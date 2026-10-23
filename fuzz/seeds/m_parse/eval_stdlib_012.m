@@ -1,0 +1,1 @@
+Text.Trim("  a b#(tab) ")

@@ -1,0 +1,1398 @@
+{
+  "schemaVersion": 1,
+  "description": "Stable facts about the Microsoft Power BI Desktop sample files (MIT) used as DashCraft test fixtures. See README.md in this folder.",
+  "fixtureRoot": "Paths in `file` are relative to the fixture root: $PBIVIEW_REFERENCE, else <workspace>/reference. Files with committed=false are fetched by scripts/fetch-samples.sh; tests must SKIP when they are missing.",
+  "upstream": {
+    "repository": "https://github.com/microsoft/powerbi-desktop-samples",
+    "commit": "d5ec562d24b1890c2fd2976da625dd0920d35871",
+    "license": "MIT",
+    "copyright": "Copyright (c) Microsoft Corporation. All rights reserved."
+  },
+  "observedWith": "dashcraft 0.2.0 (workspace commit 1f4ccf7), 2026-10-23",
+  "valueTolerance": 0.01,
+  "crossCheck": {
+    "pbixray": "pbixray 0.15.5 (MIT), used as an external oracle in a throwaway venv: table names, row counts per table, column counts per table and measure names of every PBIX; measure values recomputed with pandas from its decoded tables (simple SUM/COUNT/DISTINCTCOUNT measures only)",
+    "rawParse": "Python zipfile + json over the raw package entries (no DashCraft code): report flavour, page names, sizes, visibility, visual counts by type; for the PBIT, DataModelSchema table names, measure and relationship counts and compatibility level",
+    "notes": [
+      "pbixray lists fewer relationships than DashCraft for Revenue Opportunities (5 vs 6), Regional Sales (7 vs 8) and Store Sales (4 vs 5): it omits the relationships whose one side is a calculated table (Calendar, Opportunity Calendar, Date). model.counts.relationships is DashCraft's count (it matches the model).",
+      "Lint findings in knownBrokenReferences were checked by hand: the `Page Details` table and the `Opportunities[Opportunity Owner Name]` column do not exist in the model (pbixray schema)."
+    ]
+  },
+  "files": [
+    {
+      "id": "revenue-opportunities",
+      "file": "samples/microsoft/Revenue Opportunities.pbix",
+      "committed": true,
+      "bytes": 245930,
+      "sha256": "3c95c4fb5a261e9d13a7152a2e14b18ea9e9efac0105dbd9ed46ba0137489c27",
+      "upstream": {
+        "path": "2026 Power BI Samples Revamp/Revenue Opportunities.pbix",
+        "gitBlobSha1": "c0dfa127100b78ec41f0c288a5c7b60dae892ace"
+      },
+      "detect": {
+        "format": "pbix",
+        "label": "PBIX (with data model, report: PBIR)",
+        "confidence": "certain",
+        "reportFlavour": "pbir"
+      },
+      "model": {
+        "source": "abf",
+        "culture": "en-US",
+        "compatibilityLevel": 1606,
+        "embeddedData": true,
+        "counts": {
+          "tables": 9,
+          "columns": 69,
+          "calculatedColumns": 1,
+          "calculatedTables": 1,
+          "measures": 6,
+          "relationships": 6,
+          "expressions": 0,
+          "parameters": 0
+        },
+        "tables": [
+          {
+            "name": "Account",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 5,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 357
+          },
+          {
+            "name": "Fact A",
+            "kind": "regular",
+            "hidden": true,
+            "columns": 13,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 228
+          },
+          {
+            "name": "Fact B",
+            "kind": "regular",
+            "hidden": true,
+            "columns": 13,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 230
+          },
+          {
+            "name": "Opportunity",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 5,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 486
+          },
+          {
+            "name": "Partner",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 3,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 101
+          },
+          {
+            "name": "Product",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 2,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 25
+          },
+          {
+            "name": "Sales stage",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 3,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 5
+          },
+          {
+            "name": "Calculations",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 14,
+            "measures": 6,
+            "data": "embedded",
+            "rows": 458
+          },
+          {
+            "name": "Calendar",
+            "kind": "calculatedTable",
+            "hidden": false,
+            "columns": 11,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 1096
+          }
+        ],
+        "measures": {
+          "count": 6,
+          "names": [
+            "Calculations[Avg Opportunity Days]",
+            "Calculations[Avg Revenue]",
+            "Calculations[Factored Revenue]",
+            "Calculations[Opportunity Count]",
+            "Calculations[Revenue]",
+            "Calculations[Total opportunity days]"
+          ],
+          "values": {
+            "Calculations[Revenue]": {
+              "value": 1968250939,
+              "formatted": "$1,968,250,939"
+            },
+            "Calculations[Factored Revenue]": {
+              "value": 446855479,
+              "formatted": "$446,855,479"
+            },
+            "Calculations[Opportunity Count]": {
+              "value": 458,
+              "formatted": "458"
+            },
+            "Calculations[Total opportunity days]": {
+              "value": 207457,
+              "formatted": "207,457"
+            },
+            "Calculations[Avg Opportunity Days]": {
+              "value": 452.96,
+              "formatted": "453"
+            }
+          }
+        }
+      },
+      "report": {
+        "name": "Revenue Opportunities",
+        "activePage": "ReportSection",
+        "pages": [
+          {
+            "name": "ReportSection",
+            "displayName": "Opportunity Overview",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": false,
+            "visuals": 8,
+            "visualsByType": {
+              "actionButton": 1,
+              "barChart": 2,
+              "cardVisual": 1,
+              "lineStackedColumnComboChart": 1,
+              "shapeMap": 1,
+              "slicer": 1,
+              "treemap": 1
+            }
+          },
+          {
+            "name": "ReportSection9380eec50a2a0165bb4b",
+            "displayName": "Detail",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": false,
+            "visuals": 2,
+            "visualsByType": {
+              "actionButton": 1,
+              "pivotTable": 1
+            }
+          },
+          {
+            "name": "ReportSectionf4c4d2dee7b9c36a1669",
+            "displayName": "Tooltip",
+            "width": 600.0,
+            "height": 450.0,
+            "hidden": true,
+            "visuals": 2,
+            "visualsByType": {
+              "cardVisual": 1,
+              "donutChart": 1
+            }
+          }
+        ]
+      },
+      "crossChecked": [
+        "model.tables[].name",
+        "model.tables[].rows",
+        "model.tables[].columns",
+        "model.measures.names",
+        "model.measures.values",
+        "detect.reportFlavour",
+        "report.pages"
+      ]
+    },
+    {
+      "id": "corporate-spend",
+      "file": "samples/microsoft/Corporate Spend.pbix",
+      "committed": true,
+      "bytes": 716704,
+      "sha256": "2e56785790d20bc4596d2aec8ede7128093b4affaaf2204198b382c9192f6ca6",
+      "upstream": {
+        "path": "2026 Power BI Samples Revamp/Corporate Spend.pbix",
+        "gitBlobSha1": "51d0c147006fbf97fdb11181e747c5e1c46d3539"
+      },
+      "detect": {
+        "format": "pbix",
+        "label": "PBIX (with data model, report: PBIR)",
+        "confidence": "certain",
+        "reportFlavour": "pbir"
+      },
+      "model": {
+        "source": "abf",
+        "culture": "en-US",
+        "compatibilityLevel": 1606,
+        "embeddedData": true,
+        "counts": {
+          "tables": 10,
+          "columns": 36,
+          "calculatedColumns": 2,
+          "calculatedTables": 2,
+          "measures": 19,
+          "relationships": 7,
+          "expressions": 0,
+          "parameters": 0
+        },
+        "tables": [
+          {
+            "name": "Business Area",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 2,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 7
+          },
+          {
+            "name": "Cost Element",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 4,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 253
+          },
+          {
+            "name": "Country Region",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 4,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 52
+          },
+          {
+            "name": "Date",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 4,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 48
+          },
+          {
+            "name": "Department",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 2,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 471
+          },
+          {
+            "name": "Calculations",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 8,
+            "measures": 18,
+            "data": "embedded",
+            "rows": 166216
+          },
+          {
+            "name": "IT Area",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 3,
+            "measures": 1,
+            "data": "embedded",
+            "rows": 40
+          },
+          {
+            "name": "Scenario",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 3,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 5
+          },
+          {
+            "name": "Toggle for variance to plan",
+            "kind": "calculatedTable",
+            "hidden": false,
+            "columns": 3,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 2
+          },
+          {
+            "name": "Toggle for breakdown",
+            "kind": "calculatedTable",
+            "hidden": false,
+            "columns": 3,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 5
+          }
+        ],
+        "measures": {
+          "count": 19,
+          "names": [
+            "Calculations[Amount]",
+            "Calculations[Actual]",
+            "Calculations[LE1]",
+            "Calculations[LE2]",
+            "Calculations[LE3]",
+            "Calculations[Plan]",
+            "Calculations[Var to LE1]",
+            "Calculations[Var to LE2]",
+            "Calculations[Var to LE3]",
+            "Calculations[Var to Plan]",
+            "Calculations[Var to LE1 %]",
+            "Calculations[Var to LE2 %]",
+            "Calculations[Var to LE3 %]",
+            "Calculations[Var to Plan %]",
+            "Calculations[Actual/Plan]",
+            "Calculations[Actual overspent]",
+            "Calculations[Acutal within plan]",
+            "Calculations[Actual vs Plan title]",
+            "IT Area[IT Area/Sub Area]"
+          ]
+        }
+      },
+      "report": {
+        "name": "Corporate Spend",
+        "activePage": "ReportSection32e53fe7c4f4cd87dd85",
+        "pages": [
+          {
+            "name": "ReportSection2",
+            "displayName": "IT Spend Trend",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": false,
+            "visuals": 8,
+            "visualsByType": {
+              "azureMap": 1,
+              "cardVisual": 1,
+              "clusteredColumnChart": 1,
+              "decompositionTreeVisual": 1,
+              "slicer": 1,
+              "stackedAreaChart": 1,
+              "textbox": 2
+            }
+          },
+          {
+            "name": "ReportSection32e53fe7c4f4cd87dd85",
+            "displayName": "Plan Variance Analysis",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": false,
+            "visuals": 9,
+            "visualsByType": {
+              "advancedSlicerVisual": 2,
+              "cardVisual": 1,
+              "clusteredBarChart": 1,
+              "lineChart": 1,
+              "pivotTable": 1,
+              "slicer": 1,
+              "textbox": 2
+            }
+          },
+          {
+            "name": "ReportSectionaad1fe93e01b608cbcaa",
+            "displayName": "Tooltip",
+            "width": 600.0,
+            "height": 450.0,
+            "hidden": true,
+            "visuals": 3,
+            "visualsByType": {
+              "cardVisual": 1,
+              "lineChart": 1,
+              "textbox": 1
+            }
+          }
+        ]
+      },
+      "crossChecked": [
+        "model.tables[].name",
+        "model.tables[].rows",
+        "model.tables[].columns",
+        "model.measures.names",
+        "detect.reportFlavour",
+        "report.pages"
+      ]
+    },
+    {
+      "id": "regional-sales",
+      "file": "samples/microsoft/Regional Sales Sample.pbix",
+      "committed": true,
+      "bytes": 1018743,
+      "sha256": "050e6b8549c222489ef51ec6c7647609b9401d42da0daf793f91603dd2d8f3da",
+      "upstream": {
+        "path": "2026 Power BI Samples Revamp/Regional Sales Sample.pbix",
+        "gitBlobSha1": "575efb38d4c3f8c692d1dd03f7aa2b6a2f76e04e"
+      },
+      "detect": {
+        "format": "pbix",
+        "label": "PBIX (with data model, report: legacy Layout)",
+        "confidence": "certain",
+        "reportFlavour": "legacyLayout"
+      },
+      "model": {
+        "source": "abf",
+        "culture": "en-US",
+        "compatibilityLevel": 1606,
+        "embeddedData": true,
+        "counts": {
+          "tables": 11,
+          "columns": 70,
+          "calculatedColumns": 5,
+          "calculatedTables": 3,
+          "measures": 15,
+          "relationships": 8,
+          "expressions": 0,
+          "parameters": 0
+        },
+        "tables": [
+          {
+            "name": "Accounts",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 9,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 300
+          },
+          {
+            "name": "Industries",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 2,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 45
+          },
+          {
+            "name": "Opportunities",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 22,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 20000
+          },
+          {
+            "name": "Owners",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 4,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 20
+          },
+          {
+            "name": "Products",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 3,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 9
+          },
+          {
+            "name": "Opportunity Forecast Adjustment",
+            "kind": "calculatedTable",
+            "hidden": true,
+            "columns": 2,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 11
+          },
+          {
+            "name": "Opportunity Calendar",
+            "kind": "calculatedTable",
+            "hidden": false,
+            "columns": 15,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 1461
+          },
+          {
+            "name": "Contacts",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 4,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 1
+          },
+          {
+            "name": "Territories",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 5,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 51
+          },
+          {
+            "name": "Campaigns",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 3,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 12
+          },
+          {
+            "name": "Calculations",
+            "kind": "calculatedTable",
+            "hidden": false,
+            "columns": 1,
+            "measures": 15,
+            "data": "embedded",
+            "rows": 1
+          }
+        ],
+        "measures": {
+          "count": 15,
+          "names": [
+            "Calculations[Close %]",
+            "Calculations[Count of Lost]",
+            "Calculations[Count of Won]",
+            "Calculations[Forecast Adjustment Slicer Alt Text]",
+            "Calculations[Forecast]",
+            "Calculations[Forecast %]",
+            "Calculations[Forecast Adjustment Value]",
+            "Calculations[Forecast by Win/Loss Ratio]",
+            "Calculations[Opportunity Count]",
+            "Calculations[Opportunity Count In Pipeline]",
+            "Calculations[Rev Goal]",
+            "Calculations[Revenue In Pipeline]",
+            "Calculations[Revenue Open]",
+            "Calculations[Revenue Won]",
+            "Calculations[Revenue Won Average Deal Size]"
+          ],
+          "values": {
+            "Calculations[Opportunity Count]": {
+              "value": 20000,
+              "formatted": "20,000"
+            },
+            "Calculations[Count of Won]": {
+              "value": 7282,
+              "formatted": "7,282"
+            },
+            "Calculations[Count of Lost]": {
+              "value": 7385,
+              "formatted": "7,385"
+            },
+            "Calculations[Revenue Won]": {
+              "value": 26435925,
+              "formatted": "$26,435,925"
+            }
+          }
+        }
+      },
+      "report": {
+        "name": "Regional Sales Sample",
+        "activePage": "ReportSectionb621f12070647be09138",
+        "pages": [
+          {
+            "name": "ReportSectionb621f12070647be09138",
+            "displayName": "Overview",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": false,
+            "visuals": 22,
+            "visualsByType": {
+              "barChart": 1,
+              "bookmarkNavigator": 1,
+              "cardVisual": 1,
+              "funnel": 1,
+              "group": 1,
+              "image": 1,
+              "lineStackedColumnComboChart": 1,
+              "pageNavigator": 2,
+              "pivotTable": 2,
+              "shape": 4,
+              "shapeMap": 1,
+              "slicer": 1,
+              "textbox": 5
+            }
+          },
+          {
+            "name": "ReportSection3685d80df8fded83ed3c",
+            "displayName": "Win/Loss Ratio",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": true,
+            "visuals": 19,
+            "visualsByType": {
+              "FlowVisual_C29F1DCC_81F5_4973_94AD_0517D44CC06A": 1,
+              "barChart": 1,
+              "cardVisual": 1,
+              "clusteredColumnChart": 1,
+              "group": 1,
+              "image": 1,
+              "lineChart": 1,
+              "pageNavigator": 2,
+              "pivotTable": 1,
+              "shape": 5,
+              "tableEx": 1,
+              "textbox": 3
+            }
+          },
+          {
+            "name": "ReportSection0e05747ca87ed9d14526",
+            "displayName": "Industries Overview",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": true,
+            "visuals": 15,
+            "visualsByType": {
+              "group": 1,
+              "image": 1,
+              "lineChart": 1,
+              "pageNavigator": 2,
+              "pivotTable": 1,
+              "scatterChart": 1,
+              "shape": 4,
+              "tableEx": 1,
+              "textbox": 3
+            }
+          },
+          {
+            "name": "ReportSection08507840a0c5d0d26f29",
+            "displayName": "Trend Analytics",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": true,
+            "visuals": 16,
+            "visualsByType": {
+              "cardVisual": 1,
+              "group": 1,
+              "image": 1,
+              "lineChart": 4,
+              "pageNavigator": 2,
+              "shape": 4,
+              "textbox": 3
+            }
+          },
+          {
+            "name": "ReportSection9cc1f1d2d4c5bad9d959",
+            "displayName": "Pipeline Trends",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": true,
+            "visuals": 16,
+            "visualsByType": {
+              "aiNarratives": 1,
+              "barChart": 1,
+              "cardVisual": 1,
+              "group": 1,
+              "image": 1,
+              "pageNavigator": 2,
+              "ribbonChart": 1,
+              "shape": 4,
+              "tableEx": 1,
+              "textbox": 3
+            }
+          },
+          {
+            "name": "ReportSection76c409e0c333d60bb1e2",
+            "displayName": "Won Key Influencers",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": true,
+            "visuals": 15,
+            "visualsByType": {
+              "barChart": 1,
+              "group": 1,
+              "image": 1,
+              "keyDriversVisual": 1,
+              "lineStackedColumnComboChart": 1,
+              "pageNavigator": 3,
+              "shape": 4,
+              "textbox": 3
+            }
+          },
+          {
+            "name": "ReportSectionf0c8ef19be5e8127c627",
+            "displayName": "Days Key Influencers",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": true,
+            "visuals": 15,
+            "visualsByType": {
+              "barChart": 2,
+              "group": 1,
+              "image": 1,
+              "keyDriversVisual": 1,
+              "pageNavigator": 3,
+              "shape": 4,
+              "textbox": 3
+            }
+          },
+          {
+            "name": "ReportSection46edb4426e9aacd8d4b9",
+            "displayName": "% off Key Influencers",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": true,
+            "visuals": 15,
+            "visualsByType": {
+              "barChart": 2,
+              "group": 1,
+              "image": 1,
+              "keyDriversVisual": 1,
+              "pageNavigator": 3,
+              "shape": 4,
+              "textbox": 3
+            }
+          },
+          {
+            "name": "ReportSectionacd41c847407a998c130",
+            "displayName": "Decomposition",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": true,
+            "visuals": 14,
+            "visualsByType": {
+              "barChart": 2,
+              "decompositionTreeVisual": 1,
+              "group": 1,
+              "image": 1,
+              "pageNavigator": 2,
+              "shape": 4,
+              "textbox": 3
+            }
+          }
+        ]
+      },
+      "knownBrokenReferences": [
+        {
+          "rule": "LINT001",
+          "severity": "error",
+          "message": "pivotTable `e9ee7b2d33b6ec76638d` formatting: table `Page Details` does not exist in the model",
+          "path": "Report/Layout",
+          "pointer": "/sections/0/visualContainers/15"
+        },
+        {
+          "rule": "LINT001",
+          "severity": "error",
+          "message": "pivotTable `9f70be51c71a0fb66724` formatting: table `Page Details` does not exist in the model",
+          "path": "Report/Layout",
+          "pointer": "/sections/1/visualContainers/1"
+        },
+        {
+          "rule": "LINT004",
+          "severity": "error",
+          "message": "page `Pipeline Trends` filter `Filtere27aed5a6c11e1810292`: column `Opportunities[Opportunity Owner Name]` does not exist",
+          "path": "Report/Layout",
+          "pointer": "/sections/4/filters/3"
+        }
+      ],
+      "crossChecked": [
+        "model.tables[].name",
+        "model.tables[].rows",
+        "model.tables[].columns",
+        "model.measures.names",
+        "model.measures.values",
+        "detect.reportFlavour",
+        "report.pages",
+        "knownBrokenReferences"
+      ]
+    },
+    {
+      "id": "covid-19-us-tracking",
+      "file": "samples/microsoft/COVID-19 US Tracking Sample.pbit",
+      "committed": true,
+      "bytes": 1276277,
+      "sha256": "714d3b00e5b02d4c0d87c73363b00829d14c77f609c49ea2c23b4f3392ea626d",
+      "upstream": {
+        "path": "powerbi-service-samples/COVID-19 US Tracking Sample.pbit",
+        "gitBlobSha1": "6c45d9ddf47a3303dd74b96727124e92b8c07c70"
+      },
+      "detect": {
+        "format": "pbit",
+        "label": "PBIT template",
+        "confidence": "certain",
+        "reportFlavour": "legacyLayout"
+      },
+      "model": {
+        "source": "tmsl",
+        "culture": "en-US",
+        "compatibilityLevel": 1550,
+        "embeddedData": false,
+        "counts": {
+          "tables": 6,
+          "columns": 30,
+          "calculatedColumns": 16,
+          "calculatedTables": 2,
+          "measures": 10,
+          "relationships": 2,
+          "expressions": 5,
+          "parameters": 1
+        },
+        "tables": [
+          {
+            "name": "DateTableTemplate_fe7eb183-f12b-4c88-bb89-cfaa7f88e1df",
+            "kind": "calculatedTable",
+            "hidden": true,
+            "columns": 7,
+            "measures": 0,
+            "data": "dax",
+            "rows": 1
+          },
+          {
+            "name": "COVID",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 9,
+            "measures": 2,
+            "data": "m",
+            "rows": null
+          },
+          {
+            "name": "StateDim",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 5,
+            "measures": 1,
+            "data": "m",
+            "rows": null
+          },
+          {
+            "name": "Table",
+            "kind": "regular",
+            "hidden": true,
+            "columns": 2,
+            "measures": 2,
+            "data": "m",
+            "rows": null
+          },
+          {
+            "name": "COVID measures",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 0,
+            "measures": 5,
+            "data": "m",
+            "rows": null
+          },
+          {
+            "name": "LocalDateTable_d10bc129-7e77-4c5a-b3dd-b8487b54dfe3",
+            "kind": "calculatedTable",
+            "hidden": true,
+            "columns": 7,
+            "measures": 0,
+            "data": "dax",
+            "rows": null
+          }
+        ],
+        "measures": {
+          "count": 10,
+          "names": [
+            "COVID[Updated]",
+            "COVID[Max date]",
+            "StateDim[Drill-through button text]",
+            "Table[Methodology]",
+            "Table[Terms of use]",
+            "COVID measures[Total confirmed cases]",
+            "COVID measures[Total deaths]",
+            "COVID measures[Case fatality rate]",
+            "COVID measures[Confirmed cases]",
+            "COVID measures[Deaths]"
+          ]
+        }
+      },
+      "report": {
+        "name": "COVID-19 US Tracking Sample",
+        "activePage": "ReportSection0e72bac688f60e7252ea",
+        "pages": [
+          {
+            "name": "ReportSection0e72bac688f60e7252ea",
+            "displayName": "Main",
+            "width": 1280.0,
+            "height": 720.0,
+            "hidden": false,
+            "visuals": 32,
+            "visualsByType": {
+              "actionButton": 17,
+              "clusteredColumnChart": 4,
+              "group": 4,
+              "image": 2,
+              "pivotTable": 1,
+              "shapeMap": 2,
+              "slicer": 1,
+              "textbox": 1
+            }
+          },
+          {
+            "name": "ReportSectiond674ab9f427ee88965ee",
+            "displayName": "County view",
+            "width": 1280.0,
+            "height": 720.0,
+            "hidden": true,
+            "visuals": 35,
+            "visualsByType": {
+              "actionButton": 20,
+              "clusteredColumnChart": 4,
+              "filledMap": 2,
+              "group": 5,
+              "image": 1,
+              "pivotTable": 1,
+              "slicer": 1,
+              "textbox": 1
+            }
+          }
+        ]
+      },
+      "crossChecked": [
+        "model.tables[].name",
+        "model.tables[].columns",
+        "model.measures.count",
+        "model.counts.relationships",
+        "model.compatibilityLevel",
+        "detect.reportFlavour",
+        "report.pages"
+      ]
+    },
+    {
+      "id": "adventureworks-sales",
+      "file": "samples/downloads/AdventureWorks Sales.pbix",
+      "committed": false,
+      "bytes": 8390782,
+      "sha256": "76c89b64cd1c5a9514b43cc5ea356efc82f8e92f9a96b49f6679d9ccd57fc4f5",
+      "upstream": {
+        "path": "2026 Power BI Samples Revamp/AdventureWorks Sales.pbix",
+        "gitBlobSha1": "97d8172c89c8b0a541e95a4e263391322013a13f"
+      },
+      "detect": {
+        "format": "pbix",
+        "label": "PBIX (with data model, report: PBIR)",
+        "confidence": "certain",
+        "reportFlavour": "pbir"
+      },
+      "model": {
+        "source": "abf",
+        "culture": "en-US",
+        "compatibilityLevel": 1606,
+        "embeddedData": true,
+        "counts": {
+          "tables": 10,
+          "columns": 62,
+          "calculatedColumns": 4,
+          "calculatedTables": 0,
+          "measures": 20,
+          "relationships": 9,
+          "expressions": 0,
+          "parameters": 0
+        },
+        "tables": [
+          {
+            "name": "Customer",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 7,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 18485
+          },
+          {
+            "name": "Date",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 10,
+            "measures": 1,
+            "data": "embedded",
+            "rows": 1461
+          },
+          {
+            "name": "Product",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 10,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 397
+          },
+          {
+            "name": "Reseller",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 8,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 702
+          },
+          {
+            "name": "Sales",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 15,
+            "measures": 19,
+            "data": "embedded",
+            "rows": 121253
+          },
+          {
+            "name": "Sales Order",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 4,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 121253
+          },
+          {
+            "name": "Sales Territory",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 4,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 11
+          },
+          {
+            "name": "Category",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 2,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 4
+          },
+          {
+            "name": "Time Intelligence",
+            "kind": "calculationGroup",
+            "hidden": false,
+            "columns": 1,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 10
+          },
+          {
+            "name": "Date Role",
+            "kind": "calculationGroup",
+            "hidden": false,
+            "columns": 1,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 3
+          }
+        ],
+        "measures": {
+          "count": 20,
+          "names": [
+            "Date[Latest year]",
+            "Sales[Sales by Due Date]",
+            "Sales[Cost]",
+            "Sales[Profit]",
+            "Sales[Profit %]",
+            "Sales[Orders]",
+            "Sales[Average Sales per Order]",
+            "Sales[Customers]",
+            "Sales[Products]",
+            "Sales[Sales YTD]",
+            "Sales[Sales QTD]",
+            "Sales[Sales MTD]",
+            "Sales[Sales PY]",
+            "Sales[Sales YoY]",
+            "Sales[Sales YoY %]",
+            "Sales[Sales]",
+            "Sales[Order Quantity]",
+            "Sales[Sales by Order Date]",
+            "Sales[Sales by Ship Date]",
+            "Sales[Customers %]"
+          ],
+          "values": {
+            "Sales[Sales]": {
+              "value": 109809274.2,
+              "formatted": "$109,809,274"
+            },
+            "Sales[Cost]": {
+              "value": 97257907.95,
+              "formatted": "$97,257,908"
+            },
+            "Sales[Orders]": {
+              "value": 31455,
+              "formatted": "31,455"
+            },
+            "Sales[Customers]": {
+              "value": 18485,
+              "formatted": "18,485"
+            },
+            "Sales[Products]": {
+              "value": 350,
+              "formatted": "350"
+            },
+            "Sales[Order Quantity]": {
+              "value": 274776,
+              "formatted": "274,776"
+            }
+          }
+        }
+      },
+      "report": {
+        "name": "AdventureWorks Sales",
+        "activePage": "ReportSection",
+        "pages": [
+          {
+            "name": "ReportSection",
+            "displayName": "Overview",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": false,
+            "visuals": 17,
+            "visualsByType": {
+              "advancedSlicerVisual": 1,
+              "azureMap": 1,
+              "cardVisual": 1,
+              "clusteredBarChart": 1,
+              "clusteredColumnChart": 1,
+              "donutChart": 1,
+              "funnel": 1,
+              "lineChart": 1,
+              "pivotTable": 1,
+              "shape": 7,
+              "slicer": 1
+            }
+          }
+        ]
+      },
+      "crossChecked": [
+        "model.tables[].name",
+        "model.tables[].rows",
+        "model.tables[].columns",
+        "model.measures.names",
+        "model.measures.values",
+        "detect.reportFlavour",
+        "report.pages"
+      ]
+    },
+    {
+      "id": "store-sales",
+      "file": "samples/downloads/Store Sales.pbix",
+      "committed": false,
+      "bytes": 9701642,
+      "sha256": "160b5b48b74ee1b5ea7259b6c8f0f1e2ec011e94c7b743742a14e6cad1153e6f",
+      "upstream": {
+        "path": "2026 Power BI Samples Revamp/Store Sales.pbix",
+        "gitBlobSha1": "0abd97ce162f7ab4186f7f40bb481add19a87a53"
+      },
+      "detect": {
+        "format": "pbix",
+        "label": "PBIX (with data model, report: PBIR)",
+        "confidence": "certain",
+        "reportFlavour": "pbir"
+      },
+      "model": {
+        "source": "abf",
+        "culture": "en-US",
+        "compatibilityLevel": 1606,
+        "embeddedData": true,
+        "counts": {
+          "tables": 7,
+          "columns": 69,
+          "calculatedColumns": 7,
+          "calculatedTables": 2,
+          "measures": 32,
+          "relationships": 5,
+          "expressions": 0,
+          "parameters": 0
+        },
+        "tables": [
+          {
+            "name": "Store",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 19,
+            "measures": 6,
+            "data": "embedded",
+            "rows": 104
+          },
+          {
+            "name": "Sales",
+            "kind": "regular",
+            "hidden": true,
+            "columns": 10,
+            "measures": 26,
+            "data": "embedded",
+            "rows": 923371
+          },
+          {
+            "name": "Item",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 6,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 364184
+          },
+          {
+            "name": "Fiscal calendar",
+            "kind": "regular",
+            "hidden": true,
+            "columns": 5,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 734
+          },
+          {
+            "name": "District",
+            "kind": "regular",
+            "hidden": false,
+            "columns": 7,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 9
+          },
+          {
+            "name": "ClusterMappingTable 2",
+            "kind": "calculatedTable",
+            "hidden": true,
+            "columns": 2,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 9
+          },
+          {
+            "name": "Date",
+            "kind": "calculatedTable",
+            "hidden": false,
+            "columns": 20,
+            "measures": 0,
+            "data": "embedded",
+            "rows": 1461
+          }
+        ],
+        "measures": {
+          "count": 32,
+          "names": [
+            "Store[Average Selling Area Size]",
+            "Store[New stores]",
+            "Store[New stores target]",
+            "Store[Stores]",
+            "Store[Open stores]",
+            "Store[Number of opening dates]",
+            "Sales[Regular Sales $]",
+            "Sales[Markdown Sales $]",
+            "Sales[Sales]",
+            "Sales[Sales LY]",
+            "Sales[Gross Margin This Year]",
+            "Sales[Gross Margin This Year %]",
+            "Sales[Gross Margin Last Year]",
+            "Sales[Gross Margin Last Year %]",
+            "Sales[Regular Sales #]",
+            "Sales[Markdown Sales #]",
+            "Sales[Units]",
+            "Sales[Units LY]",
+            "Sales[Units TY]",
+            "Sales[Avg $/Unit TY]",
+            "Sales[Avg $/Unit LY]",
+            "Sales[Total Sales Var]",
+            "Sales[Total Sales Var %]",
+            "Sales[Sales Per Sq Ft]",
+            "Sales[Last Year Sales]",
+            "Sales[Total Sales Variance]",
+            "Sales[Total Sales Variance %]",
+            "Sales[Store Count]",
+            "Sales[Average Unit Price]",
+            "Sales[Average Unit Price Last Year]",
+            "Sales[Sales TY]",
+            "Sales[This Year Sales]"
+          ],
+          "values": {
+            "Sales[Regular Sales $]": {
+              "value": 41013686.95,
+              "formatted": "$41,013,687"
+            },
+            "Sales[Markdown Sales $]": {
+              "value": 4170866.74,
+              "formatted": "$4,170,867"
+            },
+            "Sales[Regular Sales #]": {
+              "value": 7406039,
+              "formatted": "7,406,039"
+            },
+            "Store[Stores]": {
+              "value": 104,
+              "formatted": "104"
+            }
+          }
+        }
+      },
+      "report": {
+        "name": "Store Sales",
+        "activePage": "ReportSectiona9cc27467b93abd98c40",
+        "pages": [
+          {
+            "name": "ReportSectiona9cc27467b93abd98c40",
+            "displayName": "Store Sales Overview",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": false,
+            "visuals": 5,
+            "visualsByType": {
+              "azureMap": 1,
+              "cardVisual": 1,
+              "donutChart": 1,
+              "lineChart": 1,
+              "scatterChart": 1
+            }
+          },
+          {
+            "name": "ReportSection5a077c50c8d149e8746d",
+            "displayName": "District Monthly Sales",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": false,
+            "visuals": 4,
+            "visualsByType": {
+              "barChart": 1,
+              "cardVisual": 1,
+              "lineChart": 1,
+              "textbox": 1
+            }
+          },
+          {
+            "name": "ReportSection8ef90f03d68d67c9d9ee",
+            "displayName": "New Stores",
+            "width": 1920.0,
+            "height": 1080.0,
+            "hidden": false,
+            "visuals": 5,
+            "visualsByType": {
+              "azureMap": 1,
+              "cardVisual": 1,
+              "gauge": 1,
+              "pivotTable": 1,
+              "waterfallChart": 1
+            }
+          }
+        ]
+      },
+      "crossChecked": [
+        "model.tables[].name",
+        "model.tables[].rows",
+        "model.tables[].columns",
+        "model.measures.names",
+        "model.measures.values",
+        "detect.reportFlavour",
+        "report.pages"
+      ]
+    }
+  ]
+}

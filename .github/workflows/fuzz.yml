@@ -1,0 +1,99 @@
+name: Fuzz
+
+on:
+  schedule:
+    - cron: '23 3 * * *' # nightly, 03:23 UTC
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Seconds to fuzz each target
+        required: false
+        default: '60'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # cargo-fuzz needs nightly (-Zsanitizer); overrides rust-toolchain.toml.
+  RUSTUP_TOOLCHAIN: nightly
+  FUZZ_SECONDS: ${{ inputs.seconds || '60' }}
+
+jobs:
+  fuzz:
+    name: cargo-fuzz
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+
+      # hashFiles() is not available in job-level `if:`, so gate the steps.
+      - id: detect
+        run: echo "fuzz=${{ hashFiles('fuzz/Cargo.toml') != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: No fuzz crate yet
+        if: steps.detect.outputs.fuzz != 'true'
+        run: echo "::notice::fuzz/Cargo.toml not found; nothing to fuzz."
+
+      - name: Install nightly Rust
+        if: steps.detect.outputs.fuzz == 'true'
+        run: |
+          rustup toolchain install nightly --profile minimal
+          rustc --version && cargo --version
+
+      - uses: Swatinem/rust-cache@v2
+        if: steps.detect.outputs.fuzz == 'true'
+        with:
+          workspaces: fuzz -> target
+
+      # Grow the corpus across nightly runs (fuzz/corpus is gitignored).
+      - uses: actions/cache@v6
+        if: steps.detect.outputs.fuzz == 'true'
+        with:
+          path: fuzz/corpus
+          key: fuzz-corpus-${{ github.run_id }}
+          restore-keys: fuzz-corpus-
+
+      - name: Install cargo-fuzz
+        if: steps.detect.outputs.fuzz == 'true'
+        run: cargo install cargo-fuzz --locked
+
+      - name: Build fuzz targets
+        if: steps.detect.outputs.fuzz == 'true'
+        run: cargo fuzz build
+
+      - name: Run fuzz targets
+        if: steps.detect.outputs.fuzz == 'true'
+        shell: bash
+        run: |
+          mapfile -t targets < <(cargo fuzz list)
+          if [ "${#targets[@]}" -eq 0 ]; then
+            echo "::notice::cargo fuzz list returned no targets."
+            exit 0
+          fi
+          failed=()
+          for target in "${targets[@]}"; do
+            echo "::group::fuzz $target (${FUZZ_SECONDS}s)"
+            # Corpus in fuzz/corpus/<target> + committed fuzz/seeds/<target> + dictionary.
+            if ! bash fuzz/run.sh "$target" "$FUZZ_SECONDS"; then
+              failed+=("$target")
+            fi
+            echo "::endgroup::"
+          done
+          if [ "${#failed[@]}" -gt 0 ]; then
+            echo "::error::Fuzz targets found crashes: ${failed[*]} (see the fuzz-artifacts upload)"
+            exit 1
+          fi
+
+      - name: Upload crash artifacts
+        if: failure() && steps.detect.outputs.fuzz == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts
+          if-no-files-found: ignore

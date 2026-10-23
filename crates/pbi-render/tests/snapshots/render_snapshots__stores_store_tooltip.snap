@@ -1,0 +1,12 @@
+---
+source: crates/pbi-render/tests/render_snapshots.rs
+expression: text
+---
+Acme Outfitters - Stores / Store Tooltip (ActualSize, 320×240, 1 visuals)
+page svg: 2489 bytes, fnv1a 7b37ab29c3afa7b1
+
+c649a1da0227ceeffc35 cardVisual 304×224 at (8, 8): svg 2e1dadce35443848, 0 data points
+  | $609,500.10
+  | Total Sales
+  | 106.6%
+  | Target Attainment %

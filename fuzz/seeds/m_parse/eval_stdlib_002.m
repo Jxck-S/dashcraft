@@ -1,0 +1,1 @@
+Table.ColumnNames(Csv.Document("1,2", [Columns = {"x", "y"}]))

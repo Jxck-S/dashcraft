@@ -1,0 +1,1 @@
+List.NonNullCount({1, null})

@@ -1,0 +1,1 @@
+let Source = AzureStorage.Blobs("https://example.invalid/c"), Csv = Csv.Document(Source{[Name = "x.csv"]}[Content]) in Csv

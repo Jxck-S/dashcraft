@@ -1,0 +1,26 @@
+[package]
+name = "pbi-engine"
+description = "Arrow columnar store, relationships and filter propagation (DataFusion-backed)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pbi-model = { workspace = true }
+arrow = { workspace = true }
+# `sql` enables SessionContext::sql / DataFrame::parse_sql_expr (ad-hoc SQL,
+# grid filters). Candidate for the root workspace dependency features.
+datafusion = { workspace = true, features = ["sql"] }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+thiserror = { workspace = true }
+indexmap = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

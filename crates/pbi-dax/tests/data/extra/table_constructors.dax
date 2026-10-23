@@ -1,0 +1,6 @@
+UNION (
+    { 1, 2, 3 },
+    { ( 4, "four" ), ( 5, "five" ) },
+    DATATABLE ( "Name", STRING, "Value", INTEGER, { { "a", 1 }, { "b", 2 } } ),
+    FILTER ( ALL ( 'T'[A], 'T'[B] ), ( 'T'[A], 'T'[B] ) IN { ( 1, 2 ), ( 3, 4 ) } )
+)

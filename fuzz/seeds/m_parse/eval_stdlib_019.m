@@ -1,0 +1,1 @@
+Text.Start("abcdef", 2)

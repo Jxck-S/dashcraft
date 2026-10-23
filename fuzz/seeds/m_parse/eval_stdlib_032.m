@@ -1,0 +1,1 @@
+Text.PositionOf("abcabc", "c")

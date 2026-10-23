@@ -1,0 +1,1 @@
+List.AllTrue({false, true})

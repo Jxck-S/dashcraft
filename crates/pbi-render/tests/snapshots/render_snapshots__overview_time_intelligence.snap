@@ -1,0 +1,146 @@
+---
+source: crates/pbi-render/tests/render_snapshots.rs
+expression: text
+---
+Acme Outfitters - Overview / Time Intelligence (FitToPage, 1280×720, 12 visuals)
+page svg: 49458 bytes, fnv1a 23068afb89b572a6
+
+73a4b46ae84c53908089 shape 1280×64 at (0, 0): svg 0418e473b7439a2b, 0 data points
+
+50869f8a65b027c7e618 textbox 680×48 at (24, 8): svg 60c6e2705e063ead, 0 data points
+  | Acme Outfitters
+  |   |  Time intelligence
+
+b41d675081c224f256ea slicer 220×64 at (24, 76): svg 6a878bf9cfde2cde, 0 data points
+  | Month
+  | 2025-06
+
+398b24904a1feb7d0755 slicer 320×64 at (260, 76): svg d5e0a6481b220339, 0 data points
+  | Order date (relative)
+  | 2025-06-01
+  | 2025-06-30
+
+e2ec1886bb9df4e1d51a cardVisual 300×100 at (24, 152): svg 5de07937fececcbd, 0 data points
+  | Total Sales - Current
+  | $41,267.95
+  | Total Sales
+
+e1d275355b1648435593 cardVisual 300×100 at (340, 152): svg d3b3ffdcf07c72fc, 0 data points
+  | Total Sales - YTD
+  | $204,412.55
+  | Total Sales
+
+bb525ba6bb81d291695d cardVisual 300×100 at (656, 152): svg 095f6042bbdbaf79, 0 data points
+  | Total Sales - PY
+  | $35,804.75
+  | Total Sales
+
+c507b8509ba0b970a4ee cardVisual 284×100 at (972, 152): svg 6c05e94d55183ef9, 0 data points
+  | Total Sales - YoY %
+  | +15.3%
+  | Total Sales
+
+24f8ad03f5a0230faab0 multiRowCard 400×200 at (24, 268): svg 3ab5bb11c926130d, 0 data points
+  | Same values as measures
+  | $204,412.55
+  | Sales YTD
+  | $35,804.75
+  | Sales PY
+  | +15.3%
+  | Sales YoY %
+  | $45,297.75
+  | Sales Prev Month
+  | $40,393.90
+  | Shipped Sales
+
+0be665cce25f93e37e88 pivotTable 816×200 at (440, 268): svg 76dbb1d59d90c25c, 12 data points
+  | Total Sales by time calculation (all months)
+  | 2024
+  | $372,196.85
+  | $372,196.85
+  | $372,196.85
+  | 2025
+  | $457,432.15
+  | $457,432.15
+  | $372,196.85
+  | +22.9%
+  | $457,432.15
+  | Year
+  | Current
+  | YTD
+  | PY
+  | YoY %
+  | Total
+  | Total
+  | $829,629.00
+  | $457,432.15
+  | $372,196.85
+  | +122.9%
+  | $829,629.00
+
+cfa6b3b57d4eab8e6066 lineChart 616×220 at (24, 484): svg b38049ac9f90133b, 36 data points
+  warning: filter not applied: RelativeDate filters are not supported yet
+  | Sales by month (last 10 years)
+  | Total Sales
+  | Sales PY
+  | $0K
+  | $20K
+  | $40K
+  | Total Sales and...
+  | 2024-01
+  | 2024-02
+  | 2024-03
+  | 2024-04
+  | 2024-05
+  | 2024-06
+  | 2024-07
+  | 2024-08
+  | 2024-09
+  | 2024-10
+  | 2024-11
+  | 2024-12
+  | 2025-01
+  | 2025-02
+  | 2025-03
+  | 2025-04
+  | 2025-05
+  | 2025-06
+  | 2025-07
+  | 2025-08
+  | 2025-09
+  | 2025-10
+  | 2025-11
+  | 2025-12
+  | Year Month
+
+7db2a139761251b9162a areaChart 600×220 at (656, 484): svg 29549e0df9120edb, 24 data points
+  | Shipped sales by ship month
+  | $0K
+  | $20K
+  | $40K
+  | Shipped Sales
+  | 2024-01
+  | 2024-02
+  | 2024-03
+  | 2024-04
+  | 2024-05
+  | 2024-06
+  | 2024-07
+  | 2024-08
+  | 2024-09
+  | 2024-10
+  | 2024-11
+  | 2024-12
+  | 2025-01
+  | 2025-02
+  | 2025-03
+  | 2025-04
+  | 2025-05
+  | 2025-06
+  | 2025-07
+  | 2025-08
+  | 2025-09
+  | 2025-10
+  | 2025-11
+  | 2025-12
+  | Year Month

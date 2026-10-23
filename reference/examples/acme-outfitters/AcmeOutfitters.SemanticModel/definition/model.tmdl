@@ -1,0 +1,40 @@
+/// Acme Outfitters: a synthetic outdoor-gear retailer (fictional data, DashCraft example).
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+queryGroup Parameters
+
+	annotation PBI_QueryGroupOrder = 0
+
+queryGroup Functions
+
+	annotation PBI_QueryGroupOrder = 1
+
+queryGroup Sources
+
+	annotation PBI_QueryGroupOrder = 2
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["StorageContainerUrl","fnCleanKey","fnParseNames","Orders","Customers","Products","Stores","Targets","Returns","Web Sessions","Last Refreshed"]
+
+ref table Orders
+ref table Customers
+ref table Products
+ref table Stores
+ref table Targets
+ref table Returns
+ref table 'Web Sessions'
+ref table Date
+ref table 'Time Calc'
+ref table 'Products Never Sold'
+ref table 'Last Refreshed'
+
+ref role 'Region West'
+ref role 'Store Manager'

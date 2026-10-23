@@ -1,0 +1,7 @@
+role Readers
+	modelPermission: read
+
+	tablePermission Sales = Sales[Region] = "West"
+
+	member 'user@contoso.com'
+		memberType: user

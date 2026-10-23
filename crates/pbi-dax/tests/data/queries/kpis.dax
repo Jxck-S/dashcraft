@@ -1,0 +1,23 @@
+// KPI query as used by the DAX query view
+DEFINE
+    VAR _threshold = 10
+    MEASURE Orders[Completed Share] =
+        DIVIDE ( [Completed Sales], [Total Sales], 0 )
+    TABLE 'Small Orders' =
+        FILTER ( Orders, Orders[Quantity] < _threshold )
+    COLUMN Products[Upper Name] = UPPER ( Products[Product Name] )
+    FUNCTION Local.AddTax = ( amount : SCALAR NUMERIC VAL, rate ) => amount * ( 1 + rate )
+
+EVALUATE
+    SUMMARIZECOLUMNS (
+        Orders[Status],
+        "Orders", [Order Count],
+        "Share", [Completed Share],
+        "Taxed", Local.AddTax ( 100, 0.2 )
+    )
+ORDER BY Orders[Status] DESC, [Orders]
+START AT "Pending"
+
+EVALUATE 'Small Orders'
+
+EVALUATE { _threshold }

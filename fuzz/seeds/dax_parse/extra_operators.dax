@@ -1,0 +1,6 @@
+/* every operator */
+IF (
+    NOT ISBLANK ( [Amount] ) && [Amount] >= 1e3 || [Qty] <> 0,
+    "Big: " & FORMAT ( -[Amount] ^ 2 * 0.5 / .25 + 1 - 2, "#,0.00" ),
+    [Code] == "X" || 'Product'[Color] IN { "Red", "Blue" } && NOT ( [A] < 1 ) && [B] <= 2 && [C] > 3
+)

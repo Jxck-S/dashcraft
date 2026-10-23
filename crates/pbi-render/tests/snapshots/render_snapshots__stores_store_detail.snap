@@ -1,0 +1,76 @@
+---
+source: crates/pbi-render/tests/render_snapshots.rs
+expression: text
+---
+Acme Outfitters - Stores / Store Detail (FitToWidth, 1280×900, 5 visuals)
+page svg: 19463 bytes, fnv1a 21eea18f3c0c9321
+
+e75a27703fdb37682083 shape 1280×64 at (0, 0): svg 368747810bf4ec7f, 0 data points
+
+9ec3f2beb17aab1baec7 textbox 680×48 at (24, 8): svg 3d3022ce2d77bec7, 0 data points
+  | Acme Outfitters
+  |   |  Store detail (hidden page, East region)
+
+3b28913dac9013392389 multiRowCard 1232×280 at (24, 80): svg 60f06bf83e7af5e8, 0 data points
+  | East stores
+  | Boston Back Bay
+  | Jordan Lee
+  | Store Manager
+  | Boston
+  | City
+  | $64,315.30
+  | Total Sales
+  | Burlington Lakeside
+  | Sam Patel
+  | Store Manager
+  | Burlington
+  | City
+  | $28,661.15
+  | Total Sales
+  | Philadelphia Outlet
+  | Drew Kowalski
+  | Store Manager
+  | Philadelphia
+  | City
+  | $42,013.90
+  | Total Sales
+
+4deb2424b9269f15f86c tableEx 600×300 at (24, 376): svg a919116d13d6336c, 12 data points
+  | Returns by reason
+  | Changed Mind
+  | 10
+  | $1,629.95
+  | Wrong Size
+  | 10
+  | $1,034.50
+  | Not As Described
+  | 7
+  | $1,040.35
+  | Damaged In Transit
+  | 6
+  | $275.70
+  | Reason
+  | Returns Count
+  | Refunds
+  | Total
+  | 33
+  | $3,980.50
+
+4cc43d133c541edb8c33 clusteredColumnChart 616×300 at (640, 376): svg 03065903bb01f005, 4 data points
+  | Returns by reason
+  | 0
+  | 2
+  | 4
+  | 6
+  | 8
+  | 10
+  | Returns Count
+  | Changed Mind
+  | Wrong Size
+  | Not As Described
+  | Damaged In Transit
+  | Reason
+  | 10
+  | 10
+  | 7
+  | 6

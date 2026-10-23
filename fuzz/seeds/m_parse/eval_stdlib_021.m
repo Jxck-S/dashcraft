@@ -1,0 +1,1 @@
+Text.Range("abcdef", 2)

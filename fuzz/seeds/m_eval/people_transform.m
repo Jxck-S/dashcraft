@@ -1,0 +1,1 @@
+let raw = "[{'firstName': 'Ada', 'lastName': 'Lovelace'}]", Field = (person as text, key as text) as text => let after = Text.AfterDelimiter(person, "'" & key & "': "), q = Text.Start(after, 1) in if after = "" then "" else Text.BeforeDelimiter(Text.Range(after, 1), q) in Field(raw, "firstName")

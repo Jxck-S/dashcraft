@@ -1,0 +1,9 @@
+-- Year-over-year growth with nested VARs
+VAR _current = [Total Sales]
+VAR _previous =
+    CALCULATE ( [Total Sales], DATEADD ( 'Date'[Date], -1, YEAR ) )
+VAR _delta =
+    VAR _d = _current - _previous
+    RETURN IF ( ISBLANK ( _d ), BLANK (), _d )
+RETURN
+    DIVIDE ( _delta, _previous ) // ratio

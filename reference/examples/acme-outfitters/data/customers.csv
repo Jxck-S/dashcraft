@@ -1,0 +1,404 @@
+customer_id,first_name,last_name,email,segment,city,state,join_date,loyalty_tier,account_managers
+C0001,Liam,Mendez,liam.mendez1@mail.example,Consumer,Portland,OR,2021-11-03,Bronze,['Lena Ford']
+C0002,Hugo,Khan,hugo.khan2@inbox.example,Consumer,Burlington,VT,2018-07-21,Bronze,"['Ana Ruiz', 'Jo Kim']"
+C0003,Kira,Ito,kira.ito3@trailpost.example,Club ,Kansas City,MO,2018-04-14,Bronze,"[""O'Neil Park""]"
+C0004,Uma,Turner,uma.turner4@mail.example,Consumer,Seattle,WA,2021-09-13,Silver,['Marcus Bell']
+ c0005,Sam,Khan,sam.khan5@trailpost.example,Club,Austin,TX,2020-01-20,Gold,['Lena Ford']
+C0006,Felix,Patel,felix.patel6@mail.example,Consumer,Asheville,NC,2019-07-07,,"['Ana Ruiz', ""D'Arcy Lane""]"
+C0007,Rosa,Flores,ROSA.FLORES7@INBOX.EXAMPLE,Consumer,Boston,MA,2022-11-15,Bronze,['Lena Ford']
+C0008,Eli,Khan,eli.khan8@mail.example,Club,Philadelphia,PA,2019-06-15,Silver,"['Ana Ruiz', 'Marcus Bell']"
+C0009,Caleb,Duarte,caleb.duarte9@mail.example,Club,Philadelphia,PA,2019-05-10,Silver,['Ana Ruiz']
+C0010,Hugo,Nguyen,hugo.nguyen10@trailpost.example,Consumer,Atlanta,GA,2021-12-03,Bronze,[]
+C0011,Iris,Lopez,iris.lopez11@trailpost.example,Consumer,Richmond,VA,2018-12-09,Silver,['Ana Ruiz']
+C0012,Gabe,Xu,gabe.xu12@inbox.example,Club,Philadelphia,PA,2021-07-04,,['Priya Shah']
+C0013,Noah,Flores,noah.flores13@trailpost.example,Consumer,Kansas City,MO,2022-01-09,Silver,"[""D'Arcy Lane""]"
+C0014,Elena,Ueda,elena.ueda14@corp.example,Corporate,Burlington,VT,2024-06-19,Bronze,['Ana Ruiz']
+C0015,Maya,Xu,maya.xu15@inbox.example,Consumer,Asheville,NC,2019-05-21,Gold,"[""O'Neil Park""]"
+C0016,Jonah,Baker,jonah.baker16@inbox.example,Consumer,Minneapolis,MN,2018-02-16,Bronze,"[""O'Neil Park"", 'Priya Shah']"
+C0017,Kira,Silva,kira.silva17@trailpost.example,Consumer,Phoenix,AZ,2021-06-16,Bronze,"['Ana Ruiz', 'Jo Kim']"
+C0018,Victor,Quintero,victor.quintero18@mail.example,Consumer,Minneapolis,MN,2023-09-05,,['Jo Kim']
+C0019,Elena,Jordan,elena.jordan19@mail.example,Consumer,Boston,MA,2021-03-31,Silver,['Jo Kim']
+C0020,Noah,Chen,noah.chen20@inbox.example,Consumer,Seattle,WA,2022-09-26,Silver,
+C0021,Jonah,Adams,jonah.adams21@corp.example,Corporate,Tacoma,WA,2023-04-27,Bronze,[]
+C0022,Liam,Ellis,liam.ellis22@inbox.example,Consumer,Philadelphia,PA,2021-03-22,Bronze,['Ana Ruiz']
+C0023,Yara,Vargas,yara.vargas23@mail.example,Consumer,Philadelphia,PA,2023-06-08,Gold,
+C0024,Wren,Grant,wren.grant24@trailpost.example,Consumer,Boise,ID,2020-12-05,Bronze,['Tomas Vega']
+C0025,Victor,Holt,victor.holt25@mail.example,Consumer,Richmond,VA,2019-11-14,,
+C0026,Eli,Young,eli.young26@trailpost.example,Consumer,Austin,TX,2019-10-01,Bronze,['Jo Kim']
+C0027,Liam,Xu,liam.xu27@inbox.example,Club,Minneapolis,MN,2018-11-15,,"[""O'Neil Park"", 'Priya Shah']"
+C0028,Uma,Ibarra,uma.ibarra28@mail.example,Consumer,Tacoma,WA,2022-01-12,Silver,"['Lena Ford', 'Priya Shah']"
+C0029,Liam,Kim,liam.kim29@corp.example,Corporate,Kansas City,MO,2020-10-24,Silver,
+C0030,Elena,Young,elena.young30@mail.example,Club,Boise,ID,2020-11-23,,[]
+C0031,Sam,Ellis,sam.ellis31@inbox.example,Consumer,Seattle,WA,2024-11-02,Bronze,
+C0032,Sam,Fischer,sam.fischer32@trailpost.example,Consumer ,Minneapolis,MN,2021-09-20,,
+C0033,Ben,Chen,ben.chen33@trailpost.example,Club,Richmond,VA,2018-01-07,Gold,
+C0034,Dev,Zimmer,dev.zimmer34@inbox.example,Consumer,Asheville,NC,2025-05-10,,['Lena Ford']
+C0035,Pablo,Evans,pablo.evans35@corp.example,Corporate,Boulder,CO,2025-02-05,,"[""O'Neil Park""]"
+C0036,Tara,Walsh,tara.walsh36@mail.example,Consumer,Austin,TX,2024-12-30,Silver,"['Marcus Bell', ""O'Neil Park""]"
+C0037,Hugo,Jordan,hugo.jordan37@trailpost.example,Consumer,Salt Lake City,UT,2025-02-15,Bronze,['Marcus Bell']
+C0038,Noah,Larsen,NOAH.LARSEN38@INBOX.EXAMPLE,Consumer,Burlington,VT,2024-05-20,Bronze,[]
+C0039,Kira,Vargas,kira.vargas39@mail.example,Club,Richmond,VA,2023-11-11,,"[""O'Neil Park""]"
+C0040,Victor,Garcia,victor.garcia40@trailpost.example,Consumer,Boulder,CO,2023-06-06,Bronze,"[""D'Arcy Lane""]"
+C0041,Dev,Patel,dev.patel41@inbox.example,Consumer,Eugene,OR,2021-12-25,,['Lena Ford']
+C0042,Lena,Jordan,lena.jordan42@mail.example,Consumer,Seattle,WA,2022-08-24,Bronze,['Ana Ruiz']
+C0043,Wren,Holt,wren.holt43@trailpost.example,Consumer,Phoenix,AZ,2018-07-19,,"[""D'Arcy Lane""]"
+C0044,Kofi,Ibarra,kofi.ibarra44@inbox.example,Consumer,Albuquerque,NM,2025-05-31,Bronze,"[""O'Neil Park""]"
+C0045,Uma,Novak,uma.novak45@trailpost.example,Consumer,Boston,MA,2024-11-03,Gold,['Ana Ruiz']
+C0046,Maya,Zimmer,maya.zimmer46@inbox.example,Consumer,Portland,OR,2024-11-27,Silver,"['Ana Ruiz', ""O'Neil Park""]"
+C0047,Victor,Brooks,victor.brooks47@mail.example,Consumer,Phoenix,AZ,2018-08-19,Bronze,['Tomas Vega']
+C0048,Sam,Hughes,sam.hughes48@trailpost.example,Consumer,Phoenix,AZ,2019-01-13,Gold,"[""O'Neil Park""]"
+C0049,Zane,Fischer,zane.fischer49@mail.example,Consumer,Boston,MA,2024-07-20,Bronze,['Priya Shah']
+C0050,Dana,Hughes,dana.hughes50@mail.example,Consumer,Phoenix,AZ,2020-11-27,,[]
+C0051,Victor,Quintero,victor.quintero51@trailpost.example,Club,Eugene,OR,2022-12-17,Bronze,['Lena Ford']
+ c0052,Ana,Baker,ana.baker52@inbox.example,Consumer,Eugene,OR,2020-02-15,,"['Lena Ford', ""O'Neil Park""]"
+C0053,Jonah,Grant,jonah.grant53@trailpost.example,Consumer,Salt Lake City,UT,2025-06-18,Bronze,"[""D'Arcy Lane""]"
+C0054,Amir,Zimmer,amir.zimmer54@corp.example,Corporate,Minneapolis,MN,2023-04-29,Silver,"['Jo Kim', 'Lena Ford']"
+C0055,Jade,Baker,jade.baker55@trailpost.example,Consumer,Albuquerque,NM,2019-07-23,Gold,[]
+C0056,Olive,Grant,olive.grant56@mail.example,Club,Minneapolis,MN,2023-08-02,Silver,"[""D'Arcy Lane""]"
+C0057,Quinn,Lopez,quinn.lopez57@inbox.example,Consumer,Eugene,OR,2020-02-23,Bronze,['Jo Kim']
+C0058,Iris,Khan,iris.khan58@mail.example,Consumer,Seattle,WA,2024-02-15,Bronze,"[""D'Arcy Lane""]"
+C0059,Ben,Novak,ben.novak59@inbox.example,Consumer,Boston,MA,2024-09-12,Gold,['Priya Shah']
+C0060,Grace,Xu,grace.xu60@corp.example,Corporate,Seattle,WA,2021-05-10,Bronze,"[""O'Neil Park""]"
+C0061,Dana,Rivera,dana.rivera61@mail.example,Consumer ,Minneapolis,MN,2019-12-10,Silver,['Tomas Vega']
+C0062,Noah,Evans,noah.evans62@inbox.example,Consumer,Asheville,NC,2021-05-08,Gold,
+C0063,Elena,Khan,elena.khan63@mail.example,Club,Tacoma,WA,2021-04-17,Gold,"[""O'Neil Park""]"
+C0064,Iris,Nguyen,iris.nguyen64@trailpost.example,Consumer,Salt Lake City,UT,2024-04-27,,"[""D'Arcy Lane"", 'Lena Ford']"
+C0065,Zane,Adams,zane.adams65@inbox.example,Consumer,Boulder,CO,2018-01-22,Bronze,"['Marcus Bell', 'Priya Shah']"
+C0066,Nadia,Xu,nadia.xu66@mail.example,Club,Asheville,NC,2018-09-15,Bronze,"['Ana Ruiz', 'Priya Shah']"
+C0067,Liam,Young,liam.young67@trailpost.example,Club,Asheville,NC,2021-11-21,Silver,['Jo Kim']
+C0068,Uma,Khan,uma.khan68@mail.example,Consumer,Burlington,VT,2019-07-02,Silver,"['Jo Kim', ""O'Neil Park""]"
+C0069,Noah,Garcia,NOAH.GARCIA69@INBOX.EXAMPLE,Consumer,Richmond,VA,2022-04-11,Silver,
+C0070,Olive,Evans,olive.evans70@inbox.example,Consumer,Seattle,WA,2022-11-06,Silver,"['Ana Ruiz', 'Priya Shah']"
+C0071,Maya,Ellis,maya.ellis71@trailpost.example,Consumer,Seattle,WA,2024-08-21,Bronze,['Marcus Bell']
+C0072,Uma,Flores,uma.flores72@trailpost.example,Consumer,Richmond,VA,2024-10-29,,"['Ana Ruiz', 'Tomas Vega']"
+C0073,Felix,Khan,felix.khan73@mail.example,Consumer,Kansas City,MO,2020-08-07,,"[""O'Neil Park"", 'Priya Shah']"
+C0074,Ben,Khan,ben.khan74@corp.example,Corporate,Philadelphia,PA,2023-08-26,Bronze,['Priya Shah']
+C0075,Eli,Chen,eli.chen75@inbox.example,Consumer,Eugene,OR,2018-03-18,Silver,['Tomas Vega']
+C0076,Nadia,Ellis,nadia.ellis76@inbox.example,Club,Portland,OR,2021-02-07,Bronze,['Jo Kim']
+C0077,Noah,Garcia,noah.garcia77@inbox.example,Consumer,Madison,WI,2020-01-31,Silver,
+C0078,Ivan,Khan,ivan.khan78@inbox.example,Consumer,Eugene,OR,2024-07-26,Bronze,"['Lena Ford', ""O'Neil Park""]"
+C0079,Kofi,Mendez,kofi.mendez79@inbox.example,Club,Atlanta,GA,2020-04-28,Gold,"['Jo Kim', 'Lena Ford']"
+C0080,Yara,Moore,yara.moore80@trailpost.example,Consumer,Albuquerque,NM,2024-02-19,Gold,['Jo Kim']
+C0081,Marco,Patel,marco.patel81@mail.example,Consumer,Tacoma,WA,2020-05-19,,"[""D'Arcy Lane""]"
+C0082,Ben,Garcia,ben.garcia82@inbox.example,Consumer,Austin,TX,2024-06-03,,
+C0083,Eli,Flores,eli.flores83@trailpost.example,Consumer,Eugene,OR,2018-01-05,Bronze,['Tomas Vega']
+C0084,Uma,Jordan,uma.jordan84@trailpost.example,Consumer,Seattle,WA,2020-05-21,Gold,['Ana Ruiz']
+C0085,Noah,Ellis,noah.ellis85@mail.example,Club,Portland,OR,2023-06-14,Gold,['Ana Ruiz']
+C0086,Lena,Silva,lena.silva86@trailpost.example,Consumer,Richmond,VA,2024-03-14,Bronze,"['Jo Kim', 'Marcus Bell']"
+C0087,Uma,Diaz,uma.diaz87@inbox.example,Consumer,Seattle,WA,2020-12-25,Bronze,['Marcus Bell']
+C0088,Tara,Novak,tara.novak88@mail.example,Consumer,Minneapolis,MN,2024-02-12,Bronze,"[""D'Arcy Lane""]"
+C0089,Hugo,Patel,hugo.patel89@trailpost.example,Club,Eugene,OR,2019-07-05,,[]
+C0090,Noah,Chen,noah.chen90@mail.example,Club ,Madison,WI,2021-10-14,Silver,['Tomas Vega']
+C0091,Rosa,Silva,rosa.silva91@corp.example,Corporate,Asheville,NC,2019-03-22,Bronze,
+C0092,Sam,Evans,sam.evans92@corp.example,Corporate,Denver,CO,2020-04-28,Bronze,['Tomas Vega']
+C0093,Jonah,Moore,jonah.moore93@trailpost.example,Consumer,Austin,TX,2018-10-09,Bronze,['Ana Ruiz']
+C0094,Carla,Chen,carla.chen94@inbox.example,Consumer,Boston,MA,2020-06-26,Bronze,"['Ana Ruiz', 'Priya Shah']"
+C0095,Lena,Mendez,lena.mendez95@trailpost.example,Club,Richmond,VA,2022-11-05,Bronze,['Jo Kim']
+C0096,Rosa,Nguyen,rosa.nguyen96@trailpost.example,Consumer,Denver,CO,2023-08-15,Silver,"[""D'Arcy Lane"", 'Lena Ford']"
+C0097,Eli,Nguyen,eli.nguyen97@mail.example,Consumer,Asheville,NC,2023-12-15,Bronze,['Marcus Bell']
+C0098,Zane,Brooks,zane.brooks98@mail.example,Club,Albuquerque,NM,2023-03-18,Bronze,"[""D'Arcy Lane"", 'Marcus Bell']"
+ c0099,Marco,Brooks,marco.brooks99@trailpost.example,Consumer,Atlanta,GA,2025-03-20,Gold,['Ana Ruiz']
+C0100,Hana,Jensen,HANA.JENSEN100@INBOX.EXAMPLE,Consumer,Portland,OR,2025-03-06,Bronze,"['Lena Ford', 'Tomas Vega']"
+C0101,Sam,Baker,sam.baker101@inbox.example,Club,Tacoma,WA,2019-11-23,Bronze,"[""D'Arcy Lane""]"
+C0102,Zane,Brooks,zane.brooks102@trailpost.example,Consumer,Boise,ID,2023-11-17,Silver,"[""O'Neil Park""]"
+C0103,Marco,Xu,marco.xu103@trailpost.example,Consumer,Minneapolis,MN,2021-04-09,Bronze,['Priya Shah']
+C0104,Dana,Moore,dana.moore104@trailpost.example,Club,Kansas City,MO,2019-10-17,Gold,
+C0105,Tara,Abbott,tara.abbott105@mail.example,Club,Tacoma,WA,2021-08-30,Bronze,[]
+C0106,Zane,Zimmer,zane.zimmer106@inbox.example,Consumer,Burlington,VT,2018-08-28,Gold,"[""D'Arcy Lane"", 'Tomas Vega']"
+C0107,Lena,Flores,lena.flores107@inbox.example,Consumer,Boulder,CO,2019-01-07,Gold,"['Marcus Bell', 'Priya Shah']"
+C0108,Olive,Ellis,olive.ellis108@corp.example,Corporate,Seattle,WA,2021-11-09,Bronze,"[""D'Arcy Lane"", 'Marcus Bell']"
+C0109,Elena,Evans,elena.evans109@trailpost.example,Consumer,Tacoma,WA,2021-09-22,Bronze,['Tomas Vega']
+C0110,Caleb,Fischer,caleb.fischer110@inbox.example,Consumer,Salt Lake City,UT,2018-09-24,,
+C0111,Felix,Chen,felix.chen111@mail.example,Club,Atlanta,GA,2022-01-27,Gold,['Ana Ruiz']
+C0112,Quinn,Brooks,quinn.brooks112@inbox.example,Consumer,Philadelphia,PA,2024-12-20,Gold,"['Marcus Bell', 'Tomas Vega']"
+C0113,Maya,Grant,maya.grant113@trailpost.example,Consumer,Philadelphia,PA,2018-01-29,Bronze,['Marcus Bell']
+C0114,Noah,Chen,noah.chen114@mail.example,Consumer,Richmond,VA,2019-11-25,Gold,['Jo Kim']
+C0115,Jonah,Ellis,jonah.ellis115@trailpost.example,Consumer,Denver,CO,2023-08-30,Gold,"[""O'Neil Park"", 'Priya Shah']"
+C0116,Marco,Grant,marco.grant116@mail.example,Consumer,Boulder,CO,2018-10-08,,['Lena Ford']
+C0117,Olive,Chen,olive.chen117@corp.example,Corporate,Phoenix,AZ,2021-10-15,Bronze,"[""O'Neil Park""]"
+C0118,Eli,Ueda,eli.ueda118@inbox.example,Consumer,Eugene,OR,2018-03-07,Bronze,['Priya Shah']
+C0119,Bianca,Adams,bianca.adams119@mail.example,Consumer ,Boulder,CO,2018-06-13,Gold,['Priya Shah']
+C0120,Ana,Rivera,ana.rivera120@inbox.example,Consumer,Asheville,NC,2021-08-13,Silver,"[""D'Arcy Lane"", 'Lena Ford']"
+C0018,Victor,Quintero,victor.quintero18@mail.example,Consumer,Minneapolis,MN,2023-09-05,,['Jo Kim']
+C0121,Hana,Zimmer,hana.zimmer121@mail.example,Club,Portland,OR,2021-09-04,Silver,[]
+C0122,Ben,Holt,ben.holt122@trailpost.example,Consumer,Salt Lake City,UT,2025-05-14,,['Jo Kim']
+C0123,Zane,Walsh,zane.walsh123@trailpost.example,Consumer,Philadelphia,PA,2018-02-10,Silver,['Ana Ruiz']
+C0124,Tara,Quintero,tara.quintero124@trailpost.example,Consumer,Richmond,VA,2019-08-19,Gold,['Ana Ruiz']
+C0125,Sam,Silva,sam.silva125@trailpost.example,Consumer,Eugene,OR,2020-11-26,Silver,['Jo Kim']
+C0126,Grace,Diaz,grace.diaz126@inbox.example,Club,Boston,MA,2018-03-27,Bronze,
+C0127,Gabe,Rivera,gabe.rivera127@trailpost.example,Consumer,Seattle,WA,2018-08-06,Silver,"['Ana Ruiz', 'Lena Ford']"
+C0128,Zane,Jordan,zane.jordan128@inbox.example,Consumer,Kansas City,MO,2022-06-10,,['Priya Shah']
+C0129,Jade,Zimmer,jade.zimmer129@corp.example,Corporate,Philadelphia,PA,2018-10-03,Silver,
+C0130,Bianca,Kim,bianca.kim130@mail.example,Consumer,Boise,ID,2020-12-22,Silver,"['Jo Kim', 'Lena Ford']"
+C0131,Rosa,Jensen,ROSA.JENSEN131@MAIL.EXAMPLE,Consumer,Burlington,VT,2022-10-23,Bronze,
+C0132,Lena,Ibarra,lena.ibarra132@trailpost.example,Consumer,Kansas City,MO,2019-11-08,,
+C0133,Quinn,Baker,quinn.baker133@mail.example,Consumer,Eugene,OR,2023-11-23,Bronze,['Tomas Vega']
+C0134,Ana,Ito,ana.ito134@trailpost.example,Club,Eugene,OR,2018-04-03,Bronze,['Lena Ford']
+C0135,Quinn,Khan,quinn.khan135@inbox.example,Consumer,Kansas City,MO,2023-10-22,Bronze,"[""O'Neil Park""]"
+C0136,Liam,Novak,liam.novak136@inbox.example,Consumer,Burlington,VT,2024-05-21,Bronze,['Priya Shah']
+C0137,Lena,Nguyen,lena.nguyen137@trailpost.example,Consumer,Philadelphia,PA,2024-02-24,Silver,['Tomas Vega']
+C0138,Zane,Adams,zane.adams138@inbox.example,Consumer,Kansas City,MO,2021-12-12,,[]
+C0139,Eli,Larsen,eli.larsen139@trailpost.example,Consumer,Salt Lake City,UT,2020-07-12,Bronze,
+C0140,Dana,Evans,dana.evans140@inbox.example,Consumer,Boise,ID,2023-08-11,Bronze,"[""D'Arcy Lane"", 'Marcus Bell']"
+C0141,Rosa,Xu,rosa.xu141@mail.example,Consumer,Burlington,VT,2023-01-28,Bronze,"[""D'Arcy Lane""]"
+C0142,Tara,Abbott,tara.abbott142@mail.example,Club,Atlanta,GA,2021-10-21,Silver,"['Lena Ford', ""O'Neil Park""]"
+C0143,Ana,Moore,ana.moore143@trailpost.example,Consumer,Kansas City,MO,2021-12-24,Bronze,
+C0144,Iris,Rivera,iris.rivera144@inbox.example,Consumer,Philadelphia,PA,2022-07-02,Bronze,['Tomas Vega']
+C0145,Dana,Xu,dana.xu145@trailpost.example,Consumer,Minneapolis,MN,2024-06-09,Silver,[]
+ c0146,Jade,Xu,jade.xu146@mail.example,Club,Atlanta,GA,2024-05-23,Silver,['Lena Ford']
+C0147,Marco,Hughes,marco.hughes147@trailpost.example,Consumer,Seattle,WA,2020-03-27,Bronze,['Priya Shah']
+C0148,Yara,Evans,yara.evans148@trailpost.example,Consumer ,Burlington,VT,2019-06-20,Gold,['Tomas Vega']
+C0149,Kofi,Ito,kofi.ito149@corp.example,Corporate,Denver,CO,2023-03-12,,"[""O'Neil Park""]"
+C0150,Xavier,Jensen,xavier.jensen150@mail.example,Consumer,Boston,MA,2021-04-02,Silver,['Lena Ford']
+C0151,Eli,Grant,eli.grant151@trailpost.example,Consumer,Eugene,OR,2023-10-24,Bronze,"[""O'Neil Park""]"
+C0152,Ben,Ito,ben.ito152@inbox.example,Consumer,Boulder,CO,2021-10-28,Silver,[]
+C0153,Liam,Garcia,liam.garcia153@trailpost.example,Consumer,Asheville,NC,2019-11-01,Gold,['Marcus Bell']
+C0154,Zane,Novak,zane.novak154@mail.example,Consumer,Denver,CO,2023-08-02,,"['Ana Ruiz', 'Lena Ford']"
+C0155,Fiona,Duarte,fiona.duarte155@mail.example,Consumer,Eugene,OR,2018-01-18,Bronze,
+C0156,Iris,Xu,iris.xu156@mail.example,Consumer,Denver,CO,2023-08-24,Silver,"['Jo Kim', 'Priya Shah']"
+C0157,Olive,Castillo,olive.castillo157@mail.example,Consumer,Asheville,NC,2022-03-21,Silver,['Ana Ruiz']
+C0158,Wren,Hughes,wren.hughes158@mail.example,Consumer,Albuquerque,NM,2020-08-21,Bronze,['Jo Kim']
+C0159,Kofi,Jensen,kofi.jensen159@inbox.example,Consumer,Tacoma,WA,2023-05-26,,"['Jo Kim', ""O'Neil Park""]"
+C0160,Jade,Mendez,jade.mendez160@mail.example,Club,Austin,TX,2019-12-21,Gold,
+C0161,Grace,Jordan,grace.jordan161@inbox.example,Consumer,Philadelphia,PA,2018-03-26,,"['Lena Ford', 'Tomas Vega']"
+C0162,Marco,Rivera,MARCO.RIVERA162@MAIL.EXAMPLE,Consumer,Minneapolis,MN,2019-02-10,Gold,"[""D'Arcy Lane""]"
+C0163,Dev,Quintero,dev.quintero163@mail.example,Consumer,Atlanta,GA,2021-09-02,,[]
+C0164,Fiona,Jensen,fiona.jensen164@inbox.example,Consumer,Richmond,VA,2023-09-20,,[]
+C0165,Noah,Grant,noah.grant165@inbox.example,Club,Tacoma,WA,2024-06-08,Bronze,['Tomas Vega']
+C0166,Jonah,Fischer,jonah.fischer166@trailpost.example,Consumer,Atlanta,GA,2021-10-08,Bronze,"['Marcus Bell', ""O'Neil Park""]"
+C0167,Olive,Garcia,olive.garcia167@trailpost.example,Consumer,Portland,OR,2020-02-20,,"[""O'Neil Park"", 'Priya Shah']"
+C0168,Victor,Walsh,victor.walsh168@mail.example,Consumer,Austin,TX,2022-01-24,Bronze,[]
+C0169,Pablo,Moore,pablo.moore169@inbox.example,Consumer,Austin,TX,2022-06-26,Bronze,[]
+C0170,Tara,Vargas,tara.vargas170@trailpost.example,Club,Atlanta,GA,2018-03-19,Gold,['Tomas Vega']
+C0171,Hugo,Evans,hugo.evans171@inbox.example,Consumer,Philadelphia,PA,2024-12-08,,[]
+C0172,Lena,Duarte,lena.duarte172@inbox.example,Consumer,Madison,WI,2020-11-04,Gold,"[""O'Neil Park""]"
+C0173,Olive,Vargas,olive.vargas173@trailpost.example,Consumer,Salt Lake City,UT,2023-10-30,Bronze,"['Ana Ruiz', ""D'Arcy Lane""]"
+C0174,Ana,Xu,ana.xu174@trailpost.example,Club,Kansas City,MO,2023-03-16,Silver,"['Jo Kim', 'Marcus Bell']"
+C0175,Pablo,Lopez,pablo.lopez175@mail.example,Consumer,Asheville,NC,2023-12-17,,"['Jo Kim', 'Tomas Vega']"
+C0176,Zane,Grant,zane.grant176@trailpost.example,Consumer,Salt Lake City,UT,2018-10-01,Bronze,['Lena Ford']
+C0177,Hana,Kim,hana.kim177@mail.example,Consumer ,Philadelphia,PA,2022-06-25,Gold,['Jo Kim']
+C0178,Amir,Ibarra,amir.ibarra178@inbox.example,Consumer,Phoenix,AZ,2020-07-08,,['Tomas Vega']
+C0179,Marco,Turner,marco.turner179@trailpost.example,Consumer,Burlington,VT,2019-06-10,Silver,"[""O'Neil Park""]"
+C0180,Caleb,Evans,caleb.evans180@trailpost.example,Consumer,Burlington,VT,2022-10-30,,['Ana Ruiz']
+C0181,Olive,Jensen,olive.jensen181@mail.example,Consumer,Philadelphia,PA,2019-11-27,Gold,"['Jo Kim', 'Tomas Vega']"
+C0182,Ana,Lopez,ana.lopez182@inbox.example,Consumer,Madison,WI,2020-09-13,Bronze,
+C0183,Gabe,Vargas,gabe.vargas183@trailpost.example,Consumer,Atlanta,GA,2019-12-20,Bronze,[]
+C0184,Sam,Khan,sam.khan184@corp.example,Corporate,Seattle,WA,2019-03-29,,"['Lena Ford', 'Priya Shah']"
+C0185,Nadia,Jordan,nadia.jordan185@inbox.example,Consumer,Richmond,VA,2024-06-23,,['Ana Ruiz']
+C0186,Elena,Grant,elena.grant186@inbox.example,Club,Seattle,WA,2024-11-15,Silver,['Tomas Vega']
+C0187,Iris,Turner,iris.turner187@inbox.example,Consumer,Denver,CO,2018-12-28,Silver,[]
+C0188,Victor,Young,victor.young188@inbox.example,Consumer,Eugene,OR,2018-01-18,Silver,['Jo Kim']
+C0189,Olive,Adams,olive.adams189@corp.example,Corporate,Tacoma,WA,2020-01-19,Bronze,"['Ana Ruiz', 'Jo Kim']"
+C0190,Eli,O'Brien,eli.obrien190@mail.example,Consumer,Philadelphia,PA,2022-05-10,Bronze,['Ana Ruiz']
+C0191,Olive,Ito,olive.ito191@inbox.example,Consumer,Seattle,WA,2019-03-12,Gold,"[""O'Neil Park""]"
+C0192,Maya,Ibarra,maya.ibarra192@inbox.example,Club,Madison,WI,2023-02-05,Bronze,"[""D'Arcy Lane"", 'Marcus Bell']"
+ c0193,Hugo,Flores,HUGO.FLORES193@INBOX.EXAMPLE,Club,Phoenix,AZ,2020-04-20,Bronze,['Priya Shah']
+C0194,Jonah,Baker,jonah.baker194@corp.example,Corporate,Seattle,WA,2025-03-11,,"[""D'Arcy Lane""]"
+C0195,Wren,Lopez,wren.lopez195@mail.example,Consumer,Salt Lake City,UT,2021-04-20,,['Marcus Bell']
+C0196,Dana,Evans,dana.evans196@mail.example,Club,Boston,MA,2022-02-26,Gold,['Marcus Bell']
+C0197,Wren,Adams,wren.adams197@trailpost.example,Club,Salt Lake City,UT,2023-06-04,Bronze,['Jo Kim']
+C0198,Hugo,Zimmer,hugo.zimmer198@mail.example,Consumer,Tacoma,WA,2018-04-09,Bronze,['Ana Ruiz']
+C0199,Marco,Mendez,marco.mendez199@mail.example,Consumer,Salt Lake City,UT,2018-12-11,Bronze,['Marcus Bell']
+C0200,Liam,Patel,liam.patel200@trailpost.example,Consumer,Madison,WI,2019-12-18,,"[""O'Neil Park""]"
+C0201,Hugo,Quintero,hugo.quintero201@mail.example,Consumer,Albuquerque,NM,2022-11-24,Gold,[]
+C0202,Bianca,Rivera,bianca.rivera202@inbox.example,Consumer,Albuquerque,NM,2024-08-05,Silver,['Jo Kim']
+C0203,Maya,Walsh,maya.walsh203@trailpost.example,Consumer,Tacoma,WA,2018-01-07,Silver,"['Ana Ruiz', ""O'Neil Park""]"
+C0204,Fiona,Xu,fiona.xu204@trailpost.example,Consumer,Richmond,VA,2019-06-30,Bronze,"[""O'Neil Park""]"
+C0205,Yara,Garcia,yara.garcia205@mail.example,Consumer,Philadelphia,PA,2022-11-27,Silver,['Marcus Bell']
+C0206,Nadia,Castillo,nadia.castillo206@inbox.example,Consumer ,Boulder,CO,2023-11-13,Gold,
+C0207,Felix,Chen,felix.chen207@inbox.example,Consumer,Atlanta,GA,2024-12-20,Bronze,[]
+C0208,Gabe,Kim,gabe.kim208@mail.example,Consumer,Salt Lake City,UT,2024-07-11,Bronze,['Ana Ruiz']
+C0209,Jade,Patel,jade.patel209@inbox.example,Consumer,Portland,OR,2019-04-21,Gold,['Ana Ruiz']
+C0210,Iris,Larsen,iris.larsen210@trailpost.example,Consumer,Atlanta,GA,2023-01-30,Silver,"[""D'Arcy Lane""]"
+C0211,Rosa,Quintero,rosa.quintero211@trailpost.example,Consumer,Tacoma,WA,2024-03-16,Bronze,
+C0212,Kofi,Ito,kofi.ito212@trailpost.example,Consumer,Portland,OR,2023-07-22,Bronze,['Marcus Bell']
+C0213,Pablo,Silva,pablo.silva213@inbox.example,Consumer,Boston,MA,2023-11-21,Silver,"['Marcus Bell', ""O'Neil Park""]"
+C0214,Felix,Nguyen,felix.nguyen214@mail.example,Consumer,Phoenix,AZ,2021-10-27,Gold,"[""O'Neil Park"", 'Priya Shah']"
+C0215,Noah,Novak,noah.novak215@mail.example,Consumer,Boston,MA,2018-04-16,Silver,[]
+C0216,Elena,Hughes,elena.hughes216@trailpost.example,Consumer,Richmond,VA,2019-11-04,Bronze,['Ana Ruiz']
+C0217,Xavier,Duarte,xavier.duarte217@mail.example,Club,Madison,WI,2023-02-11,Bronze,['Priya Shah']
+C0218,Fiona,Evans,fiona.evans218@inbox.example,Consumer,Eugene,OR,2019-09-05,Bronze,"[""O'Neil Park""]"
+C0219,Elena,Nguyen,elena.nguyen219@inbox.example,Consumer,Madison,WI,2021-04-28,Silver,['Tomas Vega']
+C0220,Nadia,Quintero,nadia.quintero220@mail.example,Consumer,Boulder,CO,2021-03-10,Gold,['Ana Ruiz']
+C0221,Yara,Duarte,yara.duarte221@trailpost.example,Consumer,Richmond,VA,2024-01-25,Bronze,[]
+C0222,Felix,Walsh,felix.walsh222@inbox.example,Consumer,Tacoma,WA,2024-05-13,Bronze,
+C0223,Carla,Xu,carla.xu223@trailpost.example,Consumer,Boise,ID,2020-05-05,Bronze,"['Ana Ruiz', 'Jo Kim']"
+C0224,Dev,Brooks,DEV.BROOKS224@INBOX.EXAMPLE,Consumer,Richmond,VA,2020-10-25,Silver,['Marcus Bell']
+C0225,Nadia,Adams,nadia.adams225@trailpost.example,Consumer,Denver,CO,2022-01-04,Bronze,['Priya Shah']
+C0226,Quinn,Quintero,quinn.quintero226@mail.example,Club,Minneapolis,MN,2019-02-09,Silver,[]
+C0227,Rosa,Garcia,rosa.garcia227@inbox.example,Consumer,Minneapolis,MN,2024-04-25,,['Jo Kim']
+C0228,Eli,Garcia,eli.garcia228@mail.example,Consumer,Tacoma,WA,2024-02-11,Gold,"[""D'Arcy Lane""]"
+C0229,Nadia,Nguyen,nadia.nguyen229@inbox.example,Consumer,Phoenix,AZ,2021-05-06,Bronze,"['Marcus Bell', 'Priya Shah']"
+C0230,Amir,Ibarra,amir.ibarra230@mail.example,Consumer,Eugene,OR,2023-02-04,Gold,"['Jo Kim', 'Marcus Bell']"
+C0231,Tara,Vargas,tara.vargas231@corp.example,Corporate,Seattle,WA,2018-05-27,Gold,"[""D'Arcy Lane""]"
+C0232,Tara,Garcia,tara.garcia232@trailpost.example,Consumer,Minneapolis,MN,2022-01-07,Silver,['Marcus Bell']
+C0233,Liam,Brooks,liam.brooks233@inbox.example,Consumer,Kansas City,MO,2021-04-10,Gold,"[""D'Arcy Lane""]"
+C0234,Carla,Zimmer,carla.zimmer234@trailpost.example,Consumer,Philadelphia,PA,2023-06-09,Silver,
+C0235,Bianca,Mendez,bianca.mendez235@mail.example,Club ,Denver,CO,2020-09-05,Silver,['Priya Shah']
+C0236,Victor,Novak,victor.novak236@trailpost.example,Consumer,Minneapolis,MN,2019-06-28,Bronze,"['Lena Ford', 'Priya Shah']"
+C0237,Tara,Silva,tara.silva237@trailpost.example,Consumer,Kansas City,MO,2024-05-29,,['Priya Shah']
+C0238,Nadia,Chen,nadia.chen238@mail.example,Consumer,Denver,CO,2023-08-19,Bronze,"[""O'Neil Park""]"
+C0239,Felix,Flores,felix.flores239@trailpost.example,Consumer,Kansas City,MO,2023-07-04,Silver,['Jo Kim']
+ c0240,Felix,Holt,felix.holt240@trailpost.example,Consumer,Portland,OR,2022-04-04,Gold,[]
+C0241,Ivan,Adams,ivan.adams241@corp.example,Corporate,Madison,WI,2019-08-23,Gold,
+C0242,Eli,Moore,eli.moore242@inbox.example,Consumer,Philadelphia,PA,2019-12-17,Gold,[]
+C0243,Maya,Vargas,maya.vargas243@mail.example,Consumer,Portland,OR,2019-02-02,Bronze,"[""O'Neil Park""]"
+C0244,Marco,Patel,marco.patel244@trailpost.example,Consumer,Madison,WI,2021-10-01,,['Jo Kim']
+C0245,Gabe,Evans,gabe.evans245@mail.example,Consumer,Philadelphia,PA,2021-06-28,Bronze,['Lena Ford']
+C0246,Zane,Zimmer,zane.zimmer246@mail.example,Consumer,Minneapolis,MN,2018-04-20,Silver,[]
+C0247,Ivan,Grant,ivan.grant247@corp.example,Corporate,Salt Lake City,UT,2021-05-06,Bronze,[]
+C0248,Ana,O'Brien,ana.obrien248@trailpost.example,Consumer,Eugene,OR,2022-07-14,Bronze,[]
+C0249,Olive,Holt,olive.holt249@trailpost.example,Consumer,Burlington,VT,2020-05-05,Gold,"[""D'Arcy Lane""]"
+C0250,Xavier,Khan,xavier.khan250@mail.example,Club,Boston,MA,2021-12-09,Bronze,"[""D'Arcy Lane""]"
+C0251,Liam,Adams,liam.adams251@mail.example,Consumer,Minneapolis,MN,2018-11-06,Bronze,[]
+C0252,Ben,Patel,ben.patel252@inbox.example,Consumer,Richmond,VA,2018-09-21,Silver,
+C0253,Marco,Grant,marco.grant253@inbox.example,Consumer,Portland,OR,2022-01-17,Silver,['Priya Shah']
+C0254,Wren,Vargas,wren.vargas254@inbox.example,Consumer,Salt Lake City,UT,2021-05-19,Silver,"[""D'Arcy Lane""]"
+C0255,Sam,Rivera,SAM.RIVERA255@MAIL.EXAMPLE,Club,Boise,ID,2022-09-25,Gold,
+C0256,Victor,Castillo,victor.castillo256@trailpost.example,Consumer,Salt Lake City,UT,2019-11-13,,"[""O'Neil Park""]"
+C0257,Rosa,Abbott,rosa.abbott257@mail.example,Club,Philadelphia,PA,2018-07-19,Gold,"['Ana Ruiz', 'Jo Kim']"
+C0258,Jonah,Castillo,jonah.castillo258@inbox.example,Consumer,Boulder,CO,2023-05-01,Bronze,"['Lena Ford', 'Priya Shah']"
+C0259,Ivan,Khan,ivan.khan259@trailpost.example,Consumer,Asheville,NC,2020-02-19,Bronze,['Marcus Bell']
+C0203,Maya,Walsh,maya.walsh203@trailpost.example,Consumer,Tacoma,WA,2018-01-07,Silver,"['Ana Ruiz', ""O'Neil Park""]"
+C0260,Xavier,Duarte,xavier.duarte260@inbox.example,Consumer,Boulder,CO,2024-04-23,Silver,['Marcus Bell']
+C0261,Nadia,Kim,nadia.kim261@mail.example,Consumer,Seattle,WA,2023-01-09,Silver,"[""O'Neil Park"", 'Tomas Vega']"
+C0262,Kofi,Fischer,kofi.fischer262@trailpost.example,Consumer,Boulder,CO,2023-01-01,Bronze,['Tomas Vega']
+C0263,Amir,Zimmer,amir.zimmer263@trailpost.example,Consumer,Eugene,OR,2018-06-16,Silver,[]
+C0264,Maya,Novak,maya.novak264@inbox.example,Consumer ,Atlanta,GA,2018-08-25,Bronze,['Ana Ruiz']
+C0265,Sam,Diaz,sam.diaz265@trailpost.example,Consumer,Madison,WI,2023-12-04,,[]
+C0266,Bianca,Zimmer,bianca.zimmer266@mail.example,Consumer,Boise,ID,2022-10-04,Bronze,"[""D'Arcy Lane""]"
+C0267,Grace,Walsh,grace.walsh267@mail.example,Consumer,Minneapolis,MN,2018-06-17,Bronze,"['Jo Kim', 'Lena Ford']"
+C0268,Olive,Fischer,olive.fischer268@trailpost.example,Consumer,Asheville,NC,2024-12-22,Silver,"['Ana Ruiz', 'Tomas Vega']"
+C0269,Quinn,Brooks,quinn.brooks269@trailpost.example,Club,Boise,ID,2025-05-10,Bronze,['Priya Shah']
+C0270,Hana,Hughes,hana.hughes270@trailpost.example,Club,Seattle,WA,2020-10-26,Bronze,"[""D'Arcy Lane""]"
+C0271,Nadia,Evans,nadia.evans271@trailpost.example,Consumer,Minneapolis,MN,2022-07-12,Bronze,['Tomas Vega']
+C0272,Iris,Castillo,iris.castillo272@inbox.example,Consumer,Denver,CO,2022-04-13,Bronze,"[""D'Arcy Lane""]"
+C0273,Rosa,Hughes,rosa.hughes273@mail.example,Consumer,Phoenix,AZ,2022-01-08,Bronze,['Ana Ruiz']
+C0274,Ivan,Fischer,ivan.fischer274@trailpost.example,Consumer,Minneapolis,MN,2020-04-30,Bronze,['Jo Kim']
+C0275,Wren,Moore,wren.moore275@mail.example,Consumer,Tacoma,WA,2021-10-13,Bronze,[]
+C0276,Ivan,Flores,ivan.flores276@inbox.example,Consumer,Boston,MA,2025-06-28,Bronze,"[""D'Arcy Lane"", ""O'Neil Park""]"
+C0277,Quinn,Diaz,quinn.diaz277@mail.example,Club,Seattle,WA,2022-12-20,Bronze,['Ana Ruiz']
+C0278,Carla,Zimmer,carla.zimmer278@inbox.example,Consumer,Kansas City,MO,2023-04-02,Silver,"['Lena Ford', 'Priya Shah']"
+C0279,Jonah,Walsh,jonah.walsh279@inbox.example,Consumer,Richmond,VA,2024-12-28,Silver,['Lena Ford']
+C0280,Felix,Khan,felix.khan280@inbox.example,Club,Boston,MA,2019-08-14,Gold,
+C0281,Dev,Ellis,dev.ellis281@mail.example,Consumer,Boise,ID,2024-10-01,Bronze,"['Jo Kim', 'Priya Shah']"
+C0282,Nadia,Holt,nadia.holt282@trailpost.example,Consumer,Madison,WI,2022-11-26,Silver,['Tomas Vega']
+C0283,Elena,Xu,elena.xu283@mail.example,Consumer,Richmond,VA,2023-06-28,Bronze,"['Ana Ruiz', 'Marcus Bell']"
+C0284,Liam,Zimmer,liam.zimmer284@inbox.example,Consumer,Madison,WI,2024-02-27,,[]
+C0285,Olive,Fischer,olive.fischer285@corp.example,Corporate,Albuquerque,NM,2022-09-30,Bronze,['Tomas Vega']
+C0286,Pablo,Castillo,PABLO.CASTILLO286@MAIL.EXAMPLE,Consumer,Burlington,VT,2020-01-21,Bronze,"['Marcus Bell', 'Priya Shah']"
+ c0287,Pablo,Fischer,pablo.fischer287@trailpost.example,Club,Salt Lake City,UT,2022-11-19,Silver,['Marcus Bell']
+C0288,Dana,Nguyen,dana.nguyen288@trailpost.example,Consumer,Portland,OR,2024-12-18,Bronze,"['Ana Ruiz', 'Lena Ford']"
+C0289,Tara,Grant,tara.grant289@inbox.example,Club,Austin,TX,2021-06-15,,[]
+C0290,Yara,Duarte,yara.duarte290@mail.example,Consumer,Albuquerque,NM,2023-08-25,Gold,['Ana Ruiz']
+C0291,Uma,Rivera,uma.rivera291@mail.example,Consumer,Seattle,WA,2018-06-10,Bronze,['Jo Kim']
+C0292,Kofi,Larsen,kofi.larsen292@inbox.example,Club,Philadelphia,PA,2021-07-24,Silver,[]
+C0293,Nadia,Rivera,nadia.rivera293@trailpost.example,Consumer ,Denver,CO,2024-07-12,Bronze,"[""O'Neil Park""]"
+C0294,Jonah,Ibarra,jonah.ibarra294@mail.example,Consumer,Salt Lake City,UT,2023-08-24,,['Jo Kim']
+C0295,Tara,Baker,tara.baker295@inbox.example,Consumer,Boston,MA,2020-07-15,Silver,"['Marcus Bell', 'Tomas Vega']"
+C0296,Felix,Lopez,felix.lopez296@inbox.example,Consumer,Philadelphia,PA,2022-11-23,,[]
+C0297,Hugo,Grant,hugo.grant297@inbox.example,Consumer,Tacoma,WA,2025-01-25,Bronze,['Marcus Bell']
+C0298,Wren,Vargas,wren.vargas298@inbox.example,Consumer,Austin,TX,2019-09-05,Silver,"[""O'Neil Park""]"
+C0299,Grace,Ueda,grace.ueda299@inbox.example,Consumer,Portland,OR,2022-08-13,Bronze,
+C0300,Hana,Abbott,hana.abbott300@trailpost.example,Club,Seattle,WA,2018-05-28,,['Jo Kim']
+C0301,Iris,Abbott,iris.abbott301@mail.example,Consumer,Seattle,WA,2018-06-18,Silver,
+C0302,Ana,Larsen,ana.larsen302@trailpost.example,Club,Salt Lake City,UT,2020-03-09,Gold,['Jo Kim']
+C0303,Caleb,Evans,caleb.evans303@inbox.example,Consumer,Madison,WI,2019-07-28,Bronze,['Tomas Vega']
+C0304,Hana,Lopez,hana.lopez304@inbox.example,Consumer,Kansas City,MO,2018-10-28,Bronze,['Jo Kim']
+C0305,Noah,Baker,noah.baker305@trailpost.example,Consumer,Albuquerque,NM,2024-12-30,Silver,"[""O'Neil Park"", 'Priya Shah']"
+C0306,Noah,Chen,noah.chen306@inbox.example,Consumer,Phoenix,AZ,2021-05-31,Silver,['Priya Shah']
+C0307,Victor,Ellis,victor.ellis307@corp.example,Corporate,Eugene,OR,2020-08-21,Gold,"['Ana Ruiz', 'Tomas Vega']"
+C0308,Maya,Diaz,maya.diaz308@mail.example,Consumer,Philadelphia,PA,2025-06-01,Bronze,['Lena Ford']
+C0309,Quinn,Moore,quinn.moore309@inbox.example,Consumer,Seattle,WA,2020-08-22,Bronze,['Jo Kim']
+C0310,Wren,Ito,wren.ito310@inbox.example,Consumer,Boulder,CO,2019-08-07,Gold,['Marcus Bell']
+C0311,Quinn,Baker,quinn.baker311@trailpost.example,Consumer,Madison,WI,2021-09-20,Bronze,['Lena Ford']
+C0312,Elena,Ueda,elena.ueda312@corp.example,Corporate,Minneapolis,MN,2019-09-04,Gold,"[""D'Arcy Lane""]"
+C0313,Bianca,Grant,bianca.grant313@trailpost.example,Consumer,Phoenix,AZ,2023-01-02,Silver,"[""D'Arcy Lane"", ""O'Neil Park""]"
+C0314,Dana,Garcia,dana.garcia314@inbox.example,Consumer,Seattle,WA,2024-05-10,Bronze,['Ana Ruiz']
+C0315,Bianca,Jensen,bianca.jensen315@corp.example,Corporate,Seattle,WA,2018-06-13,Gold,[]
+C0316,Amir,Brooks,amir.brooks316@trailpost.example,Consumer,Eugene,OR,2025-04-11,Silver,['Jo Kim']
+C0317,Kira,Diaz,KIRA.DIAZ317@INBOX.EXAMPLE,Club,Phoenix,AZ,2022-04-13,Silver,['Tomas Vega']
+C0318,Uma,O'Brien,uma.obrien318@trailpost.example,Club,Richmond,VA,2022-09-22,Silver,['Lena Ford']
+C0319,Marco,Turner,marco.turner319@trailpost.example,Club,Salt Lake City,UT,2022-02-10,,"[""D'Arcy Lane""]"
+C0320,Maya,Lopez,maya.lopez320@trailpost.example,Consumer,Richmond,VA,2018-03-24,Bronze,
+C0321,Yara,Adams,yara.adams321@mail.example,Consumer,Boulder,CO,2025-02-20,Silver,['Ana Ruiz']
+C0322,Nadia,Garcia,nadia.garcia322@trailpost.example,Consumer ,Atlanta,GA,2021-07-23,Bronze,[]
+C0323,Quinn,Quintero,quinn.quintero323@mail.example,Consumer,Salt Lake City,UT,2021-12-05,Bronze,[]
+C0324,Quinn,Kim,quinn.kim324@inbox.example,Club,Burlington,VT,2024-04-14,,['Marcus Bell']
+C0325,Bianca,Hughes,bianca.hughes325@trailpost.example,Consumer,Madison,WI,2018-12-09,,[]
+C0326,Rosa,Silva,rosa.silva326@inbox.example,Consumer,Seattle,WA,2021-04-01,Silver,"[""D'Arcy Lane""]"
+C0327,Pablo,Quintero,pablo.quintero327@inbox.example,Consumer,Boston,MA,2024-07-28,Silver,['Ana Ruiz']
+C0328,Tara,Nguyen,tara.nguyen328@mail.example,Club,Albuquerque,NM,2021-05-10,Bronze,['Ana Ruiz']
+C0310,Wren,Ito,wren.ito310@inbox.example,Consumer,Boulder,CO,2019-08-07,Gold,['Marcus Bell']
+C0329,Fiona,Diaz,fiona.diaz329@inbox.example,Consumer,Madison,WI,2020-09-12,Silver,['Jo Kim']
+C0330,Xavier,Mendez,xavier.mendez330@inbox.example,Consumer,Philadelphia,PA,2023-05-12,Gold,[]
+C0331,Eli,Ellis,eli.ellis331@inbox.example,Consumer,Burlington,VT,2022-09-03,Silver,
+C0332,Kofi,Zimmer,kofi.zimmer332@trailpost.example,Consumer,Tacoma,WA,2023-01-24,Gold,"[""O'Neil Park""]"
+C0333,Gabe,Lopez,gabe.lopez333@inbox.example,Consumer,Burlington,VT,2023-09-29,Bronze,['Tomas Vega']
+ c0334,Ivan,Khan,ivan.khan334@trailpost.example,Consumer,Atlanta,GA,2021-11-20,Bronze,"[""O'Neil Park""]"
+C0335,Fiona,Ueda,fiona.ueda335@mail.example,Consumer,Richmond,VA,2020-08-06,Bronze,[]
+C0336,Yara,Larsen,yara.larsen336@mail.example,Consumer,Boise,ID,2019-02-10,Bronze,"['Ana Ruiz', 'Priya Shah']"
+C0337,Olive,Zimmer,olive.zimmer337@mail.example,Consumer,Boston,MA,2024-10-04,Silver,"['Lena Ford', 'Tomas Vega']"
+C0338,Sam,Ibarra,sam.ibarra338@trailpost.example,Consumer,Madison,WI,2025-02-18,Gold,['Priya Shah']
+C0339,Ben,Chen,ben.chen339@inbox.example,Consumer,Phoenix,AZ,2025-01-12,Silver,['Jo Kim']
+C0340,Hugo,Brooks,hugo.brooks340@inbox.example,Consumer,Albuquerque,NM,2025-04-28,Bronze,"['Lena Ford', 'Tomas Vega']"
+C0341,Felix,Vargas,felix.vargas341@corp.example,Corporate,Phoenix,AZ,2021-03-27,Bronze,
+C0342,Jonah,Flores,jonah.flores342@mail.example,Consumer,Seattle,WA,2021-11-03,Silver,['Tomas Vega']
+C0343,Yara,Garcia,yara.garcia343@inbox.example,Consumer,Seattle,WA,2018-02-27,Silver,"['Ana Ruiz', 'Priya Shah']"
+C0344,Grace,Jensen,grace.jensen344@inbox.example,Consumer,Philadelphia,PA,2023-06-30,Bronze,['Priya Shah']
+C0345,Grace,Young,grace.young345@mail.example,Consumer,Albuquerque,NM,2021-08-17,Bronze,"['Ana Ruiz', 'Jo Kim']"
+C0346,Wren,Moore,wren.moore346@mail.example,Consumer,Minneapolis,MN,2023-06-19,Silver,['Ana Ruiz']
+C0347,Gabe,Ellis,gabe.ellis347@inbox.example,Consumer,Burlington,VT,2020-05-03,Gold,['Jo Kim']
+C0348,Olive,Jensen,OLIVE.JENSEN348@INBOX.EXAMPLE,Consumer,Boise,ID,2021-04-27,Silver,[]
+C0349,Marco,Vargas,marco.vargas349@mail.example,Consumer,Boston,MA,2021-08-12,Bronze,"[""D'Arcy Lane"", ""O'Neil Park""]"
+C0350,Victor,Rivera,victor.rivera350@trailpost.example,Consumer,Portland,OR,2020-05-16,,"[""O'Neil Park""]"
+C0351,Tara,Jensen,tara.jensen351@mail.example,Consumer ,Seattle,WA,2018-03-04,Bronze,['Lena Ford']
+C0352,Grace,Hughes,grace.hughes352@trailpost.example,Consumer,Asheville,NC,2024-08-07,,['Lena Ford']
+C0353,Gabe,Lopez,gabe.lopez353@trailpost.example,Consumer,Atlanta,GA,2022-10-20,Silver,['Lena Ford']
+C0354,Dana,Holt,dana.holt354@trailpost.example,Consumer,Albuquerque,NM,2019-05-18,,"['Marcus Bell', ""O'Neil Park""]"
+C0355,Kofi,Mendez,kofi.mendez355@corp.example,Corporate,Boston,MA,2019-11-16,Bronze,['Tomas Vega']
+C0356,Jonah,Diaz,jonah.diaz356@trailpost.example,Consumer,Seattle,WA,2021-04-11,Bronze,
+C0357,Kofi,Grant,kofi.grant357@mail.example,Club,Boulder,CO,2025-04-23,Bronze,"['Jo Kim', 'Tomas Vega']"
+C0358,Wren,Duarte,wren.duarte358@trailpost.example,Consumer,Madison,WI,2020-03-23,Bronze,['Jo Kim']
+C0359,Nadia,Young,nadia.young359@trailpost.example,Consumer,Salt Lake City,UT,2023-03-18,Bronze,[]
+C0360,Liam,Zimmer,liam.zimmer360@mail.example,Consumer,Eugene,OR,2022-02-02,Bronze,['Lena Ford']
+C0361,Bianca,Ito,bianca.ito361@inbox.example,Consumer,Minneapolis,MN,2020-01-26,,['Ana Ruiz']
+C0362,Zane,Grant,zane.grant362@inbox.example,Club,Boulder,CO,2023-06-08,Silver,['Marcus Bell']
+C0363,Fiona,Mendez,fiona.mendez363@mail.example,Consumer,Austin,TX,2019-04-06,Bronze,['Lena Ford']
+C0364,Iris,Young,iris.young364@inbox.example,Consumer,Boise,ID,2018-06-12,Silver,[]
+C0365,Kira,Khan,kira.khan365@mail.example,Consumer,Asheville,NC,2023-10-16,Silver,[]
+C0366,Yara,Ellis,yara.ellis366@corp.example,Corporate,Atlanta,GA,2020-07-13,Bronze,"['Ana Ruiz', 'Priya Shah']"
+C0367,Victor,Nguyen,victor.nguyen367@inbox.example,Consumer,Salt Lake City,UT,2022-08-01,Silver,[]
+C0368,Felix,Zimmer,felix.zimmer368@mail.example,Consumer,Salt Lake City,UT,2021-03-23,Gold,
+C0369,Nadia,Fischer,nadia.fischer369@corp.example,Corporate,Boston,MA,2021-05-01,Gold,['Priya Shah']
+C0370,Xavier,Castillo,xavier.castillo370@mail.example,Consumer,Eugene,OR,2025-06-10,,['Marcus Bell']
+C0371,Carla,Vargas,carla.vargas371@inbox.example,Consumer,Portland,OR,2025-05-29,Silver,"['Ana Ruiz', 'Jo Kim']"
+C0372,Rosa,O'Brien,rosa.obrien372@trailpost.example,Consumer,Phoenix,AZ,2019-08-30,Gold,['Ana Ruiz']
+C0373,Ana,Ito,ana.ito373@mail.example,Consumer,Kansas City,MO,2020-09-19,Bronze,['Tomas Vega']
+C0374,Victor,Mendez,victor.mendez374@inbox.example,Consumer,Boise,ID,2019-10-11,Gold,"[""O'Neil Park""]"
+C0375,Rosa,Zimmer,rosa.zimmer375@corp.example,Corporate,Richmond,VA,2022-11-06,Bronze,"[""D'Arcy Lane""]"
+C0376,Eli,Zimmer,eli.zimmer376@trailpost.example,Consumer,Phoenix,AZ,2022-02-16,Bronze,['Priya Shah']
+C0377,Xavier,Hughes,xavier.hughes377@trailpost.example,Consumer,Boulder,CO,2018-01-14,Bronze,['Marcus Bell']
+C0378,Grace,O'Brien,grace.obrien378@mail.example,Consumer,Asheville,NC,2024-12-21,Bronze,"[""D'Arcy Lane""]"
+C0379,Iris,Lopez,IRIS.LOPEZ379@CORP.EXAMPLE,Corporate,Burlington,VT,2024-09-20,Silver,"[""D'Arcy Lane"", ""O'Neil Park""]"
+C0380,Dev,Garcia,dev.garcia380@mail.example,Consumer ,Seattle,WA,2021-05-07,Bronze,"[""O'Neil Park""]"
+ c0381,Liam,Holt,liam.holt381@trailpost.example,Consumer,Eugene,OR,2023-12-19,Silver,[]
+C0382,Noah,Xu,noah.xu382@inbox.example,Consumer,Denver,CO,2024-09-01,Bronze,['Ana Ruiz']
+C0383,Noah,Xu,noah.xu383@trailpost.example,Club,Madison,WI,2024-10-22,,"[""D'Arcy Lane""]"
+C0384,Caleb,O'Brien,caleb.obrien384@inbox.example,Consumer,Salt Lake City,UT,2024-06-23,Bronze,['Marcus Bell']
+C0385,Carla,Baker,carla.baker385@mail.example,Consumer,Boise,ID,2022-02-27,Silver,"[""D'Arcy Lane""]"
+C0386,Grace,Holt,grace.holt386@mail.example,Consumer,Seattle,WA,2020-02-13,,"[""O'Neil Park""]"
+C0387,Xavier,Khan,xavier.khan387@inbox.example,Consumer,Seattle,WA,2024-11-18,Bronze,['Jo Kim']
+C0388,Wren,Khan,wren.khan388@mail.example,Consumer,Boston,MA,2021-07-17,Silver,"[""O'Neil Park""]"
+C0389,Maya,Vargas,maya.vargas389@trailpost.example,Consumer,Tacoma,WA,2022-10-26,,['Jo Kim']
+C0390,Wren,Young,wren.young390@mail.example,Consumer,Salt Lake City,UT,2019-05-30,Bronze,['Jo Kim']
+C0391,Ben,Garcia,ben.garcia391@mail.example,Consumer,Phoenix,AZ,2022-08-03,Bronze,"[""D'Arcy Lane""]"
+C0392,Grace,Kim,grace.kim392@inbox.example,Club,Tacoma,WA,2024-02-19,,"['Lena Ford', 'Tomas Vega']"
+C0393,Jonah,Silva,jonah.silva393@trailpost.example,Consumer,Austin,TX,2025-04-03,Silver,['Ana Ruiz']
+C0394,Nadia,Nguyen,nadia.nguyen394@corp.example,Corporate,Denver,CO,2022-11-20,Bronze,[]
+C0395,Felix,Mendez,felix.mendez395@inbox.example,Club,Minneapolis,MN,2022-04-22,Silver,['Marcus Bell']
+C0396,Nadia,O'Brien,nadia.obrien396@trailpost.example,Club,Eugene,OR,2023-02-09,Bronze,['Priya Shah']
+C0397,Elena,Flores,elena.flores397@mail.example,Consumer,Atlanta,GA,2019-01-18,Bronze,[]
+C0398,Caleb,O'Brien,caleb.obrien398@corp.example,Corporate,Denver,CO,2023-01-21,Bronze,['Marcus Bell']
+C0399,Iris,Zimmer,iris.zimmer399@inbox.example,Club,Eugene,OR,2023-07-22,Bronze,"['Ana Ruiz', ""D'Arcy Lane""]"
+C0400,Amir,Chen,amir.chen400@trailpost.example,Consumer,Portland,OR,2023-03-23,Silver,['Priya Shah']

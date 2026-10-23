@@ -1,0 +1,24 @@
+table 'Time Intelligence'
+	lineageTag: t3
+
+	calculationGroup
+		precedence: 1
+
+		calculationItem Current = SELECTEDMEASURE()
+
+		calculationItem YTD =
+				CALCULATE(
+				    SELECTEDMEASURE(),
+				    DATESYTD('Calendar'[Date])
+				)
+			ordinal: 1
+
+	column 'Time Calculation'
+		dataType: string
+		lineageTag: c5
+		summarizeBy: none
+		sourceColumn: Name
+		sortByColumn: Ordinal
+
+	partition 'Time Intelligence' = calculationGroup
+		mode: import

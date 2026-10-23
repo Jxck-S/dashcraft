@@ -1,0 +1,617 @@
+name: Release
+
+# Tag push `v*`: builds every artifact and attaches it to a *draft* GitHub release.
+# Manual run (workflow_dispatch): dry run — same builds, artifacts only on the workflow run.
+# Details: docs/packaging.md and docs/ci.md.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  prepare:
+    name: Prepare (version, notes, licenses, SBOM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      label: ${{ steps.version.outputs.label }}
+      publish: ${{ steps.version.outputs.publish }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      msi: ${{ steps.version.outputs.msi }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # The tag must match the version in Cargo.toml (workspace), app/package.json and, if
+      # set, tauri.conf.json; bump them in a commit before tagging.
+      - id: version
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"])')
+          npm_version=$(jq -r .version app/package.json)
+          conf_version=$(jq -r '.version // empty' app/src-tauri/tauri.conf.json)
+          if [ "$npm_version" != "$version" ]; then
+            echo "::error::app/package.json version $npm_version != Cargo.toml workspace version $version"
+            exit 1
+          fi
+          if [ -n "$conf_version" ] && [ "$conf_version" != "$version" ]; then
+            echo "::error::tauri.conf.json version $conf_version != Cargo.toml workspace version $version"
+            exit 1
+          fi
+          if [ "$EVENT" = push ]; then
+            if [ "$REF_NAME" != "v$version" ]; then
+              echo "::error::Tag $REF_NAME does not match the workspace version $version (expected v$version)."
+              exit 1
+            fi
+            label=$REF_NAME
+            publish=true
+          else
+            label="v$version-dev.${SHA::7}"
+            publish=false
+          fi
+          prerelease=false
+          if [[ "$version" == *-* ]]; then prerelease=true; fi
+          # WiX only accepts a numeric pre-release (1.2.3-4); other pre-releases ship NSIS only.
+          msi=true
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?$ ]]; then
+            msi=false
+            echo "::warning::Version $version is not MSI-compatible; the Windows build ships the NSIS installer only."
+          fi
+          {
+            echo "version=$version"
+            echo "label=$label"
+            echo "publish=$publish"
+            echo "prerelease=$prerelease"
+            echo "msi=$msi"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Release notes (CHANGELOG.md)
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          PUBLISH: ${{ steps.version.outputs.publish }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          HAS_APPLE_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
+          HAS_APPLE_NOTARIZATION: ${{ secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+          HAS_WINDOWS_SIGNING: ${{ secrets.WINDOWS_CERTIFICATE != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+        run: |
+          mkdir -p dist/meta
+          notes=dist/meta/release-notes.md
+          if ! scripts/changelog-section.sh "$VERSION" > "$notes"; then
+            if [ "$PUBLISH" = true ] && [ "$PRERELEASE" != true ]; then
+              echo "::error::CHANGELOG.md has no '## [$VERSION]' section. Move the [Unreleased] entries under it before tagging."
+              exit 1
+            fi
+            echo "::warning::No CHANGELOG.md section for $VERSION; using [Unreleased]."
+            scripts/changelog-section.sh Unreleased > "$notes"
+          fi
+          {
+            echo
+            echo "---"
+            echo
+            echo "**Downloads:** macOS \`.dmg\` (arm64 and x64), Windows \`.msi\` / \`-setup.exe\`, Linux \`.AppImage\` / \`.deb\`, and the \`dashcraft\` CLI (with its \`pbiview\` alias) as \`.tar.gz\` / \`.zip\` per platform. Every file has a \`.sha256\`; \`SHA256SUMS.txt\` lists them all. SBOMs (CycloneDX) are in \`dashcraft-*-sbom.zip\`; licenses in \`THIRD_PARTY_NOTICES.md\` and \`THIRD_PARTY_LICENSES.txt\`; trademark and non-affiliation notice in \`NOTICE\`."
+            echo
+            if [ "$HAS_APPLE_SIGNING" != true ] || [ "$HAS_APPLE_NOTARIZATION" != true ]; then
+              echo "- macOS builds are **not notarized**: on first launch, allow it under System Settings → Privacy & Security → Open Anyway, or run \`xattr -dr com.apple.quarantine /Applications/DashCraft.app\`."
+            fi
+            if [ "$HAS_WINDOWS_SIGNING" != true ]; then
+              echo "- Windows installers are **unsigned**: SmartScreen shows \"Windows protected your PC\" → More info → Run anyway."
+            fi
+          } >> "$notes"
+          cat "$notes"
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        run: |
+          rustup set profile minimal
+          rustup toolchain install || rustup show
+          rustc --version && cargo --version
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: npm ci
+        working-directory: app
+        run: npm ci
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-cyclonedx
+
+      # Regenerated here so the shipped notices always match Cargo.lock / package-lock.json.
+      - name: License inventory and full license texts
+        run: |
+          python3 scripts/license-inventory.py --texts dist/licenses/THIRD_PARTY_LICENSES.txt
+          if ! git diff --quiet -- THIRD_PARTY_NOTICES.md; then
+            echo "::warning::THIRD_PARTY_NOTICES.md was out of date; the release ships the regenerated file. Run scripts/license-inventory.py and commit the result."
+          fi
+          cp THIRD_PARTY_NOTICES.md dist/licenses/
+
+      - name: SBOMs (CycloneDX)
+        env:
+          LABEL: ${{ steps.version.outputs.label }}
+        run: |
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          export SOURCE_DATE_EPOCH
+          # One SBOM per shipped binary (dashcraft, its pbiview alias, dashcraft-app) and release target;
+          # no build/dev deps.
+          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc x86_64-unknown-linux-gnu; do
+            cargo cyclonedx --format json --describe binaries --target "$target" --target-in-filename \
+              --spec-version 1.5 --no-build-deps -q
+          done
+          mkdir -p dist/sbom
+          find crates app/src-tauri -maxdepth 2 -name '*.cdx.json' -exec mv {} dist/sbom/ \;
+          # Front end: the whole lockfile; build-only packages carry cdx:npm:package:development=true.
+          (cd app && npm sbom --sbom-format cyclonedx --sbom-type application) > dist/sbom/dashcraft-app_npm.cdx.json
+          ls -la dist/sbom
+          (cd dist/sbom && zip -q -X "../meta/dashcraft-$LABEL-sbom.zip" ./*.cdx.json)
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: licenses
+          path: dist/licenses/
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-meta
+          path: dist/meta/
+          if-no-files-found: error
+
+  create-release:
+    name: Create draft release
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Dry run
+        if: needs.prepare.outputs.publish != 'true'
+        run: |
+          echo "::notice::Manual run: no GitHub release; artifacts are attached to this workflow run."
+
+      - uses: actions/download-artifact@v8
+        if: needs.prepare.outputs.publish == 'true'
+        with:
+          name: release-meta
+          path: dist/meta
+
+      - uses: actions/download-artifact@v8
+        if: needs.prepare.outputs.publish == 'true'
+        with:
+          name: licenses
+          path: dist/licenses
+
+      # Reuse the draft for this tag on re-runs; refuse to touch a published release.
+      - name: Create or update the draft and upload notices and SBOMs
+        if: needs.prepare.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+        run: |
+          existing=$(gh api "repos/$GH_REPO/releases" --paginate \
+            --jq ".[] | select(.tag_name == \"$TAG\") | \"\(.id) \(.draft)\"" | head -n1)
+          if [ -n "$existing" ]; then
+            read -r id draft <<<"$existing"
+            if [ "$draft" != "true" ]; then
+              echo "::error::Release $TAG is already published; delete it or push a new tag."
+              exit 1
+            fi
+            gh api "repos/$GH_REPO/releases/$id" -X PATCH -F body=@dist/meta/release-notes.md > /dev/null
+          else
+            gh api "repos/$GH_REPO/releases" -X POST \
+              -f tag_name="$TAG" -f name="DashCraft $TAG" \
+              -F draft=true -F prerelease="$PRERELEASE" -F body=@dist/meta/release-notes.md > /dev/null
+          fi
+          cd dist/meta
+          for f in *.zip; do sha256sum "$f" > "$f.sha256"; done
+          gh release upload "$TAG" ./*.zip ./*.zip.sha256 ../licenses/* --clobber
+
+  bundle:
+    name: App bundle (${{ matrix.name }})
+    needs: [prepare, create-release]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Two thin macOS builds instead of one universal binary: half the download each, and
+          # the jobs run in parallel. x64 is cross-compiled on Apple Silicon.
+          - name: macOS arm64
+            os: macos-14
+            target: aarch64-apple-darwin
+            bundles: app,dmg
+          - name: macOS x64
+            os: macos-14
+            target: x86_64-apple-darwin
+            bundles: app,dmg
+          - name: Windows x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: msi,nsis
+          - name: Linux x64
+            os: ubuntu-22.04 # oldest supported glibc => widest AppImage/deb compatibility
+            target: x86_64-unknown-linux-gnu
+            bundles: appimage,deb
+    env:
+      # Secrets can't be used in step `if:`; expose only whether they are set.
+      HAS_APPLE_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
+      HAS_APPLE_NOTARIZATION: ${{ secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+      HAS_WINDOWS_SIGNING: ${{ secrets.WINDOWS_CERTIFICATE != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev libxdo-dev patchelf file xdg-utils
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          rustup set profile minimal
+          rustup toolchain install || rustup show
+          rustup target add "$TARGET"
+          rustc --version && cargo --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: bundle-${{ matrix.target }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: npm ci
+        working-directory: app
+        run: npm ci
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: licenses
+          path: dist/licenses
+
+      # Bundle the regenerated notices plus the full license texts (not in git) as resources.
+      - name: Release bundle config
+        shell: bash
+        run: |
+          cp dist/licenses/THIRD_PARTY_NOTICES.md THIRD_PARTY_NOTICES.md
+          # Resource sources are relative to app/src-tauri (forward slashes on every OS).
+          echo '{"bundle":{"resources":{"../../dist/licenses/THIRD_PARTY_LICENSES.txt":"licenses/THIRD_PARTY_LICENSES.txt"}}}' \
+            > "$RUNNER_TEMP/tauri.release.json"
+
+      # ---- Code signing: each block only runs when its secrets are configured;
+      # ---- otherwise the build is unsigned. Done after `npm ci` so install
+      # ---- scripts never see the signing material.
+
+      # The Tauri bundler imports APPLE_CERTIFICATE into a temporary keychain.
+      # The variables must be *unset* (not empty) for unsigned builds, hence
+      # exporting them conditionally instead of using a static `env:` block.
+      - name: Enable macOS code signing
+        if: runner.os == 'macOS' && env.HAS_APPLE_SIGNING == 'true'
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          {
+            echo "APPLE_CERTIFICATE<<__PBIVIEW_EOF__"
+            echo "$APPLE_CERTIFICATE"
+            echo "__PBIVIEW_EOF__"
+            echo "APPLE_CERTIFICATE_PASSWORD<<__PBIVIEW_EOF__"
+            echo "$APPLE_CERTIFICATE_PASSWORD"
+            echo "__PBIVIEW_EOF__"
+            # Optional: inferred from the certificate when not set.
+            if [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+              echo "APPLE_SIGNING_IDENTITY<<__PBIVIEW_EOF__"
+              echo "$APPLE_SIGNING_IDENTITY"
+              echo "__PBIVIEW_EOF__"
+            fi
+          } >> "$GITHUB_ENV"
+
+      - name: Enable macOS notarization
+        if: runner.os == 'macOS' && env.HAS_APPLE_SIGNING == 'true' && env.HAS_APPLE_NOTARIZATION == 'true'
+        shell: bash
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          {
+            echo "APPLE_ID=$APPLE_ID"
+            echo "APPLE_PASSWORD=$APPLE_PASSWORD"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+          } >> "$GITHUB_ENV"
+
+      # Unsigned macOS fallback: ad-hoc signature so the arm64 app isn't
+      # reported as "damaged" (users still have to approve it in Gatekeeper).
+      - name: Use ad-hoc macOS signature (no signing secrets)
+        if: runner.os == 'macOS' && env.HAS_APPLE_SIGNING != 'true'
+        shell: bash
+        run: echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+
+      - name: Enable Windows code signing
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_SIGNING == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          Remove-Item $pfx
+          # Merged into tauri.conf.json via `tauri build --config <file>`.
+          $config = @{ bundle = @{ windows = @{
+            certificateThumbprint = $cert.Thumbprint
+            digestAlgorithm = 'sha256'
+            timestampUrl = 'http://timestamp.digicert.com'
+          } } } | ConvertTo-Json -Depth 5
+          $configPath = (Join-Path $env:RUNNER_TEMP 'tauri.signing.json').Replace('\', '/')
+          Set-Content -Path $configPath -Value $config -Encoding utf8NoBOM
+          "TAURI_SIGNING_CONFIG=$configPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build bundles
+        shell: bash
+        working-directory: app
+        env:
+          TARGET: ${{ matrix.target }}
+          BUNDLES: ${{ matrix.bundles }}
+          MSI: ${{ needs.prepare.outputs.msi }}
+        run: |
+          bundles=$BUNDLES
+          if [ "$RUNNER_OS" = Windows ] && [ "$MSI" != true ]; then bundles=nsis; fi
+          configs=(--config "$RUNNER_TEMP/tauri.release.json")
+          if [ -n "${TAURI_SIGNING_CONFIG:-}" ]; then configs+=(--config "$TAURI_SIGNING_CONFIG"); fi
+          npx --no-install tauri build --ci --target "$TARGET" --bundles "$bundles" "${configs[@]}"
+
+      - name: Verify bundles
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          dir="target/$TARGET/release/bundle"
+          case "$RUNNER_OS" in
+            macOS)
+              app="$dir/macos/DashCraft.app"
+              codesign --verify --deep --strict --verbose=2 "$app"
+              codesign -dv "$app" 2>&1 | grep -E '^(Identifier|Format|Signature|TeamIdentifier|Authority)' || true
+              /usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes' "$app/Contents/Info.plist" | grep -c CFBundleTypeExtensions
+              test -f "$app/Contents/Resources/licenses/THIRD_PARTY_LICENSES.txt"
+              test -f "$app/Contents/Resources/licenses/NOTICE"
+              lipo -archs "$app/Contents/MacOS/dashcraft-app"
+              ;;
+            Linux)
+              deb=$(ls "$dir"/deb/*.deb)
+              dpkg-deb --info "$deb"
+              dpkg-deb -x "$deb" "$RUNNER_TEMP/deb"
+              find "$RUNNER_TEMP/deb" -path '*/licenses/*' -o -path '*/mime/packages/*' -o -name '*.desktop' | sort
+              test -f "$RUNNER_TEMP/deb/usr/lib/DashCraft/licenses/THIRD_PARTY_LICENSES.txt"
+              test -f "$RUNNER_TEMP/deb/usr/lib/DashCraft/licenses/NOTICE"
+              cat "$RUNNER_TEMP"/deb/usr/share/applications/*.desktop
+              grep -q '^Exec=dashcraft-app %F$' "$RUNNER_TEMP"/deb/usr/share/applications/*.desktop
+              grep -q '^MimeType=application/x-dashcraft-pbix;' "$RUNNER_TEMP"/deb/usr/share/applications/*.desktop
+              test -f "$RUNNER_TEMP/deb/usr/share/mime/packages/dashcraft.xml"
+              ;;
+            Windows)
+              ls -la "$dir"/msi "$dir"/nsis 2>/dev/null || true
+              ;;
+          esac
+
+      - name: Collect bundles
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          src="target/$TARGET/release/bundle"
+          out=dist/bundle
+          mkdir -p "$out"
+          shopt -s nullglob
+          for f in "$src"/dmg/*.dmg "$src"/msi/*.msi "$src"/nsis/*-setup.exe "$src"/appimage/*.AppImage "$src"/deb/*.deb; do
+            cp "$f" "$out/"
+          done
+          cd "$out"
+          files=(*)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No bundles found under $src"
+            exit 1
+          fi
+          for f in "${files[@]}"; do
+            if command -v sha256sum > /dev/null; then sha256sum "$f"; else shasum -a 256 "$f"; fi > "$f.sha256"
+          done
+          ls -la
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bundle-${{ matrix.target }}
+          path: dist/bundle/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload to draft release
+        if: needs.prepare.outputs.publish == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" dist/bundle/* --clobber
+
+  cli:
+    name: CLI (${{ matrix.target }})
+    needs: [prepare, create-release]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-14
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            # Static CRT: no VC++ redistributable needed on the target machine.
+            rustflags: -C target-feature=+crt-static
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          rustup set profile minimal
+          rustup toolchain install || rustup show
+          rustup target add "$TARGET"
+          rustc --version && cargo --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: cli-${{ matrix.target }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: licenses
+          path: dist/licenses
+
+      - name: Build DashCraft CLI (dashcraft + pbiview alias)
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
+        run: cargo build --release --locked -p pbiview-cli --target ${{ matrix.target }}
+
+      - name: Smoke test
+        if: matrix.target != 'x86_64-apple-darwin' # cross-compiled; Rosetta may be absent
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          "target/$TARGET/release/dashcraft" --version
+          "target/$TARGET/release/dashcraft" inspect reference/examples/acme-outfitters/AcmeOutfitters.pbip --json > /dev/null
+          "target/$TARGET/release/pbiview" --version | grep -q '^pbiview '
+
+      - name: Package
+        shell: bash
+        env:
+          LABEL: ${{ needs.prepare.outputs.label }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          name="dashcraft-${LABEL}-${TARGET}"
+          ext=""
+          if [ "$RUNNER_OS" = "Windows" ]; then ext=.exe; fi
+          mkdir -p "dist/$name" dist/cli
+          cp "target/$TARGET/release/dashcraft$ext" "target/$TARGET/release/pbiview$ext" \
+            README.md NOTICE dist/licenses/* "dist/$name/"
+          cd dist
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            archive="$name.zip"
+            7z a -tzip "cli/$archive" "$name" > /dev/null
+          else
+            archive="$name.tar.gz"
+            tar -czf "cli/$archive" "$name"
+          fi
+          cd cli
+          if command -v sha256sum > /dev/null; then sha256sum "$archive"; else shasum -a 256 "$archive"; fi > "$archive.sha256"
+          ls -la
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cli-${{ matrix.target }}
+          path: dist/cli/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload to draft release
+        if: needs.prepare.outputs.publish == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" dist/cli/* --clobber
+
+  finalize:
+    name: Checksums and attestations
+    needs: [prepare, create-release, bundle, cli]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist/all
+          merge-multiple: true
+
+      - name: SHA256SUMS.txt
+        env:
+          LABEL: ${{ needs.prepare.outputs.label }}
+        run: |
+          cd dist/all
+          find . -type f ! -name '*.sha256' ! -name 'release-notes.md' | sed 's|^\./||' | LC_ALL=C sort |
+            while IFS= read -r f; do sha256sum "$f"; done > ../SHA256SUMS.txt
+          cat ../SHA256SUMS.txt
+          {
+            echo "### Release artifacts ($LABEL)"
+            echo
+            echo '```'
+            cat ../SHA256SUMS.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: SHA256SUMS
+          path: dist/SHA256SUMS.txt
+
+      - name: Upload to draft release
+        if: needs.prepare.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" dist/SHA256SUMS.txt --clobber
+
+      # Build provenance (Sigstore). Public repos, or private repos on GitHub Enterprise Cloud
+      # with the repository variable PBIVIEW_ATTEST=true. Verify: gh attestation verify <file> -R <repo>
+      - uses: actions/attest-build-provenance@v4
+        if: needs.prepare.outputs.publish == 'true' && (!github.event.repository.private || vars.PBIVIEW_ATTEST == 'true')
+        with:
+          subject-checksums: dist/SHA256SUMS.txt

@@ -1,0 +1,66 @@
+[package]
+name = "pbiview-app"
+description = "DashCraft desktop app (`dashcraft-app`): Tauri 2 shell around the pbi-* crates"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+default-run = "dashcraft-app"
+
+[lib]
+# `_lib` suffix avoids a name clash with the bin target on Windows (Tauri 2 template convention).
+name = "pbiview_app_lib"
+# Desktop only. Mobile targets would additionally need "staticlib" and "cdylib".
+crate-type = ["rlib"]
+
+# The binary is `dashcraft-app` (tauri.conf.json `mainBinaryName`); the package keeps its
+# internal `pbiview-app` name (ADR-0009).
+[[bin]]
+name = "dashcraft-app"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = [] }
+tauri-plugin-dialog = "2.8"
+# tauri-specta v2 is still a release candidate: pin exact versions (specta must match tauri-specta's `=` requirement).
+tauri-specta = { version = "=2.0.0-rc.26" }
+# `serde_json`: `ops_execute` parameters / results and progress details are JSON values (exported
+# through the `JsonValue` override in `src/ops.rs`).
+specta = { version = "=2.0.0-rc.26", features = ["derive", "serde_json"] }
+serde = { workspace = true }
+# Workspace flavour on purpose (arbitrary_precision, preserve_order): pbi-* types carry
+# `serde_json::Value`s, and the IPC tests prove Tauri's command (de)serialization still works.
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+# The command registry and workspace: every domain operation (open, refresh, grid, DAX, measures,
+# canvas, exports) runs through `pbi_ops::Registry::execute`, as in the CLI and for agents.
+pbi-ops = { workspace = true }
+# Readers (detection, containers, TMDL/TMSL/PBIR) and the canonical model, for the app-only views
+# (model tree, report outline, Properties / Format panes). pbi-model types are never sent over IPC
+# directly: they are mapped to the app-side DTOs in `src/dto.rs`.
+pbi-core = { workspace = true }
+pbi-model = { workspace = true }
+# `SessionOptions` (the workspace's open hook installs the blob resolver), cache info.
+pbi-session = { workspace = true }
+# `BlobResolver` trait: the blob map can be swapped without reopening the document.
+pbi-m = { workspace = true }
+# TMDL view: canonical TMDL generated from models that were not read from TMDL (TMSL, PBIX).
+pbi-tmdl = { workspace = true }
+# The opt-in AI layer (ADR-0008): the `ai.*` registry commands, the AI host (settings in the app
+# config folder, keys in the OS keychain) and provider adapters. Off by default; nothing is sent
+# without enabling it and a recorded consent.
+pbi-ai = { workspace = true }
+
+[dev-dependencies]
+tauri = { version = "2.12", features = ["test"] }
+# TypeScript export only happens in the `export_bindings` test, so the exporter stays out of the shipped binary.
+tauri-specta = { version = "=2.0.0-rc.26", features = ["typescript"] }
+specta-typescript = "=0.0.13"
+
+[lints]
+workspace = true

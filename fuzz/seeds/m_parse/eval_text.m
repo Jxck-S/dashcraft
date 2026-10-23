@@ -1,0 +1,1 @@
+let t = "  Hello, World  " in {Text.Trim(t), Text.Upper(t), Text.Split(t, ","), Text.Replace(t, "l", "L"), Text.PadStart("7", 3, "0"), Text.Combine({"a", "b"}, "-"), Text.BetweenDelimiters("[x]", "[", "]")}

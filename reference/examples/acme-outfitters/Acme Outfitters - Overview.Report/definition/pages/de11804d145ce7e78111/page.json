@@ -1,0 +1,96 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "de11804d145ce7e78111",
+  "displayName": "Time Intelligence",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "objects": {
+    "background": [
+      {
+        "properties": {
+          "color": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "Literal": {
+                    "Value": "'#F7F5EF'"
+                  }
+                }
+              }
+            }
+          },
+          "transparency": {
+            "expr": {
+              "Literal": {
+                "Value": "0L"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "visualInteractions": [
+    {
+      "source": "b41d675081c224f256ea",
+      "target": "0be665cce25f93e37e88",
+      "type": "NoFilter"
+    },
+    {
+      "source": "b41d675081c224f256ea",
+      "target": "cfa6b3b57d4eab8e6066",
+      "type": "NoFilter"
+    },
+    {
+      "source": "b41d675081c224f256ea",
+      "target": "7db2a139761251b9162a",
+      "type": "NoFilter"
+    },
+    {
+      "source": "398b24904a1feb7d0755",
+      "target": "b41d675081c224f256ea",
+      "type": "NoFilter"
+    },
+    {
+      "source": "398b24904a1feb7d0755",
+      "target": "e2ec1886bb9df4e1d51a",
+      "type": "NoFilter"
+    },
+    {
+      "source": "398b24904a1feb7d0755",
+      "target": "e1d275355b1648435593",
+      "type": "NoFilter"
+    },
+    {
+      "source": "398b24904a1feb7d0755",
+      "target": "bb525ba6bb81d291695d",
+      "type": "NoFilter"
+    },
+    {
+      "source": "398b24904a1feb7d0755",
+      "target": "c507b8509ba0b970a4ee",
+      "type": "NoFilter"
+    },
+    {
+      "source": "398b24904a1feb7d0755",
+      "target": "24f8ad03f5a0230faab0",
+      "type": "NoFilter"
+    },
+    {
+      "source": "398b24904a1feb7d0755",
+      "target": "0be665cce25f93e37e88",
+      "type": "NoFilter"
+    },
+    {
+      "source": "398b24904a1feb7d0755",
+      "target": "cfa6b3b57d4eab8e6066",
+      "type": "NoFilter"
+    },
+    {
+      "source": "398b24904a1feb7d0755",
+      "target": "7db2a139761251b9162a",
+      "type": "NoFilter"
+    }
+  ]
+}

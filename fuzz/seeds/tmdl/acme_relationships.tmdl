@@ -1,0 +1,38 @@
+relationship c79d4066-724d-5669-b57b-f6bf11da6f40
+	crossFilteringBehavior: bothDirections
+	fromColumn: Orders.'Customer ID'
+	toColumn: Customers.'Customer ID'
+
+relationship b064dd21-773c-5c43-9fc0-1fa3327ae319
+	fromColumn: Orders.'Product ID'
+	toColumn: Products.'Product ID'
+
+relationship d4926a14-f8ee-5523-be56-0dd865b87eee
+	fromColumn: Orders.'Store ID'
+	toColumn: Stores.'Store ID'
+
+relationship 5fd8dd36-8b63-5abf-b8b9-50b8de54f509
+	fromColumn: Orders.'Order Date'
+	toColumn: Date.Date
+
+relationship 976ded3b-d763-50ba-be93-faf5d31cd63c
+	isActive: false
+	fromColumn: Orders.'Ship Date'
+	toColumn: Date.Date
+
+relationship 561c8d0e-e2ca-5ea0-b1cc-2954869daedc
+	crossFilteringBehavior: bothDirections
+	fromCardinality: one
+	toCardinality: one
+	securityFilteringBehavior: bothDirections
+	fromColumn: Returns.'Order ID'
+	toColumn: Orders.'Order ID'
+
+relationship 8f93a1dc-7185-5ba7-a262-fc82bdaf7ddf
+	toCardinality: many
+	fromColumn: Targets.Region
+	toColumn: Stores.Region
+
+relationship add3c6ca-dc4b-5b99-8e8c-0f18a493c9f2
+	fromColumn: Targets.Month
+	toColumn: Date.Date

@@ -1,0 +1,134 @@
+---
+source: crates/pbi-render/tests/render_snapshots.rs
+expression: text
+---
+Acme Outfitters - Overview / Executive Summary (FitToPage, 1280×720, 14 visuals)
+page svg: 41394 bytes, fnv1a 97cca3cc13e83bc4
+
+923adeb43119cf2eccfc shape 1280×64 at (0, 0): svg 0ba2991a9d328fe6, 0 data points
+
+6ef6d064d0265cfd95aa textbox 680×48 at (24, 8): svg 740198d5a3d3c16d, 0 data points
+  | Acme Outfitters
+  |   |  Executive summary
+
+4962619bce10ce9dfb1c pageNavigator 496×36 at (760, 14): svg 1b956932b9c44bdb, 0 data points
+  | Page navigator
+
+5db7384676d59b0fb322 slicer 360×64 at (24, 76): svg b17ecb5772e85d52, 0 data points
+  | Year
+  | 2024
+  | 2025
+
+578558f36aded7690edd slicer 220×64 at (400, 76): svg a3ec0e5aa4a25462, 0 data points
+  | Region
+  | All
+
+f7a9c9413fef68532313 cardVisual 1000×124 at (24, 152): svg 19a8fb69f684deb6, 0 data points
+  | $457,432.15
+  | Total Sales
+  | 2,024
+  | Order Count
+  | $226.00
+  | Avg Order Value
+  | 45.3%
+  | Margin %
+  | 374
+  | Active Customers
+
+d1534ca5259c4de6151d card 216×124 at (1040, 152): svg 221b259cb7b9a385, 0 data points
+  | Sales (dynamic format)
+  | $457.4K
+  | Sales (Scaled)
+
+c9aea193ee9b20c67335 kpi 300×192 at (24, 292): svg db71ca9cb1ef8739, 0 data points
+  | Sales vs target (latest month)
+  | $56,117.00
+  | Goal: $56,000 (+0.21%)
+
+569b9ae1b4cfad5aa48d lineChart 600×192 at (340, 292): svg 757f61e68595da3f, 24 data points
+  | Sales by month, this year and last
+  | Total Sales
+  | Sales PY
+  | $0K
+  | $20K
+  | $40K
+  | Total Sales and...
+  | Jan
+  | Feb
+  | Mar
+  | Apr
+  | May
+  | Jun
+  | Jul
+  | Aug
+  | Sep
+  | Oct
+  | Nov
+  | Dec
+  | Month
+
+bdf9d92d87bec8350cc4 clusteredColumnChart 300×192 at (956, 292): svg c45eb5e70fc99721, 6 data points
+  | Sales by category
+  | $0K
+  | $50K
+  | $100K
+  | Total Sales
+  | Camp
+  | ing
+  | Hikin
+  | g
+  | Paddli
+  | ng
+  | Climbi
+  | ng
+  | Appar
+  | el
+  | (Blank
+  | )
+  | Category
+
+c9f87905246642c35687 donutChart 300×208 at (24, 496): svg 1c8bc8c35231adfb, 3 data points
+  | Sales by channel
+  | Channel
+  | Retail
+  | Online
+  | Outlet
+  | $225,552.85
+  | $144,596.30 (31...)
+  | $87,283.00
+
+ed03ff7722a2eaf64065 clusteredBarChart 600×208 at (340, 496): svg def7ad392473fcb1, 8 data points
+  | Sales and target by region
+  | Total Sales
+  | Target
+  | $0K
+  | $50K
+  | $100K
+  | $150K
+  | Total Sales and Target
+  | Region
+  | Online
+  | West
+  | Central
+  | East
+  | $144,596.30
+  | $150,000
+  | $102,855.80
+  | $102,500
+  | $79,537.30
+  | $80,000
+  | $66,925.40
+  | $68,000
+
+5cd0757711b84d2d8214 actionButton 300×48 at (956, 496): svg a783ff537160bebd, 0 data points
+  | Open product detail
+
+b8b18fd95a6ed3ba97a1 textbox 300×144 at (956, 560): svg 8d9dc464b6e23110, 0 data points
+  | About this report
+  | •
+  | Synthetic data, generated for DashCraft tests.
+  | •
+  | Cancelled orders are filtered out at report
+  | level.
+  | Sample site:
+  | example.com

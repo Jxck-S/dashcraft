@@ -1,0 +1,154 @@
+/// Customers (synthetic). Account managers are parsed from Python-style lists by fnParseNames.
+table Customers
+	lineageTag: 6b7c2c45-f20c-5bb1-b38f-5e977eabf0fc
+
+	/// Customers in the filter context (cross-filtered by Orders, both directions).
+	measure 'Customer Count' = COUNTROWS(Customers)
+		formatString: #,0
+		lineageTag: 3c338e6e-c8e0-5312-881c-fbb8bb2c3751
+
+	column 'Customer ID'
+		dataType: string
+		isKey
+		lineageTag: 569fcf7e-fc1b-53d8-a8fa-d1c51c477a69
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Customer Name'
+		dataType: string
+		lineageTag: 5a8f8bc1-0cae-5b7e-9728-904d9bf7370a
+		summarizeBy: none
+		sourceColumn: Customer Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column Email
+		dataType: string
+		lineageTag: 2e43f8d5-1344-52f4-846d-a20e92576c75
+		summarizeBy: none
+		sourceColumn: Email
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Email Domain'
+		dataType: string
+		lineageTag: 90df83bc-ab19-5276-b780-0d79954877ce
+		summarizeBy: none
+		sourceColumn: Email Domain
+
+		annotation SummarizationSetBy = Automatic
+
+	column Segment
+		dataType: string
+		lineageTag: 436b4345-f6f4-5ae5-9217-18ad4340a99c
+		summarizeBy: none
+		sourceColumn: Segment
+
+		annotation SummarizationSetBy = Automatic
+
+	column City
+		dataType: string
+		lineageTag: 5be61485-87e5-5775-a00b-51c6a2a5b9a5
+		dataCategory: City
+		summarizeBy: none
+		sourceColumn: City
+
+		annotation SummarizationSetBy = Automatic
+
+	column State
+		dataType: string
+		lineageTag: cc930e0e-a212-5318-b8b6-26b9fefd7e13
+		dataCategory: StateOrProvince
+		summarizeBy: none
+		sourceColumn: State
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Join Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 9dbd616e-2b09-5b67-8dc0-1207d42fc96d
+		summarizeBy: none
+		sourceColumn: Join Date
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Bronze, Silver, Gold; blanks become Unassigned.
+	column 'Loyalty Tier'
+		dataType: string
+		lineageTag: d35e0961-5fb6-5d93-9b17-0ac369fb5d63
+		summarizeBy: none
+		sourceColumn: Loyalty Tier
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Parsed names joined with "; "; blank when the list is empty.
+	column 'Account Managers'
+		dataType: string
+		lineageTag: 7558eb43-678c-5359-bdea-48a9046b79a6
+		summarizeBy: none
+		sourceColumn: Account Managers
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Account Manager Count'
+		dataType: int64
+		formatString: 0
+		lineageTag: bdb5bcdb-3c3d-59dc-8912-5574e5747372
+		summarizeBy: none
+		sourceColumn: Account Manager Count
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Context transition: every order of the customer, all statuses.
+	column 'Lifetime Sales' = CALCULATE(SUM(Orders[Line Amount]))
+		dataType: double
+		formatString: \$#,0
+		lineageTag: d5939a53-f184-57f2-9044-f1673e1ec8fa
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Has Orders' = IF(ISEMPTY(RELATEDTABLE(Orders)), "No", "Yes")
+		dataType: string
+		lineageTag: a72d0851-4b7c-530f-bfa8-630daa472a28
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Value Tier' =
+			SWITCH(
+			    TRUE(),
+			    Customers[Lifetime Sales] >= 3000, "High",
+			    Customers[Lifetime Sales] >= 1000, "Medium",
+			    Customers[Lifetime Sales] > 0, "Low",
+			    "None"
+			)
+		dataType: string
+		lineageTag: 2db84444-87c7-5359-8b5d-828d5f54c6b1
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Customers = m
+		mode: import
+		queryGroup: Sources
+		source =
+				let
+				    Source = AzureStorage.Blobs(StorageContainerUrl),
+				    #"Source CSV" = Csv.Document(Source{[Name = "sales/customers.csv"]}[Content], [Delimiter = ",", Columns = 10, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+				    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"customer_id", fnCleanKey, type text}, {"email", each Text.Lower(Text.Trim(_)), type text}, {"segment", Text.Trim, type text}, {"loyalty_tier", each let t = Text.Trim(_ ?? "") in if t = "" then "Unassigned" else t, type text}, {"account_managers", each let names = fnParseNames(_ ?? "") in if names = "" then null else names, type nullable text}}),
+				    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+				    #"Added Name" = Table.AddColumn(#"Removed Duplicates", "customer_name", each Text.Combine({Text.Trim([first_name]), Text.Trim([last_name])}, " "), type text),
+				    #"Added Domain" = Table.AddColumn(#"Added Name", "email_domain", each Text.AfterDelimiter([email], "@"), type text),
+				    #"Added Manager Count" = Table.AddColumn(#"Added Domain", "manager_count", each List.Count(List.RemoveNulls(List.Transform(Text.Split([account_managers] ?? "", ";"), each if Text.Trim(_) = "" then null else _))), Int64.Type),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Added Manager Count", {{"join_date", type date}}),
+				    #"Selected Columns" = Table.SelectColumns(#"Changed Type", {"customer_id", "customer_name", "email", "email_domain", "segment", "city", "state", "join_date", "loyalty_tier", "account_managers", "manager_count"}),
+				    #"Renamed Columns" = Table.RenameColumns(#"Selected Columns", {{"customer_id", "Customer ID"}, {"customer_name", "Customer Name"}, {"email", "Email"}, {"email_domain", "Email Domain"}, {"segment", "Segment"}, {"city", "City"}, {"state", "State"}, {"join_date", "Join Date"}, {"loyalty_tier", "Loyalty Tier"}, {"account_managers", "Account Managers"}, {"manager_count", "Account Manager Count"}})
+				in
+				    #"Renamed Columns"
+
+	annotation PBI_ResultType = Table

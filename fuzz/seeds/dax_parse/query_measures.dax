@@ -1,0 +1,23 @@
+// Measures of the synthetic Acme Outfitters example as a DAX query
+DEFINE
+    VAR _MinQty = 10
+    MEASURE Orders[Return Share] =
+        DIVIDE ( [Returns Count], [Order Count], 0 )
+    TABLE 'Small Orders' =
+        FILTER ( Orders, Orders[Quantity] < _MinQty )
+    COLUMN Stores[Region Code Upper] = UPPER ( Stores[Region Code] )
+    FUNCTION Pricing.WithTax = ( price : NUMERIC VAL, rate ) => price * ( 1 + rate )
+
+EVALUATE
+    SUMMARIZECOLUMNS (
+        Stores[Region],
+        "Sales", [Total Sales],
+        "Margin", [Margin %],
+        "Taxed", Pricing.WithTax ( 100, 0.2 )
+    )
+ORDER BY Stores[Region] ASC, [Sales]
+START AT "East"
+
+EVALUATE 'Small Orders'
+
+EVALUATE { _MinQty }

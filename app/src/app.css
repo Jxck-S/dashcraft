@@ -1,0 +1,200 @@
+/*
+ * DashCraft UI theme, modelled on Power BI Desktop's light theme (Fluent 2): off-white chrome
+ * (title bar, ribbon tabs, view rail, status bar), white ribbon body and panes, a light gray
+ * canvas surround, teal selection accents and the yellow product accent used sparingly.
+ * Font: Segoe UI where the OS has it, else the bundled Selawik (SIL OFL 1.1, assets/fonts).
+ * Selawik 1.01 draws U+2026 (…) as a single dot, so its faces skip that code point
+ * (`unicode-range`) and the next font in the stack draws it (text-overflow ellipses too).
+ * Carlito (SIL OFL 1.1, assets/fonts/carlito) is metric-compatible with Calibri: the report
+ * renderer measures Calibri text with it and its SVG asks for `Carlito, Calibri, sans-serif`,
+ * so the canvas draws exactly what was measured.
+ */
+
+@font-face {
+  font-family: 'Selawik';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  unicode-range: U+0000-2025, U+2027-10FFFF;
+  src: url('./assets/fonts/Selawik-Light.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Selawik';
+  font-style: normal;
+  font-weight: 350;
+  font-display: swap;
+  unicode-range: U+0000-2025, U+2027-10FFFF;
+  src: url('./assets/fonts/Selawik-Semilight.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Selawik';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0000-2025, U+2027-10FFFF;
+  src: url('./assets/fonts/Selawik-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Selawik';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  unicode-range: U+0000-2025, U+2027-10FFFF;
+  src: url('./assets/fonts/Selawik-Semibold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Selawik';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0000-2025, U+2027-10FFFF;
+  src: url('./assets/fonts/Selawik-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Carlito';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/carlito/Carlito-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Carlito';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/carlito/Carlito-Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Carlito';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/carlito/Carlito-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Carlito';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/carlito/Carlito-BoldItalic.ttf') format('truetype');
+}
+
+:root {
+  --font-ui: 'Segoe UI', 'Selawik', system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, 'SF Mono', Menlo, 'Liberation Mono', monospace;
+
+  /* Product accent (used sparingly) and selection accent. */
+  --color-accent: #f2c811;
+  --color-accent-dark: #a67c00;
+  --color-brand: #117865;
+  --color-brand-hover: #0e6656;
+  --color-brand-soft: #e6f2ef;
+
+  /* Neutrals (Fluent 2 light). */
+  --color-text: #242424;
+  --color-text-muted: #616161;
+  --color-text-subtle: #8a8a8a;
+  --color-text-disabled: #bdbdbd;
+  --color-border: #e0e0e0;
+  --color-border-strong: #d1d1d1;
+  --color-chrome: #f5f5f5; /* title bar, ribbon tabs, view rail, status bar */
+  --color-ribbon: #ffffff;
+  --color-pane: #ffffff;
+  --color-pane-strip: #f7f9fa; /* collapsed panes */
+  --color-canvas: #eaeaea; /* around report pages and the model diagram */
+  --color-pagetabs: #f7f7f7;
+  --color-hover: #f0f0f0;
+  --color-pressed: #e0e0e0;
+  --color-selected: #ebebeb;
+  --color-danger: #c50f1f;
+  --color-danger-bg: #fdf3f4;
+  --color-warning-bg: #fff9f5;
+  --color-warning-bar: #fff4ce; /* Desktop's yellow notification bar */
+  --color-warning-border: #f7e28b;
+  --color-info-bg: #ebf3fc;
+  --color-code-bg: #fbfbfb;
+
+  --titlebar-height: 36px;
+  --ribbon-tabs-height: 34px;
+  --ribbon-body-height: 92px;
+  --rail-width: 48px;
+  --statusbar-height: 26px;
+  --pagetabs-height: 36px;
+  --pane-width: 252px;
+  --pane-strip-width: 32px;
+
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--color-text);
+  background: var(--color-chrome);
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.pane-title {
+  margin: 0;
+  padding: 10px 12px 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.empty-hint {
+  padding: 16px 12px;
+  color: var(--color-text-subtle);
+  font-style: italic;
+}
+
+/* Thin, Desktop-like scrollbars where the engine supports them. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c7c7c7 transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: -2px;
+}

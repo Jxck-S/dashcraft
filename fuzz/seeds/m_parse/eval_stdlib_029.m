@@ -1,0 +1,1 @@
+Text.Contains("Hello", "ell")

@@ -1,0 +1,1 @@
+Text.AfterDelimiter("a-b-c", "-")

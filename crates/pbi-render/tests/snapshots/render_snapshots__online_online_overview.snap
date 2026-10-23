@@ -1,0 +1,125 @@
+---
+source: crates/pbi-render/tests/render_snapshots.rs
+expression: text
+---
+Acme Outfitters - Online / Online Overview (FitToPage, 1280×720, 14 visuals)
+page svg: 35950 bytes, fnv1a 46c4b53d35849e4b
+
+a7c66460647c2f31f219 shape 1280×64 at (0, 0): svg c2d49bb7ac205d20, 0 data points
+
+ec2cae0a6609976b1686 textbox 680×48 at (24, 8): svg 9be9917af2ff54e8, 0 data points
+  | Acme Outfitters
+  |   |  Online (report filters: online channel, mobile sessions)
+
+dc3526a14816153b5bf4 actionButton 120×36 at (1136, 14): svg ba057a781bea260d, 0 data points
+  | Reset
+
+a7ffc46c144f47dfb492 slicer 200×300 at (24, 76): svg 35c4edb80904855d, 0 data points
+  | Loyalty tier
+  | Select all
+  | (Blank)
+  | Bronze
+  | Gold
+  | Silver
+  | Unassigned
+
+3d4874ac0bcfb9c0f53d cardVisual 1016×124 at (240, 76): svg 166aa539396566ca, 0 data points
+  | $235,768.30
+  | Total Sales
+  | 1,024
+  | Order Count
+  | 293
+  | Active Customers
+  | 290
+  | Customers Reached
+  | $230.24
+  | Avg Order Value
+
+f251dbc74c2b67f5305d card 240×124 at (240, 216): svg 583f3cc6f97888d7, 0 data points
+  | Mobile sessions
+  | 678
+  | Sessions
+
+c359151cf9df2b5ad588 cardVisual 500×124 at (496, 216): svg cd0950574c3ac3b3, 0 data points
+  | 8.6%
+  | Conversion Rate
+  | 8.0
+  | Avg Pages per Session
+  | 1,600
+  | Sessions (All Devices)
+
+a5ba137f5f714613904e textbox 244×124 at (1012, 216): svg f495db8f96cc99cc, 0 data points
+  | Report filters
+  | •
+  | Channel = Online
+  | •
+  | Device = Mobile (sessions only)
+
+b65c61ae204a9bf6f9ed funnel 330×348 at (240, 356): svg 469d5e0372632b6e, 6 data points
+  | Sessions by traffic source
+  | Organic Search
+  | Direct
+  | Paid Search
+  | Email Campaign
+  | Social Campai...
+  | Referral
+  | 217
+  | 140
+  | 96
+  | 83
+  | 77
+  | 65
+  | 100%
+  | 30%
+
+bde8debb2da31c9b193a pieChart 330×168 at (586, 356): svg aaa0e4ac1a46eaf9, 1 data points
+  | Sessions by device
+  | Device
+  | Mobile
+  | 678
+  | (100.00%)
+
+cd1ddb13861fd987ed89 clusteredBarChart 324×168 at (932, 356): svg a1d7ecec7d3b4112, 3 data points
+  | Online sales by segment
+  | $0K
+  | $100K
+  | Total Sales
+  | Segment
+  | Consumer
+  | Club
+  | Corporate
+  | $179,769.35
+  | $39,268.90
+  | $16,098.75
+
+f28cc556633b1995df76 hundredPercentStackedColumnChart 670×164 at (586, 540): svg 9c5f47c2ae743183, 13 data points
+  | Loyalty mix by quarter
+  | Loyalty Tier
+  | (Blank)
+  | Bronze
+  | Gold
+  | Silver
+  | 0%
+  | 50%
+  | 100%
+  | Total Sales
+  | Q1
+  | Q2
+  | Q3
+  | Q4
+  | Quarter
+
+6ee78332f30e000101aa basicShape 200×24 at (24, 392): svg 6f0c301e8be8614d, 0 data points
+
+7e5b54ef35df8a9a09b9 textbox 200×272 at (24, 432): svg 15f686eacf209a6b, 0 data points
+  | How to read this page
+  | 1.
+  | The tier slicer excludes
+  | Unassigned (inverted
+  | selection).
+  | 2.
+  | Session visuals ignore the
+  | sales filters: Web Sessions
+  | has no relationships.
+  | Docs:
+  | example.org

@@ -1,0 +1,561 @@
+{
+  "name": "Features",
+  "compatibilityLevel": 1604,
+  "compatibilityMode": "powerBI",
+  "model": {
+    "culture": "en-US",
+    "discourageImplicitMeasures": true,
+    "dataAccessOptions": {
+      "legacyRedirects": true,
+      "returnErrorValuesAsNull": true
+    },
+    "futureModelSetting": {
+      "level": 3,
+      "ratio": 0.10,
+      "big": 12345678901234567890123,
+      "neg": -0.0,
+      "exp": 1e-300
+    },
+    "defaultPowerBIDataSourceVersion": "powerBI_V3",
+    "sourceQueryCulture": "en-GB",
+    "dataSources": [
+      {
+        "type": "structured",
+        "name": "Legacy SQL",
+        "connectionDetails": {
+          "protocol": "tds",
+          "address": {
+            "server": "sql.contoso.com",
+            "database": "Legacy"
+          }
+        },
+        "credential": {
+          "AuthenticationKind": "UsernamePassword",
+          "kind": "SQL",
+          "path": "sql.contoso.com;Legacy",
+          "Username": "reader"
+        }
+      }
+    ],
+    "futureCollection": [
+      {
+        "anything": [
+          1,
+          2.50,
+          true,
+          null,
+          "x"
+        ]
+      }
+    ],
+    "tables": [
+      {
+        "name": "Sales",
+        "description": [
+          "Fact table with one row per order line.",
+          "Second line of the description."
+        ],
+        "lineageTag": "5f0c8b1e-1a52-4c55-9d43-0d6f5e1d7a01",
+        "columns": [
+          {
+            "name": "OrderDate",
+            "dataType": "dateTime",
+            "isKey": true,
+            "sourceColumn": "OrderDate",
+            "formatString": "General Date",
+            "lineageTag": "5f0c8b1e-1a52-4c55-9d43-0d6f5e1d7a02",
+            "summarizeBy": "none",
+            "variations": [
+              {
+                "name": "Variation",
+                "relationship": "c0ffee00-0000-4000-8000-000000000001",
+                "defaultHierarchy": {
+                  "table": "LocalDateTable_1",
+                  "hierarchy": "Date Hierarchy"
+                },
+                "isDefault": true
+              }
+            ],
+            "annotations": [
+              {
+                "name": "UnderlyingDateTimeDataType",
+                "value": "Date"
+              }
+            ]
+          },
+          {
+            "name": "Amount",
+            "dataType": "decimal",
+            "sourceColumn": "Amount",
+            "formatString": "\\$#,0.00;(\\$#,0.00);\\$#,0.00",
+            "displayFolder": "Money",
+            "lineageTag": "5f0c8b1e-1a52-4c55-9d43-0d6f5e1d7a03",
+            "summarizeBy": "sum",
+            "encodingHint": "value",
+            "futureColumnProp": {
+              "x": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "type": "calculated",
+            "name": "Big Order",
+            "dataType": "boolean",
+            "isDataTypeInferred": true,
+            "expression": [
+              "",
+              "VAR a = Sales[Amount]",
+              "RETURN a > 1000"
+            ],
+            "summarizeBy": "none"
+          },
+          {
+            "type": "rowNumber",
+            "name": "RowNumber-2662979B-1795-4F74-8F37-6A1BA8059B61",
+            "dataType": "int64",
+            "isHidden": true,
+            "isUnique": true,
+            "isKey": true,
+            "isNullable": false,
+            "attributeHierarchy": {}
+          },
+          {
+            "type": "futureColumnType",
+            "name": "Odd",
+            "dataType": "string",
+            "sourceColumn": "Odd"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Sales-Current",
+            "mode": "import",
+            "dataView": "full",
+            "queryGroup": "Facts",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Sql.Database(ServerName, \"Sales\")",
+                "in",
+                "    Source"
+              ],
+              "futureSourceProp": 1
+            }
+          },
+          {
+            "name": "Sales-2020",
+            "mode": "import",
+            "source": {
+              "type": "policyRange",
+              "start": "2020-01-01T00:00:00",
+              "end": "2021-01-01T00:00:00",
+              "granularity": "year"
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Total Sales",
+            "description": "Sum of amounts.",
+            "expression": "SUM(Sales[Amount])",
+            "formatString": "#,0",
+            "isHidden": false,
+            "displayFolder": "KPIs",
+            "lineageTag": "5f0c8b1e-1a52-4c55-9d43-0d6f5e1d7a04",
+            "formatStringDefinition": {
+              "expression": "\"#,0\""
+            },
+            "kpi": {
+              "targetExpression": "1000",
+              "statusGraphic": "Traffic Light - Single",
+              "statusExpression": [
+                "VAR x = [Total Sales]",
+                "RETURN IF(x > 1000, 1, -1)"
+              ]
+            },
+            "annotations": [
+              {
+                "name": "Note",
+                "value": [
+                  "line one",
+                  "line two"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Multi As String",
+            "expression": "VAR x = 1\nRETURN x"
+          },
+          {
+            "name": "Single As Array",
+            "expression": [
+              "1 + 1"
+            ],
+            "detailRowsDefinition": {}
+          }
+        ],
+        "hierarchies": [
+          {
+            "name": "Calendar",
+            "description": "Year, then day.",
+            "displayFolder": "Dates",
+            "hideMembers": "hideBlankMembers",
+            "lineageTag": "5f0c8b1e-1a52-4c55-9d43-0d6f5e1d7a05",
+            "levels": [
+              {
+                "name": "Year",
+                "ordinal": 0,
+                "column": "OrderDate",
+                "lineageTag": "5f0c8b1e-1a52-4c55-9d43-0d6f5e1d7a06"
+              },
+              {
+                "name": "Day",
+                "description": "Calendar day.",
+                "ordinal": 1,
+                "column": "OrderDate",
+                "futureLevelProp": "y"
+              }
+            ],
+            "annotations": [
+              {
+                "name": "H",
+                "value": "1"
+              }
+            ]
+          }
+        ],
+        "refreshPolicy": {
+          "policyType": "basic",
+          "rollingWindowGranularity": "year",
+          "rollingWindowPeriods": 3,
+          "incrementalGranularity": "day",
+          "incrementalPeriods": 10,
+          "sourceExpression": [
+            "let",
+            "    Source = Sql.Database(ServerName, \"Sales\")",
+            "in",
+            "    Source"
+          ]
+        },
+        "futureTableFlag": true,
+        "annotations": [
+          {
+            "name": "PBI_ResultType",
+            "value": "Table"
+          }
+        ]
+      },
+      {
+        "name": "Legacy",
+        "isHidden": false,
+        "columns": [
+          {
+            "type": "data",
+            "name": "Id",
+            "dataType": "int64",
+            "sourceColumn": "Id",
+            "sourceProviderType": "Integer"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Legacy",
+            "source": {
+              "query": "SELECT Id FROM dbo.Legacy",
+              "dataSource": "Legacy SQL"
+            }
+          }
+        ],
+        "measures": [],
+        "annotations": [
+          {
+            "name": "Weird",
+            "value": 42
+          }
+        ]
+      },
+      {
+        "name": "Remote Sales",
+        "lineageTag": "5f0c8b1e-1a52-4c55-9d43-0d6f5e1d7a07",
+        "sourceLineageTag": "[dbo].[sales]",
+        "columns": [
+          {
+            "name": "Amount",
+            "dataType": "double",
+            "sourceColumn": "amount",
+            "lineageTag": "5f0c8b1e-1a52-4c55-9d43-0d6f5e1d7a08",
+            "sourceLineageTag": "amount",
+            "summarizeBy": "sum"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Remote Sales",
+            "mode": "directLake",
+            "source": {
+              "type": "entity",
+              "entityName": "sales",
+              "expressionSource": "DatabaseQuery",
+              "schemaName": "dbo"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Time Intelligence",
+        "calculationGroup": {
+          "precedence": 10,
+          "calculationItems": [
+            {
+              "name": "Current",
+              "expression": "SELECTEDMEASURE()",
+              "ordinal": 0
+            },
+            {
+              "name": "YTD",
+              "expression": [
+                "CALCULATE(",
+                "    SELECTEDMEASURE(),",
+                "    DATESYTD(Sales[OrderDate])",
+                ")"
+              ],
+              "ordinal": 1,
+              "formatStringDefinition": {
+                "expression": "SELECTEDMEASUREFORMATSTRING()"
+              }
+            }
+          ]
+        },
+        "columns": [
+          {
+            "name": "Name",
+            "dataType": "string",
+            "sourceColumn": "Name",
+            "sortByColumn": "Ordinal",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Ordinal",
+            "dataType": "int64",
+            "isHidden": true,
+            "sourceColumn": "Ordinal",
+            "summarizeBy": "sum"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Partition",
+            "mode": "import",
+            "source": {
+              "type": "calculationGroup"
+            }
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "name": "c0ffee00-0000-4000-8000-000000000001",
+        "fromCardinality": "one",
+        "fromTable": "Sales",
+        "fromColumn": "OrderDate",
+        "toTable": "Legacy",
+        "toColumn": "Id",
+        "isActive": false,
+        "joinOnDateBehavior": "datePartOnly"
+      },
+      {
+        "name": "c0ffee00-0000-4000-8000-000000000002",
+        "fromTable": "Remote Sales",
+        "fromColumn": "Amount",
+        "toTable": "Sales",
+        "toColumn": "Amount",
+        "isActive": true,
+        "crossFilteringBehavior": "BothDirections",
+        "futureRelProp": "z",
+        "toCardinality": "many",
+        "relyOnReferentialIntegrity": true,
+        "securityFilteringBehavior": "bothDirections",
+        "annotations": [
+          {
+            "name": "A",
+            "value": "1"
+          }
+        ]
+      }
+    ],
+    "perspectives": [
+      {
+        "name": "Sales Only",
+        "description": "Just sales.",
+        "tables": [
+          {
+            "name": "Sales",
+            "columns": [
+              {
+                "name": "Amount"
+              }
+            ],
+            "measures": [
+              {
+                "name": "Total Sales"
+              }
+            ],
+            "hierarchies": [
+              {
+                "name": "Calendar"
+              }
+            ]
+          }
+        ],
+        "annotations": [
+          {
+            "name": "P",
+            "value": "1"
+          }
+        ]
+      }
+    ],
+    "cultures": [
+      {
+        "name": "en-US",
+        "linguisticMetadata": {
+          "content": {
+            "Version": "1.0.0",
+            "Language": "en-US",
+            "DynamicImprovement": "HighConfidence"
+          },
+          "contentType": "json"
+        }
+      },
+      {
+        "name": "de-DE",
+        "linguisticMetadata": {
+          "content": "<LinguisticSchema xmlns=\"http://schemas.microsoft.com/sqlserver/2016/linguistic\"/>",
+          "contentType": "xml"
+        },
+        "translations": {
+          "model": {
+            "name": "Model",
+            "tables": [
+              {
+                "name": "Sales",
+                "translatedCaption": "Umsätze",
+                "measures": [
+                  {
+                    "name": "Total Sales",
+                    "translatedCaption": "Gesamtumsatz"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "futureCultureProp": 1
+      }
+    ],
+    "roles": [
+      {
+        "name": "Region Managers",
+        "description": "Row-level security by region.",
+        "modelPermission": "read",
+        "members": [
+          {
+            "memberName": "someone@contoso.com",
+            "identityProvider": "AzureAD"
+          }
+        ],
+        "futureRoleProp": true,
+        "tablePermissions": [
+          {
+            "name": "Sales",
+            "filterExpression": [
+              "VAR me = USERPRINCIPALNAME()",
+              "RETURN Sales[Amount] > 0"
+            ],
+            "columnPermissions": [
+              {
+                "name": "Amount",
+                "metadataPermission": "none"
+              }
+            ],
+            "futureTablePermissionProp": "z"
+          }
+        ]
+      }
+    ],
+    "expressions": [
+      {
+        "name": "ServerName",
+        "kind": "m",
+        "expression": "\"sql.contoso.com\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
+        "lineageTag": "5f0c8b1e-1a52-4c55-9d43-0d6f5e1d7a09",
+        "queryGroup": "Parameters",
+        "annotations": [
+          {
+            "name": "PBI_ResultType",
+            "value": "Text"
+          }
+        ]
+      },
+      {
+        "name": "Threshold",
+        "expression": "1000  meta [IsParameterQuery=true, Type=\"Number\", IsParameterQueryRequired=true]"
+      },
+      {
+        "name": "DaxHelper",
+        "kind": "dax",
+        "expression": "SUM(Sales[Amount])"
+      },
+      {
+        "name": "SalesQuery",
+        "kind": "m",
+        "expression": [
+          "let",
+          "    Source = Sql.Database(ServerName, \"Sales\")",
+          "in",
+          "    Source"
+        ],
+        "queryGroup": "Facts",
+        "mAttributes": "[]"
+      }
+    ],
+    "queryGroups": [
+      {
+        "folder": "Facts",
+        "futureQueryGroupProp": 2,
+        "annotations": [
+          {
+            "name": "PBI_QueryGroupOrder",
+            "value": "0"
+          }
+        ]
+      },
+      {
+        "folder": "Parameters"
+      }
+    ],
+    "annotations": [
+      {
+        "name": "PBI_QueryOrder",
+        "value": "[\"ServerName\",\"Threshold\",\"SalesQuery\"]"
+      },
+      {
+        "name": "__PBI_TimeIntelligenceEnabled",
+        "value": "0"
+      }
+    ]
+  },
+  "id": "Features",
+  "futureDatabaseProp": {
+    "nested": {
+      "deep": [
+        "keep"
+      ]
+    }
+  }
+}

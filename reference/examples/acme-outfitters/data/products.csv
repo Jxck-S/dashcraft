@@ -1,0 +1,123 @@
+product_id,product_name,category,subcategory,list_price,unit_cost,launch_date
+P0001,Juniper 2P Tent,Camping,Tents,219.00,100.74,2023-10-22
+P0002,Alder 4P Tent,Camping,Tents,199.00,113.43,2020-02-17
+P0003,Juniper Ultralight Tent,Camping,Tents,399.00,187.53,2020-07-04
+P0004,Alder Dome Tent,Camping,Tents,154.00,67.76,2023-06-09
+P0005,Juniper Tarp Shelter,Camping,Tents,504.00,221.76,2021-07-18
+P0006,Alder Bivy,Camping,Tents,434.00,247.38,2020-01-06
+P0007,Juniper Family Tent,Camping,Tents,274.00,153.44,2022-06-14
+P0008,Alder Footprint,Camping,Tents,189.00,111.51,2023-09-30
+P0009,Juniper 20F Bag,Camping,Sleeping Bags,154.00,80.08,2019-09-02
+P0010,Alder 35F Bag,Camping,Sleeping Bags,129.00,61.92,2019-02-06
+P0011,Juniper Quilt,Camping,Sleeping Bags,204.00,89.76,2022-11-19
+P0012,Alder Down Bag,Camping,Sleeping Bags,259.00,152.81,2020-06-29
+P0013,Juniper Synthetic Bag,Camping,Sleeping Bags,309.00,176.13,2022-04-02
+P0014,Alder Kids Bag,Camping,Sleeping Bags,104.00,50.96,2021-04-10
+P0015,Juniper Bag Liner,Camping,Sleeping Bags,189.00,96.39,2023-12-04
+P0016,Alder Double Bag,Camping,Sleeping Bags,269.00,158.71,2022-04-15
+P0017,Juniper Stove,Camping,Camp Kitchen ,39.00,17.16,2020-03-11
+P0018,Alder Cookset Kit,Camping,Camp Kitchen,54.00,27.00,2020-08-15
+P0019,Juniper Mug,Camping,Camp Kitchen,89.00,53.40,2019-07-27
+P0020,Alder Spork Set,Camping,Camp Kitchen,49.00,24.01,2018-05-30
+P0021,Juniper Water Filter,Camping,Camp Kitchen,49.00,22.54,2019-10-12
+P0022,Alder Cooler,Camping,Camp Kitchen,84.00,50.40,2018-08-10
+P0023,Juniper Fuel Canister,Camping,Camp Kitchen,119.00,58.31,2023-05-01
+P0024,Alder Dish Kit,Camping,Camp Kitchen,59.00,31.27,2019-09-02
+P0025,Juniper Trail Runner,Hiking,Footwear,179.00,82.34,2023-09-06
+P0026,Alder Mid Boot,Hiking,Footwear,179.00,82.34,2019-05-18
+P0027,Juniper Hiking Boot,Hiking,Footwear,119.00,53.55,2020-02-07
+P0028,Alder Approach Shoe,Hiking,Footwear,194.00,95.06,2022-12-21
+P0029,Juniper Sandal,Hiking,Footwear,89.00,38.27,2021-11-23
+P0030,Alder Gaiters,Hiking,Footwear,209.00,87.78,2019-08-14
+P0012,Alder Down Bag,Camping,Sleeping Bags,259.00,152.81,2020-06-29
+P0031,Juniper Wool Socks,Hiking,Footwear,149.00,64.07,2021-06-26
+P0032,Alder Insoles,Hiking,Footwear,109.00,57.77,2023-02-14
+P0033,Juniper Daypack 20L,Hiking,Backpacks,129.00,69.66,2021-04-23
+P0034,Alder Daypack 28L,Hiking,Backpacks,64.00,28.80,2021-09-08
+P0035,Juniper Pack 45L,Hiking,Backpacks,194.00,98.94,2023-04-20
+P0036,Alder Pack 65L,Hiking,Backpacks,264.00,161.04,2022-04-16
+P0037,Juniper Hydration Pack,Hiking,Backpacks,239.00,138.62,2021-12-07
+P0038,Alder Hip Pack,Hiking,Backpacks,209.00,125.40,2018-01-18
+P0039,Juniper Kids Pack,Hiking,Backpacks,224.00,105.28,2021-06-03
+P0040,Alder Rain Cover,Hiking,Backpacks,64.00,35.84,2022-06-24
+P0041,Juniper Carbon Poles,Hiking,Trekking Poles,129.00,72.24,2022-04-05
+p0042 ,Alder Aluminum Poles,Hiking,Trekking Poles,139.00,80.62,2018-06-14
+P0043,Juniper Folding Poles,Hiking,Trekking Poles,74.00,39.22,2023-12-15
+P0044,Alder Trekking Staff,Hiking,Trekking Poles,74.00,41.44,2023-03-10
+P0045,Juniper Pole Tips,Hiking,Trekking Poles,74.00,36.26,2023-12-04
+P0046,Alder Snow Baskets,Hiking,Trekking Poles,99.00,43.56,2022-02-26
+P0047,Juniper Cork Poles,Hiking,Trekking Poles,99.00,44.55,2021-12-30
+P0048,Alder Kids Poles,Hiking,Trekking Poles,69.00,42.78,2019-09-14
+P0049,Juniper Sport Harness,Climbing,Harnesses,79.00,36.34,2018-08-03
+P0050,Alder Alpine Harness,Climbing,Harnesses,49.00,26.46,2018-05-08
+P0051,Juniper Kids Harness,Climbing,Harnesses,64.00,35.20,2022-02-20
+P0052,Alder Big Wall Harness,Climbing,Harnesses,129.00,79.98,2018-10-30
+P0053,Juniper Gym Harness,Climbing,Harnesses,64.00,36.48,2023-05-09
+P0054,Alder Chalk Bag,Climbing,Harnesses,109.00,66.49,2023-01-13
+P0055,Juniper Belay Device,Climbing,Harnesses,74.00,44.40,2018-11-17
+P0056,Alder Locking Carabiner,Climbing,Harnesses,94.00,44.18,2021-11-25
+P0057,Juniper 9.5mm Rope 60m,Climbing,Ropes,239.00,129.06,2023-10-11
+P0058,Alder 9.8mm Rope 70m,Climbing,Ropes,114.00,62.70,2020-01-10
+P0059,Juniper Static Rope,Climbing,Ropes,289.00,170.51,2020-10-19
+P0060,Alder Rope Bag,Climbing,Ropes,254.00,127.00,2023-11-23
+P0061,Juniper Cordelette,Climbing,Ropes,209.00,123.31,2020-08-20
+P0062,Alder Sling Set,Climbing,Ropes,129.00,77.40,2023-04-06
+P0063,Juniper Quickdraw Set,Climbing,Ropes ,189.00,94.50,2021-04-30
+P0064,Alder Rope Brush,Climbing,Ropes,269.00,115.67,2021-05-04
+P0065,Juniper Climbing Helmet,Climbing,Helmets,84.00,48.72,2020-05-08
+P0066,Alder Alpine Helmet,Climbing,Helmets,49.00,24.50,2022-10-14
+P0067,Juniper Kids Helmet,Climbing,Helmets,69.00,33.12,2018-08-14
+P0068,Alder Headlamp,Climbing,Helmets,124.00,64.48,2022-09-03
+P0069,Juniper Helmet Clip,Climbing,Helmets,74.00,34.78,2023-07-20
+P0070,Alder Ice Axe,Climbing,Helmets,114.00,58.14,2019-01-26
+P0071,Juniper Crampons,Climbing,Helmets,49.00,27.44,2023-07-29
+P0072,Alder Avalanche Kit,Climbing,Helmets,79.00,43.45,2020-02-05
+P0073,Juniper Rain Jacket,Apparel,Jackets,219.00,120.45,2021-08-13
+P0074,Alder Down Jacket,Apparel,Jackets,89.00,44.50,2019-03-21
+P0075,Juniper Softshell,Apparel,Jackets,139.00,73.67,2023-11-23
+P0076,Alder Insulated Vest,Apparel,Jackets,134.00,71.02,2022-11-14
+P0064,Alder Rope Brush,Climbing,Ropes,269.00,115.67,2021-05-04
+P0077,Juniper Wind Shell,Apparel,Jackets,319.00,178.64,2020-02-28
+P0078,Alder Fleece,Apparel,Jackets,299.00,128.57,2019-01-05
+P0079,Juniper Parka,Apparel,Jackets,259.00,134.68,2018-11-30
+P0080,Alder Anorak,Apparel,Jackets,299.00,125.58,2019-01-29
+P0081,Juniper Merino Crew,Apparel,Base Layers,39.00,19.50,2020-09-23
+P0082,Alder Merino Bottom,Apparel,Base Layers,89.00,46.28,2018-06-12
+P0083,Juniper Synthetic Tee,Apparel,Base Layers,44.00,22.44,2019-03-20
+P0084,Alder Sun Hoodie,Apparel,Base Layers,44.00,18.48,2019-11-26
+P0085,Juniper Liner Gloves,Apparel,Base Layers,29.00,13.92,2022-09-07
+P0086,Alder Neck Gaiter,Apparel,Base Layers,79.00,38.71,2021-06-17
+P0087,Juniper Long Sleeve,Apparel,Base Layers,34.00,14.62,2021-09-22
+P0088,Alder Base Set Kit,Apparel,Base Layers,44.00,26.84,2018-12-12
+P0089,Juniper Beanie,Apparel,Headwear,39.00,23.01,2021-05-26
+P0090,Alder Sun Hat,Apparel,Headwear,44.00,27.28,2019-03-26
+P0091,Juniper Trucker Cap,Apparel,Headwear,44.00,22.44,2020-12-24
+P0092,Alder Balaclava,Apparel,Headwear,24.00,12.24,2019-07-25
+P0093,Juniper Bucket Hat,Apparel,Headwear,34.00,14.62,2022-11-30
+P0094,Alder Headband,Apparel,Headwear,34.00,15.64,2023-10-31
+P0095,Juniper Visor,Apparel,Headwear,39.00,23.01,2020-05-08
+P0096,Alder Brim Hat,Apparel,Headwear,19.00,9.69,2023-04-20
+P0097,Juniper Touring Kayak,Paddling,Kayaks,499.00,254.49,2019-03-05
+P0098,Alder Sit-On-Top Kayak,Paddling,Kayaks,1289.00,631.61,2019-06-01
+P0099,Juniper Inflatable Kayak,Paddling,Kayaks,514.00,257.00,2019-09-26
+P0100,Alder Tandem Kayak,Paddling,Kayaks,974.00,448.04,2018-10-15
+P0101,Juniper Fishing Kayak,Paddling,Kayaks ,749.00,404.46,2022-02-05
+P0102,Alder Kids Kayak,Paddling,Kayaks,1044.00,522.00,2022-05-07
+P0103,Juniper Packraft,Paddling,Kayaks,699.00,412.41,2020-06-06
+P0104,Alder SUP Board,Paddling,Kayaks,864.00,423.36,2022-07-18
+P0105,Juniper Carbon Paddle,Paddling,Paddles,169.00,84.50,2021-07-30
+P0106,Alder Fiberglass Paddle,Paddling,Paddles,199.00,85.57,2022-04-09
+P0107,Juniper Kids Paddle,Paddling,Paddles,59.00,32.45,2020-01-23
+P0108,Alder SUP Paddle,Paddling,Paddles,134.00,61.64,2018-07-18
+P0109,Juniper Canoe Paddle,Paddling,Paddles,204.00,99.96,2020-10-01
+P0110,Alder Breakdown Paddle,Paddling,Paddles,229.00,112.21,2021-09-15
+P0111,Juniper Paddle Leash,Paddling,Paddles,159.00,87.45,2020-10-29
+P0112,Alder Drip Rings,Paddling,Paddles,214.00,117.70,2023-11-30
+P0113,Juniper Touring PFD,Paddling,Life Vests,69.00,33.81,2023-12-02
+P0114,Alder Kids PFD,Paddling,Life Vests,89.00,48.95,2018-08-30
+P0115,Juniper Inflatable PFD,Paddling,Life Vests,134.00,75.04,2020-04-18
+P0116,Alder Fishing PFD,Paddling,Life Vests,49.00,25.97,2018-10-13
+P0117,Juniper Dog PFD,Paddling,Life Vests,129.00,78.69,2023-12-30
+P0118,Alder Rescue PFD,Paddling,Life Vests,104.00,58.24,2022-06-14
+P0119,Juniper Whistle Kit,Paddling,Life Vests,99.00,58.41,2020-03-27
+P0120,Alder Dry Bag,Paddling,Life Vests,84.00,44.52,2021-05-05

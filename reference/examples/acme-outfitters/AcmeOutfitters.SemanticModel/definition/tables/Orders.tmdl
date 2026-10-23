@@ -1,0 +1,278 @@
+/// One row per order line (synthetic). Cleaned in M: rows without an id and duplicates removed, keys trimmed and upper-cased, blank discounts set to 0.
+table Orders
+	lineageTag: f6eb36ee-2aeb-54c2-8434-b9a3773f02ac
+
+	/// Sum of the order line amounts.
+	measure 'Total Sales' = SUM(Orders[Line Amount])
+		formatString: \$#,0.00
+		displayFolder: Sales
+		lineageTag: fad1f937-bd82-5d05-8b4c-c9d993d542e6
+
+		annotation PBI_FormatHint = {"currencyCulture":"en-US"}
+
+	measure 'Total Cost' = SUM(Orders[Line Cost])
+		formatString: \$#,0.00
+		displayFolder: Sales
+		lineageTag: 43aab00b-85eb-5e02-800a-21d209f3fe2c
+
+		annotation PBI_FormatHint = {"currencyCulture":"en-US"}
+
+	measure 'Gross Margin' = [Total Sales] - [Total Cost]
+		formatString: \$#,0.00
+		displayFolder: Sales
+		lineageTag: 5982e635-80eb-5d96-b8e7-845623ac98a7
+
+		annotation PBI_FormatHint = {"currencyCulture":"en-US"}
+
+	measure 'Margin %' = DIVIDE([Gross Margin], [Total Sales])
+		formatString: 0.0%
+		displayFolder: Sales
+		lineageTag: 172d60fc-baf9-51d5-8015-9313ec39fd1a
+
+	/// Total Sales with a dynamic format string: $1.23M, $45.6K or $789.00.
+	measure 'Sales (Scaled)' = [Total Sales]
+		formatString: \$#,0.00
+		displayFolder: Sales
+		lineageTag: 170e6979-28bd-5f91-a480-abc280d1d197
+		formatStringDefinition = IF(ABS(SELECTEDMEASURE()) >= 1000000, "\$#,0.00,,\M", IF(ABS(SELECTEDMEASURE()) >= 1000, "\$#,0.0,\K", "\$#,0.00"))
+
+	measure 'Completed Sales' = CALCULATE([Total Sales], KEEPFILTERS(Orders[Status] = "Completed"))
+		formatString: \$#,0.00
+		displayFolder: Sales
+		lineageTag: 74087b34-dbeb-56cd-b235-c8f4a83da620
+
+	/// Sales by ship date (inactive relationship).
+	measure 'Shipped Sales' = CALCULATE([Total Sales], USERELATIONSHIP(Orders[Ship Date], 'Date'[Date]))
+		formatString: \$#,0.00
+		displayFolder: Sales
+		lineageTag: 62eb40f3-ba03-58a6-a838-47d0367bd0af
+
+	measure 'Sales All Stores' = CALCULATE([Total Sales], ALL(Stores))
+		formatString: \$#,0.00
+		displayFolder: Sales
+		isHidden
+		lineageTag: ea7f7ace-4efe-568c-9f01-b506de97dcb9
+
+	measure 'Store Share' = DIVIDE([Total Sales], [Sales All Stores])
+		formatString: 0.0%
+		displayFolder: Sales
+		lineageTag: b79f858d-0b3c-5708-8c93-31db58227c62
+
+	measure 'Order Count' = COUNTROWS(Orders)
+		formatString: #,0
+		displayFolder: Orders
+		lineageTag: 4bead02c-1ceb-5c28-a5e3-8c8da340e10a
+
+	measure 'Units Sold' = SUM(Orders[Quantity])
+		formatString: #,0
+		displayFolder: Orders
+		lineageTag: b6b2169f-0a37-5166-8173-5c1c6b6676f6
+
+	/// Distinct customer ids on orders, unknown ids included.
+	measure 'Active Customers' = DISTINCTCOUNTNOBLANK(Orders[Customer ID])
+		formatString: #,0
+		displayFolder: Orders
+		lineageTag: 8f0439f1-f76e-5bc5-bd3b-f6725f96e018
+
+	measure 'Avg Order Value' =
+			AVERAGEX(
+			    VALUES(Orders[Order ID]),
+			    CALCULATE(SUM(Orders[Line Amount]))
+			)
+		formatString: \$#,0.00
+		displayFolder: Orders
+		lineageTag: b6d13540-e15c-5a39-9627-1b33fc17512e
+
+	measure 'Revenue per Unit' =
+			DIVIDE(
+			    SUMX(Orders, Orders[Quantity] * Orders[Unit Price] * (1 - Orders[Discount])),
+			    [Units Sold]
+			)
+		formatString: \$#,0.00
+		displayFolder: Orders
+		lineageTag: e5abd0e1-555b-5d77-9371-b4e47bcb0e6b
+
+	measure 'Last Order Date' = MAX(Orders[Order Date])
+		formatString: yyyy-mm-dd
+		displayFolder: Orders
+		lineageTag: ff17de02-a5d4-592e-8131-267d342e8773
+
+	/// Orders whose product id is not in the catalog.
+	measure 'Unknown Product Orders' = COUNTROWS(FILTER(Orders, ISBLANK(RELATED(Products[Product Name])))) + 0
+		formatString: 0
+		displayFolder: Data Quality
+		lineageTag: 4fa6d12d-fc7c-54c9-b86f-6eed3084aad4
+
+	measure 'Sales YTD' = TOTALYTD([Total Sales], 'Date'[Date])
+		formatString: \$#,0.00
+		displayFolder: Time Intelligence
+		lineageTag: 13a2123e-999b-56c8-8d14-839b54947ff8
+
+	measure 'Sales PY' = CALCULATE([Total Sales], SAMEPERIODLASTYEAR('Date'[Date]))
+		formatString: \$#,0.00
+		displayFolder: Time Intelligence
+		lineageTag: 865f8dfa-17df-5937-92a0-5b5d5cc40ffe
+
+	measure 'Sales YoY %' = DIVIDE([Total Sales] - [Sales PY], [Sales PY])
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: Time Intelligence
+		lineageTag: 99922499-d8da-5e72-a6af-fe5cb03b718e
+
+	measure 'Sales Prev Month' = CALCULATE([Total Sales], DATEADD('Date'[Date], -1, MONTH))
+		formatString: \$#,0.00
+		displayFolder: Time Intelligence
+		lineageTag: ec2c6459-4dbb-5aea-bebc-ef7a7b49a2b5
+
+	/// Order number (SO-…). Unique after Table.Distinct.
+	column 'Order ID'
+		dataType: string
+		isKey
+		lineageTag: e1f0514c-8c50-56ea-9b6c-047e3a5edc7b
+		summarizeBy: none
+		sourceColumn: Order ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 1601381e-21cb-51b3-80f0-8b1a134c6557
+		summarizeBy: none
+		sourceColumn: Order Date
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Blank for cancelled and pending orders. Inactive relationship to 'Date' (USERELATIONSHIP).
+	column 'Ship Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 7ee762a7-9a85-55f4-8534-3f8374901d85
+		summarizeBy: none
+		sourceColumn: Ship Date
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Customer ID'
+		dataType: string
+		isHidden
+		lineageTag: add07304-1536-52a2-abef-e2fb14b2e5ab
+		summarizeBy: none
+		sourceColumn: Customer ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Store ID'
+		dataType: string
+		isHidden
+		lineageTag: b9e231fa-7509-597d-a007-222e00ccea7e
+		summarizeBy: none
+		sourceColumn: Store ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Product ID'
+		dataType: string
+		isHidden
+		lineageTag: 14efe2da-6e1e-5d1c-893e-5baa9f8c2c34
+		summarizeBy: none
+		sourceColumn: Product ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column Quantity
+		dataType: int64
+		formatString: 0
+		lineageTag: c13c0b01-2981-5f46-ad41-ba524fcdde1e
+		summarizeBy: sum
+		sourceColumn: Quantity
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Unit Price'
+		dataType: double
+		formatString: \$#,0.00
+		lineageTag: 3ce2b5d5-f5c1-53c4-96a6-586acd9cd0c1
+		summarizeBy: none
+		sourceColumn: Unit Price
+
+		annotation SummarizationSetBy = Automatic
+
+	column Discount
+		dataType: double
+		formatString: 0%
+		lineageTag: cf4cf29d-d2ae-573d-8e7e-290443e3c448
+		summarizeBy: none
+		sourceColumn: Discount
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Completed, Cancelled or Pending.
+	column Status
+		dataType: string
+		lineageTag: 61f4f5fc-f8d3-519f-95e1-0da6684082be
+		summarizeBy: none
+		sourceColumn: Status
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Quantity × unit price × (1 − discount), computed in M.
+	column 'Line Amount'
+		dataType: double
+		formatString: \$#,0.00
+		lineageTag: 91d2bf3b-5385-5e81-8795-a77c09144fd1
+		summarizeBy: sum
+		sourceColumn: Line Amount
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Blank when the product is not in the catalog.
+	column 'Line Cost' = Orders[Quantity] * RELATED(Products[Unit Cost])
+		dataType: double
+		formatString: \$#,0.00
+		lineageTag: 8b9cdb09-b15a-517a-8e33-e754f82182e1
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Order Size' = SWITCH(TRUE(), Orders[Line Amount] >= 1000, "Large", Orders[Line Amount] >= 250, "Medium", "Small")
+		dataType: string
+		lineageTag: 3cd033d6-d9b9-5804-8dfe-985921e5ab4d
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Context transition through the one-to-one relationship to Returns.
+	column 'Is Returned' = IF(ISEMPTY(RELATEDTABLE(Returns)), "No", "Yes")
+		dataType: string
+		lineageTag: 020fdb06-1805-5444-acbe-5ebff10fc6a1
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Days To Ship' = IF(ISBLANK(Orders[Ship Date]), BLANK(), DATEDIFF(Orders[Order Date], Orders[Ship Date], DAY))
+		dataType: int64
+		formatString: 0
+		lineageTag: 0808305d-c680-58b1-9809-133d7cb4ddbf
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Orders = m
+		mode: import
+		queryGroup: Sources
+		source =
+				let
+				    Source = AzureStorage.Blobs(StorageContainerUrl),
+				    #"Source CSV" = Csv.Document(Source{[Name = "sales/orders.csv"]}[Content], [Delimiter = ",", Columns = 10, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+				    #"Removed Rows Without Id" = Table.SelectRows(#"Promoted Headers", each Text.Trim([order_id] ?? "") <> ""),
+				    #"Cleaned Text" = Table.TransformColumns(#"Removed Rows Without Id", {{"order_id", Text.Trim, type text}, {"customer_id", fnCleanKey, type text}, {"store_id", fnCleanKey, type text}, {"product_id", fnCleanKey, type text}, {"status", each Text.Proper(Text.Trim(_)), type text}}),
+				    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Removed Duplicates", {{"order_date", type date}, {"ship_date", type date}, {"quantity", Int64.Type}, {"unit_price", type number}, {"discount", type number}}),
+				    #"Default Discount" = Table.TransformColumns(#"Changed Type", {{"discount", each _ ?? 0, type number}}),
+				    #"Added Line Amount" = Table.AddColumn(#"Default Discount", "line_amount", each [quantity] * [unit_price] * (1 - [discount]), type number),
+				    #"Renamed Columns" = Table.RenameColumns(#"Added Line Amount", {{"order_id", "Order ID"}, {"order_date", "Order Date"}, {"ship_date", "Ship Date"}, {"customer_id", "Customer ID"}, {"store_id", "Store ID"}, {"product_id", "Product ID"}, {"quantity", "Quantity"}, {"unit_price", "Unit Price"}, {"discount", "Discount"}, {"status", "Status"}, {"line_amount", "Line Amount"}})
+				in
+				    #"Renamed Columns"
+
+	annotation PBI_ResultType = Table

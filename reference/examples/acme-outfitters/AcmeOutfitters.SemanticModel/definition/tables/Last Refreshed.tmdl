@@ -1,0 +1,24 @@
+/// Single row stamped with the refresh time (UTC). Not used by any expected value.
+table 'Last Refreshed'
+	isHidden
+	lineageTag: 233ccbe4-0141-514f-b687-41ca938b46ac
+
+	column 'Last Refreshed (UTC)'
+		dataType: dateTime
+		formatString: yyyy-mm-dd hh:nn
+		lineageTag: 7eb75460-d56e-506f-9092-9e9f45314d69
+		summarizeBy: none
+		sourceColumn: Last Refreshed (UTC)
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Last Refreshed' = m
+		mode: import
+		queryGroup: Sources
+		source =
+				let
+				    Source = #table(type table [#"Last Refreshed (UTC)" = datetime], {{DateTimeZone.RemoveZone(DateTimeZone.UtcNow())}})
+				in
+				    Source
+
+	annotation PBI_ResultType = Table

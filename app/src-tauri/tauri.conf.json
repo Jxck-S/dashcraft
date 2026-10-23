@@ -1,0 +1,160 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "DashCraft",
+  "mainBinaryName": "dashcraft-app",
+  "identifier": "io.github.jxck-s.dashcraft",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "DashCraft",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 900,
+        "minHeight": 600,
+        "center": true,
+        "resizable": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "withGlobalTauri": false,
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob:",
+        "font-src": "'self' data:",
+        "connect-src": "ipc: http://ipc.localhost",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-src": "'none'",
+        "worker-src": "'self' blob:"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob:",
+        "font-src": "'self' data:",
+        "connect-src": "ipc: http://ipc.localhost ws://localhost:1420 ws://localhost:1421",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-src": "'none'",
+        "worker-src": "'self' blob:"
+      },
+      "dangerousDisableAssetCspModification": [
+        "style-src"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg",
+      "msi",
+      "nsis",
+      "appimage",
+      "deb"
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "Opens Power BI files offline",
+    "longDescription": "DashCraft opens Power BI files (PBIX, PBIP, PBIT, TMDL, BIM) offline and renders their models, data and reports. Not affiliated with or endorsed by Microsoft.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../../NOTICE": "licenses/NOTICE",
+      "../../THIRD_PARTY_NOTICES.md": "licenses/THIRD_PARTY_NOTICES.md",
+      "../src/assets/fonts/OFL.txt": "licenses/Selawik-OFL.txt",
+      "../src/assets/icons/LICENSE": "licenses/FluentUI-System-Icons-LICENSE.txt"
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "pbix"
+        ],
+        "name": "Power BI report (PBIX)",
+        "description": "Power BI report",
+        "role": "Viewer",
+        "rank": "Alternate",
+        "mimeType": "application/x-dashcraft-pbix"
+      },
+      {
+        "ext": [
+          "pbit"
+        ],
+        "name": "Power BI template (PBIT)",
+        "description": "Power BI template",
+        "role": "Viewer",
+        "rank": "Alternate",
+        "mimeType": "application/x-dashcraft-pbit"
+      },
+      {
+        "ext": [
+          "pbip"
+        ],
+        "name": "Power BI project (PBIP)",
+        "description": "Power BI project",
+        "role": "Viewer",
+        "rank": "Alternate",
+        "mimeType": "application/x-dashcraft-pbip"
+      },
+      {
+        "ext": [
+          "bim"
+        ],
+        "name": "Tabular model (BIM)",
+        "description": "Tabular model (TMSL)",
+        "role": "Viewer",
+        "rank": "Alternate",
+        "mimeType": "application/x-dashcraft-bim"
+      },
+      {
+        "ext": [
+          "vpax"
+        ],
+        "name": "VertiPaq Analyzer export (VPAX)",
+        "description": "VertiPaq Analyzer export",
+        "role": "Viewer",
+        "rank": "Alternate",
+        "mimeType": "application/x-dashcraft-vpax"
+      }
+    ],
+    "windows": {
+      "wix": {
+        "upgradeCode": "070cde76-76b9-5f92-ad6d-f64f8824fa32"
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "linux": {
+      "deb": {
+        "section": "utils",
+        "desktopTemplate": "../../scripts/packaging/linux/dashcraft.desktop.hbs",
+        "files": {
+          "/usr/share/mime/packages/dashcraft.xml": "../../scripts/packaging/linux/dashcraft-mime.xml"
+        }
+      },
+      "appimage": {
+        "files": {
+          "/usr/share/mime/packages/dashcraft.xml": "../../scripts/packaging/linux/dashcraft-mime.xml"
+        }
+      }
+    }
+  }
+}

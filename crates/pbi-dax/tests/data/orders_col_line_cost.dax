@@ -1,0 +1,1 @@
+Orders[Quantity] * RELATED(Products[Unit Cost])

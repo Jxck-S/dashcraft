@@ -1,0 +1,1 @@
+let l = {1..10} in {List.Sum(l), List.Accumulate(l, 0, (s, x) => s + x), List.Generate(() => 0, each _ < 5, each _ + 1), List.Zip({l, l}), List.Distinct({1, 1, 2}), List.Sort({3, 1, 2}, Order.Descending), List.Range(l, 2, 3)}

@@ -1,0 +1,96 @@
+# cargo-deny policy for DashCraft — https://embarkstudios.github.io/cargo-deny/
+#
+# Run locally:   cargo deny check                     (all checks)
+#                cargo deny check licenses bans sources   (offline-friendly)
+# CI:            .github/workflows/ci.yml, job `deny` (see docs/ci.md)
+#
+# Config keys are kept compatible with cargo-deny 0.20 (the version bundled in
+# EmbarkStudios/cargo-deny-action@v2).
+
+[graph]
+# Only resolve dependencies for the platforms we ship; this keeps wasm/android/
+# etc.-only crates out of the license and advisory reports.
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+]
+# Match the CI action, which passes --all-features by default.
+all-features = true
+
+[output]
+feature-depth = 1
+
+[advisories]
+# RustSec advisory DB (fetched over the network).
+yanked = "deny"
+# Only report unmaintained crates we depend on directly; transitive ones are
+# not actionable from this repo and would only add noise.
+unmaintained = "workspace"
+ignore = [
+    # Add entries as { id = "RUSTSEC-YYYY-NNNN", reason = "why it does not apply" }
+]
+
+[licenses]
+# Permissive licenses only. cargo-deny denies every license that is not in this
+# list, so GPL-*, AGPL-* and LGPL-* (and any other copyleft or unknown license)
+# fail the check. A dual/multi-licensed crate (e.g. "MIT OR LGPL-2.1") passes
+# as long as one of its alternatives is allowed.
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    # Weak, file-level copyleft: using MPL-2.0 crates unmodified is fine for a
+    # proprietary app, but changes to MPL-covered *files* must be published.
+    # Do not vendor/patch MPL-2.0 sources without legal review.
+    "MPL-2.0",
+    # Fonts only (e.g. crates that embed OFL font files). OFL forbids selling
+    # the fonts on their own; bundling them in an application is allowed.
+    "OFL-1.1",
+]
+confidence-threshold = 0.93
+# The allow list is the project policy, not an inventory of current licenses;
+# don't warn when an allowed license is not (yet) used by any dependency.
+unused-allowed-license = "allow"
+exceptions = [
+    # Per-crate exceptions go here, always with a justification, e.g.
+    # { allow = ["LicenseRef-Foo"], crate = "foo", reason = "..." },
+]
+
+# Workspace crates are `publish = false` with license `LicenseRef-Proprietary`;
+# don't evaluate our own crates against the third-party allow list.
+[licenses.private]
+ignore = true
+registries = []
+
+[bans]
+multiple-versions = "warn"
+# `*` version requirements are not allowed for registry crates. Internal path
+# dependencies (`{ path = ... }` without a version) are fine because every
+# workspace crate is `publish = false`.
+wildcards = "deny"
+allow-wildcard-paths = true
+highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+allow = []
+deny = []
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

@@ -1,0 +1,19 @@
+table Calendar
+	lineageTag: t2
+	dataCategory: Time
+
+	column Date
+		dataType: dateTime
+		isNameInferred
+		lineageTag: c3
+		summarizeBy: none
+		sourceColumn: [Date]
+
+	column Year = YEAR('Calendar'[Date])
+		dataType: int64
+		lineageTag: c4
+		summarizeBy: none
+
+	partition Calendar = calculated
+		mode: import
+		source = CALENDARAUTO()

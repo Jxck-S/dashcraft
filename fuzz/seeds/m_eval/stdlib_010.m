@@ -1,0 +1,1 @@
+Table.FillDown(#table({"a"}, {{1}, {null}, {2}, {null}}), {"a"})[a]

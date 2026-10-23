@@ -1,0 +1,896 @@
+---
+source: crates/pbi-session/tests/export.rs
+expression: md
+---
+# AcmeOutfitters
+
+Data dictionary of the semantic model **Model** (culture en-US, compatibility level 1601).
+
+Acme Outfitters: a synthetic outdoor-gear retailer (fictional data, DashCraft example).
+
+## Summary
+
+| Object | Count |
+|---|---:|
+| Tables | 11 |
+| Columns | 81 |
+| Calculated columns | 11 |
+| Calculated tables | 2 |
+| Measures | 33 |
+| Relationships | 8 |
+| Parameters | 1 |
+| Shared expressions | 2 |
+| Roles | 2 |
+
+## Relationships
+
+| From → To | Cardinality | Cross-filter | Active |
+|---|---|---|---|
+| Orders[Customer ID] → Customers[Customer ID] | many-to-one | both directions | yes |
+| Orders[Product ID] → Products[Product ID] | many-to-one | single | yes |
+| Orders[Store ID] → Stores[Store ID] | many-to-one | single | yes |
+| Orders[Order Date] → Date[Date] | many-to-one | single | yes |
+| Orders[Ship Date] → Date[Date] | many-to-one | single | no |
+| Returns[Order ID] → Orders[Order ID] | one-to-one | both directions | yes |
+| Targets[Region] → Stores[Region] | many-to-many | single | yes |
+| Targets[Month] → Date[Date] | many-to-one | single | yes |
+
+## Tables
+
+| Table | Kind | Columns | Measures | Description |
+|---|---|---:|---:|---|
+| Orders | table | 15 | 20 | One row per order line (synthetic). Cleaned in M: rows without an id and duplicates removed, keys trimmed and upper-cased, blank discounts set to 0. |
+| Customers | table | 14 | 1 | Customers (synthetic). Account managers are parsed from Python-style lists by fnParseNames. |
+| Products | table | 9 | 0 | Product catalog: Category \> Subcategory \> Product. |
+| Stores | table | 12 | 0 | Stores and online channels. Manager Email drives the dynamic security role. |
+| Targets | table | 3 | 3 | Monthly sales targets per region (many-to-many with Stores on Region). |
+| Returns | table | 6 | 3 | Returned orders: at most one return per order (one-to-one with Orders). |
+| Web Sessions | table | 7 | 5 | Website and app sessions. No relationship to any other table: filters on it never reach the sales tables. |
+| Date | calculated table | 8 | 0 | Calendar 2024-2025, marked as the date table. |
+| Time Calc | calculation group | 2 | 0 | Calculation group applied to any measure: Current, YTD, PY and YoY %. |
+| Products Never Sold | calculated table | 4 | 1 | Calculated table: catalog products without any order. |
+| Last Refreshed | table (hidden) | 1 | 0 | Single row stamped with the refresh time (UTC). Not used by any expected value. |
+
+### Orders
+
+One row per order line (synthetic). Cleaned in M: rows without an id and duplicates removed, keys trimmed and upper-cased, blank discounts set to 0.
+
+Kind: table.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Order ID (key) | string | Order number (SO-…). Unique after Table.Distinct. | Order ID |
+| Order Date | dateTime, format yyyy-mm-dd |  | Order Date |
+| Ship Date | dateTime, format yyyy-mm-dd | Blank for cancelled and pending orders. Inactive relationship to 'Date' (USERELATIONSHIP). | Ship Date |
+| Customer ID (hidden) | string |  | Customer ID |
+| Store ID (hidden) | string |  | Store ID |
+| Product ID (hidden) | string |  | Product ID |
+| Quantity | int64, format 0 |  | Quantity |
+| Unit Price | double, format \\$#,0.00 |  | Unit Price |
+| Discount | double, format 0% |  | Discount |
+| Status | string | Completed, Cancelled or Pending. | Status |
+| Line Amount | double, format \\$#,0.00 | Quantity × unit price × (1 − discount), computed in M. | Line Amount |
+| Line Cost | double, format \\$#,0.00 | Blank when the product is not in the catalog. | calculated (DAX) |
+| Order Size | string |  | calculated (DAX) |
+| Is Returned | string | Context transition through the one-to-one relationship to Returns. | calculated (DAX) |
+| Days To Ship | int64, format 0 |  | calculated (DAX) |
+
+#### Measures
+
+| Measure | Format | Folder | Description |
+|---|---|---|---|
+| Total Sales | `\$#,0.00` | Sales | Sum of the order line amounts. |
+| Total Cost | `\$#,0.00` | Sales |  |
+| Gross Margin | `\$#,0.00` | Sales |  |
+| Margin % | `0.0%` | Sales |  |
+| Sales (Scaled) | `\$#,0.00` | Sales | Total Sales with a dynamic format string: $1.23M, $45.6K or $789.00. |
+| Completed Sales | `\$#,0.00` | Sales |  |
+| Shipped Sales | `\$#,0.00` | Sales | Sales by ship date (inactive relationship). |
+| Sales All Stores (hidden) | `\$#,0.00` | Sales |  |
+| Store Share | `0.0%` | Sales |  |
+| Order Count | `#,0` | Orders |  |
+| Units Sold | `#,0` | Orders |  |
+| Active Customers | `#,0` | Orders | Distinct customer ids on orders, unknown ids included. |
+| Avg Order Value | `\$#,0.00` | Orders |  |
+| Revenue per Unit | `\$#,0.00` | Orders |  |
+| Last Order Date | `yyyy-mm-dd` | Orders |  |
+| Unknown Product Orders | `0` | Data Quality | Orders whose product id is not in the catalog. |
+| Sales YTD | `\$#,0.00` | Time Intelligence |  |
+| Sales PY | `\$#,0.00` | Time Intelligence |  |
+| Sales YoY % | `+0.0%;-0.0%;0.0%` | Time Intelligence |  |
+| Sales Prev Month | `\$#,0.00` | Time Intelligence |  |
+
+##### Total Sales
+
+Sum of the order line amounts.
+
+```dax
+SUM(Orders[Line Amount])
+```
+
+##### Total Cost
+
+```dax
+SUM(Orders[Line Cost])
+```
+
+##### Gross Margin
+
+```dax
+[Total Sales] - [Total Cost]
+```
+
+##### Margin %
+
+```dax
+DIVIDE([Gross Margin], [Total Sales])
+```
+
+##### Sales (Scaled)
+
+Total Sales with a dynamic format string: $1.23M, $45.6K or $789.00.
+
+```dax
+[Total Sales]
+```
+
+##### Completed Sales
+
+```dax
+CALCULATE([Total Sales], KEEPFILTERS(Orders[Status] = "Completed"))
+```
+
+##### Shipped Sales
+
+Sales by ship date (inactive relationship).
+
+```dax
+CALCULATE([Total Sales], USERELATIONSHIP(Orders[Ship Date], 'Date'[Date]))
+```
+
+##### Sales All Stores
+
+```dax
+CALCULATE([Total Sales], ALL(Stores))
+```
+
+##### Store Share
+
+```dax
+DIVIDE([Total Sales], [Sales All Stores])
+```
+
+##### Order Count
+
+```dax
+COUNTROWS(Orders)
+```
+
+##### Units Sold
+
+```dax
+SUM(Orders[Quantity])
+```
+
+##### Active Customers
+
+Distinct customer ids on orders, unknown ids included.
+
+```dax
+DISTINCTCOUNTNOBLANK(Orders[Customer ID])
+```
+
+##### Avg Order Value
+
+```dax
+AVERAGEX(
+    VALUES(Orders[Order ID]),
+    CALCULATE(SUM(Orders[Line Amount]))
+)
+```
+
+##### Revenue per Unit
+
+```dax
+DIVIDE(
+    SUMX(Orders, Orders[Quantity] * Orders[Unit Price] * (1 - Orders[Discount])),
+    [Units Sold]
+)
+```
+
+##### Last Order Date
+
+```dax
+MAX(Orders[Order Date])
+```
+
+##### Unknown Product Orders
+
+Orders whose product id is not in the catalog.
+
+```dax
+COUNTROWS(FILTER(Orders, ISBLANK(RELATED(Products[Product Name])))) + 0
+```
+
+##### Sales YTD
+
+```dax
+TOTALYTD([Total Sales], 'Date'[Date])
+```
+
+##### Sales PY
+
+```dax
+CALCULATE([Total Sales], SAMEPERIODLASTYEAR('Date'[Date]))
+```
+
+##### Sales YoY %
+
+```dax
+DIVIDE([Total Sales] - [Sales PY], [Sales PY])
+```
+
+##### Sales Prev Month
+
+```dax
+CALCULATE([Total Sales], DATEADD('Date'[Date], -1, MONTH))
+```
+
+#### Calculated columns
+
+##### Line Cost
+
+Blank when the product is not in the catalog.
+
+```dax
+Orders[Quantity] * RELATED(Products[Unit Cost])
+```
+
+##### Order Size
+
+```dax
+SWITCH(TRUE(), Orders[Line Amount] >= 1000, "Large", Orders[Line Amount] >= 250, "Medium", "Small")
+```
+
+##### Is Returned
+
+Context transition through the one-to-one relationship to Returns.
+
+```dax
+IF(ISEMPTY(RELATEDTABLE(Returns)), "No", "Yes")
+```
+
+##### Days To Ship
+
+```dax
+IF(ISBLANK(Orders[Ship Date]), BLANK(), DATEDIFF(Orders[Order Date], Orders[Ship Date], DAY))
+```
+
+#### Source
+
+Power Query (M) partition `Orders`, import mode, query group `Sources`.
+
+```powerquery
+let
+    Source = AzureStorage.Blobs(StorageContainerUrl),
+    #"Source CSV" = Csv.Document(Source{[Name = "sales/orders.csv"]}[Content], [Delimiter = ",", Columns = 10, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+    #"Removed Rows Without Id" = Table.SelectRows(#"Promoted Headers", each Text.Trim([order_id] ?? "") <> ""),
+    #"Cleaned Text" = Table.TransformColumns(#"Removed Rows Without Id", {{"order_id", Text.Trim, type text}, {"customer_id", fnCleanKey, type text}, {"store_id", fnCleanKey, type text}, {"product_id", fnCleanKey, type text}, {"status", each Text.Proper(Text.Trim(_)), type text}}),
+    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+    #"Changed Type" = Table.TransformColumnTypes(#"Removed Duplicates", {{"order_date", type date}, {"ship_date", type date}, {"quantity", Int64.Type}, {"unit_price", type number}, {"discount", type number}}),
+    #"Default Discount" = Table.TransformColumns(#"Changed Type", {{"discount", each _ ?? 0, type number}}),
+    #"Added Line Amount" = Table.AddColumn(#"Default Discount", "line_amount", each [quantity] * [unit_price] * (1 - [discount]), type number),
+    #"Renamed Columns" = Table.RenameColumns(#"Added Line Amount", {{"order_id", "Order ID"}, {"order_date", "Order Date"}, {"ship_date", "Ship Date"}, {"customer_id", "Customer ID"}, {"store_id", "Store ID"}, {"product_id", "Product ID"}, {"quantity", "Quantity"}, {"unit_price", "Unit Price"}, {"discount", "Discount"}, {"status", "Status"}, {"line_amount", "Line Amount"}})
+in
+    #"Renamed Columns"
+```
+
+### Customers
+
+Customers (synthetic). Account managers are parsed from Python-style lists by fnParseNames.
+
+Kind: table.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Customer ID (key) | string |  | Customer ID |
+| Customer Name | string |  | Customer Name |
+| Email | string |  | Email |
+| Email Domain | string |  | Email Domain |
+| Segment | string |  | Segment |
+| City | string |  | City |
+| State | string |  | State |
+| Join Date | dateTime, format yyyy-mm-dd |  | Join Date |
+| Loyalty Tier | string | Bronze, Silver, Gold; blanks become Unassigned. | Loyalty Tier |
+| Account Managers | string | Parsed names joined with "; "; blank when the list is empty. | Account Managers |
+| Account Manager Count | int64, format 0 |  | Account Manager Count |
+| Lifetime Sales | double, format \\$#,0 | Context transition: every order of the customer, all statuses. | calculated (DAX) |
+| Has Orders | string |  | calculated (DAX) |
+| Value Tier | string |  | calculated (DAX) |
+
+#### Measures
+
+| Measure | Format | Description |
+|---|---|---|
+| Customer Count | `#,0` | Customers in the filter context (cross-filtered by Orders, both directions). |
+
+##### Customer Count
+
+Customers in the filter context (cross-filtered by Orders, both directions).
+
+```dax
+COUNTROWS(Customers)
+```
+
+#### Calculated columns
+
+##### Lifetime Sales
+
+Context transition: every order of the customer, all statuses.
+
+```dax
+CALCULATE(SUM(Orders[Line Amount]))
+```
+
+##### Has Orders
+
+```dax
+IF(ISEMPTY(RELATEDTABLE(Orders)), "No", "Yes")
+```
+
+##### Value Tier
+
+```dax
+SWITCH(
+    TRUE(),
+    Customers[Lifetime Sales] >= 3000, "High",
+    Customers[Lifetime Sales] >= 1000, "Medium",
+    Customers[Lifetime Sales] > 0, "Low",
+    "None"
+)
+```
+
+#### Source
+
+Power Query (M) partition `Customers`, import mode, query group `Sources`.
+
+```powerquery
+let
+    Source = AzureStorage.Blobs(StorageContainerUrl),
+    #"Source CSV" = Csv.Document(Source{[Name = "sales/customers.csv"]}[Content], [Delimiter = ",", Columns = 10, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"customer_id", fnCleanKey, type text}, {"email", each Text.Lower(Text.Trim(_)), type text}, {"segment", Text.Trim, type text}, {"loyalty_tier", each let t = Text.Trim(_ ?? "") in if t = "" then "Unassigned" else t, type text}, {"account_managers", each let names = fnParseNames(_ ?? "") in if names = "" then null else names, type nullable text}}),
+    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+    #"Added Name" = Table.AddColumn(#"Removed Duplicates", "customer_name", each Text.Combine({Text.Trim([first_name]), Text.Trim([last_name])}, " "), type text),
+    #"Added Domain" = Table.AddColumn(#"Added Name", "email_domain", each Text.AfterDelimiter([email], "@"), type text),
+    #"Added Manager Count" = Table.AddColumn(#"Added Domain", "manager_count", each List.Count(List.RemoveNulls(List.Transform(Text.Split([account_managers] ?? "", ";"), each if Text.Trim(_) = "" then null else _))), Int64.Type),
+    #"Changed Type" = Table.TransformColumnTypes(#"Added Manager Count", {{"join_date", type date}}),
+    #"Selected Columns" = Table.SelectColumns(#"Changed Type", {"customer_id", "customer_name", "email", "email_domain", "segment", "city", "state", "join_date", "loyalty_tier", "account_managers", "manager_count"}),
+    #"Renamed Columns" = Table.RenameColumns(#"Selected Columns", {{"customer_id", "Customer ID"}, {"customer_name", "Customer Name"}, {"email", "Email"}, {"email_domain", "Email Domain"}, {"segment", "Segment"}, {"city", "City"}, {"state", "State"}, {"join_date", "Join Date"}, {"loyalty_tier", "Loyalty Tier"}, {"account_managers", "Account Managers"}, {"manager_count", "Account Manager Count"}})
+in
+    #"Renamed Columns"
+```
+
+### Products
+
+Product catalog: Category \> Subcategory \> Product.
+
+Kind: table.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Product ID (key) | string |  | Product ID |
+| Product Name | string |  | Product Name |
+| Category | string |  | Category |
+| Subcategory | string |  | Subcategory |
+| List Price | decimal, format \\$#,0.00 |  | List Price |
+| Unit Cost | decimal, format \\$#,0.00 |  | Unit Cost |
+| Launch Date | dateTime, format yyyy-mm-dd |  | Launch Date |
+| Units Sold (All Time) | int64, format #,0 |  | calculated (DAX) |
+| Price Band | string |  | calculated (DAX) |
+
+#### Calculated columns
+
+##### Units Sold (All Time)
+
+```dax
+SUMX(RELATEDTABLE(Orders), Orders[Quantity])
+```
+
+##### Price Band
+
+```dax
+SWITCH(
+    TRUE(),
+    Products[List Price] < 50, "Under $50",
+    Products[List Price] < 150, "$50 to $149",
+    "$150 and up"
+)
+```
+
+#### Hierarchies
+
+| Hierarchy | Levels | Description |
+|---|---|---|
+| Product Hierarchy | Category → Subcategory → Product (Product Name) |  |
+
+#### Source
+
+Power Query (M) partition `Products`, import mode, query group `Sources`.
+
+```powerquery
+let
+    Source = AzureStorage.Blobs(StorageContainerUrl),
+    #"Source CSV" = Csv.Document(Source{[Name = "catalog/products.csv"]}[Content], [Delimiter = ",", Columns = 7, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"product_id", fnCleanKey, type text}, {"product_name", Text.Trim, type text}, {"category", Text.Trim, type text}, {"subcategory", Text.Trim, type text}}),
+    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+    #"Changed Type" = Table.TransformColumnTypes(#"Removed Duplicates", {{"list_price", Currency.Type}, {"unit_cost", Currency.Type}, {"launch_date", type date}}),
+    #"Renamed Columns" = Table.RenameColumns(#"Changed Type", {{"product_id", "Product ID"}, {"product_name", "Product Name"}, {"category", "Category"}, {"subcategory", "Subcategory"}, {"list_price", "List Price"}, {"unit_cost", "Unit Cost"}, {"launch_date", "Launch Date"}})
+in
+    #"Renamed Columns"
+```
+
+### Stores
+
+Stores and online channels. Manager Email drives the dynamic security role.
+
+Kind: table.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Store ID (key) | string |  | Store ID |
+| Store Name | string |  | Store Name |
+| Region | string |  | Region |
+| Channel | string | Retail, Outlet or Online. | Channel |
+| City | string |  | City |
+| State | string |  | State |
+| Manager Email (hidden) | string |  | Manager Email |
+| Open Date | dateTime, format yyyy-mm-dd |  | Open Date |
+| Square Feet | int64, format #,0 |  | Square Feet |
+| Store Manager | string |  | Store Manager |
+| Region Code | string |  | Region Code |
+| Store Label | string |  | calculated (DAX) |
+
+#### Calculated columns
+
+##### Store Label
+
+```dax
+Stores[Store Name] & " (" & Stores[Region] & ")"
+```
+
+#### Hierarchies
+
+| Hierarchy | Levels | Description |
+|---|---|---|
+| Geography | Region → Store (Store Name) |  |
+
+#### Source
+
+Power Query (M) partition `Stores`, import mode, query group `Sources`.
+
+```powerquery
+let
+    Source = AzureStorage.Blobs(StorageContainerUrl),
+    #"Source CSV" = Csv.Document(Source{[Name = "stores/stores.csv"]}[Content], [Delimiter = ",", Columns = 9, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"store_id", fnCleanKey, type text}, {"region", Text.Trim, type text}, {"manager_email", each Text.Lower(Text.Trim(_)), type text}}),
+    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+    #"Blanks To Null" = Table.ReplaceValue(#"Removed Duplicates", "", null, Replacer.ReplaceValue, {"city", "state", "square_feet"}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Blanks To Null", {{"open_date", type date}, {"square_feet", Int64.Type}}),
+    #"Added Manager" = Table.AddColumn(#"Changed Type", "store_manager", each Text.Proper(Text.Replace(Text.BeforeDelimiter([manager_email], "@"), ".", " ")), type text),
+    #"Added Region Code" = Table.AddColumn(#"Added Manager", "region_code", each Text.Upper(Text.Start([region], 3)), type text),
+    #"Renamed Columns" = Table.RenameColumns(#"Added Region Code", {{"store_id", "Store ID"}, {"store_name", "Store Name"}, {"region", "Region"}, {"channel", "Channel"}, {"city", "City"}, {"state", "State"}, {"manager_email", "Manager Email"}, {"open_date", "Open Date"}, {"square_feet", "Square Feet"}, {"store_manager", "Store Manager"}, {"region_code", "Region Code"}})
+in
+    #"Renamed Columns"
+```
+
+### Targets
+
+Monthly sales targets per region (many-to-many with Stores on Region).
+
+Kind: table.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Region | string |  | Region |
+| Month | dateTime, format yyyy-mm |  | Month |
+| Target Amount | decimal, format \\$#,0 |  | Target Amount |
+
+#### Measures
+
+| Measure | Format | Description |
+|---|---|---|
+| Target | `\$#,0` |  |
+| Target Attainment % | `0.0%` |  |
+| Target Stretch (hidden) | `\$#,0` | Gauge maximum. |
+
+##### Target
+
+```dax
+SUM(Targets[Target Amount])
+```
+
+##### Target Attainment %
+
+```dax
+DIVIDE([Total Sales], [Target])
+```
+
+##### Target Stretch
+
+Gauge maximum.
+
+```dax
+[Target] * 1.2
+```
+
+#### Source
+
+Power Query (M) partition `Targets`, import mode, query group `Sources`.
+
+```powerquery
+let
+    Source = AzureStorage.Blobs(StorageContainerUrl),
+    #"Source CSV" = Csv.Document(Source{[Name = "planning/targets.csv"]}[Content], [Delimiter = ",", Columns = 3, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+    #"Removed Blank Rows" = Table.SelectRows(#"Promoted Headers", each Text.Trim([region] ?? "") <> ""),
+    #"Trimmed Region" = Table.TransformColumns(#"Removed Blank Rows", {{"region", Text.Trim, type text}}),
+    #"Added Month" = Table.AddColumn(#"Trimmed Region", "month_start", each Date.FromText([month] & "-01"), type date),
+    #"Changed Type" = Table.TransformColumnTypes(#"Added Month", {{"target_amount", Currency.Type}}),
+    #"Selected Columns" = Table.SelectColumns(#"Changed Type", {"region", "month_start", "target_amount"}),
+    #"Renamed Columns" = Table.RenameColumns(#"Selected Columns", {{"region", "Region"}, {"month_start", "Month"}, {"target_amount", "Target Amount"}})
+in
+    #"Renamed Columns"
+```
+
+### Returns
+
+Returned orders: at most one return per order (one-to-one with Orders).
+
+Kind: table.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Return ID | string |  | Return ID |
+| Order ID (key) | string |  | Order ID |
+| Return Date | dateTime, format yyyy-mm-dd |  | Return Date |
+| Quantity Returned | int64, format 0 |  | Quantity Returned |
+| Reason | string |  | Reason |
+| Refund Amount | decimal, format \\$#,0.00 |  | Refund Amount |
+
+#### Measures
+
+| Measure | Format | Description |
+|---|---|---|
+| Returns Count | `#,0` |  |
+| Refunds | `\$#,0.00` |  |
+| Return Rate | `0.0%` |  |
+
+##### Returns Count
+
+```dax
+COUNTROWS(Returns)
+```
+
+##### Refunds
+
+```dax
+SUM(Returns[Refund Amount])
+```
+
+##### Return Rate
+
+```dax
+DIVIDE([Returns Count], [Order Count])
+```
+
+#### Source
+
+Power Query (M) partition `Returns`, import mode, query group `Sources`.
+
+```powerquery
+let
+    Source = AzureStorage.Blobs(StorageContainerUrl),
+    #"Source CSV" = Csv.Document(Source{[Name = "sales/returns.csv"]}[Content], [Delimiter = ",", Columns = 6, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"return_id", Text.Trim, type text}, {"order_id", Text.Trim, type text}, {"reason", each Text.Proper(Text.Trim(_)), type text}}),
+    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+    #"Changed Type" = Table.TransformColumnTypes(#"Removed Duplicates", {{"return_date", type date}, {"quantity_returned", Int64.Type}, {"refund_amount", Currency.Type}}),
+    #"Renamed Columns" = Table.RenameColumns(#"Changed Type", {{"return_id", "Return ID"}, {"order_id", "Order ID"}, {"return_date", "Return Date"}, {"quantity_returned", "Quantity Returned"}, {"reason", "Reason"}, {"refund_amount", "Refund Amount"}})
+in
+    #"Renamed Columns"
+```
+
+### Web Sessions
+
+Website and app sessions. No relationship to any other table: filters on it never reach the sales tables.
+
+Kind: table.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Session ID | string |  | Session ID |
+| Session Date | dateTime, format yyyy-mm-dd |  | Session Date |
+| Device | string |  | Device |
+| Traffic Source | string |  | Traffic Source |
+| Pages Viewed | int64, format 0 |  | Pages Viewed |
+| Converted | boolean |  | Converted |
+| Is Campaign | boolean |  | Is Campaign |
+
+#### Measures
+
+| Measure | Format | Description |
+|---|---|---|
+| Sessions | `#,0` |  |
+| Converted Sessions | `#,0` |  |
+| Conversion Rate | `0.0%` |  |
+| Avg Pages per Session | `0.0` |  |
+| Sessions (All Devices) | `#,0` | Ignores filters on Device. |
+
+##### Sessions
+
+```dax
+COUNTROWS('Web Sessions')
+```
+
+##### Converted Sessions
+
+```dax
+CALCULATE([Sessions], 'Web Sessions'[Converted] = TRUE())
+```
+
+##### Conversion Rate
+
+```dax
+DIVIDE([Converted Sessions], [Sessions])
+```
+
+##### Avg Pages per Session
+
+```dax
+AVERAGE('Web Sessions'[Pages Viewed])
+```
+
+##### Sessions (All Devices)
+
+Ignores filters on Device.
+
+```dax
+CALCULATE([Sessions], ALL('Web Sessions'[Device]))
+```
+
+#### Source
+
+Power Query (M) partition `Web Sessions`, import mode, query group `Sources`.
+
+```powerquery
+let
+    Source = AzureStorage.Blobs(StorageContainerUrl),
+    #"Source CSV" = Csv.Document(Source{[Name = "web/web_sessions.csv"]}[Content], [Delimiter = ",", Columns = 6, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"device", each Text.Proper(Text.Trim(_)), type text}}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Cleaned Text", {{"session_date", type date}, {"pages_viewed", Int64.Type}, {"converted", type logical}}),
+    #"Added Campaign Flag" = Table.AddColumn(#"Changed Type", "is_campaign", each Text.Contains([traffic_source], "Campaign"), type logical),
+    #"Renamed Columns" = Table.RenameColumns(#"Added Campaign Flag", {{"session_id", "Session ID"}, {"session_date", "Session Date"}, {"device", "Device"}, {"traffic_source", "Traffic Source"}, {"pages_viewed", "Pages Viewed"}, {"converted", "Converted"}, {"is_campaign", "Is Campaign"}})
+in
+    #"Renamed Columns"
+```
+
+### Date
+
+Calendar 2024-2025, marked as the date table.
+
+Kind: calculated table · data category: Time.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Date (key) | dateTime, format yyyy-mm-dd |  | [Date] |
+| Year | int64, format 0 |  | [Year] |
+| Month Number (hidden) | int64, format 0 |  | [Month Number] |
+| Month | string |  | [Month] |
+| Year Month | string |  | [Year Month] |
+| Quarter | string |  | [Quarter] |
+| Month Start | dateTime, format yyyy-mm-dd |  | [Month Start] |
+| Day Type | string |  | calculated (DAX) |
+
+#### Calculated columns
+
+##### Day Type
+
+```dax
+IF(WEEKDAY('Date'[Date], 2) > 5, "Weekend", "Weekday")
+```
+
+#### Hierarchies
+
+| Hierarchy | Levels | Description |
+|---|---|---|
+| Calendar | Year → Quarter → Month → Date |  |
+
+#### Source
+
+Calculated table (DAX) partition `Date`, import mode.
+
+```dax
+ADDCOLUMNS(
+    CALENDAR(DATE(2024, 1, 1), DATE(2025, 12, 31)),
+    "Year", YEAR([Date]),
+    "Month Number", MONTH([Date]),
+    "Month", FORMAT([Date], "mmm"),
+    "Year Month", FORMAT([Date], "yyyy-mm"),
+    "Quarter", "Q" & QUARTER([Date]),
+    "Month Start", DATE(YEAR([Date]), MONTH([Date]), 1)
+)
+```
+
+### Time Calc
+
+Calculation group applied to any measure: Current, YTD, PY and YoY %.
+
+Kind: calculation group.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Time Calculation | string |  | Name |
+| Ordinal (hidden) | int64, format 0 |  | Ordinal |
+
+#### Source
+
+calculationGroup partition `Time Calc`, import mode.
+
+### Products Never Sold
+
+Calculated table: catalog products without any order.
+
+Kind: calculated table.
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Product ID | string |  | [Product ID] |
+| Product | string |  | [Product] |
+| Category | string |  | [Category] |
+| List Price | decimal, format \\$#,0.00 |  | [List Price] |
+
+#### Measures
+
+| Measure | Format | Description |
+|---|---|---|
+| Products Never Sold Count | `0` |  |
+
+##### Products Never Sold Count
+
+```dax
+COUNTROWS('Products Never Sold') + 0
+```
+
+#### Source
+
+Calculated table (DAX) partition `Products Never Sold`, import mode.
+
+```dax
+VAR SoldProducts =
+    SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), "Product ID", Orders[Product ID])
+VAR Catalog =
+    SELECTCOLUMNS(ALL(Products), "Product ID", Products[Product ID])
+VAR NeverSold = EXCEPT(Catalog, SoldProducts)
+RETURN
+    SELECTCOLUMNS(
+        FILTER(
+            ALL(Products),
+            Products[Product ID] IN NeverSold
+                && ISEMPTY(RELATEDTABLE(Orders))
+        ),
+        "Product ID", Products[Product ID],
+        "Product", Products[Product Name],
+        "Category", Products[Category],
+        "List Price", Products[List Price]
+    )
+```
+
+### Last Refreshed
+
+Single row stamped with the refresh time (UTC). Not used by any expected value.
+
+Kind: table (hidden).
+
+#### Columns
+
+| Name | Type | Description | Source |
+|---|---|---|---|
+| Last Refreshed (UTC) | dateTime, format yyyy-mm-dd hh:nn |  | Last Refreshed (UTC) |
+
+#### Source
+
+Power Query (M) partition `Last Refreshed`, import mode, query group `Sources`.
+
+```powerquery
+let
+    Source = #table(type table [#"Last Refreshed (UTC)" = datetime], {{DateTimeZone.RemoveZone(DateTimeZone.UtcNow())}})
+in
+    Source
+```
+
+## Parameters
+
+| Parameter | Type | Required | Value | Description |
+|---|---|---|---|---|
+| StorageContainerUrl | Text | yes | `"https://acmeoutfittersdemo.blob.core.windows.net/sample-data"` | Fictional Azure Blob container with the sample CSVs. Never contacted: DashCraft resolves it<br>offline through blob-map.json. |
+
+## Shared expressions
+
+### fnCleanKey
+
+Power Query (M) expression, query group `Functions`.
+
+Trims and upper-cases a business key (customer, store and product ids).
+
+```powerquery
+(x as text) as text => Text.Upper(Text.Trim(x))
+```
+
+### fnParseNames
+
+Power Query (M) expression, query group `Functions`.
+
+Turns a Python-style list of names, such as ['Ana Ruiz', "O'Neil Park"], into "Ana Ruiz; O'Neil Park".
+
+```powerquery
+(raw as text) as text =>
+let
+    Trimmed = Text.Trim(raw),
+    Inner = if Text.Start(Trimmed, 1) = "[" then Text.Range(Trimmed, 1, Text.Length(Trimmed) - 2) else Trimmed,
+    Names = List.Transform(Text.Split(Inner, ","), each Text.Trim(Text.Trim(_), {"'", """"})),
+    NonEmpty = List.Select(Names, each _ <> ""),
+    Result = if List.IsEmpty(NonEmpty) then "" else Text.Combine(NonEmpty, "; ")
+in
+    Result
+```
+
+## Roles
+
+### Region West
+
+Sees the West region only: its stores, their orders, returns and targets.
+
+Model permission: read.
+
+Row filter on `Stores`:
+
+```dax
+Stores[Region] = "West"
+```
+
+### Store Manager
+
+Dynamic security: a manager sees the stores whose Manager Email is the signed-in user.
+
+Model permission: read.
+
+Row filter on `Stores`:
+
+```dax
+Stores[Manager Email] = USERPRINCIPALNAME()
+```

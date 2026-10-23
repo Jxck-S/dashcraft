@@ -1,0 +1,46 @@
+table	Business Area	rows=7
+column	Business Area	Business Area	type=2	nulls=0	distinct=7	sha256=654cfb3ef057dac293b554977d8e6afee0e1f3a092a201d09d2065b9d30be41d
+column	Business Area	Business Area ID	type=8	nulls=0	distinct=7	sha256=f164689b3b7898a898ce85d62f3712d221369bf7ada33fa237962788140f5f73
+table	Calculations	rows=166216
+column	Calculations	Date	type=9	nulls=0	distinct=12	sha256=a0c7e5c432d1541c550df9294d7aadf2c15f948ddad4679c7ecbcc78f2e6acc8
+column	Calculations	Value	type=8	nulls=0	distinct=35807	sha256=e94bb7321245212c2f2abb6ed121592b90e484914ff75a21daaffcc80f2f69e3
+column	Calculations	Department	type=8	nulls=0	distinct=410	sha256=0716bf5e0772c2fdac7fea0c6487b08ad1a845ac9fa1770507e2fb3715260e1c
+column	Calculations	Cost Element ID	type=2	nulls=0	distinct=240	sha256=210fad07d30b25d59ea0458fa598f4f78035a5e29e568007bbc0138dffb71d58
+column	Calculations	Country/Region ID	type=8	nulls=0	distinct=35	sha256=72a279a92127a17b1875fb123aad6c8461bddb758812b46f1d6ad40494e2d495
+column	Calculations	Business Area ID	type=8	nulls=0	distinct=7	sha256=08b0cabe6f1801b5dbb5897e0483bc98a8059b43df7869b7fb422f4aa0a8df02
+column	Calculations	IT Sub Area ID	type=8	nulls=0	distinct=38	sha256=ea896d8ab01110d60bc59f69e56818b6bab3f41d568dc344ae784e5ce5796025
+column	Calculations	Scenario ID	type=8	nulls=0	distinct=5	sha256=d35b0e2bcba82e1869b51dc8768606a317a56c4bd786c9685cb17bfdc5f63fc7
+table	Cost Element	rows=253
+column	Cost Element	Cost element name	type=2	nulls=0	distinct=244	sha256=c7870e8dc059ef5bf0f6654e44908ed4f486825df9b4fe2db78093a6ab4fc012
+column	Cost Element	Cost Element Group	type=2	nulls=0	distinct=7	sha256=1ea07a6326470c53225b4caf60a39a34678df9fd3dd732764be68aad6e182dde
+column	Cost Element	Cost Element Sub Group	type=2	nulls=0	distinct=25	sha256=c97d53f39141b167f08b8e6fd183dac93731b3c99763c6917dd9c059d451fb23
+column	Cost Element	Cost Element ID	type=8	nulls=0	distinct=253	sha256=8780f8523961fa562263c29f09a70e3b50d3ca550686832ed1ebdd8caf3b5d0a
+table	Country Region	rows=52
+column	Country Region	Sales Region	type=2	nulls=0	distinct=6	sha256=cb707655d2b5f5ab011fda55c6478bd6296bcc0213b159cda0a04b1f26271b0d
+column	Country Region	Country/Region	type=2	nulls=0	distinct=52	sha256=500b4bc618209e151dda58ac1aa00da361f4946256ff96a94978e7296f2304da
+column	Country Region	Country/Region ID	type=8	nulls=0	distinct=52	sha256=db07c366fef749c89276682dcb7faddcd12bcc6fab30d7a197ab7d93d6a0d71c
+column	Country Region	Country / Region	type=2	nulls=0	distinct=52	sha256=653d611a7d999f64fdfa895a74d3fd809143d197bb9e2e7a91396b1a4cdfbbd7
+table	Date	rows=48
+column	Date	Date	type=9	nulls=0	distinct=48	sha256=35e4acd8c1c982bda08806bdfdcc39fc72611f4b423b6e69fea8c747121125de
+column	Date	Year	type=6	nulls=0	distinct=4	sha256=05c0a41ed3c8cad6285b83d3eaca6187f5238ff2b962e051ff487cdf6b3b2fec
+column	Date	Period	type=6	nulls=0	distinct=12	sha256=3a2af91926e451a25378f619be463e54017d6c480486886386ec1e2b834ae8ac
+column	Date	Month	type=2	nulls=0	distinct=12	sha256=25d0ffeb927264c75511d9497a1156a14a0c7df3537737bf53d58e41b40636c1
+table	Department	rows=471
+column	Department	VP	type=2	nulls=0	distinct=63	sha256=a9d1eb676daf598d01462a39f5e28d105e556bb55005e89299c391418df57c4d
+column	Department	Department	type=6	nulls=0	distinct=471	sha256=7b3ed82a13b9bd743fef831b3b682221c56b1b108ba2f10a70e403702a85d003
+table	IT Area	rows=40
+column	IT Area	IT Area	type=2	nulls=0	distinct=5	sha256=a3e3e3f63f2d4b9d420ea427e18d7d18de2e29d067f8c8f8cd3377cc07641cee
+column	IT Area	IT Sub Area	type=2	nulls=0	distinct=40	sha256=10f51b336c9ff6d73c71c0d38adaf588f254f73f5e326eaa2d42bcbcfa8daa39
+column	IT Area	IT Sub Area ID	type=8	nulls=0	distinct=40	sha256=13ff922f2187af44b2ea62ad091a5c3fba58f9d2ab2320dac41e6f06c3d1417d
+table	Scenario	rows=5
+column	Scenario	Scenario	type=2	nulls=0	distinct=5	sha256=3a10b94119fd1d22c457bf14da7234734694924d74dc9d26f0ef6a44dbbd28fc
+column	Scenario	Scenario ID	type=8	nulls=0	distinct=5	sha256=dc0f70a0cef3b47bb97cc3d7d9aaf2913919a5d21e1ba0dcd39f67d14d4dd16d
+column	Scenario	ScenarioDescription	type=2	nulls=0	distinct=5	sha256=23e195151f9f48b6527b89e32eacdddc0454a08232621418e239610c06f0fe8d
+table	Toggle for breakdown	rows=5
+column	Toggle for breakdown	Breakdown by	type=2	nulls=0	distinct=5	sha256=b0709e25e86334287da508fdd761924b36abe818c9d72e281d2aa3ba1a8be6f9
+column	Toggle for breakdown	Parameter Fields	type=2	nulls=0	distinct=5	sha256=20258d9eaecd56ad56e5872af7baf8250459c79e1058196b0dd98c206adff686
+column	Toggle for breakdown	Parameter Order	type=6	nulls=0	distinct=5	sha256=90e56e3250064294e4657f95bd7a4399147b9c8fad3560b72272bceffd1ce61e
+table	Toggle for variance to plan	rows=2
+column	Toggle for variance to plan	# / %	type=2	nulls=0	distinct=2	sha256=7f40fb69eb5e20f756dc3f3fd8a7ff0635f181d56ddbb7ae6a6d1be851be7ed4
+column	Toggle for variance to plan	Parameter Fields	type=2	nulls=0	distinct=2	sha256=6c8a60e2fc19d912c6180be76f4257e145c8d474c8257d9e39045ea34bb42f3a
+column	Toggle for variance to plan	Parameter Order	type=6	nulls=0	distinct=2	sha256=4f63c3490ec69b5f492fa1ef2f66ca9a63887ecf23e9b58abe28e528f46582eb

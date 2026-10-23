@@ -1,0 +1,1 @@
+List.RemoveNulls({1, null, 2})

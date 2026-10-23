@@ -1,0 +1,1 @@
+CALCULATE([Total Sales], KEEPFILTERS(Orders[Status] = "Completed"))

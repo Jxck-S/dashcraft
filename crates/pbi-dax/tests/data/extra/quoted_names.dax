@@ -1,0 +1,1 @@
+CONCATENATE ( 'It''s'[A]]B], "say ""hi""" ) & 'Last Refreshed'[Last Refreshed (UTC)] & dt"2024-01-31"

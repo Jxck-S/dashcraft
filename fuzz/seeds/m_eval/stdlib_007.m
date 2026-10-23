@@ -1,0 +1,1 @@
+Table.TransformColumnNames(#table({"a b"}, {}), each Text.Replace(_, " ", "_"))

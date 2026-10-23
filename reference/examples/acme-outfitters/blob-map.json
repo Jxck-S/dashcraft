@@ -1,0 +1,14 @@
+{
+  "$comment": "Offline AzureStorage.Blobs mapping for the fictional Acme Outfitters container. Paths are relative to this file. The URL is a placeholder and is never contacted.",
+  "containers": {
+    "https://acmeoutfittersdemo.blob.core.windows.net/sample-data": {
+      "sales/orders.csv": "data/orders.csv",
+      "sales/customers.csv": "data/customers.csv",
+      "sales/returns.csv": "data/returns.csv",
+      "catalog/products.csv": "data/products.csv",
+      "stores/stores.csv": "data/stores.csv",
+      "planning/targets.csv": "data/targets.csv",
+      "web/web_sessions.csv": "data/web_sessions.csv"
+    }
+  }
+}

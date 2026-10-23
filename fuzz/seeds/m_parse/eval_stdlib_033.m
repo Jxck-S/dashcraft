@@ -1,0 +1,1 @@
+Text.Replace("a-b-c", "-", "+")

@@ -1,0 +1,1 @@
+List.MatchesAll({2, 4}, each Number.IsEven(_))

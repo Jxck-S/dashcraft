@@ -1,0 +1,2 @@
+EVALUATE
+ROW ( "Orders", [Order Count], "Param", @MinQty )

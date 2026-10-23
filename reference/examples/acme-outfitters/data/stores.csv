@@ -1,0 +1,17 @@
+store_id,store_name,region,channel,city,state,manager_email,open_date,square_feet
+S01,Seattle Flagship,West,Retail,Seattle,WA,riley.chen@acmeoutfitters.example,2012-04-14,32000
+S02,Portland Pearl,West,Retail,Portland,OR,  Morgan.Price@AcmeOutfitters.example,2014-09-06,18000
+S03,Boise Outlet,West,Outlet,Boise,ID,casey.nguyen@acmeoutfitters.example,2017-03-18,12000
+S04,Denver Union,Central,Retail,Denver,CO,jamie.ortiz@acmeoutfitters.example,2013-05-11,24000
+S05,Minneapolis North Loop,Central,Retail,Minneapolis,MN,taylor.brooks@acmeoutfitters.example,2016-08-27,16000
+S06,Kansas City Outlet,Central,Outlet,Kansas City,MO,alex.romero@acmeoutfitters.example,2019-02-23,11000
+S07,Boston Back Bay,East,Retail,Boston,MA,jordan.lee@acmeoutfitters.example,2011-10-01,21000
+S08,Burlington Lakeside,East,Retail,Burlington,VT,sam.patel@acmeoutfitters.example,2018-06-09,9000
+s09 ,Philadelphia Outlet,East,Outlet,Philadelphia,PA,drew.kowalski@acmeoutfitters.example,2020-11-14,13000
+S07,Boston Back Bay,East,Retail,Boston,MA,jordan.lee@acmeoutfitters.example,2011-10-01,21000
+S10,Asheville River Arts,South,Retail,Asheville,NC,avery.james@acmeoutfitters.example,2015-04-25,10000
+S11,Austin South Congress,South,Retail,Austin,TX,parker.diaz@acmeoutfitters.example,2016-03-05,19000
+S12,Atlanta Outlet,South,Outlet,Atlanta,GA,quinn.foster@acmeoutfitters.example,2021-09-18,14000
+S13,Salt Lake City Sugar House,West ,Retail,Salt Lake City,UT,riley.chen@acmeoutfitters.example,2022-05-07,15000
+S14,Acme Web Store,Online,Online,,,rowan.blake@acmeoutfitters.example,2010-01-15,
+S15,Acme Mobile App,Online,Online,,,emery.walsh@acmeoutfitters.example,2019-07-01,

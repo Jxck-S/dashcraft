@@ -1,0 +1,1 @@
+Text.End("abcdef", 2)

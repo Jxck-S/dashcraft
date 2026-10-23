@@ -1,0 +1,1 @@
+let a = #table({"K", "V"}, {{1, "x"}, {2, "y"}}), b = #table({"K", "W"}, {{1, "p"}, {3, "q"}}), j = Table.NestedJoin(a, {"K"}, b, {"K"}, "B", JoinKind.LeftOuter), e = Table.ExpandTableColumn(j, "B", {"W"}) in e

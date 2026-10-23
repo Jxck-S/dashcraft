@@ -1,0 +1,151 @@
+---
+source: crates/pbi-render/tests/render_snapshots.rs
+expression: text
+---
+Acme Outfitters - Stores / Store Performance (FitToPage, 1280×720, 14 visuals)
+page svg: 49469 bytes, fnv1a f06efcc8d04f99ea
+
+9b2792b8239b52dc5cbc shape 1280×64 at (0, 0): svg db72110097218115, 0 data points
+
+1279aa9cd39ad01e1554 textbox 680×48 at (24, 8): svg fe79ed00f4ef1212, 0 data points
+  | Acme Outfitters
+  |   |  Store performance
+
+aeed43591f2afff982af actionButton 120×36 at (1000, 14): svg a2c3d091879cd6dc, 0 data points
+  | West region
+
+dc300d95929adff1db1a actionButton 120×36 at (1136, 14): svg a39eeb0a3e3317d5, 0 data points
+  | All regions
+
+ba3b1b7c5a9cede8452c slicer 240×64 at (24, 76): svg e18372f946dca89e, 0 data points
+  | Region
+  | West
+
+6aecd77deab2cb76c2e5 slicer 240×64 at (24, 148): svg 37d5a875feebe35c, 0 data points
+  | Order date
+  | 2025-01-01
+  | 2025-12-31
+
+c81376feb163c3047446 cardVisual 976×136 at (280, 76): svg ed62aa2ecae2b08b, 0 data points
+  | $111,981.75
+  | Total Sales
+  | $102,500
+  | Target
+  | 109.3%
+  | Target Attainment %
+  | 3.9%
+  | Return Rate
+  | $50,094.88
+  | Gross Margin
+
+d4431298c2010cc0f494 tableEx 560×236 at (24, 228): svg f6f24bf82303d855, 16 data points
+  | Stores (target = the store's region target)
+  | Seattle Flagship
+  | $36,369.45
+  | $102,500
+  | 35.5%
+  | Portland Pearl
+  | $27,001.60
+  | $102,500
+  | 26.3%
+  | Salt Lake City Sugar House
+  | $26,465.85
+  | $102,500
+  | 25.8%
+  | Boise Outlet
+  | $22,144.85
+  | $102,500
+  | 21.6%
+  | Store Name
+  | Total Sales
+  | Target
+  | Target Attainment %
+  | Total
+  | $111,981.75
+  | $102,500
+  | 109.3%
+
+05ac8028fb6e14374ec7 stackedColumnChart 330×236 at (600, 228): svg 27622a56e90a646b, 20 data points
+  | Sales by store and category
+  | Category
+  | Apparel
+  | Camping
+  | Climbing
+  | $0K
+  | $10K
+  | $20K
+  | $30K
+  | Total Sales
+  | Seattle Flagship
+  | Portland Pearl
+  | Salt Lake City Sug...
+  | Boise Outlet
+  | Store Name
+
+6f647d31a8428ad62fb0 gauge 310×236 at (946, 228): svg 49baf042d47b371e, 1 data points
+  | Sales against target
+  | $102.50K
+  | $0.00K
+  | $123.00K
+  | $111.98K
+
+8ee1ff74df542ac157fc lineClusteredColumnComboChart 300×224 at (24, 480): svg 14a2c17dfda4ab3c, 18 data points
+  | Monthly sales and target
+  | Total Sales
+  | Target
+  | $0K
+  | $5K
+  | $10K
+  | $0K
+  | $5K
+  | $10K
+  | Total Sales
+  | Target
+  | 2025-...
+  | 2025-...
+  | 2025-...
+  | 2025-...
+  | 2025-...
+  | 2025-...
+  | 2025-...
+  | 2025-...
+  | 2025-...
+  | Year Month
+
+9b4e31f5f08b8acaa5ed waterfallChart 300×224 at (340, 480): svg fe4a65720da3ee23, 4 data points
+  | Gross margin by quarter
+  | $0K
+  | $10K
+  | $20K
+  | $30K
+  | $40K
+  | $50K
+  | Gross Margin
+  | Q1
+  | Q2
+  | Q3
+  | Q4
+  | Total
+  | Quarter
+
+69f47593f5e0a4aefd36 hundredPercentStackedBarChart 300×224 at (656, 480): svg 366f1a2e02700c25, 12 data points
+  | Customer segment mix
+  | Segment
+  | Club
+  | Consumer
+  | Corporate
+  | 0%
+  | 50%
+  | 100%
+  | Total Sales
+  | Store Name
+  | Seattle Flag...
+  | Portland Pe...
+  | Salt Lake Ci...
+  | Boise Outlet
+
+a7199dc503d24da7b45e map 284×224 at (972, 480): svg ff6e2516311e9bb6, 0 data points
+  | Store map (not rendered offline)
+  | map
+  | Category: City
+  | Size: Total Sales

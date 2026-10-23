@@ -1,0 +1,33 @@
+[package]
+name = "pbi-vertipaq"
+description = "XPress9, ABF and VertiPaq decoding to Arrow (clean-room)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Synthetic ABF builders and Xpress test vectors for downstream tests (pbi-core).
+test-support = []
+
+[dependencies]
+pbi-model = { workspace = true }
+arrow = { workspace = true }
+# `serialize`: open `metadata.sqlitedb` from bytes via `sqlite3_deserialize` (no temp files).
+rusqlite = { workspace = true, features = ["serialize"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+encoding_rs = { workspace = true }
+tracing = { workspace = true }
+# Read-only XML DOM for the ABF backup header, virtual directory and log
+# (MIT OR Apache-2.0; already in Cargo.lock via usvg).
+roxmltree = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+# SHA-256 of the decompressed fixture (MIT/Apache-2.0; already in Cargo.lock).
+sha2 = { workspace = true }

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Synthetic paginated report for pbi-core tests (no real data). -->
+<Report xmlns="http://schemas.microsoft.com/sqlserver/reporting/2016/01/reportdefinition" xmlns:rd="http://schemas.microsoft.com/SQLServer/reporting/reportdesigner">
+  <Description>Monthly sales by region</Description>
+  <Author>Test Author</Author>
+  <DataSources>
+    <DataSource Name="SalesDb">
+      <ConnectionProperties>
+        <DataProvider>SQL</DataProvider>
+        <ConnectString>Data Source=sql.example.test;Initial Catalog=Sales;User ID=report;Password=fake-test-password</ConnectString>
+      </ConnectionProperties>
+    </DataSource>
+    <DataSource Name="Model">
+      <ConnectionProperties>
+        <DataProvider>PBIDATASET</DataProvider>
+        <ConnectString>Data Source=powerbi://api.powerbi.com/v1.0/myorg/Workspace;Initial Catalog=Sales Model</ConnectString>
+        <IntegratedSecurity>true</IntegratedSecurity>
+      </ConnectionProperties>
+    </DataSource>
+    <DataSource Name="Shared">
+      <DataSourceReference>/Data Sources/Warehouse</DataSourceReference>
+    </DataSource>
+  </DataSources>
+  <DataSets>
+    <DataSet Name="SalesByRegion">
+      <Query>
+        <DataSourceName>SalesDb</DataSourceName>
+        <QueryParameters>
+          <QueryParameter Name="@Year">
+            <Value>=Parameters!Year.Value</Value>
+          </QueryParameter>
+        </QueryParameters>
+        <CommandText>SELECT Region, SUM(Amount) AS Amount
+FROM dbo.Sales WHERE YEAR(OrderDate) = @Year GROUP BY Region</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="Region">
+          <DataField>Region</DataField>
+          <rd:TypeName>System.String</rd:TypeName>
+        </Field>
+        <Field Name="Amount">
+          <DataField>Amount</DataField>
+          <rd:TypeName>System.Decimal</rd:TypeName>
+        </Field>
+        <Field Name="AmountK">
+          <Value>=Fields!Amount.Value / 1000</Value>
+        </Field>
+      </Fields>
+      <Filters>
+        <Filter>
+          <FilterExpression>=Fields!Amount.Value</FilterExpression>
+          <Operator>GreaterThan</Operator>
+          <FilterValues><FilterValue DataType="Integer">0</FilterValue></FilterValues>
+        </Filter>
+      </Filters>
+    </DataSet>
+    <DataSet Name="Years">
+      <Query>
+        <DataSourceName>Model</DataSourceName>
+        <CommandText>EVALUATE VALUES('Date'[Year])</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="Year"><DataField>[Year]</DataField></Field>
+      </Fields>
+    </DataSet>
+  </DataSets>
+  <ReportParameters>
+    <ReportParameter Name="Year">
+      <DataType>Integer</DataType>
+      <DefaultValue><Values><Value>2026</Value></Values></DefaultValue>
+      <Prompt>Year</Prompt>
+      <ValidValues>
+        <DataSetReference><DataSetName>Years</DataSetName><ValueField>Year</ValueField></DataSetReference>
+      </ValidValues>
+    </ReportParameter>
+    <ReportParameter Name="Regions">
+      <DataType>String</DataType>
+      <Nullable>true</Nullable>
+      <MultiValue>true</MultiValue>
+      <Hidden>true</Hidden>
+      <ValidValues>
+        <ParameterValues>
+          <ParameterValue><Value>North</Value></ParameterValue>
+          <ParameterValue><Value>South</Value></ParameterValue>
+        </ParameterValues>
+      </ValidValues>
+    </ReportParameter>
+  </ReportParameters>
+  <ReportSections>
+    <ReportSection>
+      <Body>
+        <ReportItems>
+          <Textbox Name="Title">
+            <Paragraphs><Paragraph><TextRuns><TextRun><Value>Sales by region</Value></TextRun></TextRuns></Paragraph></Paragraphs>
+          </Textbox>
+          <Tablix Name="SalesTable">
+            <TablixBody>
+              <TablixRows>
+                <TablixRow>
+                  <TablixCells>
+                    <TablixCell><CellContents>
+                      <Textbox Name="RegionCell"><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Region.Value</Value></TextRun></TextRuns></Paragraph></Paragraphs></Textbox>
+                    </CellContents></TablixCell>
+                    <TablixCell><CellContents>
+                      <Textbox Name="AmountCell"><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Sum(Fields!Amount.Value)</Value></TextRun></TextRuns></Paragraph></Paragraphs></Textbox>
+                    </CellContents></TablixCell>
+                  </TablixCells>
+                </TablixRow>
+              </TablixRows>
+            </TablixBody>
+            <DataSetName>SalesByRegion</DataSetName>
+          </Tablix>
+          <Rectangle Name="Panel">
+            <ReportItems>
+              <Chart Name="SalesChart"><DataSetName>SalesByRegion</DataSetName></Chart>
+              <Subreport Name="Details"><ReportName>RegionDetails</ReportName></Subreport>
+            </ReportItems>
+          </Rectangle>
+        </ReportItems>
+      </Body>
+      <Page>
+        <PageHeader><ReportItems><Image Name="Logo"/></ReportItems></PageHeader>
+        <PageFooter><ReportItems><Textbox Name="PageNo"><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Globals!PageNumber</Value></TextRun></TextRuns></Paragraph></Paragraphs></Textbox></ReportItems></PageFooter>
+        <PageHeight>11in</PageHeight>
+        <PageWidth>8.5in</PageWidth>
+      </Page>
+    </ReportSection>
+  </ReportSections>
+  <EmbeddedImages>
+    <EmbeddedImage Name="LogoImage"><MIMEType>image/png</MIMEType><ImageData>iVBORw0KGgo=</ImageData></EmbeddedImage>
+  </EmbeddedImages>
+</Report>

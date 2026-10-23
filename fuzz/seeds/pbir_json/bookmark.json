@@ -1,0 +1,35 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/1.4.0/schema.json",
+  "displayName": "All regions",
+  "name": "1d7aa4f39d8a8805d20b",
+  "options": {
+    "targetVisualNames": [
+      "ba3b1b7c5a9cede8452c"
+    ],
+    "applyOnlyToTargetVisuals": true
+  },
+  "explorationState": {
+    "version": "1.3",
+    "activeSection": "ef3ce6b6fadf22960137",
+    "sections": {
+      "ef3ce6b6fadf22960137": {
+        "visualContainers": {
+          "ba3b1b7c5a9cede8452c": {
+            "singleVisual": {
+              "visualType": "slicer",
+              "objects": {
+                "remove": [
+                  {
+                    "object": "general",
+                    "property": "filter",
+                    "selector": {}
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

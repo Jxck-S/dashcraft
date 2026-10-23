@@ -1,0 +1,1 @@
+let csv = Csv.Document("a,b#(lf)1,""x,y""#(lf)2,z", [Delimiter = ",", QuoteStyle = QuoteStyle.Csv]), p = Table.PromoteHeaders(csv, [PromoteAllScalars = true]) in p

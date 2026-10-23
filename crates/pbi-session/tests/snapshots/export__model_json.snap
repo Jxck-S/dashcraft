@@ -1,0 +1,1487 @@
+---
+source: crates/pbi-session/tests/export.rs
+expression: "serde_json::to_string_pretty(&json).unwrap()"
+---
+{
+  "schemaVersion": 1,
+  "name": "Model",
+  "description": "Acme Outfitters: a synthetic outdoor-gear retailer (fictional data, DashCraft example).",
+  "culture": "en-US",
+  "compatibilityLevel": 1601,
+  "includesExpressions": true,
+  "includesHidden": true,
+  "summary": {
+    "tables": 11,
+    "columns": 81,
+    "calculatedColumns": 11,
+    "calculatedTables": 2,
+    "measures": 33,
+    "relationships": 8,
+    "parameters": 1,
+    "expressions": 2,
+    "roles": 2
+  },
+  "tables": [
+    {
+      "name": "Orders",
+      "description": "One row per order line (synthetic). Cleaned in M: rows without an id and duplicates removed, keys trimmed and upper-cased, blank discounts set to 0.",
+      "kind": "regular",
+      "hidden": false,
+      "columns": [
+        {
+          "name": "Order ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": true,
+          "description": "Order number (SO-…). Unique after Table.Distinct.",
+          "sourceColumn": "Order ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Order Date",
+          "dataType": "dateTime",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Order Date",
+          "formatString": "yyyy-mm-dd",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Ship Date",
+          "dataType": "dateTime",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "description": "Blank for cancelled and pending orders. Inactive relationship to 'Date' (USERELATIONSHIP).",
+          "sourceColumn": "Ship Date",
+          "formatString": "yyyy-mm-dd",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Customer ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": true,
+          "key": false,
+          "sourceColumn": "Customer ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Store ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": true,
+          "key": false,
+          "sourceColumn": "Store ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Product ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": true,
+          "key": false,
+          "sourceColumn": "Product ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Quantity",
+          "dataType": "int64",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Quantity",
+          "formatString": "0",
+          "summarizeBy": "sum"
+        },
+        {
+          "name": "Unit Price",
+          "dataType": "double",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Unit Price",
+          "formatString": "\\$#,0.00",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Discount",
+          "dataType": "double",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Discount",
+          "formatString": "0%",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Status",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "description": "Completed, Cancelled or Pending.",
+          "sourceColumn": "Status",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Line Amount",
+          "dataType": "double",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "description": "Quantity × unit price × (1 − discount), computed in M.",
+          "sourceColumn": "Line Amount",
+          "formatString": "\\$#,0.00",
+          "summarizeBy": "sum"
+        },
+        {
+          "name": "Line Cost",
+          "dataType": "double",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "description": "Blank when the product is not in the catalog.",
+          "expression": "Orders[Quantity] * RELATED(Products[Unit Cost])",
+          "formatString": "\\$#,0.00",
+          "summarizeBy": "sum"
+        },
+        {
+          "name": "Order Size",
+          "dataType": "string",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "expression": "SWITCH(TRUE(), Orders[Line Amount] >= 1000, \"Large\", Orders[Line Amount] >= 250, \"Medium\", \"Small\")",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Is Returned",
+          "dataType": "string",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "description": "Context transition through the one-to-one relationship to Returns.",
+          "expression": "IF(ISEMPTY(RELATEDTABLE(Returns)), \"No\", \"Yes\")",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Days To Ship",
+          "dataType": "int64",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "expression": "IF(ISBLANK(Orders[Ship Date]), BLANK(), DATEDIFF(Orders[Order Date], Orders[Ship Date], DAY))",
+          "formatString": "0",
+          "summarizeBy": "none"
+        }
+      ],
+      "measures": [
+        {
+          "name": "Total Sales",
+          "expression": "SUM(Orders[Line Amount])",
+          "formatString": "\\$#,0.00",
+          "description": "Sum of the order line amounts.",
+          "displayFolder": "Sales",
+          "hidden": false
+        },
+        {
+          "name": "Total Cost",
+          "expression": "SUM(Orders[Line Cost])",
+          "formatString": "\\$#,0.00",
+          "displayFolder": "Sales",
+          "hidden": false
+        },
+        {
+          "name": "Gross Margin",
+          "expression": "[Total Sales] - [Total Cost]",
+          "formatString": "\\$#,0.00",
+          "displayFolder": "Sales",
+          "hidden": false
+        },
+        {
+          "name": "Margin %",
+          "expression": "DIVIDE([Gross Margin], [Total Sales])",
+          "formatString": "0.0%",
+          "displayFolder": "Sales",
+          "hidden": false
+        },
+        {
+          "name": "Sales (Scaled)",
+          "expression": "[Total Sales]",
+          "formatString": "\\$#,0.00",
+          "description": "Total Sales with a dynamic format string: $1.23M, $45.6K or $789.00.",
+          "displayFolder": "Sales",
+          "hidden": false
+        },
+        {
+          "name": "Completed Sales",
+          "expression": "CALCULATE([Total Sales], KEEPFILTERS(Orders[Status] = \"Completed\"))",
+          "formatString": "\\$#,0.00",
+          "displayFolder": "Sales",
+          "hidden": false
+        },
+        {
+          "name": "Shipped Sales",
+          "expression": "CALCULATE([Total Sales], USERELATIONSHIP(Orders[Ship Date], 'Date'[Date]))",
+          "formatString": "\\$#,0.00",
+          "description": "Sales by ship date (inactive relationship).",
+          "displayFolder": "Sales",
+          "hidden": false
+        },
+        {
+          "name": "Sales All Stores",
+          "expression": "CALCULATE([Total Sales], ALL(Stores))",
+          "formatString": "\\$#,0.00",
+          "displayFolder": "Sales",
+          "hidden": true
+        },
+        {
+          "name": "Store Share",
+          "expression": "DIVIDE([Total Sales], [Sales All Stores])",
+          "formatString": "0.0%",
+          "displayFolder": "Sales",
+          "hidden": false
+        },
+        {
+          "name": "Order Count",
+          "expression": "COUNTROWS(Orders)",
+          "formatString": "#,0",
+          "displayFolder": "Orders",
+          "hidden": false
+        },
+        {
+          "name": "Units Sold",
+          "expression": "SUM(Orders[Quantity])",
+          "formatString": "#,0",
+          "displayFolder": "Orders",
+          "hidden": false
+        },
+        {
+          "name": "Active Customers",
+          "expression": "DISTINCTCOUNTNOBLANK(Orders[Customer ID])",
+          "formatString": "#,0",
+          "description": "Distinct customer ids on orders, unknown ids included.",
+          "displayFolder": "Orders",
+          "hidden": false
+        },
+        {
+          "name": "Avg Order Value",
+          "expression": "AVERAGEX(\n    VALUES(Orders[Order ID]),\n    CALCULATE(SUM(Orders[Line Amount]))\n)",
+          "formatString": "\\$#,0.00",
+          "displayFolder": "Orders",
+          "hidden": false
+        },
+        {
+          "name": "Revenue per Unit",
+          "expression": "DIVIDE(\n    SUMX(Orders, Orders[Quantity] * Orders[Unit Price] * (1 - Orders[Discount])),\n    [Units Sold]\n)",
+          "formatString": "\\$#,0.00",
+          "displayFolder": "Orders",
+          "hidden": false
+        },
+        {
+          "name": "Last Order Date",
+          "expression": "MAX(Orders[Order Date])",
+          "formatString": "yyyy-mm-dd",
+          "displayFolder": "Orders",
+          "hidden": false
+        },
+        {
+          "name": "Unknown Product Orders",
+          "expression": "COUNTROWS(FILTER(Orders, ISBLANK(RELATED(Products[Product Name])))) + 0",
+          "formatString": "0",
+          "description": "Orders whose product id is not in the catalog.",
+          "displayFolder": "Data Quality",
+          "hidden": false
+        },
+        {
+          "name": "Sales YTD",
+          "expression": "TOTALYTD([Total Sales], 'Date'[Date])",
+          "formatString": "\\$#,0.00",
+          "displayFolder": "Time Intelligence",
+          "hidden": false
+        },
+        {
+          "name": "Sales PY",
+          "expression": "CALCULATE([Total Sales], SAMEPERIODLASTYEAR('Date'[Date]))",
+          "formatString": "\\$#,0.00",
+          "displayFolder": "Time Intelligence",
+          "hidden": false
+        },
+        {
+          "name": "Sales YoY %",
+          "expression": "DIVIDE([Total Sales] - [Sales PY], [Sales PY])",
+          "formatString": "+0.0%;-0.0%;0.0%",
+          "displayFolder": "Time Intelligence",
+          "hidden": false
+        },
+        {
+          "name": "Sales Prev Month",
+          "expression": "CALCULATE([Total Sales], DATEADD('Date'[Date], -1, MONTH))",
+          "formatString": "\\$#,0.00",
+          "displayFolder": "Time Intelligence",
+          "hidden": false
+        }
+      ],
+      "partitions": [
+        {
+          "name": "Orders",
+          "kind": "m",
+          "language": "m",
+          "mode": "import",
+          "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"sales/orders.csv\"]}[Content], [Delimiter = \",\", Columns = 10, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Removed Rows Without Id\" = Table.SelectRows(#\"Promoted Headers\", each Text.Trim([order_id] ?? \"\") <> \"\"),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Removed Rows Without Id\", {{\"order_id\", Text.Trim, type text}, {\"customer_id\", fnCleanKey, type text}, {\"store_id\", fnCleanKey, type text}, {\"product_id\", fnCleanKey, type text}, {\"status\", each Text.Proper(Text.Trim(_)), type text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Removed Duplicates\", {{\"order_date\", type date}, {\"ship_date\", type date}, {\"quantity\", Int64.Type}, {\"unit_price\", type number}, {\"discount\", type number}}),\n    #\"Default Discount\" = Table.TransformColumns(#\"Changed Type\", {{\"discount\", each _ ?? 0, type number}}),\n    #\"Added Line Amount\" = Table.AddColumn(#\"Default Discount\", \"line_amount\", each [quantity] * [unit_price] * (1 - [discount]), type number),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Added Line Amount\", {{\"order_id\", \"Order ID\"}, {\"order_date\", \"Order Date\"}, {\"ship_date\", \"Ship Date\"}, {\"customer_id\", \"Customer ID\"}, {\"store_id\", \"Store ID\"}, {\"product_id\", \"Product ID\"}, {\"quantity\", \"Quantity\"}, {\"unit_price\", \"Unit Price\"}, {\"discount\", \"Discount\"}, {\"status\", \"Status\"}, {\"line_amount\", \"Line Amount\"}})\nin\n    #\"Renamed Columns\"",
+          "queryGroup": "Sources"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Customers",
+      "description": "Customers (synthetic). Account managers are parsed from Python-style lists by fnParseNames.",
+      "kind": "regular",
+      "hidden": false,
+      "columns": [
+        {
+          "name": "Customer ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": true,
+          "sourceColumn": "Customer ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Customer Name",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Customer Name",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Email",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Email",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Email Domain",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Email Domain",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Segment",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Segment",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "City",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "City",
+          "summarizeBy": "none",
+          "dataCategory": "City"
+        },
+        {
+          "name": "State",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "State",
+          "summarizeBy": "none",
+          "dataCategory": "StateOrProvince"
+        },
+        {
+          "name": "Join Date",
+          "dataType": "dateTime",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Join Date",
+          "formatString": "yyyy-mm-dd",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Loyalty Tier",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "description": "Bronze, Silver, Gold; blanks become Unassigned.",
+          "sourceColumn": "Loyalty Tier",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Account Managers",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "description": "Parsed names joined with \"; \"; blank when the list is empty.",
+          "sourceColumn": "Account Managers",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Account Manager Count",
+          "dataType": "int64",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Account Manager Count",
+          "formatString": "0",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Lifetime Sales",
+          "dataType": "double",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "description": "Context transition: every order of the customer, all statuses.",
+          "expression": "CALCULATE(SUM(Orders[Line Amount]))",
+          "formatString": "\\$#,0",
+          "summarizeBy": "sum"
+        },
+        {
+          "name": "Has Orders",
+          "dataType": "string",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "expression": "IF(ISEMPTY(RELATEDTABLE(Orders)), \"No\", \"Yes\")",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Value Tier",
+          "dataType": "string",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "expression": "SWITCH(\n    TRUE(),\n    Customers[Lifetime Sales] >= 3000, \"High\",\n    Customers[Lifetime Sales] >= 1000, \"Medium\",\n    Customers[Lifetime Sales] > 0, \"Low\",\n    \"None\"\n)",
+          "summarizeBy": "none"
+        }
+      ],
+      "measures": [
+        {
+          "name": "Customer Count",
+          "expression": "COUNTROWS(Customers)",
+          "formatString": "#,0",
+          "description": "Customers in the filter context (cross-filtered by Orders, both directions).",
+          "hidden": false
+        }
+      ],
+      "partitions": [
+        {
+          "name": "Customers",
+          "kind": "m",
+          "language": "m",
+          "mode": "import",
+          "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"sales/customers.csv\"]}[Content], [Delimiter = \",\", Columns = 10, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"customer_id\", fnCleanKey, type text}, {\"email\", each Text.Lower(Text.Trim(_)), type text}, {\"segment\", Text.Trim, type text}, {\"loyalty_tier\", each let t = Text.Trim(_ ?? \"\") in if t = \"\" then \"Unassigned\" else t, type text}, {\"account_managers\", each let names = fnParseNames(_ ?? \"\") in if names = \"\" then null else names, type nullable text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Added Name\" = Table.AddColumn(#\"Removed Duplicates\", \"customer_name\", each Text.Combine({Text.Trim([first_name]), Text.Trim([last_name])}, \" \"), type text),\n    #\"Added Domain\" = Table.AddColumn(#\"Added Name\", \"email_domain\", each Text.AfterDelimiter([email], \"@\"), type text),\n    #\"Added Manager Count\" = Table.AddColumn(#\"Added Domain\", \"manager_count\", each List.Count(List.RemoveNulls(List.Transform(Text.Split([account_managers] ?? \"\", \";\"), each if Text.Trim(_) = \"\" then null else _))), Int64.Type),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Added Manager Count\", {{\"join_date\", type date}}),\n    #\"Selected Columns\" = Table.SelectColumns(#\"Changed Type\", {\"customer_id\", \"customer_name\", \"email\", \"email_domain\", \"segment\", \"city\", \"state\", \"join_date\", \"loyalty_tier\", \"account_managers\", \"manager_count\"}),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Selected Columns\", {{\"customer_id\", \"Customer ID\"}, {\"customer_name\", \"Customer Name\"}, {\"email\", \"Email\"}, {\"email_domain\", \"Email Domain\"}, {\"segment\", \"Segment\"}, {\"city\", \"City\"}, {\"state\", \"State\"}, {\"join_date\", \"Join Date\"}, {\"loyalty_tier\", \"Loyalty Tier\"}, {\"account_managers\", \"Account Managers\"}, {\"manager_count\", \"Account Manager Count\"}})\nin\n    #\"Renamed Columns\"",
+          "queryGroup": "Sources"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Products",
+      "description": "Product catalog: Category > Subcategory > Product.",
+      "kind": "regular",
+      "hidden": false,
+      "columns": [
+        {
+          "name": "Product ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": true,
+          "sourceColumn": "Product ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Product Name",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Product Name",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Category",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Category",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Subcategory",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Subcategory",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "List Price",
+          "dataType": "decimal",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "List Price",
+          "formatString": "\\$#,0.00",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Unit Cost",
+          "dataType": "decimal",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Unit Cost",
+          "formatString": "\\$#,0.00",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Launch Date",
+          "dataType": "dateTime",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Launch Date",
+          "formatString": "yyyy-mm-dd",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Units Sold (All Time)",
+          "dataType": "int64",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "expression": "SUMX(RELATEDTABLE(Orders), Orders[Quantity])",
+          "formatString": "#,0",
+          "summarizeBy": "sum"
+        },
+        {
+          "name": "Price Band",
+          "dataType": "string",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "expression": "SWITCH(\n    TRUE(),\n    Products[List Price] < 50, \"Under $50\",\n    Products[List Price] < 150, \"$50 to $149\",\n    \"$150 and up\"\n)",
+          "summarizeBy": "none"
+        }
+      ],
+      "measures": [],
+      "partitions": [
+        {
+          "name": "Products",
+          "kind": "m",
+          "language": "m",
+          "mode": "import",
+          "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"catalog/products.csv\"]}[Content], [Delimiter = \",\", Columns = 7, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"product_id\", fnCleanKey, type text}, {\"product_name\", Text.Trim, type text}, {\"category\", Text.Trim, type text}, {\"subcategory\", Text.Trim, type text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Removed Duplicates\", {{\"list_price\", Currency.Type}, {\"unit_cost\", Currency.Type}, {\"launch_date\", type date}}),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Changed Type\", {{\"product_id\", \"Product ID\"}, {\"product_name\", \"Product Name\"}, {\"category\", \"Category\"}, {\"subcategory\", \"Subcategory\"}, {\"list_price\", \"List Price\"}, {\"unit_cost\", \"Unit Cost\"}, {\"launch_date\", \"Launch Date\"}})\nin\n    #\"Renamed Columns\"",
+          "queryGroup": "Sources"
+        }
+      ],
+      "hierarchies": [
+        {
+          "name": "Product Hierarchy",
+          "hidden": false,
+          "levels": [
+            {
+              "name": "Category",
+              "column": "Category"
+            },
+            {
+              "name": "Subcategory",
+              "column": "Subcategory"
+            },
+            {
+              "name": "Product",
+              "column": "Product Name"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stores",
+      "description": "Stores and online channels. Manager Email drives the dynamic security role.",
+      "kind": "regular",
+      "hidden": false,
+      "columns": [
+        {
+          "name": "Store ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": true,
+          "sourceColumn": "Store ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Store Name",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Store Name",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Region",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Region",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Channel",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "description": "Retail, Outlet or Online.",
+          "sourceColumn": "Channel",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "City",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "City",
+          "summarizeBy": "none",
+          "dataCategory": "City"
+        },
+        {
+          "name": "State",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "State",
+          "summarizeBy": "none",
+          "dataCategory": "StateOrProvince"
+        },
+        {
+          "name": "Manager Email",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": true,
+          "key": false,
+          "sourceColumn": "Manager Email",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Open Date",
+          "dataType": "dateTime",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Open Date",
+          "formatString": "yyyy-mm-dd",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Square Feet",
+          "dataType": "int64",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Square Feet",
+          "formatString": "#,0",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Store Manager",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Store Manager",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Region Code",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Region Code",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Store Label",
+          "dataType": "string",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "expression": "Stores[Store Name] & \" (\" & Stores[Region] & \")\"",
+          "summarizeBy": "none"
+        }
+      ],
+      "measures": [],
+      "partitions": [
+        {
+          "name": "Stores",
+          "kind": "m",
+          "language": "m",
+          "mode": "import",
+          "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"stores/stores.csv\"]}[Content], [Delimiter = \",\", Columns = 9, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"store_id\", fnCleanKey, type text}, {\"region\", Text.Trim, type text}, {\"manager_email\", each Text.Lower(Text.Trim(_)), type text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Blanks To Null\" = Table.ReplaceValue(#\"Removed Duplicates\", \"\", null, Replacer.ReplaceValue, {\"city\", \"state\", \"square_feet\"}),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Blanks To Null\", {{\"open_date\", type date}, {\"square_feet\", Int64.Type}}),\n    #\"Added Manager\" = Table.AddColumn(#\"Changed Type\", \"store_manager\", each Text.Proper(Text.Replace(Text.BeforeDelimiter([manager_email], \"@\"), \".\", \" \")), type text),\n    #\"Added Region Code\" = Table.AddColumn(#\"Added Manager\", \"region_code\", each Text.Upper(Text.Start([region], 3)), type text),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Added Region Code\", {{\"store_id\", \"Store ID\"}, {\"store_name\", \"Store Name\"}, {\"region\", \"Region\"}, {\"channel\", \"Channel\"}, {\"city\", \"City\"}, {\"state\", \"State\"}, {\"manager_email\", \"Manager Email\"}, {\"open_date\", \"Open Date\"}, {\"square_feet\", \"Square Feet\"}, {\"store_manager\", \"Store Manager\"}, {\"region_code\", \"Region Code\"}})\nin\n    #\"Renamed Columns\"",
+          "queryGroup": "Sources"
+        }
+      ],
+      "hierarchies": [
+        {
+          "name": "Geography",
+          "hidden": false,
+          "levels": [
+            {
+              "name": "Region",
+              "column": "Region"
+            },
+            {
+              "name": "Store",
+              "column": "Store Name"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Targets",
+      "description": "Monthly sales targets per region (many-to-many with Stores on Region).",
+      "kind": "regular",
+      "hidden": false,
+      "columns": [
+        {
+          "name": "Region",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Region",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Month",
+          "dataType": "dateTime",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Month",
+          "formatString": "yyyy-mm",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Target Amount",
+          "dataType": "decimal",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Target Amount",
+          "formatString": "\\$#,0",
+          "summarizeBy": "sum"
+        }
+      ],
+      "measures": [
+        {
+          "name": "Target",
+          "expression": "SUM(Targets[Target Amount])",
+          "formatString": "\\$#,0",
+          "hidden": false
+        },
+        {
+          "name": "Target Attainment %",
+          "expression": "DIVIDE([Total Sales], [Target])",
+          "formatString": "0.0%",
+          "hidden": false
+        },
+        {
+          "name": "Target Stretch",
+          "expression": "[Target] * 1.2",
+          "formatString": "\\$#,0",
+          "description": "Gauge maximum.",
+          "hidden": true
+        }
+      ],
+      "partitions": [
+        {
+          "name": "Targets",
+          "kind": "m",
+          "language": "m",
+          "mode": "import",
+          "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"planning/targets.csv\"]}[Content], [Delimiter = \",\", Columns = 3, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Removed Blank Rows\" = Table.SelectRows(#\"Promoted Headers\", each Text.Trim([region] ?? \"\") <> \"\"),\n    #\"Trimmed Region\" = Table.TransformColumns(#\"Removed Blank Rows\", {{\"region\", Text.Trim, type text}}),\n    #\"Added Month\" = Table.AddColumn(#\"Trimmed Region\", \"month_start\", each Date.FromText([month] & \"-01\"), type date),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Added Month\", {{\"target_amount\", Currency.Type}}),\n    #\"Selected Columns\" = Table.SelectColumns(#\"Changed Type\", {\"region\", \"month_start\", \"target_amount\"}),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Selected Columns\", {{\"region\", \"Region\"}, {\"month_start\", \"Month\"}, {\"target_amount\", \"Target Amount\"}})\nin\n    #\"Renamed Columns\"",
+          "queryGroup": "Sources"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Returns",
+      "description": "Returned orders: at most one return per order (one-to-one with Orders).",
+      "kind": "regular",
+      "hidden": false,
+      "columns": [
+        {
+          "name": "Return ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Return ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Order ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": true,
+          "sourceColumn": "Order ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Return Date",
+          "dataType": "dateTime",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Return Date",
+          "formatString": "yyyy-mm-dd",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Quantity Returned",
+          "dataType": "int64",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Quantity Returned",
+          "formatString": "0",
+          "summarizeBy": "sum"
+        },
+        {
+          "name": "Reason",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Reason",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Refund Amount",
+          "dataType": "decimal",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Refund Amount",
+          "formatString": "\\$#,0.00",
+          "summarizeBy": "sum"
+        }
+      ],
+      "measures": [
+        {
+          "name": "Returns Count",
+          "expression": "COUNTROWS(Returns)",
+          "formatString": "#,0",
+          "hidden": false
+        },
+        {
+          "name": "Refunds",
+          "expression": "SUM(Returns[Refund Amount])",
+          "formatString": "\\$#,0.00",
+          "hidden": false
+        },
+        {
+          "name": "Return Rate",
+          "expression": "DIVIDE([Returns Count], [Order Count])",
+          "formatString": "0.0%",
+          "hidden": false
+        }
+      ],
+      "partitions": [
+        {
+          "name": "Returns",
+          "kind": "m",
+          "language": "m",
+          "mode": "import",
+          "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"sales/returns.csv\"]}[Content], [Delimiter = \",\", Columns = 6, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"return_id\", Text.Trim, type text}, {\"order_id\", Text.Trim, type text}, {\"reason\", each Text.Proper(Text.Trim(_)), type text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Removed Duplicates\", {{\"return_date\", type date}, {\"quantity_returned\", Int64.Type}, {\"refund_amount\", Currency.Type}}),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Changed Type\", {{\"return_id\", \"Return ID\"}, {\"order_id\", \"Order ID\"}, {\"return_date\", \"Return Date\"}, {\"quantity_returned\", \"Quantity Returned\"}, {\"reason\", \"Reason\"}, {\"refund_amount\", \"Refund Amount\"}})\nin\n    #\"Renamed Columns\"",
+          "queryGroup": "Sources"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Web Sessions",
+      "description": "Website and app sessions. No relationship to any other table: filters on it never reach the sales tables.",
+      "kind": "regular",
+      "hidden": false,
+      "columns": [
+        {
+          "name": "Session ID",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Session ID",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Session Date",
+          "dataType": "dateTime",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Session Date",
+          "formatString": "yyyy-mm-dd",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Device",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Device",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Traffic Source",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Traffic Source",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Pages Viewed",
+          "dataType": "int64",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Pages Viewed",
+          "formatString": "0",
+          "summarizeBy": "sum"
+        },
+        {
+          "name": "Converted",
+          "dataType": "boolean",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Converted",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Is Campaign",
+          "dataType": "boolean",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Is Campaign",
+          "summarizeBy": "none"
+        }
+      ],
+      "measures": [
+        {
+          "name": "Sessions",
+          "expression": "COUNTROWS('Web Sessions')",
+          "formatString": "#,0",
+          "hidden": false
+        },
+        {
+          "name": "Converted Sessions",
+          "expression": "CALCULATE([Sessions], 'Web Sessions'[Converted] = TRUE())",
+          "formatString": "#,0",
+          "hidden": false
+        },
+        {
+          "name": "Conversion Rate",
+          "expression": "DIVIDE([Converted Sessions], [Sessions])",
+          "formatString": "0.0%",
+          "hidden": false
+        },
+        {
+          "name": "Avg Pages per Session",
+          "expression": "AVERAGE('Web Sessions'[Pages Viewed])",
+          "formatString": "0.0",
+          "hidden": false
+        },
+        {
+          "name": "Sessions (All Devices)",
+          "expression": "CALCULATE([Sessions], ALL('Web Sessions'[Device]))",
+          "formatString": "#,0",
+          "description": "Ignores filters on Device.",
+          "hidden": false
+        }
+      ],
+      "partitions": [
+        {
+          "name": "Web Sessions",
+          "kind": "m",
+          "language": "m",
+          "mode": "import",
+          "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"web/web_sessions.csv\"]}[Content], [Delimiter = \",\", Columns = 6, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"device\", each Text.Proper(Text.Trim(_)), type text}}),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Cleaned Text\", {{\"session_date\", type date}, {\"pages_viewed\", Int64.Type}, {\"converted\", type logical}}),\n    #\"Added Campaign Flag\" = Table.AddColumn(#\"Changed Type\", \"is_campaign\", each Text.Contains([traffic_source], \"Campaign\"), type logical),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Added Campaign Flag\", {{\"session_id\", \"Session ID\"}, {\"session_date\", \"Session Date\"}, {\"device\", \"Device\"}, {\"traffic_source\", \"Traffic Source\"}, {\"pages_viewed\", \"Pages Viewed\"}, {\"converted\", \"Converted\"}, {\"is_campaign\", \"Is Campaign\"}})\nin\n    #\"Renamed Columns\"",
+          "queryGroup": "Sources"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Date",
+      "description": "Calendar 2024-2025, marked as the date table.",
+      "kind": "calculatedTable",
+      "hidden": false,
+      "dataCategory": "Time",
+      "columns": [
+        {
+          "name": "Date",
+          "dataType": "dateTime",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": true,
+          "sourceColumn": "[Date]",
+          "formatString": "yyyy-mm-dd",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Year",
+          "dataType": "int64",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "[Year]",
+          "formatString": "0",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Month Number",
+          "dataType": "int64",
+          "kind": "calculatedTableColumn",
+          "hidden": true,
+          "key": false,
+          "sourceColumn": "[Month Number]",
+          "formatString": "0",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Month",
+          "dataType": "string",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "[Month]",
+          "sortByColumn": "Month Number",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Year Month",
+          "dataType": "string",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "[Year Month]",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Quarter",
+          "dataType": "string",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "[Quarter]",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Month Start",
+          "dataType": "dateTime",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "[Month Start]",
+          "formatString": "yyyy-mm-dd",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Day Type",
+          "dataType": "string",
+          "kind": "calculated",
+          "hidden": false,
+          "key": false,
+          "expression": "IF(WEEKDAY('Date'[Date], 2) > 5, \"Weekend\", \"Weekday\")",
+          "summarizeBy": "none"
+        }
+      ],
+      "measures": [],
+      "partitions": [
+        {
+          "name": "Date",
+          "kind": "calculated",
+          "language": "dax",
+          "mode": "import",
+          "expression": "ADDCOLUMNS(\n    CALENDAR(DATE(2024, 1, 1), DATE(2025, 12, 31)),\n    \"Year\", YEAR([Date]),\n    \"Month Number\", MONTH([Date]),\n    \"Month\", FORMAT([Date], \"mmm\"),\n    \"Year Month\", FORMAT([Date], \"yyyy-mm\"),\n    \"Quarter\", \"Q\" & QUARTER([Date]),\n    \"Month Start\", DATE(YEAR([Date]), MONTH([Date]), 1)\n)"
+        }
+      ],
+      "hierarchies": [
+        {
+          "name": "Calendar",
+          "hidden": false,
+          "levels": [
+            {
+              "name": "Year",
+              "column": "Year"
+            },
+            {
+              "name": "Quarter",
+              "column": "Quarter"
+            },
+            {
+              "name": "Month",
+              "column": "Month"
+            },
+            {
+              "name": "Date",
+              "column": "Date"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Time Calc",
+      "description": "Calculation group applied to any measure: Current, YTD, PY and YoY %.",
+      "kind": "calculationGroup",
+      "hidden": false,
+      "columns": [
+        {
+          "name": "Time Calculation",
+          "dataType": "string",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Name",
+          "sortByColumn": "Ordinal",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Ordinal",
+          "dataType": "int64",
+          "kind": "data",
+          "hidden": true,
+          "key": false,
+          "sourceColumn": "Ordinal",
+          "formatString": "0",
+          "summarizeBy": "sum"
+        }
+      ],
+      "measures": [],
+      "partitions": [
+        {
+          "name": "Time Calc",
+          "kind": "calculationGroup",
+          "mode": "import"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Products Never Sold",
+      "description": "Calculated table: catalog products without any order.",
+      "kind": "calculatedTable",
+      "hidden": false,
+      "columns": [
+        {
+          "name": "Product ID",
+          "dataType": "string",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "[Product ID]",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Product",
+          "dataType": "string",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "[Product]",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "Category",
+          "dataType": "string",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "[Category]",
+          "summarizeBy": "none"
+        },
+        {
+          "name": "List Price",
+          "dataType": "decimal",
+          "kind": "calculatedTableColumn",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "[List Price]",
+          "formatString": "\\$#,0.00",
+          "summarizeBy": "none"
+        }
+      ],
+      "measures": [
+        {
+          "name": "Products Never Sold Count",
+          "expression": "COUNTROWS('Products Never Sold') + 0",
+          "formatString": "0",
+          "hidden": false
+        }
+      ],
+      "partitions": [
+        {
+          "name": "Products Never Sold",
+          "kind": "calculated",
+          "language": "dax",
+          "mode": "import",
+          "expression": "VAR SoldProducts =\n    SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), \"Product ID\", Orders[Product ID])\nVAR Catalog =\n    SELECTCOLUMNS(ALL(Products), \"Product ID\", Products[Product ID])\nVAR NeverSold = EXCEPT(Catalog, SoldProducts)\nRETURN\n    SELECTCOLUMNS(\n        FILTER(\n            ALL(Products),\n            Products[Product ID] IN NeverSold\n                && ISEMPTY(RELATEDTABLE(Orders))\n        ),\n        \"Product ID\", Products[Product ID],\n        \"Product\", Products[Product Name],\n        \"Category\", Products[Category],\n        \"List Price\", Products[List Price]\n    )"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Last Refreshed",
+      "description": "Single row stamped with the refresh time (UTC). Not used by any expected value.",
+      "kind": "regular",
+      "hidden": true,
+      "columns": [
+        {
+          "name": "Last Refreshed (UTC)",
+          "dataType": "dateTime",
+          "kind": "data",
+          "hidden": false,
+          "key": false,
+          "sourceColumn": "Last Refreshed (UTC)",
+          "formatString": "yyyy-mm-dd hh:nn",
+          "summarizeBy": "none"
+        }
+      ],
+      "measures": [],
+      "partitions": [
+        {
+          "name": "Last Refreshed",
+          "kind": "m",
+          "language": "m",
+          "mode": "import",
+          "expression": "let\n    Source = #table(type table [#\"Last Refreshed (UTC)\" = datetime], {{DateTimeZone.RemoveZone(DateTimeZone.UtcNow())}})\nin\n    Source",
+          "queryGroup": "Sources"
+        }
+      ],
+      "hierarchies": []
+    }
+  ],
+  "relationships": [
+    {
+      "name": "c79d4066-724d-5669-b57b-f6bf11da6f40",
+      "from": {
+        "table": "Orders",
+        "column": "Customer ID"
+      },
+      "to": {
+        "table": "Customers",
+        "column": "Customer ID"
+      },
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "crossFilteringBehavior": "bothDirections",
+      "active": true,
+      "securityFilteringBehavior": "oneDirection"
+    },
+    {
+      "name": "b064dd21-773c-5c43-9fc0-1fa3327ae319",
+      "from": {
+        "table": "Orders",
+        "column": "Product ID"
+      },
+      "to": {
+        "table": "Products",
+        "column": "Product ID"
+      },
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "crossFilteringBehavior": "oneDirection",
+      "active": true,
+      "securityFilteringBehavior": "oneDirection"
+    },
+    {
+      "name": "d4926a14-f8ee-5523-be56-0dd865b87eee",
+      "from": {
+        "table": "Orders",
+        "column": "Store ID"
+      },
+      "to": {
+        "table": "Stores",
+        "column": "Store ID"
+      },
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "crossFilteringBehavior": "oneDirection",
+      "active": true,
+      "securityFilteringBehavior": "oneDirection"
+    },
+    {
+      "name": "5fd8dd36-8b63-5abf-b8b9-50b8de54f509",
+      "from": {
+        "table": "Orders",
+        "column": "Order Date"
+      },
+      "to": {
+        "table": "Date",
+        "column": "Date"
+      },
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "crossFilteringBehavior": "oneDirection",
+      "active": true,
+      "securityFilteringBehavior": "oneDirection"
+    },
+    {
+      "name": "976ded3b-d763-50ba-be93-faf5d31cd63c",
+      "from": {
+        "table": "Orders",
+        "column": "Ship Date"
+      },
+      "to": {
+        "table": "Date",
+        "column": "Date"
+      },
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "crossFilteringBehavior": "oneDirection",
+      "active": false,
+      "securityFilteringBehavior": "oneDirection"
+    },
+    {
+      "name": "561c8d0e-e2ca-5ea0-b1cc-2954869daedc",
+      "from": {
+        "table": "Returns",
+        "column": "Order ID"
+      },
+      "to": {
+        "table": "Orders",
+        "column": "Order ID"
+      },
+      "fromCardinality": "one",
+      "toCardinality": "one",
+      "crossFilteringBehavior": "bothDirections",
+      "active": true,
+      "securityFilteringBehavior": "bothDirections"
+    },
+    {
+      "name": "8f93a1dc-7185-5ba7-a262-fc82bdaf7ddf",
+      "from": {
+        "table": "Targets",
+        "column": "Region"
+      },
+      "to": {
+        "table": "Stores",
+        "column": "Region"
+      },
+      "fromCardinality": "many",
+      "toCardinality": "many",
+      "crossFilteringBehavior": "oneDirection",
+      "active": true,
+      "securityFilteringBehavior": "oneDirection"
+    },
+    {
+      "name": "add3c6ca-dc4b-5b99-8e8c-0f18a493c9f2",
+      "from": {
+        "table": "Targets",
+        "column": "Month"
+      },
+      "to": {
+        "table": "Date",
+        "column": "Date"
+      },
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "crossFilteringBehavior": "oneDirection",
+      "active": true,
+      "securityFilteringBehavior": "oneDirection"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "StorageContainerUrl",
+      "type": "Text",
+      "required": true,
+      "description": "Fictional Azure Blob container with the sample CSVs. Never contacted: DashCraft resolves it\noffline through blob-map.json.",
+      "queryGroup": "Parameters",
+      "value": "\"https://acmeoutfittersdemo.blob.core.windows.net/sample-data\""
+    }
+  ],
+  "expressions": [
+    {
+      "name": "fnCleanKey",
+      "kind": "m",
+      "description": "Trims and upper-cases a business key (customer, store and product ids).",
+      "queryGroup": "Functions",
+      "expression": "(x as text) as text => Text.Upper(Text.Trim(x))"
+    },
+    {
+      "name": "fnParseNames",
+      "kind": "m",
+      "description": "Turns a Python-style list of names, such as ['Ana Ruiz', \"O'Neil Park\"], into \"Ana Ruiz; O'Neil Park\".",
+      "queryGroup": "Functions",
+      "expression": "(raw as text) as text =>\nlet\n    Trimmed = Text.Trim(raw),\n    Inner = if Text.Start(Trimmed, 1) = \"[\" then Text.Range(Trimmed, 1, Text.Length(Trimmed) - 2) else Trimmed,\n    Names = List.Transform(Text.Split(Inner, \",\"), each Text.Trim(Text.Trim(_), {\"'\", \"\"\"\"})),\n    NonEmpty = List.Select(Names, each _ <> \"\"),\n    Result = if List.IsEmpty(NonEmpty) then \"\" else Text.Combine(NonEmpty, \"; \")\nin\n    Result"
+    }
+  ],
+  "roles": [
+    {
+      "name": "Region West",
+      "description": "Sees the West region only: its stores, their orders, returns and targets.",
+      "modelPermission": "read",
+      "tablePermissions": [
+        {
+          "table": "Stores",
+          "filterExpression": "Stores[Region] = \"West\""
+        }
+      ]
+    },
+    {
+      "name": "Store Manager",
+      "description": "Dynamic security: a manager sees the stores whose Manager Email is the signed-in user.",
+      "modelPermission": "read",
+      "tablePermissions": [
+        {
+          "table": "Stores",
+          "filterExpression": "Stores[Manager Email] = USERPRINCIPALNAME()"
+        }
+      ]
+    }
+  ]
+}

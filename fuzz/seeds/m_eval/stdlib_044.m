@@ -1,0 +1,1 @@
+Text.FromBinary(Text.ToBinary("é", 1252), 1252)

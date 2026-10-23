@@ -1,0 +1,142 @@
+# Performance budgets, checked by `cargo xtask perf` (docs/perf.md).
+#
+# Every scenario is a `perf_*` example of the crate it measures, run in a release build.
+# Times are wall-clock milliseconds per iteration; `metric` (median by default, or p95)
+# is compared with:
+#   target_ms  the goal. Slower is reported as "over target" but does not fail the run.
+#   max_ms     the ceiling. Slower fails the run ("FAIL (over max)").
+# and with this machine's entry in perf/baseline.json: slower by more than
+# `regression_pct` percent AND more than `regression_floor_ms` fails ("FAIL (regressed)").
+#
+# data = "synthetic" (generated in code, always runs), "committed" (committed fixture under
+# reference/, runs on a fresh clone) or "private" (optional gitignored data such as the fetched
+# samples, skipped when missing; not used by any scenario now).
+# per_process = true runs one process per sample, so process-wide caches start empty.
+
+[settings]
+warmup = 2
+iterations = 15
+quick_warmup = 1
+quick_iterations = 5
+regression_pct = 20
+regression_floor_ms = 1.0
+
+[[scenario]]
+id = "P01"
+name = "table-scroll-step"
+description = """
+Scroll step of a 50 000-row × 8-column synthetic table (6 columns + 2 summed columns; the \
+visual query keeps the default 30 000-row cap, like the app): render_interactive_page with \
+the table scrolled 40 px further each step, plus SVG serialization. Warm caches."""
+package = "pbi-render"
+example = "perf_render"
+metric = "p95"
+target_ms = 16
+max_ms = 33
+warmup = 3
+iterations = 60
+quick_iterations = 20
+
+[[scenario]]
+id = "P02"
+name = "table-page-cold"
+description = """
+First render of the P01 page in a fresh process: visual query (SUMMARIZECOLUMNS over \
+50 000 rows) + render + SVG, with empty shaping and layout caches."""
+package = "pbi-render"
+example = "perf_render"
+target_ms = 1000
+max_ms = 3000
+per_process = true
+warmup = 0
+iterations = 5
+quick_warmup = 0
+quick_iterations = 3
+
+[[scenario]]
+id = "P03"
+name = "example-page-no-data"
+description = """
+Page 1 (Executive Summary, 14 visuals) of the Overview report of the committed Acme \
+Outfitters example (reference/examples/acme-outfitters/AcmeOutfitters.pbip) opened without \
+a refresh: query (empty tables) + layout + render + SVG."""
+package = "pbi-render"
+example = "perf_render"
+data = "committed"
+target_ms = 16
+max_ms = 50
+iterations = 30
+quick_iterations = 10
+
+[[scenario]]
+id = "P04"
+name = "dax-measures-1m"
+description = """
+Five DAX measures over a synthetic 1 000 000-row fact table related to a 1 000-row \
+dimension, evaluated once each in an empty filter context: COUNTROWS, SUM, CALCULATE with \
+a dimension filter, CALCULATE with two fact filters, SUMX."""
+package = "pbi-dax"
+example = "perf_dax"
+target_ms = 100
+max_ms = 500
+iterations = 10
+quick_iterations = 3
+
+[[scenario]]
+id = "P05"
+name = "m-csv-100k"
+description = """
+M partition query over a synthetic 100 000-row CSV served by an in-memory BlobResolver: \
+Csv.Document, Table.PromoteHeaders, Table.TransformColumnTypes, Table.SelectRows, \
+Table.AddColumn, then conversion to Arrow."""
+package = "pbi-m"
+example = "perf_m"
+target_ms = 250
+max_ms = 1000
+iterations = 10
+quick_iterations = 3
+
+[[scenario]]
+id = "P06"
+name = "pbix-data-open"
+description = """
+open_pbix_data on the DataModel stream of the committed Microsoft sample \
+reference/samples/microsoft/Revenue Opportunities.pbix (MIT; XPress9 → ABF → \
+metadata.sqlitedb → VertiPaq decoding of 9 tables, 2 986 rows, to Arrow)."""
+package = "pbi-vertipaq"
+example = "perf_vertipaq"
+data = "committed"
+target_ms = 20
+max_ms = 100
+iterations = 10
+quick_iterations = 3
+
+[[scenario]]
+id = "P07"
+name = "busy-page-svg"
+description = """
+SVG serialization (to_svg) of a rendered synthetic dashboard page: 4 cards, a slicer, \
+column, line (730 points) and pie charts, a matrix and a 5 000-row table."""
+package = "pbi-render"
+example = "perf_render"
+target_ms = 4
+max_ms = 16
+iterations = 30
+quick_iterations = 10
+
+[[scenario]]
+id = "P08"
+name = "example-table-scroll-step"
+description = """
+P01 on the example's data: scroll step of the table (29 rows) on the Customer Detail page \
+of the Acme Outfitters Online report, refreshed offline from its CSVs through \
+blob-map.json: render_interactive_page + SVG per 40 px step. Warm caches."""
+package = "pbi-render"
+example = "perf_render"
+data = "committed"
+metric = "p95"
+target_ms = 16
+max_ms = 33
+warmup = 3
+iterations = 40
+quick_iterations = 15

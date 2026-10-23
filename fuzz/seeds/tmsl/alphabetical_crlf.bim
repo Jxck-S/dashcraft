@@ -1,0 +1,74 @@
+{
+  "compatibilityLevel": 1567,
+  "model": {
+    "culture": "en-US",
+    "expressions": [
+      {
+        "expression": "2 meta [IsParameterQuery=true, Type=\"Number\"]",
+        "kind": "m",
+        "name": "Rate"
+      }
+    ],
+    "relationships": [
+      {
+        "crossFilteringBehavior": "bothDirections",
+        "fromColumn": "Amount",
+        "fromTable": "Sales",
+        "name": "r1",
+        "toColumn": "Double",
+        "toTable": "Sales"
+      }
+    ],
+    "tables": [
+      {
+        "annotations": [
+          {
+            "name": "PBI_ResultType",
+            "value": "Table"
+          }
+        ],
+        "columns": [
+          {
+            "dataType": "decimal",
+            "formatString": "0.00",
+            "name": "Amount",
+            "sourceColumn": "Amount",
+            "summarizeBy": "sum"
+          },
+          {
+            "dataType": "double",
+            "expression": [
+              "Sales[Amount]",
+              "* 2"
+            ],
+            "name": "Double",
+            "type": "calculated"
+          }
+        ],
+        "lineageTag": "t1",
+        "measures": [
+          {
+            "expression": "SUM(Sales[Amount])",
+            "name": "Total"
+          }
+        ],
+        "name": "Sales",
+        "partitions": [
+          {
+            "mode": "import",
+            "name": "p",
+            "source": {
+              "expression": [
+                "let",
+                "    Source = #table({\"Amount\"}, {{1}})",
+                "in",
+                "    Source"
+              ],
+              "type": "m"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

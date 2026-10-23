@@ -1,0 +1,5 @@
+perspective 'Sales View'
+
+	perspectiveTable Sales
+
+		perspectiveMeasure 'Sales Amount'

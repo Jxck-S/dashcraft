@@ -1,0 +1,1 @@
+Lins.FromText("Text.Middlea#(cؕ

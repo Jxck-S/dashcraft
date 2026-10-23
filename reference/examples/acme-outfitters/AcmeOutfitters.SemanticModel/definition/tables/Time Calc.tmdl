@@ -1,0 +1,49 @@
+/// Calculation group applied to any measure: Current, YTD, PY and YoY %.
+table 'Time Calc'
+	lineageTag: 7c7ed4fa-5512-56bd-8666-2fd606aa8878
+
+	calculationGroup
+		precedence: 10
+
+		/// The measure as is.
+		calculationItem Current = SELECTEDMEASURE()
+			ordinal: 0
+
+		/// Year to date.
+		calculationItem YTD = CALCULATE(SELECTEDMEASURE(), DATESYTD('Date'[Date]))
+			ordinal: 1
+
+		/// Same period last year.
+		calculationItem PY = CALCULATE(SELECTEDMEASURE(), SAMEPERIODLASTYEAR('Date'[Date]))
+			ordinal: 2
+
+		/// Change against the same period last year, always shown as a percent.
+		calculationItem 'YoY %' =
+				VAR CurrentValue = SELECTEDMEASURE()
+				VAR PriorValue = CALCULATE(SELECTEDMEASURE(), SAMEPERIODLASTYEAR('Date'[Date]))
+				RETURN
+				    DIVIDE(CurrentValue - PriorValue, PriorValue)
+			ordinal: 3
+			formatStringDefinition = "+0.0%;-0.0%;0.0%"
+
+	column 'Time Calculation'
+		dataType: string
+		lineageTag: 9b34b232-a947-54e3-9063-c892cd18f5e6
+		summarizeBy: none
+		sourceColumn: Name
+		sortByColumn: Ordinal
+
+		annotation SummarizationSetBy = Automatic
+
+	column Ordinal
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 6b1c84e4-40ec-5292-b435-5cbe10bdff98
+		summarizeBy: sum
+		sourceColumn: Ordinal
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Time Calc' = calculationGroup
+		mode: import

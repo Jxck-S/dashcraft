@@ -1,0 +1,1 @@
+let r = [a = 1, b = [c = 2]] in {Record.Field(r, "a"), Record.FieldNames(r), Record.AddField(r, "d", 4), r & [e = 5], r[b][c]}

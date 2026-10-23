@@ -1,0 +1,1601 @@
+session_id,session_date,device,traffic_source,pages_viewed,converted
+WS000001,2024-04-29,Desktop,Email Campaign,13,false
+WS000002,2024-05-14,Mobile,Organic Search,1,false
+WS000003,2024-09-09,Mobile,Organic Search,6,true
+WS000004,2025-05-03,Tablet,Referral,6,false
+WS000005,2025-05-23,Desktop,Organic Search,2,false
+WS000006,2024-04-23,Mobile,Direct,5,false
+WS000007,2025-12-25,Desktop,Organic Search,13,true
+WS000008,2025-10-30,Desktop,Direct,6,false
+WS000009,2025-02-13,desktop ,Organic Search,1,false
+WS000010,2024-12-13,Desktop,Social Campaign,14,false
+WS000011,2025-03-02,Mobile,Organic Search,15,false
+WS000012,2025-09-05,Desktop,Referral,12,false
+WS000013,2024-09-24,Mobile,Organic Search,12,false
+WS000014,2025-04-24,Mobile,Direct,2,false
+WS000015,2024-01-18,Desktop,Email Campaign,7,false
+WS000016,2025-11-10,Tablet,Direct,13,false
+WS000017,2025-03-29,Desktop,Organic Search,14,false
+WS000018,2024-01-20,Desktop,Social Campaign,8,false
+WS000019,2024-10-02,Desktop,Email Campaign,2,false
+WS000020,2025-03-24,Mobile,Direct,14,false
+WS000021,2024-07-18,Desktop,Referral,6,true
+WS000022,2025-07-26,Mobile,Organic Search,14,false
+WS000023,2025-01-04,Tablet,Direct,14,true
+WS000024,2025-01-22,Desktop,Paid Search,15,false
+WS000025,2024-10-17,Mobile,Social Campaign,12,false
+WS000026,2025-05-24,Desktop,Organic Search,9,false
+WS000027,2025-02-24,Mobile,Organic Search,9,false
+WS000028,2024-04-16,Tablet,Paid Search,11,false
+WS000029,2024-10-29,Desktop,Email Campaign,12,false
+WS000030,2025-01-17,Mobile,Organic Search,6,false
+WS000031,2024-06-20,Mobile,Organic Search,7,false
+WS000032,2025-07-21,Desktop,Email Campaign,11,false
+WS000033,2024-09-03,Mobile,Direct,6,false
+WS000034,2025-05-18,Desktop,Social Campaign,12,false
+WS000035,2024-08-19,Mobile,Direct,7,false
+WS000036,2024-02-16,Desktop,Referral,7,false
+WS000037,2024-10-26,Desktop,Referral,13,true
+WS000038,2025-03-07,Desktop,Email Campaign,3,false
+WS000039,2025-01-21,Desktop,Direct,12,false
+WS000040,2025-09-04,Desktop,Referral,8,false
+WS000041,2025-08-11,Desktop,Social Campaign,14,false
+WS000042,2025-10-17,Mobile,Direct,12,false
+WS000043,2025-05-09,Mobile,Social Campaign,5,false
+WS000044,2025-01-07,Desktop,Referral,14,false
+WS000045,2024-08-04,Desktop,Organic Search,10,false
+WS000046,2024-04-06,mobile ,Organic Search,5,false
+WS000047,2024-09-05,Desktop,Referral,3,false
+WS000048,2024-08-23,Mobile,Paid Search,14,false
+WS000049,2024-05-27,Desktop,Email Campaign,11,false
+WS000050,2024-04-12,Mobile,Referral,8,true
+WS000051,2024-04-07,Mobile,Email Campaign,5,false
+WS000052,2024-08-19,Desktop,Referral,11,false
+WS000053,2025-05-27,Desktop,Direct,3,false
+WS000054,2025-08-19,Mobile,Referral,14,true
+WS000055,2024-08-27,Mobile,Social Campaign,3,false
+WS000056,2025-03-27,Mobile,Organic Search,8,false
+WS000057,2024-03-25,Desktop,Organic Search,11,true
+WS000058,2025-05-28,Mobile,Organic Search,14,false
+WS000059,2025-02-16,Desktop,Organic Search,13,false
+WS000060,2024-05-09,Desktop,Organic Search,13,false
+WS000061,2024-10-18,Mobile,Direct,6,false
+WS000062,2024-07-24,Desktop,Paid Search,1,false
+WS000063,2024-05-09,Mobile,Referral,2,false
+WS000064,2024-10-24,Desktop,Organic Search,15,false
+WS000065,2024-12-12,Mobile,Direct,15,false
+WS000066,2024-06-06,Tablet,Paid Search,8,false
+WS000067,2024-01-25,Mobile,Referral,5,false
+WS000068,2024-09-29,Desktop,Organic Search,3,false
+WS000069,2025-02-11,Mobile,Paid Search,15,false
+WS000070,2025-11-02,Mobile,Email Campaign,3,false
+WS000071,2024-04-02,Mobile,Direct,11,false
+WS000072,2024-06-08,Mobile,Direct,10,false
+WS000073,2025-06-17,Mobile,Paid Search,1,false
+WS000074,2024-09-18,Desktop,Email Campaign,10,false
+WS000075,2024-07-16,Mobile,Email Campaign,4,false
+WS000076,2024-01-07,Mobile,Organic Search,7,false
+WS000077,2024-07-09,Desktop,Paid Search,3,false
+WS000078,2025-11-11,Mobile,Direct,13,false
+WS000079,2024-02-26,Desktop,Direct,9,false
+WS000080,2024-03-09,Desktop,Organic Search,4,false
+WS000081,2024-11-29,Desktop,Social Campaign,12,false
+WS000082,2024-09-22,Mobile,Direct,9,false
+WS000083,2025-12-31,Desktop  ,Organic Search,9,false
+WS000084,2025-10-15,Tablet,Direct,12,false
+WS000085,2025-10-31,Desktop,Referral,10,false
+WS000086,2024-08-06,Desktop,Social Campaign,7,false
+WS000087,2024-05-03,Desktop,Organic Search,6,false
+WS000088,2024-07-31,Desktop,Referral,11,false
+WS000089,2025-04-15,Desktop,Paid Search,9,false
+WS000090,2024-02-10,Mobile,Social Campaign,1,false
+WS000091,2025-07-26,Tablet,Organic Search,2,false
+WS000092,2025-12-26,Desktop,Email Campaign,11,false
+WS000093,2025-02-15,Desktop,Organic Search,13,false
+WS000094,2024-10-06,Mobile,Email Campaign,15,false
+WS000095,2025-04-23,Desktop,Social Campaign,1,false
+WS000096,2025-08-09,Tablet,Social Campaign,12,true
+WS000097,2025-07-05,Tablet,Organic Search,2,false
+WS000098,2025-06-27,Desktop,Direct,8,false
+WS000099,2024-10-08,Tablet,Organic Search,8,false
+WS000100,2024-09-18,Mobile,Email Campaign,3,false
+WS000101,2024-08-13,Mobile,Referral,8,false
+WS000102,2024-10-03,Mobile,Social Campaign,10,true
+WS000103,2025-04-27,Mobile,Paid Search,8,false
+WS000104,2025-07-26,Mobile,Email Campaign,8,true
+WS000105,2025-07-15,Mobile,Direct,4,true
+WS000106,2024-02-27,Desktop,Referral,12,false
+WS000107,2024-02-18,Desktop,Social Campaign,5,false
+WS000108,2025-04-24,Mobile,Organic Search,3,false
+WS000109,2025-01-10,Mobile,Email Campaign,9,false
+WS000110,2025-03-21,Mobile,Paid Search,7,false
+WS000111,2024-11-21,Mobile,Direct,2,false
+WS000112,2024-08-17,Desktop,Email Campaign,12,false
+WS000113,2025-04-11,Desktop,Paid Search,4,false
+WS000114,2025-01-30,Mobile,Direct,8,false
+WS000115,2024-08-06,Mobile,Email Campaign,1,false
+WS000116,2024-12-19,Mobile,Paid Search,7,false
+WS000117,2025-08-23,Desktop,Social Campaign,2,false
+WS000118,2025-08-07,Desktop,Organic Search,5,false
+WS000119,2025-12-08,Desktop,Paid Search,10,false
+WS000120,2024-09-18, Tablet,Paid Search,14,false
+WS000121,2025-04-06,Mobile,Email Campaign,9,false
+WS000122,2024-03-21,Mobile,Social Campaign,14,false
+WS000123,2024-05-01,Desktop,Organic Search,14,false
+WS000124,2024-03-27,Mobile,Referral,8,false
+WS000125,2024-02-11,Desktop,Direct,10,false
+WS000126,2024-01-25,Mobile,Referral,8,false
+WS000127,2025-03-09,Tablet,Direct,12,false
+WS000128,2025-03-01,Desktop,Direct,10,true
+WS000129,2024-11-25,Desktop,Social Campaign,2,false
+WS000130,2024-04-20,Desktop,Organic Search,8,false
+WS000131,2024-11-30,Tablet,Organic Search,3,false
+WS000132,2025-09-07,Desktop,Paid Search,4,false
+WS000133,2025-07-15,Desktop,Organic Search,12,false
+WS000134,2025-02-03,Mobile,Referral,2,false
+WS000135,2025-10-16,Desktop,Organic Search,1,false
+WS000136,2024-03-21,Desktop,Referral,7,false
+WS000137,2024-06-20,Mobile,Email Campaign,1,true
+WS000138,2024-09-17,Mobile,Referral,10,false
+WS000139,2025-06-19,Desktop,Organic Search,9,false
+WS000140,2024-11-16,Mobile,Organic Search,11,false
+WS000141,2024-09-09,Tablet,Referral,7,false
+WS000142,2025-03-15,Desktop,Direct,8,false
+WS000143,2025-01-11,Mobile,Paid Search,8,false
+WS000144,2025-05-22,Tablet,Paid Search,6,true
+WS000145,2024-05-24,Desktop,Social Campaign,15,false
+WS000146,2024-03-26,Mobile,Direct,9,false
+WS000147,2024-06-25,Tablet,Paid Search,13,false
+WS000148,2024-04-01,Mobile,Email Campaign,7,false
+WS000149,2025-01-29,Desktop,Direct,7,false
+WS000150,2024-05-27,Desktop,Paid Search,1,false
+WS000151,2024-09-07,Desktop,Organic Search,13,true
+WS000152,2025-06-15,Tablet,Organic Search,14,false
+WS000153,2024-12-21,Mobile,Organic Search,5,false
+WS000154,2025-12-29,Tablet,Referral,1,false
+WS000155,2025-10-03,Tablet,Email Campaign,13,false
+WS000156,2024-10-01,Desktop,Organic Search,3,false
+WS000157,2025-12-31,tablet ,Paid Search,2,false
+WS000158,2025-09-10,Mobile,Direct,11,false
+WS000159,2025-05-10,Desktop,Direct,5,false
+WS000160,2024-11-01,Desktop,Email Campaign,10,false
+WS000161,2025-10-09,Tablet,Email Campaign,11,false
+WS000162,2024-02-13,Tablet,Email Campaign,8,false
+WS000163,2024-01-18,Mobile,Social Campaign,4,false
+WS000164,2025-01-09,Desktop,Organic Search,15,false
+WS000165,2024-08-25,Desktop,Direct,5,false
+WS000166,2025-04-16,Desktop,Organic Search,4,false
+WS000167,2024-08-29,Mobile,Referral,7,false
+WS000168,2025-08-27,Mobile,Organic Search,4,false
+WS000169,2025-04-07,Desktop,Social Campaign,4,false
+WS000170,2025-08-31,Mobile,Organic Search,8,false
+WS000171,2024-02-24,Desktop,Email Campaign,7,false
+WS000172,2024-04-23,Desktop,Organic Search,10,false
+WS000173,2025-07-21,Mobile,Organic Search,12,false
+WS000174,2025-11-05,Mobile,Referral,2,false
+WS000175,2024-10-15,Mobile,Organic Search,15,false
+WS000176,2024-02-08,Desktop,Paid Search,10,false
+WS000177,2025-07-07,Mobile,Organic Search,4,false
+WS000178,2024-11-23,Mobile,Paid Search,5,false
+WS000179,2024-03-12,Desktop,Paid Search,9,false
+WS000180,2024-11-02,Mobile,Direct,3,false
+WS000181,2024-12-23,Tablet,Email Campaign,11,false
+WS000182,2024-09-26,Mobile,Paid Search,15,false
+WS000183,2025-01-27,Mobile,Social Campaign,15,false
+WS000184,2024-09-10,Desktop,Organic Search,8,false
+WS000185,2025-06-18,Mobile,Referral,3,false
+WS000186,2024-01-17,Mobile,Referral,1,false
+WS000187,2024-04-27,Desktop,Social Campaign,8,false
+WS000188,2024-02-03,Desktop,Direct,15,false
+WS000189,2025-02-05,Tablet,Direct,6,false
+WS000190,2025-09-20,Mobile,Direct,8,false
+WS000191,2025-04-21,Desktop,Organic Search,3,false
+WS000192,2024-01-24,Desktop,Organic Search,10,false
+WS000193,2025-08-24,Mobile,Paid Search,13,false
+WS000194,2025-09-09,mobile ,Direct,3,false
+WS000195,2024-09-18,Mobile,Organic Search,10,false
+WS000196,2025-05-20,Mobile,Direct,6,false
+WS000197,2024-12-21,Mobile,Direct,4,false
+WS000198,2025-02-09,Desktop,Social Campaign,13,false
+WS000199,2024-01-26,Mobile,Email Campaign,14,false
+WS000200,2024-09-12,Desktop,Organic Search,15,false
+WS000201,2024-07-17,Desktop,Organic Search,10,false
+WS000202,2024-03-14,Desktop,Paid Search,3,false
+WS000203,2024-05-13,Tablet,Direct,15,false
+WS000204,2025-09-25,Desktop,Organic Search,7,false
+WS000205,2024-02-15,Mobile,Referral,14,false
+WS000206,2024-12-25,Mobile,Paid Search,8,false
+WS000207,2024-12-04,Mobile,Organic Search,3,false
+WS000208,2024-09-16,Mobile,Direct,8,false
+WS000209,2025-12-21,Mobile,Organic Search,8,false
+WS000210,2024-06-10,Desktop,Referral,2,false
+WS000211,2025-02-13,Desktop,Paid Search,3,false
+WS000212,2025-12-31,Desktop,Direct,14,false
+WS000213,2025-10-26,Mobile,Referral,1,false
+WS000214,2025-06-01,Desktop,Paid Search,9,false
+WS000215,2025-12-07,Desktop,Organic Search,1,false
+WS000216,2024-09-20,Mobile,Email Campaign,6,false
+WS000217,2024-10-01,Mobile,Organic Search,7,false
+WS000218,2024-10-18,Mobile,Email Campaign,1,false
+WS000219,2024-11-18,Desktop,Referral,4,false
+WS000220,2024-07-27,Mobile,Organic Search,8,false
+WS000221,2025-07-21,Desktop,Organic Search,8,false
+WS000222,2024-07-30,Desktop,Referral,8,false
+WS000223,2024-10-23,Mobile,Referral,15,false
+WS000224,2024-03-07,Mobile,Paid Search,2,false
+WS000225,2024-10-04,Desktop,Direct,4,false
+WS000226,2025-05-13,Mobile,Social Campaign,13,false
+WS000227,2024-05-04,Mobile,Direct,8,false
+WS000228,2024-04-02,Desktop,Referral,14,false
+WS000229,2024-12-24,Mobile,Organic Search,14,false
+WS000230,2025-10-12,Mobile,Organic Search,3,false
+WS000231,2025-04-02,DESKTOP,Organic Search,11,false
+WS000232,2024-09-02,Desktop,Direct,3,false
+WS000233,2025-02-11,Desktop,Organic Search,11,false
+WS000234,2025-08-15,Mobile,Email Campaign,10,false
+WS000235,2024-10-17,Tablet,Direct,8,false
+WS000236,2025-02-07,Desktop,Paid Search,11,false
+WS000237,2024-02-16,Desktop,Direct,6,false
+WS000238,2025-04-23,Mobile,Social Campaign,6,true
+WS000239,2025-09-30,Mobile,Paid Search,14,false
+WS000240,2025-05-13,Mobile,Direct,11,false
+WS000241,2024-05-10,Mobile,Organic Search,10,false
+WS000242,2024-08-31,Desktop,Direct,4,false
+WS000243,2025-10-17,Desktop,Organic Search,7,false
+WS000244,2025-02-01,Mobile,Direct,11,false
+WS000245,2025-10-13,Mobile,Organic Search,7,false
+WS000246,2025-08-14,Tablet,Email Campaign,10,false
+WS000247,2024-08-14,Desktop,Direct,9,false
+WS000248,2024-03-10,Desktop,Direct,9,false
+WS000249,2024-10-05,Desktop,Referral,8,false
+WS000250,2025-01-24,Desktop,Email Campaign,10,false
+WS000251,2025-08-22,Mobile,Email Campaign,3,false
+WS000252,2025-07-26,Tablet,Social Campaign,2,false
+WS000253,2025-03-14,Mobile,Referral,10,false
+WS000254,2024-06-27,Mobile,Organic Search,13,false
+WS000255,2025-08-07,Desktop,Organic Search,8,false
+WS000256,2025-08-21,Desktop,Organic Search,2,false
+WS000257,2024-01-05,Desktop,Social Campaign,13,false
+WS000258,2025-08-19,Mobile,Paid Search,14,true
+WS000259,2025-03-21,Desktop,Email Campaign,1,false
+WS000260,2025-10-25,Mobile,Referral,11,false
+WS000261,2024-01-04,Tablet,Paid Search,13,false
+WS000262,2024-10-26,Desktop,Social Campaign,10,false
+WS000263,2024-09-18,Desktop,Email Campaign,11,false
+WS000264,2024-10-25,Desktop,Organic Search,2,false
+WS000265,2024-04-10,Desktop,Referral,7,false
+WS000266,2025-08-20,Desktop,Organic Search,3,false
+WS000267,2025-12-28,Desktop,Direct,11,false
+WS000268,2025-04-20,DESKTOP,Organic Search,1,false
+WS000269,2024-03-21,Mobile,Paid Search,3,false
+WS000270,2025-08-26,Mobile,Paid Search,6,false
+WS000271,2025-12-26,Desktop,Paid Search,9,false
+WS000272,2025-08-04,Desktop,Referral,5,false
+WS000273,2025-01-30,Tablet,Organic Search,7,false
+WS000274,2025-10-01,Desktop,Referral,15,false
+WS000275,2025-12-21,Mobile,Direct,8,true
+WS000276,2025-09-08,Mobile,Organic Search,9,false
+WS000277,2024-04-08,Desktop,Organic Search,3,false
+WS000278,2025-02-22,Mobile,Referral,12,false
+WS000279,2024-03-25,Mobile,Organic Search,15,false
+WS000280,2025-06-22,Desktop,Email Campaign,6,false
+WS000281,2025-05-17,Desktop,Direct,1,false
+WS000282,2024-07-31,Mobile,Email Campaign,10,false
+WS000283,2024-01-08,Tablet,Email Campaign,13,false
+WS000284,2024-12-19,Mobile,Referral,14,false
+WS000285,2024-10-11,Mobile,Email Campaign,9,false
+WS000286,2025-05-16,Tablet,Referral,7,false
+WS000287,2025-10-15,Desktop,Organic Search,13,false
+WS000288,2025-11-12,Desktop,Organic Search,10,false
+WS000289,2024-02-01,Desktop,Paid Search,10,false
+WS000290,2024-07-28,Desktop,Direct,7,false
+WS000291,2024-10-20,Desktop,Social Campaign,14,true
+WS000292,2024-08-16,Tablet,Paid Search,8,true
+WS000293,2025-01-31,Mobile,Organic Search,6,false
+WS000294,2024-09-19,Desktop,Referral,12,false
+WS000295,2025-11-14,Desktop,Organic Search,4,false
+WS000296,2024-04-18,Desktop,Organic Search,1,false
+WS000297,2025-02-05,Mobile,Direct,6,false
+WS000298,2024-08-03,Desktop,Direct,10,false
+WS000299,2025-04-29,Desktop,Organic Search,6,false
+WS000300,2024-06-06,Desktop,Organic Search,6,false
+WS000301,2025-06-15,Mobile,Direct,13,false
+WS000302,2024-02-11,Desktop,Referral,12,false
+WS000303,2025-12-28,Desktop,Paid Search,9,false
+WS000304,2024-11-03,Mobile,Direct,12,false
+WS000305,2025-09-30, Desktop,Direct,15,false
+WS000306,2025-12-15,Tablet,Referral,10,false
+WS000307,2025-06-15,Desktop,Direct,8,false
+WS000308,2024-01-12,Tablet,Organic Search,7,false
+WS000309,2024-05-25,Mobile,Organic Search,11,false
+WS000310,2024-09-13,Desktop,Direct,7,false
+WS000311,2024-01-17,Mobile,Paid Search,9,false
+WS000312,2025-01-02,Desktop,Organic Search,14,false
+WS000313,2024-04-15,Desktop,Direct,8,false
+WS000314,2025-07-18,Desktop,Organic Search,11,false
+WS000315,2025-07-29,Tablet,Organic Search,13,false
+WS000316,2024-02-21,Desktop,Direct,5,false
+WS000317,2024-01-04,Mobile,Direct,1,false
+WS000318,2024-06-22,Mobile,Organic Search,3,false
+WS000319,2024-11-30,Desktop,Paid Search,13,false
+WS000320,2024-01-08,Mobile,Email Campaign,6,false
+WS000321,2025-11-10,Desktop,Direct,13,false
+WS000322,2025-01-13,Tablet,Social Campaign,1,false
+WS000323,2024-07-01,Desktop,Paid Search,7,false
+WS000324,2024-03-26,Mobile,Email Campaign,15,false
+WS000325,2025-03-08,Mobile,Referral,11,false
+WS000326,2025-08-21,Mobile,Direct,11,false
+WS000327,2025-02-12,Tablet,Referral,1,false
+WS000328,2024-04-26,Desktop,Organic Search,2,false
+WS000329,2024-05-06,Mobile,Organic Search,6,false
+WS000330,2025-12-28,Mobile,Organic Search,5,false
+WS000331,2024-01-18,Tablet,Social Campaign,4,false
+WS000332,2024-05-20,Desktop,Referral,13,false
+WS000333,2025-03-08,Desktop,Paid Search,6,false
+WS000334,2025-04-13,Desktop,Organic Search,8,false
+WS000335,2024-01-08,Mobile,Organic Search,6,false
+WS000336,2025-05-28,Desktop,Paid Search,14,false
+WS000337,2025-12-13,Mobile,Direct,15,true
+WS000338,2024-07-24,Desktop,Direct,2,false
+WS000339,2025-11-12,Tablet,Email Campaign,8,false
+WS000340,2024-02-09,Tablet,Email Campaign,7,false
+WS000341,2025-07-23,Mobile,Paid Search,7,true
+WS000342,2025-07-31, Desktop,Email Campaign,11,false
+WS000343,2024-04-05,Desktop,Organic Search,11,false
+WS000344,2024-02-17,Mobile,Organic Search,7,false
+WS000345,2025-10-17,Tablet,Direct,13,true
+WS000346,2024-05-17,Mobile,Organic Search,8,true
+WS000347,2025-05-23,Desktop,Organic Search,14,false
+WS000348,2024-01-04,Mobile,Organic Search,11,false
+WS000349,2024-06-25,Mobile,Organic Search,9,false
+WS000350,2024-07-24,Mobile,Organic Search,2,false
+WS000351,2024-06-14,Tablet,Direct,13,false
+WS000352,2025-03-07,Desktop,Direct,14,false
+WS000353,2025-07-13,Mobile,Paid Search,12,false
+WS000354,2025-08-04,Desktop,Direct,2,false
+WS000355,2024-02-22,Mobile,Direct,6,false
+WS000356,2025-08-01,Mobile,Referral,4,false
+WS000357,2024-12-18,Desktop,Email Campaign,6,false
+WS000358,2024-07-27,Mobile,Paid Search,2,false
+WS000359,2024-04-16,Desktop,Organic Search,4,false
+WS000360,2025-01-28,Desktop,Social Campaign,6,false
+WS000361,2025-01-16,Mobile,Organic Search,10,true
+WS000362,2025-01-09,Desktop,Direct,13,false
+WS000363,2024-02-03,Mobile,Email Campaign,15,false
+WS000364,2024-06-11,Tablet,Direct,3,false
+WS000365,2024-03-06,Mobile,Organic Search,1,false
+WS000366,2024-11-18,Desktop,Social Campaign,7,false
+WS000367,2025-10-30,Desktop,Organic Search,15,false
+WS000368,2025-07-02,Desktop,Paid Search,13,false
+WS000369,2024-02-11,Mobile,Email Campaign,10,false
+WS000370,2025-01-22,Desktop,Organic Search,5,false
+WS000371,2024-02-27,Desktop,Organic Search,9,true
+WS000372,2024-03-25,Tablet,Paid Search,7,false
+WS000373,2024-09-07,Tablet,Paid Search,4,false
+WS000374,2024-09-15,Mobile,Social Campaign,13,false
+WS000375,2024-09-17,Desktop,Organic Search,5,false
+WS000376,2024-03-19,Desktop,Organic Search,3,false
+WS000377,2024-08-03,Mobile,Direct,2,false
+WS000378,2025-12-20,Mobile,Referral,3,false
+WS000379,2024-10-19, Desktop,Social Campaign,6,false
+WS000380,2025-06-09,Mobile,Organic Search,11,false
+WS000381,2024-03-04,Tablet,Direct,9,false
+WS000382,2025-10-26,Desktop,Referral,5,false
+WS000383,2025-02-10,Tablet,Direct,7,false
+WS000384,2025-12-23,Desktop,Direct,6,false
+WS000385,2025-08-31,Desktop,Organic Search,5,false
+WS000386,2024-09-18,Mobile,Organic Search,15,false
+WS000387,2025-02-03,Mobile,Social Campaign,9,false
+WS000388,2024-04-25,Mobile,Paid Search,3,false
+WS000389,2025-11-04,Mobile,Social Campaign,9,false
+WS000390,2025-12-08,Desktop,Social Campaign,2,false
+WS000391,2025-02-07,Mobile,Organic Search,15,false
+WS000392,2024-12-04,Desktop,Organic Search,5,false
+WS000393,2024-06-30,Mobile,Direct,3,false
+WS000394,2024-03-31,Desktop,Organic Search,2,false
+WS000395,2024-02-15,Desktop,Referral,12,false
+WS000396,2024-04-07,Mobile,Organic Search,2,false
+WS000397,2024-12-11,Desktop,Direct,13,true
+WS000398,2024-11-27,Desktop,Organic Search,6,false
+WS000399,2025-08-22,Desktop,Paid Search,2,false
+WS000400,2024-08-25,Desktop,Social Campaign,13,false
+WS000401,2025-06-20,Mobile,Social Campaign,9,false
+WS000402,2025-02-10,Desktop,Organic Search,14,false
+WS000403,2024-03-15,Tablet,Direct,8,false
+WS000404,2025-01-15,Mobile,Referral,3,true
+WS000405,2025-05-10,Desktop,Email Campaign,15,false
+WS000406,2024-10-29,Mobile,Email Campaign,2,false
+WS000407,2024-06-06,Tablet,Referral,13,false
+WS000408,2025-03-28,Desktop,Direct,12,true
+WS000409,2024-04-06,Mobile,Social Campaign,10,false
+WS000410,2024-06-18,Mobile,Direct,3,false
+WS000411,2024-12-06,Desktop,Direct,11,false
+WS000412,2025-02-27,Mobile,Social Campaign,10,false
+WS000413,2024-12-10,Desktop,Referral,12,false
+WS000414,2024-11-26,Desktop,Referral,8,false
+WS000415,2024-12-25,Mobile,Organic Search,6,false
+WS000416,2024-12-30, Mobile,Organic Search,12,false
+WS000417,2024-08-18,Desktop,Email Campaign,15,false
+WS000418,2025-01-29,Desktop,Social Campaign,1,true
+WS000419,2025-08-14,Mobile,Social Campaign,15,true
+WS000420,2024-02-05,Desktop,Direct,10,true
+WS000421,2024-05-21,Mobile,Direct,14,false
+WS000422,2025-06-26,Tablet,Organic Search,1,false
+WS000423,2024-01-04,Desktop,Organic Search,2,false
+WS000424,2025-03-07,Mobile,Social Campaign,13,false
+WS000425,2025-01-31,Desktop,Paid Search,12,false
+WS000426,2024-01-19,Desktop,Social Campaign,3,false
+WS000427,2025-04-02,Desktop,Paid Search,5,false
+WS000428,2025-08-23,Desktop,Organic Search,11,false
+WS000429,2024-09-19,Mobile,Organic Search,9,false
+WS000430,2025-04-25,Mobile,Email Campaign,9,false
+WS000431,2025-11-21,Mobile,Organic Search,15,true
+WS000432,2025-03-22,Mobile,Organic Search,11,false
+WS000433,2024-11-02,Mobile,Paid Search,3,false
+WS000434,2024-05-05,Mobile,Paid Search,11,true
+WS000435,2024-02-21,Desktop,Organic Search,1,false
+WS000436,2025-01-21,Mobile,Referral,7,false
+WS000437,2025-10-30,Desktop,Social Campaign,3,false
+WS000438,2024-06-25,Tablet,Paid Search,4,false
+WS000439,2025-02-28,Desktop,Direct,12,false
+WS000440,2024-09-25,Desktop,Organic Search,2,false
+WS000441,2025-08-24,Mobile,Referral,15,false
+WS000442,2025-06-21,Mobile,Paid Search,7,true
+WS000443,2024-03-27,Desktop,Social Campaign,9,false
+WS000444,2025-05-11,Desktop,Paid Search,15,false
+WS000445,2025-08-09,Desktop,Social Campaign,10,false
+WS000446,2025-12-17,Desktop,Referral,8,true
+WS000447,2025-02-13,Tablet,Referral,1,false
+WS000448,2024-10-17,Tablet,Paid Search,5,false
+WS000449,2024-08-01,Mobile,Direct,3,false
+WS000450,2024-07-30,Mobile,Email Campaign,8,false
+WS000451,2024-01-02,Mobile,Email Campaign,8,false
+WS000452,2024-01-05,Mobile,Organic Search,2,false
+WS000453,2024-05-23,mobile ,Organic Search,13,false
+WS000454,2024-03-06,Mobile,Email Campaign,14,false
+WS000455,2025-03-04,Desktop,Organic Search,11,false
+WS000456,2024-04-02,Desktop,Social Campaign,4,false
+WS000457,2024-03-08,Desktop,Organic Search,15,true
+WS000458,2025-05-12,Tablet,Social Campaign,7,false
+WS000459,2024-11-17,Mobile,Direct,12,false
+WS000460,2025-03-02,Mobile,Paid Search,1,false
+WS000461,2025-03-17,Mobile,Email Campaign,3,false
+WS000462,2024-04-30,Desktop,Social Campaign,3,false
+WS000463,2024-01-23,Desktop,Social Campaign,1,false
+WS000464,2025-12-08,Desktop,Organic Search,10,false
+WS000465,2025-06-29,Desktop,Organic Search,2,false
+WS000466,2025-10-25,Mobile,Email Campaign,9,true
+WS000467,2024-01-07,Mobile,Organic Search,12,false
+WS000468,2024-11-08,Desktop,Email Campaign,2,false
+WS000469,2025-12-01,Mobile,Email Campaign,10,true
+WS000470,2025-05-06,Mobile,Organic Search,10,false
+WS000471,2024-05-19,Desktop,Organic Search,14,false
+WS000472,2024-10-07,Desktop,Referral,11,false
+WS000473,2024-04-25,Tablet,Paid Search,12,false
+WS000474,2024-12-22,Mobile,Direct,3,false
+WS000475,2025-03-13,Desktop,Email Campaign,9,false
+WS000476,2025-11-02,Tablet,Paid Search,7,false
+WS000477,2024-03-16,Desktop,Email Campaign,15,false
+WS000478,2024-02-01,Desktop,Direct,5,false
+WS000479,2025-12-08,Desktop,Organic Search,14,false
+WS000480,2024-06-16,Mobile,Referral,3,false
+WS000481,2024-01-08,Mobile,Social Campaign,9,false
+WS000482,2024-04-22,Desktop,Paid Search,15,false
+WS000483,2024-01-10,Mobile,Organic Search,1,false
+WS000484,2025-11-24,Mobile,Social Campaign,4,false
+WS000485,2024-05-18,Mobile,Organic Search,13,false
+WS000486,2025-04-01,Desktop,Email Campaign,7,false
+WS000487,2025-08-08,Mobile,Organic Search,3,false
+WS000488,2024-02-22,Mobile,Email Campaign,13,false
+WS000489,2025-05-22,Desktop,Organic Search,1,false
+WS000490,2024-07-09,DESKTOP,Paid Search,1,false
+WS000491,2024-08-29,Desktop,Organic Search,9,false
+WS000492,2025-12-29,Desktop,Organic Search,8,false
+WS000493,2025-01-24,Desktop,Paid Search,13,false
+WS000494,2025-08-27,Desktop,Referral,12,false
+WS000495,2024-11-08,Desktop,Paid Search,4,false
+WS000496,2025-08-08,Desktop,Email Campaign,14,false
+WS000497,2025-06-18,Desktop,Organic Search,15,false
+WS000498,2025-11-02,Mobile,Paid Search,7,false
+WS000499,2025-01-02,Tablet,Email Campaign,2,false
+WS000500,2025-09-10,Mobile,Referral,7,false
+WS000501,2025-09-03,Desktop,Organic Search,2,false
+WS000502,2025-04-18,Mobile,Organic Search,13,false
+WS000503,2025-02-06,Mobile,Organic Search,6,false
+WS000504,2024-05-14,Tablet,Direct,9,false
+WS000505,2024-05-17,Desktop,Paid Search,6,false
+WS000506,2025-02-17,Tablet,Organic Search,3,false
+WS000507,2025-02-03,Desktop,Organic Search,6,false
+WS000508,2024-03-30,Desktop,Organic Search,13,false
+WS000509,2024-04-06,Mobile,Email Campaign,4,false
+WS000510,2025-11-26,Tablet,Organic Search,9,false
+WS000511,2024-11-17,Mobile,Organic Search,12,false
+WS000512,2025-05-28,Desktop,Direct,14,false
+WS000513,2025-07-01,Mobile,Paid Search,9,false
+WS000514,2024-09-24,Desktop,Email Campaign,11,false
+WS000515,2025-12-02,Desktop,Direct,6,true
+WS000516,2024-08-15,Tablet,Direct,3,false
+WS000517,2024-05-05,Desktop,Paid Search,14,true
+WS000518,2025-05-10,Mobile,Direct,12,false
+WS000519,2025-11-24,Mobile,Organic Search,11,false
+WS000520,2025-12-06,Tablet,Social Campaign,7,false
+WS000521,2025-04-27,Tablet,Referral,15,false
+WS000522,2025-11-21,Desktop,Paid Search,6,false
+WS000523,2025-01-01,Desktop,Paid Search,9,false
+WS000524,2024-03-03,Tablet,Organic Search,1,false
+WS000525,2025-05-03,Desktop,Organic Search,2,false
+WS000526,2024-08-21,Mobile,Organic Search,7,false
+WS000527,2025-10-01,Tablet  ,Paid Search,13,true
+WS000528,2025-06-25,Desktop,Social Campaign,13,false
+WS000529,2025-03-05,Mobile,Email Campaign,8,false
+WS000530,2025-03-08,Desktop,Email Campaign,5,false
+WS000531,2024-08-30,Mobile,Direct,3,false
+WS000532,2025-07-01,Mobile,Paid Search,14,true
+WS000533,2024-05-19,Tablet,Referral,5,false
+WS000534,2025-09-25,Desktop,Direct,11,false
+WS000535,2025-01-09,Mobile,Direct,3,false
+WS000536,2025-04-23,Mobile,Organic Search,4,false
+WS000537,2025-08-27,Desktop,Direct,10,false
+WS000538,2024-03-22,Desktop,Email Campaign,11,false
+WS000539,2025-11-28,Desktop,Referral,8,false
+WS000540,2025-05-26,Desktop,Referral,11,false
+WS000541,2025-05-20,Desktop,Paid Search,9,false
+WS000542,2024-11-28,Desktop,Email Campaign,5,false
+WS000543,2025-10-18,Desktop,Referral,13,false
+WS000544,2024-08-14,Desktop,Organic Search,11,false
+WS000545,2025-02-28,Desktop,Organic Search,12,false
+WS000546,2025-07-06,Mobile,Organic Search,8,false
+WS000547,2025-11-11,Desktop,Email Campaign,7,false
+WS000548,2024-09-27,Mobile,Social Campaign,14,false
+WS000549,2024-06-19,Desktop,Direct,3,false
+WS000550,2025-09-25,Mobile,Organic Search,2,false
+WS000551,2025-06-29,Desktop,Referral,12,false
+WS000552,2025-12-04,Mobile,Paid Search,10,false
+WS000553,2024-09-04,Desktop,Referral,1,false
+WS000554,2024-07-28,Desktop,Referral,11,false
+WS000555,2025-07-03,Mobile,Direct,10,false
+WS000556,2024-03-27,Desktop,Organic Search,15,false
+WS000557,2024-03-08,Mobile,Paid Search,2,false
+WS000558,2024-03-31,Desktop,Email Campaign,12,false
+WS000559,2024-12-04,Desktop,Social Campaign,6,false
+WS000560,2024-09-12,Mobile,Social Campaign,7,false
+WS000561,2024-04-26,Mobile,Social Campaign,13,false
+WS000562,2024-07-01,Desktop,Paid Search,2,false
+WS000563,2025-03-15,Desktop,Paid Search,12,false
+WS000564,2024-06-18, Desktop,Organic Search,5,false
+WS000565,2025-03-21,Desktop,Email Campaign,6,false
+WS000566,2024-04-04,Mobile,Direct,6,false
+WS000567,2025-02-24,Mobile,Paid Search,7,false
+WS000568,2025-01-28,Tablet,Direct,10,false
+WS000569,2024-10-25,Mobile,Organic Search,1,false
+WS000570,2024-04-12,Desktop,Referral,13,false
+WS000571,2025-01-30,Mobile,Paid Search,3,false
+WS000572,2025-02-22,Tablet,Referral,15,false
+WS000573,2025-02-08,Desktop,Organic Search,1,false
+WS000574,2024-01-11,Mobile,Direct,15,false
+WS000575,2024-09-04,Mobile,Organic Search,7,true
+WS000576,2025-07-10,Mobile,Organic Search,4,false
+WS000577,2024-04-13,Tablet,Direct,6,false
+WS000578,2024-08-22,Mobile,Organic Search,2,false
+WS000579,2024-02-15,Desktop,Social Campaign,15,false
+WS000580,2024-10-11,Mobile,Direct,10,false
+WS000581,2024-11-24,Desktop,Organic Search,12,false
+WS000582,2024-08-05,Desktop,Organic Search,13,false
+WS000583,2024-04-23,Mobile,Paid Search,7,false
+WS000584,2024-01-23,Desktop,Social Campaign,11,false
+WS000585,2025-02-23,Desktop,Organic Search,14,false
+WS000586,2025-01-05,Mobile,Organic Search,2,false
+WS000587,2024-10-02,Mobile,Direct,11,false
+WS000588,2024-11-17,Desktop,Organic Search,11,false
+WS000589,2025-10-17,Desktop,Email Campaign,10,false
+WS000590,2024-02-21,Desktop,Organic Search,14,false
+WS000591,2025-07-15,Mobile,Referral,10,false
+WS000592,2025-05-30,Tablet,Direct,12,false
+WS000593,2024-02-11,Mobile,Organic Search,13,false
+WS000594,2024-03-31,Mobile,Direct,3,false
+WS000595,2025-12-15,Mobile,Organic Search,4,false
+WS000596,2025-02-15,Mobile,Direct,1,false
+WS000597,2025-11-26,Mobile,Organic Search,4,false
+WS000598,2024-09-08,Mobile,Referral,7,false
+WS000599,2025-05-17,Desktop,Organic Search,5,false
+WS000600,2024-10-11,Mobile,Direct,2,false
+WS000601,2025-05-13,Desktop  ,Social Campaign,8,false
+WS000602,2024-06-16,Tablet,Direct,7,false
+WS000603,2024-07-26,Desktop,Referral,12,false
+WS000604,2024-07-04,Desktop,Organic Search,7,false
+WS000605,2025-01-24,Desktop,Email Campaign,14,false
+WS000606,2024-07-04,Desktop,Organic Search,6,false
+WS000607,2024-07-13,Mobile,Direct,14,false
+WS000608,2025-04-08,Mobile,Social Campaign,5,true
+WS000609,2025-03-05,Desktop,Organic Search,14,false
+WS000610,2025-10-12,Desktop,Organic Search,8,false
+WS000611,2025-12-27,Desktop,Organic Search,14,false
+WS000612,2025-03-09,Desktop,Paid Search,4,false
+WS000613,2025-07-15,Mobile,Paid Search,7,false
+WS000614,2025-05-10,Mobile,Email Campaign,8,false
+WS000615,2024-09-03,Tablet,Paid Search,11,false
+WS000616,2024-04-03,Desktop,Direct,11,false
+WS000617,2025-03-06,Desktop,Paid Search,4,false
+WS000618,2024-06-05,Desktop,Direct,13,false
+WS000619,2025-08-31,Mobile,Social Campaign,15,true
+WS000620,2025-12-17,Desktop,Direct,4,true
+WS000621,2025-05-11,Tablet,Paid Search,13,false
+WS000622,2024-05-16,Mobile,Organic Search,5,false
+WS000623,2025-06-08,Mobile,Social Campaign,9,false
+WS000624,2025-06-24,Desktop,Paid Search,8,false
+WS000625,2025-05-27,Tablet,Social Campaign,7,false
+WS000626,2025-07-27,Desktop,Direct,5,true
+WS000627,2025-06-13,Mobile,Direct,2,false
+WS000628,2024-06-24,Desktop,Paid Search,9,false
+WS000629,2024-06-30,Desktop,Direct,13,false
+WS000630,2025-03-11,Mobile,Organic Search,13,false
+WS000631,2024-10-28,Mobile,Email Campaign,14,false
+WS000632,2024-04-01,Mobile,Organic Search,8,false
+WS000633,2024-11-20,Desktop,Organic Search,1,false
+WS000634,2024-03-26,Desktop,Paid Search,9,false
+WS000635,2025-03-25,Tablet,Organic Search,6,false
+WS000636,2024-05-25,Tablet,Paid Search,11,false
+WS000637,2024-04-17,Mobile,Organic Search,13,false
+WS000638,2025-10-13,Mobile  ,Email Campaign,1,false
+WS000639,2024-09-13,Desktop,Paid Search,8,false
+WS000640,2025-11-04,Mobile,Organic Search,4,false
+WS000641,2025-09-09,Mobile,Direct,9,false
+WS000642,2025-06-06,Mobile,Paid Search,4,false
+WS000643,2024-11-30,Tablet,Paid Search,12,false
+WS000644,2024-04-27,Desktop,Email Campaign,3,false
+WS000645,2024-07-12,Desktop,Organic Search,5,false
+WS000646,2024-12-07,Desktop,Email Campaign,2,true
+WS000647,2024-10-19,Mobile,Email Campaign,10,false
+WS000648,2024-09-28,Mobile,Email Campaign,11,false
+WS000649,2024-02-29,Mobile,Direct,8,false
+WS000650,2025-04-11,Desktop,Direct,6,false
+WS000651,2025-04-21,Desktop,Paid Search,12,false
+WS000652,2024-01-31,Mobile,Email Campaign,11,false
+WS000653,2025-08-14,Tablet,Direct,13,false
+WS000654,2024-08-04,Desktop,Referral,13,false
+WS000655,2025-11-20,Desktop,Referral,12,false
+WS000656,2024-03-29,Mobile,Direct,7,false
+WS000657,2025-09-29,Tablet,Social Campaign,9,false
+WS000658,2024-05-27,Mobile,Organic Search,1,false
+WS000659,2024-03-24,Desktop,Direct,6,false
+WS000660,2024-08-05,Desktop,Paid Search,9,true
+WS000661,2024-09-30,Desktop,Direct,2,true
+WS000662,2025-11-21,Mobile,Referral,2,false
+WS000663,2025-06-19,Mobile,Organic Search,2,false
+WS000664,2024-05-25,Mobile,Social Campaign,14,true
+WS000665,2024-12-16,Mobile,Direct,8,true
+WS000666,2024-05-25,Desktop,Organic Search,2,false
+WS000667,2024-03-07,Mobile,Organic Search,14,false
+WS000668,2025-10-23,Mobile,Paid Search,11,false
+WS000669,2024-06-16,Mobile,Social Campaign,1,false
+WS000670,2025-01-28,Desktop,Paid Search,3,false
+WS000671,2025-11-05,Desktop,Paid Search,1,false
+WS000672,2024-11-04,Desktop,Referral,15,false
+WS000673,2025-03-08,Desktop,Social Campaign,14,false
+WS000674,2025-01-27,Desktop,Paid Search,9,false
+WS000675,2025-07-09,Desktop  ,Social Campaign,6,false
+WS000676,2024-09-30,Desktop,Organic Search,2,true
+WS000677,2025-01-12,Mobile,Referral,14,true
+WS000678,2024-01-17,Mobile,Referral,15,false
+WS000679,2025-03-22,Desktop,Email Campaign,13,false
+WS000680,2025-02-26,Mobile,Direct,15,false
+WS000681,2024-07-03,Tablet,Direct,12,false
+WS000682,2025-04-17,Desktop,Organic Search,6,false
+WS000683,2024-09-17,Mobile,Organic Search,12,false
+WS000684,2024-08-11,Mobile,Direct,1,false
+WS000685,2024-08-03,Mobile,Paid Search,11,false
+WS000686,2024-03-25,Desktop,Email Campaign,3,false
+WS000687,2024-12-23,Mobile,Email Campaign,7,false
+WS000688,2024-08-10,Desktop,Direct,8,false
+WS000689,2024-01-16,Mobile,Organic Search,4,false
+WS000690,2024-03-05,Tablet,Direct,5,false
+WS000691,2025-02-07,Mobile,Email Campaign,2,false
+WS000692,2025-06-29,Mobile,Direct,4,false
+WS000693,2024-04-13,Desktop,Social Campaign,15,false
+WS000694,2024-03-01,Mobile,Email Campaign,2,false
+WS000695,2025-07-14,Mobile,Social Campaign,10,false
+WS000696,2024-07-06,Mobile,Email Campaign,5,false
+WS000697,2024-01-06,Desktop,Organic Search,3,false
+WS000698,2024-09-07,Desktop,Organic Search,5,false
+WS000699,2025-04-18,Desktop,Email Campaign,4,false
+WS000700,2024-08-25,Tablet,Direct,14,false
+WS000701,2025-05-19,Mobile,Social Campaign,6,false
+WS000702,2024-07-06,Desktop,Social Campaign,15,false
+WS000703,2024-05-09,Mobile,Direct,1,false
+WS000704,2024-01-01,Desktop,Direct,13,true
+WS000705,2025-12-20,Desktop,Organic Search,1,false
+WS000706,2024-10-10,Desktop,Paid Search,15,false
+WS000707,2024-11-26,Mobile,Email Campaign,1,false
+WS000708,2025-12-17,Desktop,Organic Search,7,false
+WS000709,2025-02-17,Mobile,Referral,2,false
+WS000710,2025-09-30,Mobile,Paid Search,10,false
+WS000711,2024-11-22,Mobile,Referral,11,true
+WS000712,2025-03-20, Desktop,Email Campaign,13,false
+WS000713,2024-02-04,Desktop,Email Campaign,5,true
+WS000714,2025-10-26,Desktop,Paid Search,15,true
+WS000715,2025-05-12,Desktop,Email Campaign,13,false
+WS000716,2024-09-21,Desktop,Organic Search,1,true
+WS000717,2025-07-10,Desktop,Organic Search,13,true
+WS000718,2025-01-22,Mobile,Email Campaign,12,false
+WS000719,2024-11-09,Desktop,Email Campaign,9,false
+WS000720,2025-02-26,Mobile,Organic Search,4,true
+WS000721,2025-08-17,Desktop,Organic Search,10,false
+WS000722,2025-04-13,Tablet,Organic Search,6,false
+WS000723,2024-08-31,Desktop,Organic Search,13,false
+WS000724,2025-08-22,Mobile,Organic Search,15,false
+WS000725,2024-04-12,Tablet,Referral,4,false
+WS000726,2025-09-11,Desktop,Organic Search,10,false
+WS000727,2024-12-14,Mobile,Organic Search,11,false
+WS000728,2025-06-13,Desktop,Organic Search,8,false
+WS000729,2024-08-01,Mobile,Social Campaign,13,false
+WS000730,2024-07-15,Desktop,Direct,4,false
+WS000731,2025-11-20,Desktop,Direct,7,false
+WS000732,2025-07-07,Mobile,Email Campaign,1,false
+WS000733,2024-11-26,Mobile,Social Campaign,11,false
+WS000734,2024-12-06,Mobile,Paid Search,4,false
+WS000735,2025-03-21,Desktop,Direct,4,false
+WS000736,2024-05-22,Desktop,Email Campaign,4,false
+WS000737,2025-03-10,Mobile,Organic Search,15,true
+WS000738,2025-11-20,Desktop,Organic Search,14,false
+WS000739,2025-07-17,Desktop,Referral,12,false
+WS000740,2025-01-26,Mobile,Direct,13,false
+WS000741,2024-04-21,Desktop,Paid Search,10,false
+WS000742,2025-09-14,Mobile,Direct,11,false
+WS000743,2025-06-14,Mobile,Social Campaign,11,false
+WS000744,2024-03-28,Tablet,Referral,12,false
+WS000745,2024-01-13,Desktop,Organic Search,14,false
+WS000746,2025-08-19,Mobile,Organic Search,8,false
+WS000747,2024-01-04,Desktop,Direct,4,false
+WS000748,2025-02-18,Mobile,Organic Search,6,false
+WS000749,2024-06-01,DESKTOP,Social Campaign,11,false
+WS000750,2025-07-27,Tablet,Organic Search,7,false
+WS000751,2025-06-22,Mobile,Organic Search,10,false
+WS000752,2025-03-05,Mobile,Direct,12,false
+WS000753,2024-09-28,Mobile,Social Campaign,4,false
+WS000754,2025-11-30,Desktop,Organic Search,14,false
+WS000755,2025-02-21,Tablet,Social Campaign,4,false
+WS000756,2025-05-01,Desktop,Organic Search,11,true
+WS000757,2025-05-14,Tablet,Paid Search,5,false
+WS000758,2024-11-10,Mobile,Direct,10,false
+WS000759,2024-07-21,Desktop,Social Campaign,1,false
+WS000760,2025-11-04,Mobile,Organic Search,8,false
+WS000761,2024-08-06,Desktop,Social Campaign,3,false
+WS000762,2024-07-15,Desktop,Organic Search,11,false
+WS000763,2025-08-07,Tablet,Referral,3,false
+WS000764,2024-11-18,Desktop,Direct,12,false
+WS000765,2024-12-21,Desktop,Email Campaign,5,false
+WS000766,2025-02-21,Mobile,Email Campaign,12,true
+WS000767,2025-07-12,Desktop,Organic Search,4,false
+WS000768,2025-11-23,Desktop,Social Campaign,12,true
+WS000769,2025-03-06,Tablet,Organic Search,6,false
+WS000770,2025-06-11,Mobile,Paid Search,6,true
+WS000771,2024-07-02,Tablet,Organic Search,11,false
+WS000772,2025-11-17,Mobile,Organic Search,8,false
+WS000773,2024-11-16,Tablet,Referral,6,false
+WS000774,2024-02-17,Desktop,Organic Search,15,false
+WS000775,2025-12-07,Mobile,Direct,7,false
+WS000776,2025-03-23,Mobile,Paid Search,9,false
+WS000777,2025-04-29,Desktop,Organic Search,14,false
+WS000778,2024-02-22,Tablet,Paid Search,4,false
+WS000779,2025-03-15,Desktop,Social Campaign,7,false
+WS000780,2025-12-24,Desktop,Social Campaign,14,false
+WS000781,2025-11-23,Mobile,Social Campaign,2,false
+WS000782,2025-01-04,Mobile,Email Campaign,15,false
+WS000783,2024-04-23,Desktop,Paid Search,14,false
+WS000784,2025-07-05,Mobile,Paid Search,3,false
+WS000785,2024-09-08,Tablet,Organic Search,9,false
+WS000786,2025-07-12, Mobile,Email Campaign,4,false
+WS000787,2025-07-06,Desktop,Organic Search,11,false
+WS000788,2024-11-21,Desktop,Direct,9,true
+WS000789,2025-03-18,Tablet,Organic Search,3,false
+WS000790,2024-07-31,Desktop,Social Campaign,15,false
+WS000791,2024-06-18,Mobile,Paid Search,3,false
+WS000792,2024-05-07,Desktop,Direct,3,false
+WS000793,2024-06-05,Mobile,Paid Search,10,false
+WS000794,2025-03-20,Mobile,Paid Search,12,false
+WS000795,2024-09-29,Mobile,Paid Search,15,false
+WS000796,2025-06-13,Mobile,Organic Search,3,false
+WS000797,2025-04-18,Tablet,Organic Search,13,false
+WS000798,2025-10-13,Desktop,Social Campaign,14,false
+WS000799,2024-04-07,Tablet,Organic Search,11,false
+WS000800,2025-05-30,Mobile,Paid Search,1,false
+WS000801,2025-03-14,Mobile,Paid Search,12,false
+WS000802,2024-11-16,Mobile,Paid Search,9,false
+WS000803,2025-12-01,Tablet,Direct,7,false
+WS000804,2025-09-17,Desktop,Social Campaign,3,false
+WS000805,2024-03-13,Tablet,Social Campaign,6,false
+WS000806,2024-06-13,Mobile,Organic Search,9,false
+WS000807,2025-11-07,Mobile,Direct,13,true
+WS000808,2025-08-11,Desktop,Direct,7,false
+WS000809,2024-09-11,Mobile,Paid Search,15,false
+WS000810,2025-03-28,Mobile,Direct,2,false
+WS000811,2024-05-29,Desktop,Organic Search,3,false
+WS000812,2024-03-02,Mobile,Paid Search,2,false
+WS000813,2025-10-14,Tablet,Direct,8,false
+WS000814,2024-02-18,Tablet,Organic Search,10,false
+WS000815,2024-02-12,Desktop,Email Campaign,13,false
+WS000816,2025-10-08,Desktop,Social Campaign,1,false
+WS000817,2025-11-20,Desktop,Organic Search,8,false
+WS000818,2025-01-05,Mobile,Organic Search,7,false
+WS000819,2024-06-19,Mobile,Paid Search,3,false
+WS000820,2024-10-13,Mobile,Organic Search,4,false
+WS000821,2024-05-03,Desktop,Email Campaign,15,false
+WS000822,2024-11-17,Desktop,Social Campaign,8,true
+WS000823,2024-07-17, Desktop,Organic Search,13,false
+WS000824,2025-05-19,Desktop,Organic Search,14,false
+WS000825,2024-11-01,Desktop,Paid Search,5,false
+WS000826,2024-05-18,Desktop,Direct,9,false
+WS000827,2025-11-08,Desktop,Direct,15,false
+WS000828,2024-06-04,Mobile,Paid Search,5,false
+WS000829,2025-08-02,Desktop,Social Campaign,7,false
+WS000830,2024-07-23,Mobile,Organic Search,2,false
+WS000831,2024-08-02,Desktop,Email Campaign,10,true
+WS000832,2024-04-28,Mobile,Email Campaign,15,false
+WS000833,2024-02-11,Mobile,Organic Search,5,false
+WS000834,2025-02-06,Desktop,Paid Search,3,false
+WS000835,2024-08-06,Desktop,Organic Search,2,false
+WS000836,2025-11-10,Mobile,Direct,9,false
+WS000837,2025-04-07,Mobile,Direct,13,false
+WS000838,2025-12-21,Desktop,Direct,9,false
+WS000839,2025-04-07,Mobile,Direct,15,false
+WS000840,2024-08-30,Mobile,Organic Search,14,false
+WS000841,2025-11-15,Desktop,Social Campaign,1,false
+WS000842,2024-10-29,Tablet,Social Campaign,14,false
+WS000843,2025-03-02,Desktop,Referral,14,false
+WS000844,2025-02-04,Desktop,Organic Search,2,false
+WS000845,2025-11-11,Desktop,Email Campaign,4,false
+WS000846,2025-07-18,Mobile,Direct,12,false
+WS000847,2024-01-08,Mobile,Direct,13,true
+WS000848,2025-08-31,Mobile,Organic Search,12,false
+WS000849,2024-06-21,Mobile,Direct,7,false
+WS000850,2025-05-23,Desktop,Direct,13,false
+WS000851,2025-12-13,Mobile,Referral,11,false
+WS000852,2024-10-04,Desktop,Referral,2,false
+WS000853,2025-11-09,Desktop,Organic Search,15,false
+WS000854,2024-05-07,Mobile,Organic Search,9,false
+WS000855,2024-08-15,Mobile,Paid Search,13,true
+WS000856,2025-08-18,Desktop,Paid Search,14,false
+WS000857,2025-08-17,Mobile,Organic Search,8,false
+WS000858,2025-04-10,Desktop,Social Campaign,15,false
+WS000859,2025-02-06,Mobile,Social Campaign,8,false
+WS000860,2024-05-30, Tablet,Direct,13,false
+WS000861,2024-01-27,Desktop,Organic Search,12,false
+WS000862,2024-08-02,Mobile,Organic Search,11,false
+WS000863,2025-11-16,Desktop,Paid Search,14,false
+WS000864,2024-05-21,Tablet,Organic Search,14,false
+WS000865,2025-09-26,Desktop,Paid Search,2,false
+WS000866,2024-03-09,Desktop,Direct,3,false
+WS000867,2025-01-12,Desktop,Direct,1,true
+WS000868,2025-02-02,Desktop,Email Campaign,2,false
+WS000869,2024-06-24,Desktop,Email Campaign,4,false
+WS000870,2024-05-27,Desktop,Social Campaign,13,true
+WS000871,2025-12-24,Mobile,Direct,7,false
+WS000872,2024-06-01,Desktop,Organic Search,7,false
+WS000873,2025-10-24,Desktop,Email Campaign,2,true
+WS000874,2025-06-15,Mobile,Direct,3,false
+WS000875,2024-01-18,Desktop,Direct,15,false
+WS000876,2025-02-10,Mobile,Referral,10,true
+WS000877,2025-09-04,Mobile,Paid Search,13,false
+WS000878,2024-05-19,Mobile,Referral,13,false
+WS000879,2025-01-06,Desktop,Organic Search,2,false
+WS000880,2024-11-21,Desktop,Paid Search,4,false
+WS000881,2025-06-07,Mobile,Direct,7,false
+WS000882,2024-03-14,Mobile,Organic Search,15,false
+WS000883,2025-11-06,Desktop,Referral,9,true
+WS000884,2025-10-04,Desktop,Organic Search,1,false
+WS000885,2025-03-30,Mobile,Direct,9,false
+WS000886,2025-08-01,Desktop,Referral,12,false
+WS000887,2025-03-13,Desktop,Direct,10,false
+WS000888,2025-12-07,Desktop,Organic Search,8,false
+WS000889,2024-07-17,Desktop,Email Campaign,3,false
+WS000890,2024-12-08,Tablet,Paid Search,5,false
+WS000891,2024-01-17,Desktop,Paid Search,10,false
+WS000892,2024-08-14,Mobile,Organic Search,8,false
+WS000893,2025-10-09,Mobile,Organic Search,6,false
+WS000894,2024-10-24,Mobile,Direct,15,false
+WS000895,2024-07-10,Mobile,Direct,7,false
+WS000896,2025-09-12,Desktop,Direct,6,false
+WS000897,2024-02-09, Mobile,Email Campaign,1,false
+WS000898,2024-05-28,Tablet,Organic Search,10,false
+WS000899,2025-03-13,Desktop,Organic Search,2,false
+WS000900,2025-11-13,Desktop,Referral,2,false
+WS000901,2024-11-03,Mobile,Email Campaign,6,false
+WS000902,2024-03-12,Desktop,Email Campaign,12,false
+WS000903,2024-04-23,Mobile,Social Campaign,11,false
+WS000904,2024-01-24,Desktop,Direct,9,false
+WS000905,2025-11-15,Mobile,Social Campaign,13,false
+WS000906,2024-10-05,Desktop,Referral,11,false
+WS000907,2024-08-23,Desktop,Paid Search,2,false
+WS000908,2025-01-27,Mobile,Organic Search,12,false
+WS000909,2024-01-08,Desktop,Organic Search,6,false
+WS000910,2025-02-13,Mobile,Direct,14,false
+WS000911,2025-09-22,Mobile,Organic Search,9,false
+WS000912,2024-07-10,Desktop,Email Campaign,8,false
+WS000913,2025-12-13,Mobile,Paid Search,8,false
+WS000914,2025-03-14,Desktop,Organic Search,2,false
+WS000915,2024-01-10,Desktop,Email Campaign,9,false
+WS000916,2025-10-14,Desktop,Email Campaign,15,false
+WS000917,2025-09-30,Desktop,Direct,14,false
+WS000918,2025-10-25,Desktop,Email Campaign,5,false
+WS000919,2024-04-30,Mobile,Email Campaign,11,false
+WS000920,2025-09-07,Desktop,Organic Search,11,false
+WS000921,2025-08-05,Desktop,Referral,2,false
+WS000922,2025-01-28,Mobile,Organic Search,15,false
+WS000923,2024-07-16,Desktop,Email Campaign,2,false
+WS000924,2025-02-18,Tablet,Paid Search,12,false
+WS000925,2025-09-13,Mobile,Referral,5,false
+WS000926,2024-11-21,Desktop,Social Campaign,15,false
+WS000927,2025-02-22,Desktop,Paid Search,2,false
+WS000928,2024-01-16,Desktop,Email Campaign,3,false
+WS000929,2024-08-21,Mobile,Organic Search,3,false
+WS000930,2024-09-14,Desktop,Paid Search,2,true
+WS000931,2025-08-16,Desktop,Referral,11,false
+WS000932,2024-12-10,Mobile,Email Campaign,11,false
+WS000933,2024-05-16,Mobile,Organic Search,15,false
+WS000934,2024-08-02, Mobile,Email Campaign,10,false
+WS000935,2025-02-26,Mobile,Paid Search,9,true
+WS000936,2024-08-15,Mobile,Email Campaign,15,false
+WS000937,2025-09-06,Tablet,Direct,12,true
+WS000938,2024-08-10,Desktop,Social Campaign,12,false
+WS000939,2025-01-07,Mobile,Direct,10,true
+WS000940,2024-04-15,Mobile,Referral,7,false
+WS000941,2024-05-29,Tablet,Organic Search,5,false
+WS000942,2024-08-29,Mobile,Organic Search,5,false
+WS000943,2025-11-23,Mobile,Direct,4,false
+WS000944,2025-09-27,Mobile,Organic Search,10,false
+WS000945,2025-02-21,Desktop,Social Campaign,13,true
+WS000946,2025-02-21,Desktop,Email Campaign,7,false
+WS000947,2025-02-21,Mobile,Paid Search,11,false
+WS000948,2025-05-16,Mobile,Organic Search,5,false
+WS000949,2024-10-08,Desktop,Social Campaign,3,false
+WS000950,2025-09-08,Desktop,Social Campaign,4,false
+WS000951,2024-04-05,Mobile,Direct,3,false
+WS000952,2024-07-08,Mobile,Direct,3,false
+WS000953,2025-05-30,Tablet,Social Campaign,1,false
+WS000954,2024-04-02,Desktop,Direct,1,false
+WS000955,2025-04-09,Mobile,Organic Search,13,false
+WS000956,2025-06-17,Desktop,Organic Search,4,false
+WS000957,2024-04-24,Desktop,Organic Search,13,false
+WS000958,2024-05-14,Tablet,Paid Search,8,false
+WS000959,2025-06-10,Mobile,Organic Search,4,false
+WS000960,2024-02-27,Mobile,Organic Search,2,false
+WS000961,2025-10-27,Tablet,Email Campaign,5,false
+WS000962,2025-09-15,Mobile,Paid Search,8,false
+WS000963,2024-03-23,Desktop,Social Campaign,2,false
+WS000964,2024-08-30,Mobile,Organic Search,11,false
+WS000965,2025-11-27,Mobile,Organic Search,1,false
+WS000966,2025-06-16,Mobile,Social Campaign,3,false
+WS000967,2024-07-24,Mobile,Direct,2,false
+WS000968,2025-06-24,Desktop,Referral,14,false
+WS000969,2025-02-19,Mobile,Organic Search,12,false
+WS000970,2025-12-15,Desktop,Email Campaign,2,false
+WS000971,2024-08-27,desktop ,Email Campaign,14,false
+WS000972,2025-08-13,Tablet,Social Campaign,3,true
+WS000973,2025-10-23,Mobile,Direct,9,false
+WS000974,2025-01-04,Desktop,Paid Search,14,false
+WS000975,2025-06-17,Desktop,Email Campaign,11,false
+WS000976,2024-01-22,Desktop,Organic Search,1,false
+WS000977,2024-12-16,Desktop,Paid Search,14,false
+WS000978,2024-06-04,Desktop,Organic Search,15,false
+WS000979,2025-08-26,Tablet,Paid Search,12,false
+WS000980,2024-08-24,Mobile,Social Campaign,11,true
+WS000981,2024-10-02,Mobile,Organic Search,15,false
+WS000982,2025-06-30,Desktop,Organic Search,1,false
+WS000983,2025-02-13,Desktop,Paid Search,4,false
+WS000984,2024-09-07,Mobile,Organic Search,1,false
+WS000985,2024-11-20,Desktop,Paid Search,1,false
+WS000986,2024-02-11,Mobile,Direct,1,false
+WS000987,2025-10-13,Mobile,Paid Search,9,false
+WS000988,2024-12-06,Desktop,Paid Search,10,false
+WS000989,2024-10-12,Mobile,Organic Search,7,true
+WS000990,2025-09-24,Desktop,Direct,6,false
+WS000991,2025-09-18,Mobile,Email Campaign,11,false
+WS000992,2025-01-24,Desktop,Organic Search,5,false
+WS000993,2025-05-13,Desktop,Email Campaign,8,false
+WS000994,2025-05-24,Mobile,Organic Search,12,false
+WS000995,2024-12-31,Desktop,Organic Search,2,false
+WS000996,2024-03-01,Mobile,Organic Search,3,false
+WS000997,2024-09-27,Mobile,Referral,8,false
+WS000998,2024-09-10,Mobile,Social Campaign,8,false
+WS000999,2024-02-07,Mobile,Paid Search,11,false
+WS001000,2025-05-26,Mobile,Organic Search,15,false
+WS001001,2025-11-05,Tablet,Paid Search,10,false
+WS001002,2025-10-26,Mobile,Organic Search,2,false
+WS001003,2024-02-28,Tablet,Paid Search,12,false
+WS001004,2024-12-04,Desktop,Email Campaign,7,false
+WS001005,2025-04-03,Desktop,Direct,11,true
+WS001006,2024-12-19,Mobile,Direct,11,false
+WS001007,2024-07-25,Mobile,Organic Search,9,false
+WS001008,2025-05-26,Mobile  ,Organic Search,6,false
+WS001009,2025-09-05,Mobile,Paid Search,6,false
+WS001010,2024-05-31,Desktop,Organic Search,13,false
+WS001011,2025-05-29,Desktop,Direct,5,false
+WS001012,2024-10-04,Tablet,Social Campaign,1,true
+WS001013,2024-09-30,Mobile,Organic Search,11,false
+WS001014,2024-06-18,Mobile,Direct,5,false
+WS001015,2024-12-05,Mobile,Direct,13,false
+WS001016,2025-12-22,Mobile,Organic Search,12,false
+WS001017,2025-12-03,Desktop,Social Campaign,13,false
+WS001018,2024-01-13,Mobile,Organic Search,9,false
+WS001019,2024-04-15,Mobile,Organic Search,1,false
+WS001020,2024-01-31,Mobile,Paid Search,8,false
+WS001021,2024-11-21,Mobile,Direct,9,false
+WS001022,2024-06-14,Desktop,Social Campaign,10,false
+WS001023,2024-11-09,Tablet,Direct,5,false
+WS001024,2024-10-19,Desktop,Paid Search,8,false
+WS001025,2024-09-08,Mobile,Organic Search,4,false
+WS001026,2025-05-19,Tablet,Direct,4,false
+WS001027,2025-07-02,Desktop,Referral,12,false
+WS001028,2024-10-11,Mobile,Organic Search,2,false
+WS001029,2025-12-11,Mobile,Email Campaign,9,false
+WS001030,2025-08-16,Mobile,Paid Search,8,false
+WS001031,2024-01-28,Mobile,Direct,8,false
+WS001032,2024-11-26,Mobile,Organic Search,1,false
+WS001033,2025-08-28,Desktop,Organic Search,8,true
+WS001034,2025-12-10,Mobile,Direct,7,false
+WS001035,2025-04-07,Mobile,Social Campaign,4,false
+WS001036,2025-05-11,Mobile,Direct,5,false
+WS001037,2024-03-02,Desktop,Direct,9,false
+WS001038,2024-02-07,Mobile,Organic Search,3,false
+WS001039,2025-12-12,Desktop,Organic Search,2,false
+WS001040,2025-09-17,Desktop,Organic Search,6,false
+WS001041,2024-09-10,Desktop,Direct,15,true
+WS001042,2024-02-28,Tablet,Direct,14,false
+WS001043,2025-01-04,Desktop,Paid Search,9,true
+WS001044,2024-04-01,Desktop,Social Campaign,11,false
+WS001045,2024-06-11,DESKTOP,Paid Search,3,true
+WS001046,2025-02-18,Desktop,Paid Search,11,false
+WS001047,2025-09-08,Mobile,Organic Search,15,false
+WS001048,2025-03-05,Desktop,Organic Search,10,false
+WS001049,2024-10-26,Mobile,Referral,8,false
+WS001050,2024-04-09,Mobile,Direct,12,false
+WS001051,2025-09-13,Mobile,Social Campaign,4,false
+WS001052,2025-03-15,Tablet,Social Campaign,8,false
+WS001053,2024-12-03,Desktop,Organic Search,9,false
+WS001054,2024-07-26,Mobile,Direct,13,false
+WS001055,2025-02-09,Desktop,Organic Search,9,false
+WS001056,2024-10-11,Desktop,Direct,5,false
+WS001057,2025-09-11,Mobile,Direct,9,false
+WS001058,2024-05-21,Desktop,Social Campaign,15,false
+WS001059,2025-08-02,Mobile,Email Campaign,4,false
+WS001060,2025-02-27,Mobile,Organic Search,11,false
+WS001061,2025-01-24,Desktop,Paid Search,14,false
+WS001062,2024-02-06,Desktop,Direct,1,false
+WS001063,2024-11-18,Mobile,Organic Search,7,false
+WS001064,2024-04-26,Mobile,Paid Search,13,false
+WS001065,2024-01-03,Desktop,Organic Search,13,false
+WS001066,2025-06-27,Desktop,Email Campaign,10,false
+WS001067,2025-10-25,Mobile,Organic Search,7,false
+WS001068,2025-10-17,Mobile,Referral,14,false
+WS001069,2025-12-09,Desktop,Email Campaign,12,false
+WS001070,2025-02-15,Desktop,Organic Search,14,false
+WS001071,2025-03-16,Desktop,Direct,12,false
+WS001072,2024-04-04,Desktop,Social Campaign,13,false
+WS001073,2024-06-13,Mobile,Paid Search,14,false
+WS001074,2024-09-16,Tablet,Paid Search,11,false
+WS001075,2025-01-11,Desktop,Direct,11,false
+WS001076,2024-04-13,Mobile,Organic Search,3,false
+WS001077,2025-03-13,Mobile,Organic Search,7,false
+WS001078,2024-06-14,Desktop,Email Campaign,15,false
+WS001079,2025-09-04,Tablet,Paid Search,3,false
+WS001080,2024-03-02,Desktop,Paid Search,4,true
+WS001081,2025-12-17,Desktop,Email Campaign,2,false
+WS001082,2025-10-17,mobile ,Paid Search,12,false
+WS001083,2024-02-27,Desktop,Organic Search,15,false
+WS001084,2024-05-23,Desktop,Organic Search,14,false
+WS001085,2024-12-09,Tablet,Referral,2,false
+WS001086,2024-02-12,Desktop,Organic Search,12,false
+WS001087,2024-07-17,Desktop,Paid Search,2,false
+WS001088,2024-04-05,Tablet,Social Campaign,14,false
+WS001089,2024-07-03,Desktop,Social Campaign,12,true
+WS001090,2025-10-16,Tablet,Referral,9,false
+WS001091,2024-07-26,Desktop,Email Campaign,13,true
+WS001092,2025-09-18,Mobile,Direct,3,true
+WS001093,2024-11-18,Desktop,Organic Search,15,false
+WS001094,2025-11-02,Desktop,Social Campaign,4,false
+WS001095,2024-08-13,Desktop,Organic Search,14,false
+WS001096,2024-05-13,Tablet,Organic Search,3,false
+WS001097,2024-11-15,Desktop,Social Campaign,14,false
+WS001098,2025-09-16,Desktop,Organic Search,15,false
+WS001099,2025-10-01,Desktop,Organic Search,10,false
+WS001100,2025-06-01,Mobile,Organic Search,12,false
+WS001101,2024-10-22,Mobile,Organic Search,15,false
+WS001102,2024-08-05,Mobile,Social Campaign,7,false
+WS001103,2025-02-11,Tablet,Organic Search,7,false
+WS001104,2024-04-20,Desktop,Paid Search,9,false
+WS001105,2025-04-23,Tablet,Email Campaign,4,true
+WS001106,2024-12-25,Mobile,Organic Search,9,false
+WS001107,2025-04-28,Mobile,Paid Search,2,false
+WS001108,2025-11-16,Mobile,Organic Search,2,false
+WS001109,2025-07-18,Desktop,Referral,10,false
+WS001110,2025-05-17,Mobile,Organic Search,5,true
+WS001111,2024-04-22,Mobile,Organic Search,12,false
+WS001112,2025-10-06,Mobile,Organic Search,5,false
+WS001113,2024-10-04,Mobile,Social Campaign,10,false
+WS001114,2024-11-10,Tablet,Direct,9,false
+WS001115,2024-08-24,Mobile,Organic Search,11,false
+WS001116,2024-02-04,Mobile,Social Campaign,15,false
+WS001117,2025-07-28,Desktop,Organic Search,4,false
+WS001118,2025-07-14,Desktop,Social Campaign,11,false
+WS001119,2024-09-19, Tablet,Email Campaign,14,false
+WS001120,2024-07-05,Mobile,Organic Search,9,true
+WS001121,2025-04-05,Desktop,Referral,12,false
+WS001122,2024-11-16,Mobile,Referral,9,false
+WS001123,2025-03-17,Tablet,Paid Search,12,false
+WS001124,2025-03-09,Mobile,Paid Search,8,false
+WS001125,2024-07-08,Tablet,Social Campaign,10,false
+WS001126,2025-03-26,Desktop,Email Campaign,14,false
+WS001127,2025-10-13,Tablet,Email Campaign,7,true
+WS001128,2024-07-02,Desktop,Referral,3,false
+WS001129,2024-02-11,Desktop,Paid Search,12,false
+WS001130,2024-03-11,Desktop,Organic Search,7,false
+WS001131,2025-06-13,Desktop,Social Campaign,4,false
+WS001132,2024-02-19,Tablet,Social Campaign,15,false
+WS001133,2025-07-22,Desktop,Referral,14,true
+WS001134,2024-11-25,Mobile,Direct,6,false
+WS001135,2024-10-11,Mobile,Direct,12,false
+WS001136,2025-08-14,Tablet,Direct,9,false
+WS001137,2024-08-01,Mobile,Direct,13,false
+WS001138,2025-10-29,Tablet,Paid Search,3,false
+WS001139,2024-08-10,Mobile,Email Campaign,5,false
+WS001140,2024-08-19,Tablet,Email Campaign,2,false
+WS001141,2024-12-02,Desktop,Social Campaign,11,false
+WS001142,2024-07-04,Mobile,Organic Search,5,false
+WS001143,2024-10-04,Desktop,Organic Search,5,false
+WS001144,2025-12-02,Mobile,Organic Search,13,false
+WS001145,2024-02-11,Mobile,Referral,8,false
+WS001146,2025-01-21,Mobile,Paid Search,1,false
+WS001147,2024-03-25,Tablet,Social Campaign,11,false
+WS001148,2024-07-27,Desktop,Direct,2,false
+WS001149,2025-08-21,Tablet,Referral,5,false
+WS001150,2025-10-21,Mobile,Organic Search,8,false
+WS001151,2025-04-17,Desktop,Direct,8,false
+WS001152,2025-01-15,Mobile,Paid Search,14,false
+WS001153,2025-08-11,Tablet,Organic Search,4,false
+WS001154,2024-08-13,Tablet,Email Campaign,1,false
+WS001155,2024-07-22,Mobile,Referral,5,false
+WS001156,2024-01-23,Desktop  ,Referral,15,false
+WS001157,2024-08-13,Mobile,Direct,7,false
+WS001158,2025-04-02,Desktop,Organic Search,3,false
+WS001159,2024-11-16,Desktop,Paid Search,14,false
+WS001160,2024-05-28,Mobile,Paid Search,13,false
+WS001161,2024-11-10,Mobile,Referral,2,false
+WS001162,2024-12-30,Desktop,Paid Search,1,true
+WS001163,2024-11-09,Tablet,Direct,15,false
+WS001164,2025-02-01,Desktop,Organic Search,14,false
+WS001165,2025-06-03,Desktop,Paid Search,2,false
+WS001166,2025-03-11,Mobile,Social Campaign,1,true
+WS001167,2025-02-25,Desktop,Organic Search,10,false
+WS001168,2025-08-05,Desktop,Organic Search,7,false
+WS001169,2025-07-31,Desktop,Paid Search,15,true
+WS001170,2024-02-29,Desktop,Referral,7,false
+WS001171,2025-06-02,Mobile,Social Campaign,12,true
+WS001172,2024-05-22,Desktop,Paid Search,15,false
+WS001173,2025-11-30,Mobile,Organic Search,10,false
+WS001174,2024-12-11,Tablet,Referral,11,true
+WS001175,2025-06-23,Desktop,Email Campaign,11,false
+WS001176,2024-05-21,Desktop,Social Campaign,13,false
+WS001177,2024-09-26,Desktop,Organic Search,6,false
+WS001178,2024-10-18,Desktop,Social Campaign,5,false
+WS001179,2025-05-28,Mobile,Organic Search,15,false
+WS001180,2025-03-18,Desktop,Paid Search,4,false
+WS001181,2024-03-04,Desktop,Paid Search,12,false
+WS001182,2025-10-31,Mobile,Direct,12,false
+WS001183,2024-01-30,Mobile,Paid Search,2,false
+WS001184,2025-01-15,Tablet,Organic Search,1,false
+WS001185,2025-02-23,Desktop,Direct,15,false
+WS001186,2024-08-05,Mobile,Referral,6,false
+WS001187,2024-08-31,Mobile,Email Campaign,3,false
+WS001188,2025-05-28,Desktop,Organic Search,13,false
+WS001189,2024-07-07,Tablet,Organic Search,3,false
+WS001190,2025-05-18,Desktop,Email Campaign,5,false
+WS001191,2024-05-14,Tablet,Organic Search,7,false
+WS001192,2024-03-27,Desktop,Paid Search,6,false
+WS001193,2024-06-05, Mobile,Paid Search,13,false
+WS001194,2025-10-17,Desktop,Referral,5,false
+WS001195,2024-07-03,Desktop,Organic Search,11,true
+WS001196,2025-10-17,Tablet,Direct,9,false
+WS001197,2024-02-18,Desktop,Organic Search,6,false
+WS001198,2024-12-02,Desktop,Referral,12,false
+WS001199,2025-07-08,Desktop,Direct,11,true
+WS001200,2025-04-14,Desktop,Paid Search,7,false
+WS001201,2024-05-08,Desktop,Direct,4,false
+WS001202,2024-02-10,Desktop,Organic Search,12,false
+WS001203,2025-12-27,Desktop,Organic Search,1,false
+WS001204,2025-06-04,Desktop,Organic Search,11,false
+WS001205,2024-02-22,Desktop,Organic Search,6,false
+WS001206,2025-08-19,Desktop,Social Campaign,12,false
+WS001207,2024-06-05,Mobile,Direct,8,false
+WS001208,2024-03-21,Desktop,Referral,3,false
+WS001209,2025-07-12,Mobile,Referral,7,false
+WS001210,2025-02-20,Mobile,Referral,14,false
+WS001211,2024-02-17,Desktop,Social Campaign,4,false
+WS001212,2025-03-20,Desktop,Paid Search,6,false
+WS001213,2024-06-19,Desktop,Direct,1,false
+WS001214,2024-12-06,Desktop,Social Campaign,8,false
+WS001215,2024-04-22,Desktop,Direct,11,false
+WS001216,2024-10-09,Mobile,Social Campaign,12,false
+WS001217,2025-02-01,Mobile,Referral,10,false
+WS001218,2024-06-09,Desktop,Paid Search,8,true
+WS001219,2024-10-07,Desktop,Referral,9,false
+WS001220,2025-08-15,Desktop,Social Campaign,5,false
+WS001221,2025-12-21,Desktop,Organic Search,13,false
+WS001222,2025-03-17,Mobile,Referral,13,false
+WS001223,2024-04-19,Mobile,Direct,15,false
+WS001224,2024-09-16,Mobile,Direct,2,false
+WS001225,2024-12-11,Desktop,Referral,12,false
+WS001226,2024-02-21,Mobile,Social Campaign,5,false
+WS001227,2025-10-14,Mobile,Paid Search,10,false
+WS001228,2025-10-16,Mobile,Organic Search,8,false
+WS001229,2025-06-14,Desktop,Paid Search,14,false
+WS001230,2025-05-10,MOBILE,Direct,3,false
+WS001231,2024-02-06,Desktop,Organic Search,6,false
+WS001232,2025-05-06,Mobile,Paid Search,14,true
+WS001233,2024-12-15,Mobile,Direct,15,false
+WS001234,2024-04-12,Tablet,Direct,14,false
+WS001235,2024-04-26,Mobile,Social Campaign,1,false
+WS001236,2024-07-09,Desktop,Organic Search,9,false
+WS001237,2024-08-24,Mobile,Organic Search,8,false
+WS001238,2024-12-27,Mobile,Social Campaign,3,false
+WS001239,2024-05-26,Desktop,Direct,4,true
+WS001240,2025-06-09,Mobile,Social Campaign,4,false
+WS001241,2024-07-22,Desktop,Social Campaign,8,false
+WS001242,2024-01-08,Mobile,Organic Search,14,false
+WS001243,2025-09-20,Mobile,Referral,3,true
+WS001244,2024-03-07,Desktop,Direct,14,false
+WS001245,2025-12-27,Desktop,Direct,3,false
+WS001246,2024-01-01,Desktop,Direct,6,false
+WS001247,2025-08-31,Desktop,Paid Search,11,false
+WS001248,2025-12-09,Tablet,Paid Search,9,false
+WS001249,2025-01-08,Mobile,Email Campaign,14,false
+WS001250,2025-07-19,Desktop,Social Campaign,4,false
+WS001251,2024-02-01,Desktop,Direct,8,false
+WS001252,2024-03-08,Mobile,Organic Search,10,false
+WS001253,2024-04-01,Desktop,Paid Search,10,false
+WS001254,2025-05-20,Mobile,Organic Search,7,false
+WS001255,2025-11-25,Desktop,Referral,14,false
+WS001256,2024-10-29,Mobile,Direct,1,false
+WS001257,2024-07-05,Desktop,Referral,13,false
+WS001258,2025-01-28,Desktop,Organic Search,2,true
+WS001259,2025-10-10,Desktop,Organic Search,15,false
+WS001260,2024-02-03,Desktop,Organic Search,12,false
+WS001261,2025-04-22,Desktop,Social Campaign,14,true
+WS001262,2025-11-16,Tablet,Organic Search,5,false
+WS001263,2024-02-13,Mobile,Direct,10,false
+WS001264,2025-11-10,Mobile,Social Campaign,6,false
+WS001265,2025-03-13,Desktop,Paid Search,10,true
+WS001266,2025-04-30,Mobile,Direct,2,false
+WS001267,2024-09-20,MOBILE,Organic Search,8,false
+WS001268,2025-04-25,Mobile,Organic Search,4,false
+WS001269,2025-07-13,Desktop,Organic Search,3,false
+WS001270,2025-10-29,Desktop,Direct,11,false
+WS001271,2024-03-23,Mobile,Direct,2,false
+WS001272,2024-12-08,Tablet,Referral,3,false
+WS001273,2025-12-06,Desktop,Organic Search,7,false
+WS001274,2025-04-12,Tablet,Direct,6,false
+WS001275,2024-07-14,Desktop,Paid Search,4,false
+WS001276,2024-06-01,Desktop,Paid Search,8,false
+WS001277,2024-04-27,Desktop,Organic Search,8,false
+WS001278,2024-09-06,Desktop,Paid Search,6,false
+WS001279,2024-08-07,Desktop,Social Campaign,3,false
+WS001280,2025-08-01,Tablet,Organic Search,2,false
+WS001281,2025-09-27,Mobile,Referral,9,false
+WS001282,2025-05-06,Tablet,Organic Search,14,false
+WS001283,2024-08-27,Desktop,Social Campaign,2,false
+WS001284,2025-11-07,Desktop,Organic Search,6,false
+WS001285,2025-10-19,Mobile,Email Campaign,5,false
+WS001286,2024-07-07,Desktop,Paid Search,12,false
+WS001287,2025-05-03,Mobile,Social Campaign,2,false
+WS001288,2025-11-30,Mobile,Organic Search,12,false
+WS001289,2024-08-09,Desktop,Social Campaign,12,false
+WS001290,2025-07-09,Mobile,Organic Search,13,false
+WS001291,2024-12-14,Desktop,Organic Search,15,false
+WS001292,2024-04-05,Desktop,Direct,4,false
+WS001293,2025-11-13,Tablet,Social Campaign,12,false
+WS001294,2025-09-20,Desktop,Direct,13,false
+WS001295,2025-10-19,Mobile,Social Campaign,8,false
+WS001296,2024-07-24,Desktop,Organic Search,2,false
+WS001297,2025-03-22,Mobile,Paid Search,3,false
+WS001298,2025-04-06,Mobile,Email Campaign,6,false
+WS001299,2025-04-30,Desktop,Social Campaign,10,false
+WS001300,2025-02-04,Tablet,Email Campaign,14,false
+WS001301,2025-06-18,Desktop,Organic Search,7,false
+WS001302,2024-01-20,Mobile,Email Campaign,6,true
+WS001303,2025-03-27,Desktop,Organic Search,12,false
+WS001304,2024-01-30,MOBILE,Direct,10,false
+WS001305,2024-01-07,Desktop,Organic Search,4,false
+WS001306,2024-05-21,Desktop,Email Campaign,10,false
+WS001307,2025-01-21,Mobile,Social Campaign,12,false
+WS001308,2025-11-09,Mobile,Social Campaign,15,false
+WS001309,2025-05-20,Mobile,Direct,10,false
+WS001310,2025-07-31,Mobile,Organic Search,15,false
+WS001311,2025-05-07,Tablet,Organic Search,8,true
+WS001312,2025-06-06,Desktop,Organic Search,15,false
+WS001313,2024-04-29,Desktop,Email Campaign,12,false
+WS001314,2024-06-23,Mobile,Social Campaign,2,false
+WS001315,2025-01-07,Mobile,Paid Search,9,false
+WS001316,2025-11-18,Mobile,Direct,3,false
+WS001317,2025-12-11,Desktop,Referral,4,false
+WS001318,2025-06-25,Desktop,Paid Search,15,true
+WS001319,2024-04-01,Mobile,Social Campaign,11,false
+WS001320,2025-03-15,Mobile,Social Campaign,6,true
+WS001321,2025-02-07,Mobile,Direct,1,false
+WS001322,2024-03-28,Desktop,Direct,7,false
+WS001323,2024-10-07,Mobile,Organic Search,15,false
+WS001324,2025-01-29,Desktop,Paid Search,8,false
+WS001325,2025-11-10,Mobile,Organic Search,14,false
+WS001326,2024-01-14,Desktop,Social Campaign,12,false
+WS001327,2024-04-10,Mobile,Referral,11,true
+WS001328,2024-07-24,Desktop,Direct,7,false
+WS001329,2024-08-27,Desktop,Organic Search,9,false
+WS001330,2025-09-27,Desktop,Organic Search,6,false
+WS001331,2024-07-21,Desktop,Email Campaign,2,false
+WS001332,2024-02-25,Mobile,Referral,6,false
+WS001333,2025-05-11,Mobile,Email Campaign,12,false
+WS001334,2025-06-18,Mobile,Organic Search,2,false
+WS001335,2025-10-08,Desktop,Direct,4,false
+WS001336,2024-06-02,Desktop,Direct,5,false
+WS001337,2024-11-12,Mobile,Direct,9,false
+WS001338,2024-05-12,Mobile,Direct,11,false
+WS001339,2025-02-23,Desktop,Organic Search,13,false
+WS001340,2024-07-08,Desktop,Paid Search,14,false
+WS001341,2024-02-17, Mobile,Organic Search,9,false
+WS001342,2024-11-29,Tablet,Paid Search,14,false
+WS001343,2025-07-05,Mobile,Social Campaign,2,false
+WS001344,2024-06-02,Mobile,Direct,2,false
+WS001345,2024-11-12,Desktop,Referral,7,false
+WS001346,2024-09-16,Desktop,Social Campaign,12,false
+WS001347,2025-05-18,Desktop,Direct,9,false
+WS001348,2024-02-26,Desktop,Email Campaign,11,false
+WS001349,2024-12-27,Mobile,Paid Search,5,false
+WS001350,2024-10-03,Desktop,Paid Search,10,true
+WS001351,2024-11-01,Mobile,Direct,2,false
+WS001352,2024-04-14,Desktop,Social Campaign,12,false
+WS001353,2025-11-28,Mobile,Referral,2,false
+WS001354,2025-10-15,Mobile,Direct,15,true
+WS001355,2024-05-17,Mobile,Organic Search,8,false
+WS001356,2024-12-08,Mobile,Direct,12,true
+WS001357,2024-11-28,Mobile,Paid Search,2,false
+WS001358,2025-02-03,Mobile,Organic Search,12,false
+WS001359,2025-03-11,Desktop,Email Campaign,4,false
+WS001360,2024-09-14,Desktop,Email Campaign,14,false
+WS001361,2024-06-02,Desktop,Organic Search,13,false
+WS001362,2024-11-10,Mobile,Referral,4,false
+WS001363,2025-11-13,Mobile,Organic Search,14,false
+WS001364,2025-09-02,Tablet,Paid Search,8,false
+WS001365,2025-11-13,Mobile,Organic Search,3,false
+WS001366,2025-11-14,Mobile,Social Campaign,14,false
+WS001367,2025-05-11,Tablet,Paid Search,11,false
+WS001368,2024-03-15,Mobile,Social Campaign,14,false
+WS001369,2024-01-11,Mobile,Email Campaign,15,false
+WS001370,2025-01-15,Desktop,Organic Search,10,false
+WS001371,2025-05-08,Mobile,Direct,7,false
+WS001372,2025-06-19,Mobile,Organic Search,15,false
+WS001373,2024-03-21,Mobile,Email Campaign,3,false
+WS001374,2024-11-19,Mobile,Organic Search,11,false
+WS001375,2024-07-03,Tablet,Direct,5,false
+WS001376,2025-10-20,Desktop,Direct,11,false
+WS001377,2025-11-20,Mobile,Email Campaign,11,false
+WS001378,2025-01-23,MOBILE,Email Campaign,12,false
+WS001379,2025-05-04,Desktop,Organic Search,13,false
+WS001380,2024-01-30,Desktop,Organic Search,8,false
+WS001381,2025-12-09,Tablet,Organic Search,11,false
+WS001382,2024-12-24,Mobile,Organic Search,8,false
+WS001383,2025-06-19,Mobile,Organic Search,4,false
+WS001384,2024-10-03,Mobile,Email Campaign,5,false
+WS001385,2025-02-08,Mobile,Social Campaign,10,false
+WS001386,2025-01-28,Mobile,Social Campaign,12,false
+WS001387,2025-11-09,Mobile,Email Campaign,14,true
+WS001388,2024-08-08,Desktop,Direct,12,false
+WS001389,2024-08-13,Desktop,Social Campaign,15,false
+WS001390,2025-05-13,Desktop,Direct,11,false
+WS001391,2025-04-30,Desktop,Paid Search,7,false
+WS001392,2025-01-01,Desktop,Organic Search,6,false
+WS001393,2025-03-18,Desktop,Direct,15,false
+WS001394,2025-08-13,Mobile,Email Campaign,14,false
+WS001395,2024-03-13,Mobile,Referral,14,false
+WS001396,2025-09-28,Mobile,Organic Search,2,false
+WS001397,2025-04-15,Mobile,Email Campaign,7,false
+WS001398,2024-12-24,Mobile,Social Campaign,6,false
+WS001399,2024-06-10,Desktop,Organic Search,11,false
+WS001400,2025-12-11,Mobile,Direct,10,false
+WS001401,2024-12-11,Tablet,Direct,7,false
+WS001402,2025-01-11,Tablet,Paid Search,15,false
+WS001403,2024-11-06,Mobile,Email Campaign,3,true
+WS001404,2024-10-12,Tablet,Paid Search,15,false
+WS001405,2025-10-15,Mobile,Social Campaign,10,false
+WS001406,2025-09-17,Mobile,Organic Search,9,false
+WS001407,2025-07-08,Mobile,Paid Search,5,false
+WS001408,2025-02-14,Desktop,Organic Search,13,false
+WS001409,2025-08-27,Mobile,Social Campaign,12,false
+WS001410,2024-11-04,Mobile,Organic Search,5,false
+WS001411,2024-12-27,Desktop,Paid Search,15,false
+WS001412,2025-04-09,Mobile,Organic Search,8,false
+WS001413,2025-06-21,Mobile,Paid Search,8,true
+WS001414,2025-02-06,Desktop,Referral,3,false
+WS001415,2024-08-03, Mobile,Email Campaign,11,false
+WS001416,2025-06-26,Desktop,Organic Search,14,false
+WS001417,2024-03-04,Tablet,Direct,3,false
+WS001418,2025-05-28,Mobile,Organic Search,12,false
+WS001419,2024-03-25,Mobile,Referral,14,false
+WS001420,2024-11-09,Desktop,Direct,3,false
+WS001421,2025-02-14,Mobile,Social Campaign,4,false
+WS001422,2025-06-14,Mobile,Email Campaign,9,false
+WS001423,2024-05-22,Desktop,Referral,8,false
+WS001424,2024-11-20,Mobile,Organic Search,5,false
+WS001425,2025-04-03,Mobile,Referral,7,false
+WS001426,2024-11-17,Tablet,Social Campaign,1,true
+WS001427,2024-02-12,Tablet,Referral,11,false
+WS001428,2025-05-19,Desktop,Referral,5,true
+WS001429,2025-08-30,Desktop,Email Campaign,10,false
+WS001430,2025-10-06,Desktop,Social Campaign,14,false
+WS001431,2024-02-22,Desktop,Direct,10,false
+WS001432,2025-06-20,Mobile,Direct,2,false
+WS001433,2025-10-17,Desktop,Direct,13,false
+WS001434,2024-01-11,Desktop,Paid Search,8,false
+WS001435,2024-06-05,Mobile,Organic Search,5,false
+WS001436,2024-01-14,Desktop,Organic Search,14,false
+WS001437,2025-01-08,Desktop,Referral,6,false
+WS001438,2024-04-30,Mobile,Social Campaign,7,false
+WS001439,2025-01-10,Desktop,Social Campaign,9,false
+WS001440,2024-01-31,Desktop,Direct,11,true
+WS001441,2025-05-23,Tablet,Referral,10,false
+WS001442,2025-07-10,Mobile,Direct,8,false
+WS001443,2024-01-25,Mobile,Organic Search,5,false
+WS001444,2024-07-20,Mobile,Organic Search,7,false
+WS001445,2025-10-27,Desktop,Social Campaign,13,false
+WS001446,2025-02-07,Desktop,Paid Search,12,false
+WS001447,2024-02-20,Desktop,Paid Search,12,true
+WS001448,2025-01-24,Desktop,Direct,5,false
+WS001449,2025-11-28,Mobile,Paid Search,7,false
+WS001450,2024-03-07,Mobile,Direct,15,false
+WS001451,2024-06-17,Mobile,Email Campaign,6,false
+WS001452,2025-01-21, Desktop,Email Campaign,2,false
+WS001453,2025-09-04,Desktop,Email Campaign,10,true
+WS001454,2025-12-25,Desktop,Direct,8,false
+WS001455,2025-01-24,Mobile,Direct,6,true
+WS001456,2024-04-23,Desktop,Email Campaign,11,false
+WS001457,2025-02-20,Desktop,Organic Search,2,false
+WS001458,2025-06-18,Mobile,Organic Search,15,false
+WS001459,2024-08-01,Mobile,Paid Search,13,false
+WS001460,2024-08-20,Desktop,Organic Search,11,true
+WS001461,2025-08-08,Desktop,Email Campaign,11,false
+WS001462,2024-08-05,Mobile,Organic Search,1,false
+WS001463,2025-03-01,Desktop,Direct,2,false
+WS001464,2025-05-30,Mobile,Organic Search,13,false
+WS001465,2025-01-06,Desktop,Social Campaign,3,false
+WS001466,2024-12-05,Desktop,Paid Search,11,false
+WS001467,2025-05-17,Desktop,Organic Search,3,false
+WS001468,2025-11-10,Mobile,Organic Search,1,false
+WS001469,2025-06-27,Desktop,Social Campaign,9,false
+WS001470,2024-06-13,Desktop,Direct,1,false
+WS001471,2024-10-08,Mobile,Email Campaign,1,false
+WS001472,2024-12-26,Desktop,Organic Search,13,false
+WS001473,2024-05-14,Desktop,Organic Search,9,false
+WS001474,2025-05-11,Desktop,Referral,13,false
+WS001475,2025-11-23,Mobile,Paid Search,4,false
+WS001476,2025-02-17,Mobile,Organic Search,11,false
+WS001477,2024-12-28,Desktop,Direct,15,false
+WS001478,2025-05-12,Mobile,Direct,10,false
+WS001479,2024-09-16,Desktop,Paid Search,15,false
+WS001480,2024-04-21,Tablet,Organic Search,7,false
+WS001481,2025-06-18,Desktop,Direct,8,false
+WS001482,2024-05-15,Tablet,Referral,2,false
+WS001483,2025-09-27,Mobile,Organic Search,8,false
+WS001484,2024-06-07,Desktop,Email Campaign,6,false
+WS001485,2025-11-20,Mobile,Social Campaign,9,false
+WS001486,2025-04-08,Tablet,Social Campaign,6,true
+WS001487,2024-12-06,Tablet,Social Campaign,8,false
+WS001488,2025-05-19,Desktop,Organic Search,6,false
+WS001489,2024-04-17,Desktop  ,Organic Search,3,false
+WS001490,2024-11-07,Desktop,Direct,3,false
+WS001491,2024-12-29,Desktop,Organic Search,6,false
+WS001492,2025-04-28,Desktop,Social Campaign,5,false
+WS001493,2025-09-26,Mobile,Social Campaign,12,false
+WS001494,2024-02-24,Desktop,Organic Search,6,false
+WS001495,2025-11-22,Tablet,Direct,3,false
+WS001496,2024-09-18,Tablet,Paid Search,13,false
+WS001497,2024-09-17,Mobile,Referral,12,false
+WS001498,2025-09-07,Mobile,Organic Search,6,false
+WS001499,2024-09-01,Mobile,Organic Search,1,false
+WS001500,2025-05-09,Mobile,Organic Search,2,false
+WS001501,2024-01-18,Mobile,Direct,7,false
+WS001502,2024-03-10,Mobile,Paid Search,11,false
+WS001503,2024-04-12,Mobile,Organic Search,11,false
+WS001504,2025-03-06,Tablet,Direct,4,false
+WS001505,2025-08-03,Desktop,Organic Search,4,true
+WS001506,2025-10-21,Desktop,Organic Search,15,false
+WS001507,2025-07-19,Tablet,Paid Search,14,false
+WS001508,2024-07-14,Desktop,Direct,4,false
+WS001509,2024-06-28,Mobile,Direct,15,false
+WS001510,2025-01-22,Mobile,Direct,12,false
+WS001511,2024-04-25,Mobile,Direct,13,false
+WS001512,2024-03-16,Mobile,Direct,5,false
+WS001513,2025-01-28,Mobile,Organic Search,3,false
+WS001514,2025-01-10,Desktop,Direct,12,false
+WS001515,2025-09-14,Desktop,Referral,12,false
+WS001516,2025-07-16,Desktop,Referral,14,false
+WS001517,2024-10-21,Mobile,Social Campaign,5,false
+WS001518,2024-12-23,Mobile,Paid Search,15,false
+WS001519,2025-10-31,Mobile,Direct,1,false
+WS001520,2024-02-25,Desktop,Direct,11,false
+WS001521,2024-12-18,Desktop,Organic Search,10,false
+WS001522,2025-08-02,Desktop,Referral,5,true
+WS001523,2025-06-22,Mobile,Organic Search,5,false
+WS001524,2024-07-05,Mobile,Paid Search,12,false
+WS001525,2024-10-11,Mobile,Paid Search,6,false
+WS001526,2025-11-07,Desktop  ,Direct,11,false
+WS001527,2024-06-22,Tablet,Organic Search,15,false
+WS001528,2025-07-12,Tablet,Direct,3,false
+WS001529,2024-06-18,Desktop,Email Campaign,4,false
+WS001530,2024-05-21,Mobile,Organic Search,6,false
+WS001531,2025-11-13,Mobile,Organic Search,9,false
+WS001532,2024-11-23,Mobile,Organic Search,1,false
+WS001533,2024-02-25,Desktop,Paid Search,1,false
+WS001534,2025-05-08,Desktop,Organic Search,2,false
+WS001535,2024-11-16,Desktop,Paid Search,14,false
+WS001536,2024-03-15,Mobile,Social Campaign,1,false
+WS001537,2024-08-28,Tablet,Email Campaign,3,false
+WS001538,2024-07-28,Desktop,Paid Search,2,true
+WS001539,2024-05-05,Mobile,Paid Search,13,false
+WS001540,2024-05-23,Mobile,Organic Search,7,false
+WS001541,2025-02-24,Tablet,Organic Search,1,false
+WS001542,2024-04-27,Tablet,Referral,1,false
+WS001543,2025-05-26,Mobile,Referral,10,false
+WS001544,2025-03-03,Mobile,Email Campaign,5,false
+WS001545,2025-05-19,Desktop,Social Campaign,1,false
+WS001546,2024-12-30,Mobile,Social Campaign,7,false
+WS001547,2024-08-22,Desktop,Social Campaign,6,false
+WS001548,2024-04-26,Tablet,Paid Search,1,false
+WS001549,2025-01-20,Desktop,Social Campaign,12,false
+WS001550,2024-06-04,Mobile,Direct,3,false
+WS001551,2024-02-02,Mobile,Referral,10,false
+WS001552,2024-03-18,Desktop,Organic Search,12,false
+WS001553,2024-05-06,Desktop,Email Campaign,9,false
+WS001554,2025-03-25,Tablet,Social Campaign,7,false
+WS001555,2024-11-04,Desktop,Organic Search,4,false
+WS001556,2024-08-24,Mobile,Paid Search,2,true
+WS001557,2025-09-18,Mobile,Paid Search,15,false
+WS001558,2025-04-15,Mobile,Email Campaign,12,false
+WS001559,2024-08-05,Desktop,Referral,8,false
+WS001560,2025-12-21,Mobile,Organic Search,9,false
+WS001561,2025-10-08,Desktop,Direct,12,true
+WS001562,2024-07-09,Mobile,Organic Search,6,false
+WS001563,2024-04-30,DESKTOP,Organic Search,13,false
+WS001564,2024-08-22,Desktop,Direct,4,false
+WS001565,2025-01-11,Desktop,Organic Search,13,false
+WS001566,2024-10-14,Mobile,Email Campaign,2,false
+WS001567,2025-03-28,Mobile,Organic Search,13,false
+WS001568,2025-10-21,Mobile,Social Campaign,3,false
+WS001569,2024-02-23,Mobile,Paid Search,3,false
+WS001570,2024-06-17,Mobile,Email Campaign,4,false
+WS001571,2025-06-13,Desktop,Paid Search,10,false
+WS001572,2025-12-13,Mobile,Organic Search,12,false
+WS001573,2024-09-21,Desktop,Paid Search,4,false
+WS001574,2024-03-15,Mobile,Organic Search,14,false
+WS001575,2024-09-30,Tablet,Paid Search,13,false
+WS001576,2024-09-15,Desktop,Email Campaign,8,false
+WS001577,2024-08-21,Desktop,Social Campaign,11,true
+WS001578,2025-08-20,Mobile,Organic Search,1,false
+WS001579,2024-12-09,Desktop,Direct,14,false
+WS001580,2024-04-07,Desktop,Organic Search,7,false
+WS001581,2024-05-20,Mobile,Direct,6,false
+WS001582,2025-09-02,Mobile,Paid Search,9,false
+WS001583,2025-06-11,Tablet,Paid Search,6,false
+WS001584,2024-05-04,Desktop,Email Campaign,6,false
+WS001585,2025-12-29,Desktop,Direct,6,false
+WS001586,2024-07-16,Mobile,Referral,10,false
+WS001587,2024-01-03,Mobile,Direct,2,false
+WS001588,2025-12-22,Desktop,Direct,3,false
+WS001589,2024-06-08,Desktop,Email Campaign,9,false
+WS001590,2024-07-16,Desktop,Organic Search,5,false
+WS001591,2025-01-14,Mobile,Paid Search,2,false
+WS001592,2025-12-02,Tablet,Referral,10,false
+WS001593,2024-12-26,Desktop,Social Campaign,15,false
+WS001594,2025-11-14,Mobile,Organic Search,7,false
+WS001595,2024-02-11,Desktop,Referral,10,false
+WS001596,2024-11-23,Mobile,Organic Search,13,false
+WS001597,2024-06-05,Desktop,Paid Search,8,false
+WS001598,2025-11-17,Mobile,Paid Search,11,false
+WS001599,2024-03-10,Desktop,Direct,5,false
+WS001600,2024-12-20,MOBILE,Organic Search,9,false

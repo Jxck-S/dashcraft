@@ -1,0 +1,1 @@
+Text.Proper("the QUICK brown-fox")

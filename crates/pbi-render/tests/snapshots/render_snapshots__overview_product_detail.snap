@@ -1,0 +1,165 @@
+---
+source: crates/pbi-render/tests/render_snapshots.rs
+expression: text
+---
+Acme Outfitters - Overview / Product Detail (FitToWidth, 1280×1080, 13 visuals)
+page svg: 57043 bytes, fnv1a 409e9305f80753eb
+
+59abfff274b9da052748 shape 1280×64 at (0, 0): svg 0438c1e51ea41997, 0 data points
+
+a6054178e1d001688cde textbox 680×48 at (24, 8): svg b4b35141ad975d0d, 0 data points
+  | Acme Outfitters
+  |   |  Product detail
+
+2bc4995228830afb03fb actionButton 48×40 at (1208, 12): svg 2ec06f22e1e61029, 0 data points
+
+ae52f390e9a9b569c31f slicer 220×220 at (24, 80): svg 800b8e77a9c1b53a, 0 data points
+  | Category
+  | Select all
+  | Apparel
+  | Camping
+  | Climbing
+  | Hiking
+  | Paddling
+
+deefdb166d949b468007 slicer 220×90 at (24, 316): svg d0c9cd77eaa6a530, 0 data points
+  | List price
+  | 50
+  | 400
+
+2ef83213665da5b85d71 cardVisual 760×126 at (260, 80): svg b41fc0120fd5ffd6, 0 data points
+  | $345,894.00
+  | Total Sales
+  | 2,299
+  | Units Sold
+  | 45.4%
+  | Margin %
+  | $150.45
+  | Revenue per Unit
+
+52eaae062b660efcf364 cardVisual 220×126 at (1036, 80): svg 498516fb23c6f9e7, 0 data points
+  | 6
+  | Products Never Sold Count
+
+5eac79b1096df863260d card 220×100 at (1036, 222): svg 4f37c1a5bf8b99d1, 0 data points
+  | Orders with unknown prod…
+  | 0
+  | Unknown Product Orders
+
+919615d40ce0dca8a7ba pivotTable 760×284 at (260, 222): svg 7c907128655201ca, 8 data points
+  | Sales by category and subcategory
+  | Camping
+  | $168,564.50
+  | 1,047
+  | 44.0%
+  | Hiking
+  | $177,329.50
+  | 1,252
+  | 46.7%
+  | Category
+  | Total Sales
+  | Units Sold
+  | Margin %
+  | Total
+  | $345,894.00
+  | 2,299
+  | 45.4%
+
+fc4760750cac58a5aa34 tableEx 620×300 at (24, 522): svg a996d33b3be8688e, 40 data points
+  | Top 10 products by sales
+  | Juniper Synthetic Bag
+  | $27,670.95
+  | 94
+  | 40.2%
+  | Juniper Bag Liner
+  | $18,900.00
+  | 106
+  | 45.9%
+  | Juniper Pack 45L
+  | $17,741.30
+  | 96
+  | 46.5%
+  | Juniper Family Tent
+  | $17,467.50
+  | 66
+  | 42.0%
+  | Alder Pack 65L
+  | $17,133.60
+  | 67
+  | 37.0%
+  | Alder Gaiters
+  | $15,654.10
+  | 80
+  | 55.1%
+  | Juniper 2P Tent
+  | $14,202.15
+  | 67
+  | 52.5%
+  | Juniper Hydration Pack
+  | $11,914.15
+  | 51
+  | 40.7%
+  | Alder Approach Shoe
+  | $11,581.80
+  | 62
+  | 49.1%
+  | Juniper Kids Pack
+  | $11,435.20
+  | 55
+  | 49.4%
+  | Product Name
+  | Total Sales
+  | Units Sold
+  | Margin %
+  | Total
+  | $163,700.75
+  | 744
+  | 45.2%
+
+e2a918f1b79f547dfc54 treemap 596×300 at (660, 522): svg cfb63724f7a73333, 6 data points
+  | Sales by subcategory
+  | Sleeping Bags
+  | $85,275.75
+  | Backpacks
+  | $71,401.15
+  | Footwear
+  | $67,127.35
+  | Tents
+  | $57,690.10
+  | Trekking Poles
+  | $38,801.00
+  | Camp Kitc...
+  | $25,598.65
+
+020da48b0ec95bb9aa1c scatterChart 620×220 at (24, 838): svg 45665c744738a800, 42 data points
+  | Units against sales per product
+  | Category
+  | Camping
+  | Hiking
+  | $0K
+  | $10K
+  | $20K
+  | Total Sales
+  | 50
+  | 100
+  | Units Sold
+
+1443235a1cafb8cc114a clusteredBarChart 596×220 at (660, 838): svg 47c3846997cb2341, 6 data points
+  | Units by subcategory (red: margin below 44%)
+  | 0
+  | 200
+  | 400
+  | Units Sold
+  | Subcategory
+  | Sleeping Bags
+  | Footwear
+  | Trekking Poles
+  | Backpacks
+  | Camp Kitchen
+  | Tents
+  | 450
+  | 447
+  | 431
+  | 374
+  | 346
+  | 251

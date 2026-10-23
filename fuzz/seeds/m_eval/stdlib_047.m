@@ -1,0 +1,1 @@
+Lines.FromText("a#(cr,lf)b#(lf)c")

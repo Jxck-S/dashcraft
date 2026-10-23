@@ -1,0 +1,1 @@
+Text.Split("a, b,c", ",")

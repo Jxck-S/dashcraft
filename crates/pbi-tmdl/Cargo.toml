@@ -1,0 +1,21 @@
+[package]
+name = "pbi-tmdl"
+description = "Lossless TMDL (Tabular Model Definition Language) parser and writer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pbi-model = { workspace = true }
+thiserror = { workspace = true }
+indexmap = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+walkdir = { workspace = true }
+insta = { workspace = true }

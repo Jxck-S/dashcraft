@@ -1,0 +1,24 @@
+[package]
+name = "pbi-dax"
+description = "DAX lexer, parser and evaluator"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pbi-model = { workspace = true }
+pbi-engine = { workspace = true }
+arrow = { workspace = true }
+thiserror = { workspace = true }
+indexmap = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+pbi-tmdl = { workspace = true }

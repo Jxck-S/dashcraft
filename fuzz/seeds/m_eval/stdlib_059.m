@@ -1,0 +1,1 @@
+List.Max({3, null, 7, 1})

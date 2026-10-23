@@ -1,0 +1,86 @@
+/// Returned orders: at most one return per order (one-to-one with Orders).
+table Returns
+	lineageTag: f74e5fda-a63c-5c7c-abd9-7e9b0418d81e
+
+	measure 'Returns Count' = COUNTROWS(Returns)
+		formatString: #,0
+		lineageTag: 5a481dcf-47ec-5e96-9ae4-694992d64bf5
+
+	measure Refunds = SUM(Returns[Refund Amount])
+		formatString: \$#,0.00
+		lineageTag: 275d64cf-ab2d-5f5f-a748-4fecc03d4d26
+
+		annotation PBI_FormatHint = {"currencyCulture":"en-US"}
+
+	measure 'Return Rate' = DIVIDE([Returns Count], [Order Count])
+		formatString: 0.0%
+		lineageTag: 56fe7a2a-2467-551a-8335-72cb627a2092
+
+	column 'Return ID'
+		dataType: string
+		lineageTag: fa839932-381c-5786-956a-6c8ac26255f1
+		summarizeBy: none
+		sourceColumn: Return ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Order ID'
+		dataType: string
+		isKey
+		lineageTag: aea11c2c-3df5-5c0b-a743-2ef8137b8d06
+		summarizeBy: none
+		sourceColumn: Order ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Return Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 30d80620-3e49-5762-b5e2-40f1193f02b4
+		summarizeBy: none
+		sourceColumn: Return Date
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Quantity Returned'
+		dataType: int64
+		formatString: 0
+		lineageTag: f74c5b23-eabd-5226-9c4f-3dda5459eb0a
+		summarizeBy: sum
+		sourceColumn: Quantity Returned
+
+		annotation SummarizationSetBy = Automatic
+
+	column Reason
+		dataType: string
+		lineageTag: 8a57e272-9ac4-52a1-a2cb-328e506658c0
+		summarizeBy: none
+		sourceColumn: Reason
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Refund Amount'
+		dataType: decimal
+		formatString: \$#,0.00
+		lineageTag: 5c851934-1258-55f5-88c9-c8f3ad6ae306
+		summarizeBy: sum
+		sourceColumn: Refund Amount
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Returns = m
+		mode: import
+		queryGroup: Sources
+		source =
+				let
+				    Source = AzureStorage.Blobs(StorageContainerUrl),
+				    #"Source CSV" = Csv.Document(Source{[Name = "sales/returns.csv"]}[Content], [Delimiter = ",", Columns = 6, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+				    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"return_id", Text.Trim, type text}, {"order_id", Text.Trim, type text}, {"reason", each Text.Proper(Text.Trim(_)), type text}}),
+				    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Removed Duplicates", {{"return_date", type date}, {"quantity_returned", Int64.Type}, {"refund_amount", Currency.Type}}),
+				    #"Renamed Columns" = Table.RenameColumns(#"Changed Type", {{"return_id", "Return ID"}, {"order_id", "Order ID"}, {"return_date", "Return Date"}, {"quantity_returned", "Quantity Returned"}, {"reason", "Reason"}, {"refund_amount", "Refund Amount"}})
+				in
+				    #"Renamed Columns"
+
+	annotation PBI_ResultType = Table

@@ -1,0 +1,1 @@
+Table.RowCount(Csv.Document("""a#(lf)b"",c#(lf)d,e", [QuoteStyle = QuoteStyle.Csv]))

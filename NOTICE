@@ -1,0 +1,35 @@
+DashCraft
+Copyright (c) the DashCraft authors. All rights reserved.
+
+DashCraft is an independent project that opens Power BI files offline. It is
+not affiliated with, endorsed by or sponsored by Microsoft Corporation.
+
+"Power BI" and "Microsoft" are trademarks of Microsoft Corporation. They are
+used only to describe which files DashCraft can open (nominative use). No
+Microsoft or Power BI logos, icons, images or styles are used, except the
+MIT-licensed Fluent UI System Icons listed below.
+
+DashCraft is not affiliated with storytold or its ArtCraft / *Craft
+applications, nor with any other product or company using the name
+"DashCraft" (for example the Tableau dashboard tool at dashcraft.app or
+"DashCraft AI").
+
+DashCraft was previously called "pbiview"; the `pbiview` command remains as an
+alias of `dashcraft`.
+
+Third-party components
+----------------------
+
+DashCraft bundles third-party fonts, icons and libraries under their own
+licenses, including:
+
+- Selawik fonts (SIL Open Font License 1.1, Reserved Font Name "Selawik"),
+  bundled unmodified;
+- Carlito fonts (SIL Open Font License 1.1), bundled unmodified;
+- Fluent UI System Icons (MIT License, (c) Microsoft Corporation), unmodified
+  copies of the icons the app uses;
+- Rust crates and npm packages under permissive licenses.
+
+The complete list, with license texts and attributions for the references used
+by the clean-room decoders, is in THIRD_PARTY_NOTICES.md (installed with the
+app as licenses/THIRD_PARTY_NOTICES.md and licenses/THIRD_PARTY_LICENSES.txt).

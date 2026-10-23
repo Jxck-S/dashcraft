@@ -1,0 +1,14 @@
+expression Server = "localhost" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 6b0b2c2e-0000-4000-8000-000000000001
+	queryGroup: Parameters
+
+	annotation PBI_ResultType = Text
+
+expression Sales =
+		let
+		    Source = Sql.Database(Server, "db")
+		in
+		    Source
+	lineageTag: 6b0b2c2e-0000-4000-8000-000000000002
+
+	annotation PBI_ResultType = Table

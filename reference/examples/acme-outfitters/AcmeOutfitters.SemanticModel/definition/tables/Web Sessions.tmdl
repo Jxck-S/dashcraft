@@ -1,0 +1,99 @@
+/// Website and app sessions. No relationship to any other table: filters on it never reach the sales tables.
+table 'Web Sessions'
+	lineageTag: 141b805b-8d8f-5966-bb0f-1ab00decf8bd
+
+	measure Sessions = COUNTROWS('Web Sessions')
+		formatString: #,0
+		lineageTag: 6a6ed985-e564-5da2-a3b3-b5df68a1a18d
+
+	measure 'Converted Sessions' = CALCULATE([Sessions], 'Web Sessions'[Converted] = TRUE())
+		formatString: #,0
+		lineageTag: 98b2ec3a-bd20-5556-a6b6-78ef2a1a150a
+
+	measure 'Conversion Rate' = DIVIDE([Converted Sessions], [Sessions])
+		formatString: 0.0%
+		lineageTag: babff0db-b976-51bc-9cff-488e54755604
+
+	measure 'Avg Pages per Session' = AVERAGE('Web Sessions'[Pages Viewed])
+		formatString: 0.0
+		lineageTag: c240ed1e-0e13-56c7-95ed-0e688de0384a
+
+	/// Ignores filters on Device.
+	measure 'Sessions (All Devices)' = CALCULATE([Sessions], ALL('Web Sessions'[Device]))
+		formatString: #,0
+		lineageTag: 9f21e8d4-095a-5e32-a3ef-bc81299f3593
+
+	column 'Session ID'
+		dataType: string
+		lineageTag: 959b9151-75ca-57fd-9e4e-6622770a26db
+		summarizeBy: none
+		sourceColumn: Session ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Session Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 022ec284-72d9-5453-8aaa-e758711bbe43
+		summarizeBy: none
+		sourceColumn: Session Date
+
+		annotation SummarizationSetBy = Automatic
+
+	column Device
+		dataType: string
+		lineageTag: 3ca63ac3-60f0-50f5-ac99-0ccb8b1487a2
+		summarizeBy: none
+		sourceColumn: Device
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Traffic Source'
+		dataType: string
+		lineageTag: 79ed1d7b-e681-5ba0-a8c4-7bdabed850cb
+		summarizeBy: none
+		sourceColumn: Traffic Source
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Pages Viewed'
+		dataType: int64
+		formatString: 0
+		lineageTag: aeb32f1d-fc9e-5b9d-94d3-565e9b9ffd6f
+		summarizeBy: sum
+		sourceColumn: Pages Viewed
+
+		annotation SummarizationSetBy = Automatic
+
+	column Converted
+		dataType: boolean
+		lineageTag: 588a1d45-71d8-5b7d-8542-0de80efa69e3
+		summarizeBy: none
+		sourceColumn: Converted
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Campaign'
+		dataType: boolean
+		lineageTag: 516df296-983c-5784-a406-dbc94061af58
+		summarizeBy: none
+		sourceColumn: Is Campaign
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Web Sessions' = m
+		mode: import
+		queryGroup: Sources
+		source =
+				let
+				    Source = AzureStorage.Blobs(StorageContainerUrl),
+				    #"Source CSV" = Csv.Document(Source{[Name = "web/web_sessions.csv"]}[Content], [Delimiter = ",", Columns = 6, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+				    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"device", each Text.Proper(Text.Trim(_)), type text}}),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Cleaned Text", {{"session_date", type date}, {"pages_viewed", Int64.Type}, {"converted", type logical}}),
+				    #"Added Campaign Flag" = Table.AddColumn(#"Changed Type", "is_campaign", each Text.Contains([traffic_source], "Campaign"), type logical),
+				    #"Renamed Columns" = Table.RenameColumns(#"Added Campaign Flag", {{"session_id", "Session ID"}, {"session_date", "Session Date"}, {"device", "Device"}, {"traffic_source", "Traffic Source"}, {"pages_viewed", "Pages Viewed"}, {"converted", "Converted"}, {"is_campaign", "Is Campaign"}})
+				in
+				    #"Renamed Columns"
+
+	annotation PBI_ResultType = Table

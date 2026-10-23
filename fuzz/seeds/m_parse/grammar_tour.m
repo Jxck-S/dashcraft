@@ -1,0 +1,70 @@
+// A tour of M syntax exercised by the parser tests (hand-written, not from a fixture).
+let
+    /* block comment */
+    Numbers = {1, 2..5, 0x1F, 1.5e3, .5, 2E-3},
+    Texts = {"a""b", "#(cr,lf)", "\", "#(#)(", "tab#(tab)end", "#(0041)#(0001F600)", "multi
+line"},
+    #"Quoted Name" = [#"a b" = 1, Plain Field = 2, type = 3, optional = 4, Column1.2 = 5, 1st Place = 6],
+    Recursive = (n) => if n <= 1 then 1 else n * @Recursive(n - 1),
+    Fn = (a as number, optional b as nullable text) as nullable number => a,
+    NoParams = () => 42,
+    Selected = #"Quoted Name"[Plain Field],
+    Projected = #"Quoted Name"[[#"a b"], [type]]?,
+    Item = Numbers{0}?,
+    Implicit = each [Plain Field] + _[type] + [Column1.2]? ,
+    ImplicitProjection = each [[a], [b]],
+    Types = {
+        type text,
+        type nullable number,
+        type {number},
+        type [a = text, optional b = number, c, ...],
+        type [],
+        type [...],
+        type table [A = text, #"B C" = nullable number, optional D],
+        type table Row,
+        type table (Row),
+        type function (x as text, optional y as nullable number) as logical,
+        type function () as any,
+        type nullable Int64.Type,
+        type {Int64.Type},
+        type [a = Int64.Type, b = (type text meta [Caption = "B"])],
+        type type,
+        type null,
+        type anynonnull,
+        type table,
+        type function
+    },
+    Checks = {1 is number, "x" as nullable text, null is nullable any, (1 as number) is number},
+    Errors = {
+        try error "boom" otherwise 0,
+        try 1 catch (e) => e[Message],
+        try 2 catch () => 3,
+        try ...,
+        error [Reason = "r", Message = "m"]
+    },
+    Records = Source{[Name = "x"]}[Content],
+    Meta = "v" meta [IsParameterQuery = true, Type = "Text"],
+    Logic = not true and false or 1 <> 2 ?? false,
+    Arith = -1 + +2 * (3 - 4) / 5 & "x",
+    Compare = {1 < 2, 1 <= 2, 1 > 2, 1 >= 2, 1 = 2, 1 <> 2},
+    Intrinsics = {
+        #date(2020, 1, 31),
+        #datetime(2020, 1, 1, 0, 0, 0),
+        #duration(1, 2, 3, 4),
+        #time(1, 2, 3),
+        #datetimezone(2020, 1, 1, 0, 0, 0, 1, 0),
+        #binary({1, 2}),
+        #infinity,
+        -#infinity,
+        #nan,
+        #shared,
+        #sections
+    },
+    SectionValue = Section1!Query1,
+    Nested = let x = let y = 1 in y in x,
+    Verbatim = #!"anything ""goes""",
+    Invoked = (each _ + 1)(2),
+    Chained = Table.FirstN(Source, 1){0}[Name],
+    Source = #table({"Name", "Content"}, {{"x", 1}})
+in
+    Records

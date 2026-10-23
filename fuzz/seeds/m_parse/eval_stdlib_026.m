@@ -1,0 +1,1 @@
+Text.BetweenDelimiters("a[b]c", "[", "]")

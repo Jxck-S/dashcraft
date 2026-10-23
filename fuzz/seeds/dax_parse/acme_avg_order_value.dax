@@ -1,0 +1,4 @@
+AVERAGEX(
+    VALUES(Orders[Order ID]),
+    CALCULATE(SUM(Orders[Line Amount]))
+)

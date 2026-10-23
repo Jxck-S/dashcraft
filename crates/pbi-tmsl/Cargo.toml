@@ -1,0 +1,23 @@
+[package]
+name = "pbi-tmsl"
+description = "TMSL JSON (model.bim, PBIT DataModelSchema) reader and writer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pbi-model = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+indexmap = { workspace = true }
+thiserror = { workspace = true }
+encoding_rs = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+walkdir = { workspace = true }

@@ -1,0 +1,4 @@
+CALCULATE (
+    [Sales],
+    WINDOW ( 1, ABS, 0, REL, ORDERBY ( 'Date'[Month], ASC ), PARTITIONBY ( 'Date'[Year] ) )
+)

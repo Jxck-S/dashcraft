@@ -1,0 +1,1 @@
+List.Generate(() => 0, each _ < 3, each _ + 1)

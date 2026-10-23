@@ -1,0 +1,10 @@
+relationship a1
+	isActive: false
+	crossFilteringBehavior: bothDirections
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Sales.OrderDate
+	toColumn: Calendar.Date
+
+relationship a2
+	fromColumn: Sales.'Customer Key'
+	toColumn: Customer.'Customer Key'

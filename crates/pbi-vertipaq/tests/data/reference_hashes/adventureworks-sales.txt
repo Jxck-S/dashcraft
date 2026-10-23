@@ -1,0 +1,72 @@
+table	Category	rows=4
+column	Category	Category	type=2	nulls=0	distinct=4	sha256=36bf538530579dce230cca7ccc61c002c7d1209a74e46b04b55aab3d9c25dbf5
+column	Category	Sorting	type=6	nulls=0	distinct=4	sha256=f0fe7c4e4082332bff8e00599e85fd918c6fcd76f4c2033fd483159596424d34
+table	Customer	rows=18485
+column	Customer	CustomerKey	type=6	nulls=0	distinct=18485	sha256=f77fc1c3fbedc6152827fc8cfc48a0c30b8a0f11b68a5f98e0a7b03c9d2d75ac
+column	Customer	Customer ID	type=2	nulls=0	distinct=18485	sha256=0430275f35baa3f4b8adfa403b90cd6f87b989c447371aaaceca660fa5b15f44
+column	Customer	Customer	type=2	nulls=0	distinct=18401	sha256=46aaeac4d2cf4fe66fd8f16a90a5c5d8da5601b79ddb29dbcca431c42f87e992
+column	Customer	City	type=2	nulls=0	distinct=270	sha256=4a23633632c5c4b4872432021d8387faa70573017591e5487fbdbc66089c1eaf
+column	Customer	State-Province	type=2	nulls=0	distinct=54	sha256=b6ca04e3ed59117ba86cec6ef2917d5896074d26eed27d836093efa3dfda61a1
+column	Customer	Country-Region	type=2	nulls=0	distinct=7	sha256=9091befd91d9cfa7f0324fb356adcdc776d93ded0a25b70bc109a381720065d4
+column	Customer	Postal Code	type=2	nulls=0	distinct=324	sha256=dccb34f341d73b4f7da95169ff7a6a486e6a26ff3ad71a2805a418eb160c2d60
+table	Date	rows=1461
+column	Date	DateKey	type=6	nulls=0	distinct=1461	sha256=2782a704eba6e03d735be5e6f149ad88e8fb80dbb8a6111f839beda17c9786eb
+column	Date	Date	type=9	nulls=0	distinct=1461	sha256=7949c9c075fd6714703f7fc0bca06e8ebfea78b2512719046aebfd96201da0a4
+column	Date	Fiscal Year	type=2	nulls=0	distinct=4	sha256=7d94c359a5c4e8ce47435408f9784a932f3678c38de39f0debf698257264c345
+column	Date	Fiscal Quarter	type=2	nulls=0	distinct=16	sha256=8589674c1eff27e5e88719cfe11d5bf6b9d5c70c08ac2234be59d56ddcaf8b4d
+column	Date	Month	type=9	nulls=0	distinct=48	sha256=cb92c39d332807d5e6b68634a2b395b027151ad6e6db257b3b650a0ce4b46061
+column	Date	Full Date	type=9	nulls=0	distinct=1461	sha256=7949c9c075fd6714703f7fc0bca06e8ebfea78b2512719046aebfd96201da0a4
+column	Date	MonthKey	type=6	nulls=0	distinct=48	sha256=3b8f0edcae81ed7c17ff5d826cd09775fe5dbeb126aa4bc09dd6c55ce54106c0
+column	Date	Mth	type=2	nulls=0	distinct=12	sha256=c611f0dcb0fa0a5a29fa47140181f24385e570f397d54522bafaa386ed5692be
+column	Date	Mth of year	type=6	nulls=0	distinct=12	sha256=21a22e4fe7855acdfd8b5c15d1e41e87810a2e7b924bb31d17dc279d8b9bb260
+column	Date	Year	type=6	nulls=0	distinct=5	sha256=6ba5323c33aca818734b0a48759e08995130b53246a252766f2b71a04f20aa6b
+table	Date Role	rows=3
+column	Date Role	Date Role	type=2	nulls=0	distinct=3	sha256=09fabac97d3417c2f2f176a50ac3280f57ac4503f209ed380b5d4c66514e6eb9
+table	Product	rows=397
+column	Product	ProductKey	type=6	nulls=0	distinct=397	sha256=c8fcec26a1f48e9f51ffe2bf04789ad29cce7ce2b7e5b2d0c0e46e7e9b940a58
+column	Product	SKU	type=2	nulls=0	distinct=295	sha256=d005948d887809d8926b5713f061fa58ea6429751fcde2da27e4df8be5b0cd91
+column	Product	Product	type=2	nulls=0	distinct=295	sha256=04d6fdbb8ce59d59ecfac6767ea2a00185a9d3f4b61853fe310edff39a505e3d
+column	Product	Standard Cost	type=8	nulls=0	distinct=134	sha256=8567d204b18aa9e20d410c35ebfb53397916d5d5f59345b97aa97deece5837eb
+column	Product	Color	type=2	nulls=0	distinct=10	sha256=f25b1e4af4cb9dd611cf1dfd0e9724951e06c826fcf9bb4b8261aad6107d6624
+column	Product	List Price	type=8	nulls=0	distinct=120	sha256=9bd6f49d64af71b3069c03b33af37c032040ba37c877991cf9f15c6e9a359797
+column	Product	Model	type=2	nulls=0	distinct=119	sha256=77056342eb54c486d4cad618dbc3001b7bb86cbb14b9ab04e5b6cb334ddc9228
+column	Product	Subcategory	type=2	nulls=0	distinct=37	sha256=c8648630e72f8cd368feb6a3834ad82b85e29e07010ab7b31dc3b84ac6999d32
+column	Product	Category	type=2	nulls=0	distinct=4	sha256=5d7b78a303e4fcc1adbe9aa56b3cc045181d0641f0a288bf3a31a94e65d19af1
+column	Product	Sorting	type=6	nulls=0	distinct=4	sha256=88b9a84feb7a56ef72a1ec28dc879d07344ce844c9d5ea8ae09ae0a1940d839e
+table	Reseller	rows=702
+column	Reseller	ResellerKey	type=6	nulls=0	distinct=702	sha256=9e16a074e2fe004bdb9d351acce89c6fa69ef2b52dab1ed45943398450971159
+column	Reseller	Reseller ID	type=2	nulls=0	distinct=702	sha256=b971bb570e63c6f916040297b11369a9e3d9ac5ee68f2bc7f4abea1929aecbaf
+column	Reseller	Business Type	type=2	nulls=0	distinct=4	sha256=b7d87737280646ffbb1bfc1f16cb1b38eed65c9d47e076a2f347e9756eac3e29
+column	Reseller	Reseller	type=2	nulls=0	distinct=700	sha256=05b4c942dc19ecf1c6f1ef9b0ca5be5000c6c98c50b0ef69db68486fc9366ef6
+column	Reseller	City	type=2	nulls=0	distinct=452	sha256=6236758e8f7a0183ed161f5c4319bcc745730d5f1e74bfb0545f0d904ea6ae9f
+column	Reseller	State-Province	type=2	nulls=0	distinct=66	sha256=27faf8bcd58aa3a0346e194abad80e474a3801928427de4399fb8669cde9db39
+column	Reseller	Country-Region	type=2	nulls=0	distinct=7	sha256=7ed5fa88ed4370c3843195cab34246e55aa93e134a47b2eaeb3a31b0ce442fcf
+column	Reseller	Postal Code	type=2	nulls=0	distinct=502	sha256=dc1c31a659e6d15253e08633ca24abaea6f6620378059c4f5de8bdb4d22ea64e
+table	Sales	rows=121253
+column	Sales	SalesOrderLineKey	type=6	nulls=0	distinct=121253	sha256=1628c53abe121a2e1f6272c5cf7af723954124144d9450e3e8325294d5b380ff
+column	Sales	ResellerKey	type=6	nulls=0	distinct=636	sha256=0531b7e68dde678911035071541a23b265f4e2aee282309ef1a9a3a7020aeaf7
+column	Sales	CustomerKey	type=6	nulls=0	distinct=18485	sha256=ae7ec26772e76350a4a0d203a7c0d4d426059b04aeb3bebdbcea22bdcea829d3
+column	Sales	ProductKey	type=6	nulls=0	distinct=350	sha256=857a90299ce3a843fba2510136eef7c115969f0ff48f3744c0f912e812c9e1a2
+column	Sales	OrderDateKey	type=6	nulls=0	distinct=1081	sha256=62e0717a75f76264adfca51f133e3c43ecddf72266a301bb60bbe49fcf7eaffe
+column	Sales	DueDateKey	type=6	nulls=0	distinct=1081	sha256=692ee0586a593c51364352ffe93b13b9a12b1a01490f10ad9a66c5b138287e7c
+column	Sales	ShipDateKey	type=6	nulls=2113	distinct=1074	sha256=e1960ced89de0b2b7a1bf4eb5cd8d1de11d887ae6d689dbd8c5d888a4696aa3e
+column	Sales	SalesTerritoryKey	type=6	nulls=0	distinct=10	sha256=9163a4e8bc2cb1938839bd2ba23b639717f643376771202e470afd3a1a9c587e
+column	Sales	Order Quantity (base)	type=6	nulls=0	distinct=41	sha256=4b6c24ca12cf2c560234a5e897430d9839614c0e79c2d4dc740d1db227df22c3
+column	Sales	Unit Price	type=8	nulls=0	distinct=275	sha256=175d415b40e158aebeb81c9790adf3ec86d1d8d4be672b873eb4590cb95438b9
+column	Sales	Extended Amount	type=8	nulls=0	distinct=1444	sha256=65d19aee736297ca17870640e32f2c67ea5a206e1599bacb8ae6307992ac70bb
+column	Sales	Unit Price Discount Pct	type=6	nulls=0	distinct=1	sha256=efe7ad602a7e32832982f9e7c454122290039c4e6e1dce94a7159477f0e5375b
+column	Sales	Product Standard Cost	type=8	nulls=0	distinct=125	sha256=905994525d32698369bd6c0c1b78c364969c884f8de7f2ff591302d411280af7
+column	Sales	Total Product Cost	type=8	nulls=0	distinct=1453	sha256=7b9ffb16e5b9e0ed17a81387790d7b3a62d10f54c483f2e54252904c8ab85d5e
+column	Sales	Sales Amount	type=8	nulls=0	distinct=1464	sha256=56fefe088ea6e3dc8b8e989c96db4b7e34c1244b0c0ae2b391a754f08601e4b2
+table	Sales Order	rows=121253
+column	Sales Order	Channel	type=2	nulls=0	distinct=2	sha256=317ffd9daba6a3e03102f4fc7b2ad6dd939d453949e070c96d2ed1164e63b702
+column	Sales Order	SalesOrderLineKey	type=6	nulls=0	distinct=121253	sha256=7bcfeef2e5236a45480228427a76a92bd0dcd5a09473c9e98074f418f94d8f75
+column	Sales Order	Sales Order	type=2	nulls=0	distinct=31455	sha256=3edb2f8613ac5fa455941c94ee1e1340b8e009c33c9a4b71fffc760d680ab3be
+column	Sales Order	Sales Order Line	type=2	nulls=0	distinct=121253	sha256=ec9475dbf8c108e82023746857827f93b18cc247c9f8db3700d4a64a18962052
+table	Sales Territory	rows=11
+column	Sales Territory	SalesTerritoryKey	type=6	nulls=0	distinct=11	sha256=a44a17d18ab4671f4835bdd96482ad0785435933dc4d6677e048655f850fa59b
+column	Sales Territory	Region	type=2	nulls=0	distinct=11	sha256=06491c6c6404efc22fea93e2e5e4c2aa60cafa4da08ff5dbae83bd1cc2ed846b
+column	Sales Territory	Country	type=2	nulls=0	distinct=7	sha256=95f780133149c57614e1cf64f212d91211c5e61af209e8c6305eef6cbe97d767
+column	Sales Territory	Group	type=2	nulls=0	distinct=4	sha256=0a40fb51cc26660f335b678905e9756f52b7e60a7f85e0c0c8ad0d6eb8e28dcc
+table	Time Intelligence	rows=10
+column	Time Intelligence	Time Intelligence	type=2	nulls=0	distinct=10	sha256=bde02c8d93dcb450f9840d169712634aea9861971e3df431e2ab2301984e6579

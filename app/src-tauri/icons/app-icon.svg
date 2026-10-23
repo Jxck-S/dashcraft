@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- DashCraft app icon (original artwork): teal rounded square, bar chart with a trend line. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1FB5A8"/>
+      <stop offset="1" stop-color="#0B5E5A"/>
+    </linearGradient>
+  </defs>
+  <rect x="80" y="80" width="864" height="864" rx="196" fill="url(#bg)"/>
+  <g transform="translate(0 28)">
+    <rect x="232" y="742" width="560" height="30" rx="15" fill="#E6FFFB"/>
+    <rect x="244" y="492" width="132" height="226" rx="26" fill="#E6FFFB"/>
+    <rect x="446" y="372" width="132" height="346" rx="26" fill="#E6FFFB"/>
+    <rect x="648" y="548" width="132" height="170" rx="26" fill="#E6FFFB"/>
+    <polyline points="310,372 512,252 714,428" fill="none" stroke="#FFC93C" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="310" cy="372" r="48" fill="#FFC93C" stroke="#0E6B66" stroke-width="18"/>
+    <circle cx="512" cy="252" r="48" fill="#FFC93C" stroke="#0E6B66" stroke-width="18"/>
+    <circle cx="714" cy="428" r="48" fill="#FFC93C" stroke="#0E6B66" stroke-width="18"/>
+  </g>
+</svg>

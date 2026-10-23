@@ -1,0 +1,4 @@
+VAR CurrentValue = SELECTEDMEASURE()
+VAR PriorValue = CALCULATE(SELECTEDMEASURE(), SAMEPERIODLASTYEAR('Date'[Date]))
+RETURN
+    DIVIDE(CurrentValue - PriorValue, PriorValue)

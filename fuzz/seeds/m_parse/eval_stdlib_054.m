@@ -1,0 +1,1 @@
+List.Contains({"a", "b"}, "b")

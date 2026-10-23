@@ -1,0 +1,78 @@
+table	Account	rows=357
+column	Account	Account	type=2	nulls=0	distinct=354	sha256=d1fb1f04edb766f7bc6ba45dcec4cd1fb4d7fc187ba618e101948a980588d0e5
+column	Account	Region	type=2	nulls=0	distinct=3	sha256=f4d48f8f17570df27f7b89bf4e9ad9792b658e809549775a27c08f483af80df5
+column	Account	Segment	type=2	nulls=0	distinct=3	sha256=f508cc814e0bb0ae13a1d40b3da50b877f7368f001be331a92d95c54d5c2e6ca
+column	Account	Account ID	type=6	nulls=0	distinct=357	sha256=f18aee0f31bc970a85696ac911a60b793bd8184ccf7f292466719180e5443927
+column	Account	State	type=2	nulls=0	distinct=19	sha256=d2a6e95e864348363093742f9d2f7fef6b76d80691a142e9bdf401bc47f98ebe
+table	Calculations	rows=458
+column	Calculations	EstimatedCloseDate	type=9	nulls=0	distinct=107	sha256=580de3c68f001f3affdad6158d1b0855a0e6ec923e65905378906772e0d574b2
+column	Calculations	Opportunity ID	type=6	nulls=0	distinct=457	sha256=1c28fe7c77bb3bb5fa5e9143e10c7d1cc3b3cea5a699f8d9941310d239855b14
+column	Calculations	Sales Stage ID	type=6	nulls=0	distinct=5	sha256=f602343870f700468ab092e0a2031c535de1e669267735bd56a1f9301059a612
+column	Calculations	Account ID	type=6	nulls=0	distinct=335	sha256=5cd4c29fe2f4da86357136d55bf20e389e9a5baa20b877f76ba2e3b208b91c6e
+column	Calculations	Partner ID	type=6	nulls=0	distinct=87	sha256=a93a0c2bbe9d5ff84ff9d3b9ff8ef863960d3eb1cbf8cacc023931cee19661f1
+column	Calculations	Product ID	type=6	nulls=0	distinct=25	sha256=e6f7fbefc0e3ec3ee6b3874ee286ccb7dbe97e2fb16b75f84cbaee8de387bb5c
+column	Calculations	ProductRevenue	type=10	nulls=0	distinct=458	sha256=f89531a09548316a47130b6afddb0e15668f019a0a861adda796980ca2ffe505
+column	Calculations	FactoredProductRevenue	type=10	nulls=0	distinct=457	sha256=8714ac52f507706fed97f9ddb77b798342b94e118959cfd6155106162d0e4b69
+column	Calculations	Create Date	type=9	nulls=0	distinct=210	sha256=5648974aeb40accc479fd87cd09b999f6d5f878459ce105bef9208677261bf35
+column	Calculations	Opportunity Days	type=6	nulls=0	distinct=203	sha256=6866992d3d47fcb7fcf51de753be510505f20a2c414ee321e06bb565f144eefa
+column	Calculations	Year	type=6	nulls=0	distinct=1	sha256=f856c100a24aff9107230e310b3ba440cbe466c42d530cfa333c0b1166ee1291
+column	Calculations	Month_Number	type=6	nulls=0	distinct=12	sha256=46633285540c653bd4584de74336befaea0288a750a53ca76f689717220d4ba7
+column	Calculations	Month	type=2	nulls=0	distinct=12	sha256=98d508a36ef8556927a7118082692b7125efbd6123d3ace09de87bd6c607b4a3
+column	Calculations	Date	type=9	nulls=0	distinct=103	sha256=c3a422a4bd11b5f45e58961c57e069b2d563c265d9f7b277c1bf1376c60d83fc
+table	Calendar	rows=1096
+column	Calendar	Date	type=9	nulls=0	distinct=1096	sha256=70d0d121f9635a827de7169352fc5f42a8763a94144fbc6c68f6c07d608be4b6
+column	Calendar	Year	type=6	nulls=0	distinct=3	sha256=c21aa59a8dc49b7a25c727a9ee30d677d4ea558dccf72b60e4bcf67083af89bd
+column	Calendar	Quarter Number	type=6	nulls=0	distinct=4	sha256=eea35a710e8ee38de4d28d9e2ee6b0f4d1b78954df88f2578238657decdae356
+column	Calendar	Quarter	type=2	nulls=0	distinct=4	sha256=9c3bf1a37e3dd8e033605a509aac70c78569bedae57988df621087e23fbd3946
+column	Calendar	Year Quarter	type=2	nulls=0	distinct=12	sha256=e4be1fa03c9361e0536807f4aa6b1c9c13ae2e69c1e6bdaeaecbe9aae74018a6
+column	Calendar	Month Number	type=6	nulls=0	distinct=12	sha256=4d9e47a706a9666a2246a95a78f68e183d2eab64590eb19caee06e21c50292c3
+column	Calendar	Month	type=2	nulls=0	distinct=12	sha256=20764a75734ec194a80e0e86afc2ea4185d34e891e254c0b483ae3cf375947bc
+column	Calendar	Year Month	type=2	nulls=0	distinct=36	sha256=e0697702a54ed509cd388cc2e64ff8ed5232d2b717f857421edf1b90ea92e2a4
+column	Calendar	Year Month Number	type=6	nulls=0	distinct=36	sha256=3377cdb795ea82d0f1cb98fb1fd6dcc5670872dd507aa819054637e44746d3de
+column	Calendar	Day of Week Number	type=6	nulls=0	distinct=7	sha256=fe4842d2dac7135b429f997bfe9788227f5ae1fef238a604e7be1376f2e06668
+column	Calendar	Day of Week	type=2	nulls=0	distinct=7	sha256=2f45966230f1d34b0c6fbb76c13bf3344473c7b2a2a936a37e058e29098eb998
+table	Fact A	rows=228
+column	Fact A	EstimatedCloseDate	type=9	nulls=0	distinct=72	sha256=78f1c5fc43716a365c8d87a164fc6fba2d9c38e1ad154f7820f69cff1789f580
+column	Fact A	Opportunity ID	type=6	nulls=0	distinct=227	sha256=afd3bcf33ffcc89107d2b1309b227246369b1ff40fad9d0c725b72f2572854fc
+column	Fact A	Sales Stage ID	type=6	nulls=0	distinct=5	sha256=e204e22207b8ff9c1700191ffeccb46b6896f219b39838f0ebeaf9fbe763e7cd
+column	Fact A	Account ID	type=6	nulls=0	distinct=195	sha256=7caac0cd31835760d36d19821f8f9898ebcb8216ad2fdec9b78260b05091b275
+column	Fact A	Partner ID	type=6	nulls=0	distinct=2	sha256=2314405c46ee28a5112706e287d0daf86e3c5e0b4275c9cc5b8c7a6ff90893e8
+column	Fact A	Product ID	type=6	nulls=0	distinct=25	sha256=817883d7ad53003c13162cc830eabde7bf30c61a655f1ae53bb6111ec892952c
+column	Fact A	ProductRevenue	type=10	nulls=0	distinct=228	sha256=4f350609a53f5ebd37ae8469ef18e3ab606f5110f64f98fa5b53af28ea825c12
+column	Fact A	FactoredProductRevenue	type=10	nulls=0	distinct=228	sha256=e324946c4a4d0ad6bfcff4d174023f0bbdc0cbded639dc28396b94ebc27fe9ae
+column	Fact A	Create Date	type=6	nulls=0	distinct=123	sha256=e1f7406f47bbb25e2fba497e21d5e730cd1207e9d040cf726dfd298e26d81f77
+column	Fact A	Opportunity Days	type=6	nulls=0	distinct=128	sha256=5b0d198a2e85b07b699b3d8dd1b0de7161e5a71d400079c8f7bc4423f1a7f0c2
+column	Fact A	Year	type=6	nulls=0	distinct=1	sha256=a27c17a6838567507c29261d508763619ef61fe6d960907ac057548f5b576d77
+column	Fact A	Month_Number	type=6	nulls=0	distinct=12	sha256=b01ca7a0747676f8b0eb9d2856b48d72e5ea4dfe48863f49342ab71647a28ce8
+column	Fact A	Month	type=2	nulls=0	distinct=12	sha256=64017eefab7350eed8f9b432bd528182eef7dddcc173ec7f41ae31104dca47a0
+table	Fact B	rows=230
+column	Fact B	EstimatedCloseDate	type=9	nulls=0	distinct=67	sha256=3b6da8a6bbdbdf3ec2fd5a241aa4ea1bbcffbf817207551620b9f8d25a42f432
+column	Fact B	Opportunity ID	type=6	nulls=0	distinct=230	sha256=deb42e5d7c0b89fb4ecc9c530ce33d201e4a535816864de7a283ff2b1479ddec
+column	Fact B	Sales Stage ID	type=6	nulls=0	distinct=5	sha256=3885b5157cab73d09895dc38149a26535aff0744007d843592ab97c28791f792
+column	Fact B	Account ID	type=6	nulls=0	distinct=181	sha256=b5416d7553a70311a967790e0bfd65969600839e92cbcf0dff2880c131ba56ca
+column	Fact B	Partner ID	type=6	nulls=0	distinct=86	sha256=1b0e796defb875a6d5c0162a84c67436082513d64cd631bdb97fd5e61291b99c
+column	Fact B	Product ID	type=6	nulls=0	distinct=25	sha256=0cb8a6aa51ad7411332510a940a9390c6839114590511a6f2402a5ed4bcec99b
+column	Fact B	ProductRevenue	type=10	nulls=0	distinct=230	sha256=582d7edda2c0c6595a680e5dec6a2a6fa61518c5b5baad7ae8ff5c91faaddd03
+column	Fact B	FactoredProductRevenue	type=10	nulls=0	distinct=229	sha256=bf0a74811fa75312bac5d75e8786f01e2b132d588379f264753f3a5ee600f34a
+column	Fact B	Create Date	type=6	nulls=0	distinct=156	sha256=2fb36e2f63b96c04888b0819f219b236f55fd73043f4922d7a25ceea2560b813
+column	Fact B	Opportunity Days	type=6	nulls=0	distinct=146	sha256=4125c754e7b0c0099d81abc8e0cc8b2f404fe8df012ed65585a6f05148e8a392
+column	Fact B	Year	type=6	nulls=0	distinct=1	sha256=13344fbff98283ade9a65b0cd99d6859bc92547fc3facd15a091abeec6033d4f
+column	Fact B	Month_Number	type=6	nulls=0	distinct=12	sha256=92513e4a5dc2b0efaeda7c93d5dd1ee1c6f18328fc98ba5394664d508f0f090f
+column	Fact B	Month	type=2	nulls=0	distinct=12	sha256=c5e0c2f7c52cf7ff43bffd2dabf38a2ad8da818df75dad93f8153603c456be5c
+table	Opportunity	rows=486
+column	Opportunity	Name	type=2	nulls=0	distinct=486	sha256=a89323beb6b4c38a5e06f6ab3d11d5c32ae4f5202160eb225ee25c2ee591166f
+column	Opportunity	Opportunity ID	type=6	nulls=0	distinct=486	sha256=2b99edd4048455b564890e2441cc418875e910eca1cdfe2576584a4f717505b8
+column	Opportunity	Rank	type=6	nulls=0	distinct=484	sha256=384c6ad17aafd81e671b9fff18743e451cb7d6fdfcf7d33f47320173c1181d09
+column	Opportunity	SizeID	type=6	nulls=0	distinct=3	sha256=ce3dd98af949a74850c62e789b5fedad958ad2f4025452a731fdf198cf30a151
+column	Opportunity	Opportunity Size	type=2	nulls=0	distinct=3	sha256=1f359ab0f67835c81c24c6a252ae064bbc4f8cad40d87e21de3fbb2a43deae11
+table	Partner	rows=101
+column	Partner	Partner	type=2	nulls=0	distinct=100	sha256=a7313217b140c1906cf93a78ca96b978814c9be9b76c64a9de9200172c6fb708
+column	Partner	Partner ID	type=6	nulls=0	distinct=101	sha256=e3e4874965c26f297e9959121e09173421c481c581beaea9b3702755bbd5cf30
+column	Partner	Partner Driven	type=2	nulls=0	distinct=2	sha256=be4ec1b3bc97aa3427b7c62c946d4934b3aba30046ae147aa8f2dec0dd6098f3
+table	Product	rows=25
+column	Product	Product Code	type=2	nulls=0	distinct=25	sha256=0646bda2b2d4167c1409e8d323d3799f610d71631efa3b840ca6641e07e08172
+column	Product	Product ID	type=6	nulls=0	distinct=25	sha256=549c70189d5f9414e3751f9a99c7f7134f85defb7fa1d12483962fd2ff773eac
+table	Sales stage	rows=5
+column	Sales stage	Probability	type=8	nulls=0	distinct=5	sha256=6c35061107491a1dcb78ae766cbc863fa92be4185bd517a54a5549efa1c506f9
+column	Sales stage	Sales Stage	type=2	nulls=0	distinct=5	sha256=74d9ef17a2023787ee519f712c0c453ec94dbb5c4895e8554439636eb9a6ec31
+column	Sales stage	Sales Stage ID	type=6	nulls=0	distinct=5	sha256=51e5ecaa899baf9f19f1db8216ae21bf28b0db7ff271bd8ea100026181fa238a

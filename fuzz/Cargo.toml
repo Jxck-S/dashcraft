@@ -1,0 +1,138 @@
+[package]
+name = "pbiview-fuzz"
+description = "cargo-fuzz targets for the pbiview parsers and decoders (untrusted input)"
+version = "0.0.0"
+edition = "2024"
+license = "LicenseRef-Proprietary"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+# Own workspace: keeps the fuzz crate (nightly, sanitizers, `fuzz/target`) out of
+# the main workspace without touching the root `Cargo.toml`.
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4.13"
+arbitrary = { version = "1.5", features = ["derive"] }
+pbi-core = { path = "../crates/pbi-core" }
+pbi-dax = { path = "../crates/pbi-dax" }
+pbi-m = { path = "../crates/pbi-m" }
+pbi-model = { path = "../crates/pbi-model" }
+pbi-pbir = { path = "../crates/pbi-pbir" }
+pbi-session = { path = "../crates/pbi-session" }
+pbi-tmdl = { path = "../crates/pbi-tmdl" }
+pbi-tmsl = { path = "../crates/pbi-tmsl" }
+pbi-vertipaq = { path = "../crates/pbi-vertipaq" }
+# Same versions/features as the root `[workspace.dependencies]`.
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock", "serde"] }
+indexmap = { version = "2.14", features = ["serde"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["preserve_order", "float_roundtrip", "arbitrary_precision"] }
+# Writer side of the structured `zip_container` mode (the containers only read).
+zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
+
+# cargo-fuzz builds with `--release` (+ debug assertions, so overflow checks are on).
+# Line tables keep crash backtraces readable without full debug info.
+[profile.release]
+debug = "line-tables-only"
+
+[[bin]]
+name = "xpress9"
+path = "fuzz_targets/xpress9.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "abf"
+path = "fuzz_targets/abf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "vertipaq"
+path = "fuzz_targets/vertipaq.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tmdl"
+path = "fuzz_targets/tmdl.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tmsl"
+path = "fuzz_targets/tmsl.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pbir_layout"
+path = "fuzz_targets/pbir_layout.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pbir_json"
+path = "fuzz_targets/pbir_json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "m_parse"
+path = "fuzz_targets/m_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "m_eval"
+path = "fuzz_targets/m_eval.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "dax_parse"
+path = "fuzz_targets/dax_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "zip_container"
+path = "fuzz_targets/zip_container.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "detect"
+path = "fuzz_targets/detect.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "open_bytes"
+path = "fuzz_targets/open_bytes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "people"
+path = "fuzz_targets/people.rs"
+test = false
+doc = false
+bench = false

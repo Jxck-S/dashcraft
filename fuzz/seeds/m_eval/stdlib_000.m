@@ -1,0 +1,1 @@
+Csv.Document("a,b#(lf)1,2#(lf)")

@@ -1,0 +1,1 @@
+CALCULATE([Total Sales], USERELATIONSHIP(Orders[Ship Date], 'Date'[Date]))

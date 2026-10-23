@@ -1,0 +1,65 @@
+/// Calculated table: catalog products without any order.
+table 'Products Never Sold'
+	lineageTag: d54d7d0e-7269-5501-bd58-7dff0e4fbc6d
+
+	measure 'Products Never Sold Count' = COUNTROWS('Products Never Sold') + 0
+		formatString: 0
+		lineageTag: 26a73239-dd82-5fce-ae10-bd74642bb651
+
+	column 'Product ID'
+		dataType: string
+		isNameInferred
+		lineageTag: 5a78b10a-3bc7-52ec-958d-9b5084e74be2
+		summarizeBy: none
+		sourceColumn: [Product ID]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Product
+		dataType: string
+		isNameInferred
+		lineageTag: 9c3ae5a2-cd51-515f-a560-153b0f5097fd
+		summarizeBy: none
+		sourceColumn: [Product]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Category
+		dataType: string
+		isNameInferred
+		lineageTag: 719c1234-eff5-56cb-9cd3-8b0883ca55fb
+		summarizeBy: none
+		sourceColumn: [Category]
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'List Price'
+		dataType: decimal
+		isNameInferred
+		formatString: \$#,0.00
+		lineageTag: 7a0149b5-a73a-5c11-89d0-91052852faad
+		summarizeBy: none
+		sourceColumn: [List Price]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Products Never Sold' = calculated
+		mode: import
+		source =
+				VAR SoldProducts =
+				    SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), "Product ID", Orders[Product ID])
+				VAR Catalog =
+				    SELECTCOLUMNS(ALL(Products), "Product ID", Products[Product ID])
+				VAR NeverSold = EXCEPT(Catalog, SoldProducts)
+				RETURN
+				    SELECTCOLUMNS(
+				        FILTER(
+				            ALL(Products),
+				            Products[Product ID] IN NeverSold
+				                && ISEMPTY(RELATEDTABLE(Orders))
+				        ),
+				        "Product ID", Products[Product ID],
+				        "Product", Products[Product Name],
+				        "Category", Products[Category],
+				        "List Price", Products[List Price]
+				    )

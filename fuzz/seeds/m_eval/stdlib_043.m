@@ -1,0 +1,1 @@
+Text.Clean("a#(lf)b")

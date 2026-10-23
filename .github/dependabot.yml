@@ -1,0 +1,55 @@
+version: 2
+
+updates:
+  # Rust workspace (crates/* and app/src-tauri share the root Cargo.lock).
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: deps
+    groups:
+      # These crates release in lockstep and must be bumped together.
+      arrow-datafusion:
+        patterns: ['arrow', 'arrow-*', 'parquet', 'datafusion', 'datafusion-*', 'object_store']
+      resvg:
+        patterns: ['resvg', 'usvg', 'tiny-skia', 'tiny-skia-path']
+      tauri:
+        patterns: ['tauri', 'tauri-*', 'specta', 'specta-*']
+      cargo-minor-patch:
+        update-types: [minor, patch]
+
+  # Svelte/Vite front end of the Tauri app.
+  - package-ecosystem: npm
+    directory: /app
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: deps
+    groups:
+      # @tauri-apps/* must stay on the same minor as the `tauri` crate.
+      tauri:
+        patterns: ['@tauri-apps/*']
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        patterns: ['*']

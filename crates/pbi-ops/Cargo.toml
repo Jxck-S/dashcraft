@@ -1,0 +1,35 @@
+[package]
+name = "pbi-ops"
+description = "Command registry: every pbiview capability as a named, typed, schema-described command shared by the CLI, the RPC server, the app and agents"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pbi-core = { workspace = true }
+pbi-model = { workspace = true }
+pbi-engine = { workspace = true }
+pbi-session = { workspace = true }
+pbi-render = { workspace = true }
+arrow = { workspace = true }
+base64 = { workspace = true }
+chrono = { workspace = true }
+indexmap = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["io-util"] }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "io-util", "time"] }

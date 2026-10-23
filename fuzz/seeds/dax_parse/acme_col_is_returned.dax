@@ -1,0 +1,1 @@
+IF(ISEMPTY(RELATEDTABLE(Returns)), "No", "Yes")

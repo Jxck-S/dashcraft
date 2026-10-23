@@ -1,0 +1,136 @@
+/// Stores and online channels. Manager Email drives the dynamic security role.
+table Stores
+	lineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df
+
+	column 'Store ID'
+		dataType: string
+		isKey
+		lineageTag: 89778a23-0494-5817-b7ce-4a352ab37e2c
+		summarizeBy: none
+		sourceColumn: Store ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Store Name'
+		dataType: string
+		lineageTag: 3f9af65f-b619-55dc-af6f-9635c8c4e0b7
+		summarizeBy: none
+		sourceColumn: Store Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column Region
+		dataType: string
+		lineageTag: 3ae6446f-ac4e-5ee1-aa7a-b36213bfee58
+		summarizeBy: none
+		sourceColumn: Region
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Retail, Outlet or Online.
+	column Channel
+		dataType: string
+		lineageTag: 48f5c500-267d-56de-aac2-c6e2c67a5eab
+		summarizeBy: none
+		sourceColumn: Channel
+
+		annotation SummarizationSetBy = Automatic
+
+	column City
+		dataType: string
+		lineageTag: 8181dd94-581e-5006-a588-b3e689cdea25
+		dataCategory: City
+		summarizeBy: none
+		sourceColumn: City
+
+		annotation SummarizationSetBy = Automatic
+
+	column State
+		dataType: string
+		lineageTag: e1c90c45-3d39-5884-921d-40f8057b2b83
+		dataCategory: StateOrProvince
+		summarizeBy: none
+		sourceColumn: State
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Manager Email'
+		dataType: string
+		isHidden
+		lineageTag: d735cdba-8349-5734-8fac-b8d349c06662
+		summarizeBy: none
+		sourceColumn: Manager Email
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Open Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 7799076f-55db-5c55-9c49-66f9cff09ead
+		summarizeBy: none
+		sourceColumn: Open Date
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Square Feet'
+		dataType: int64
+		formatString: #,0
+		lineageTag: 2b86394a-b5f7-5d03-a0c4-ed5a4b486caa
+		summarizeBy: none
+		sourceColumn: Square Feet
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Store Manager'
+		dataType: string
+		lineageTag: 3d3798e3-29a5-5b13-9472-48c8812322b7
+		summarizeBy: none
+		sourceColumn: Store Manager
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Region Code'
+		dataType: string
+		lineageTag: 4283cf0f-74a9-541f-975f-8db68b0da000
+		summarizeBy: none
+		sourceColumn: Region Code
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Store Label' = Stores[Store Name] & " (" & Stores[Region] & ")"
+		dataType: string
+		lineageTag: be0f3a29-4054-58e6-b13d-0c2f559b2e79
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy Geography
+		lineageTag: 99fbfb97-204d-5f7a-8359-648e843c4f06
+
+		level Region
+			lineageTag: f581669a-dbc8-52ba-ba5f-8caf9cdcc37c
+			column: Region
+
+		level Store
+			lineageTag: dfbe3384-fd91-57e5-b542-dd6014c276a7
+			column: 'Store Name'
+
+	partition Stores = m
+		mode: import
+		queryGroup: Sources
+		source =
+				let
+				    Source = AzureStorage.Blobs(StorageContainerUrl),
+				    #"Source CSV" = Csv.Document(Source{[Name = "stores/stores.csv"]}[Content], [Delimiter = ",", Columns = 9, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+				    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"store_id", fnCleanKey, type text}, {"region", Text.Trim, type text}, {"manager_email", each Text.Lower(Text.Trim(_)), type text}}),
+				    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+				    #"Blanks To Null" = Table.ReplaceValue(#"Removed Duplicates", "", null, Replacer.ReplaceValue, {"city", "state", "square_feet"}),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Blanks To Null", {{"open_date", type date}, {"square_feet", Int64.Type}}),
+				    #"Added Manager" = Table.AddColumn(#"Changed Type", "store_manager", each Text.Proper(Text.Replace(Text.BeforeDelimiter([manager_email], "@"), ".", " ")), type text),
+				    #"Added Region Code" = Table.AddColumn(#"Added Manager", "region_code", each Text.Upper(Text.Start([region], 3)), type text),
+				    #"Renamed Columns" = Table.RenameColumns(#"Added Region Code", {{"store_id", "Store ID"}, {"store_name", "Store Name"}, {"region", "Region"}, {"channel", "Channel"}, {"city", "City"}, {"state", "State"}, {"manager_email", "Manager Email"}, {"open_date", "Open Date"}, {"square_feet", "Square Feet"}, {"store_manager", "Store Manager"}, {"region_code", "Region Code"}})
+				in
+				    #"Renamed Columns"
+
+	annotation PBI_ResultType = Table

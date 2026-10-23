@@ -1,0 +1,1 @@
+Text.EndsWith("Hello", "lo")

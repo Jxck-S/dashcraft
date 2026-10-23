@@ -1,0 +1,1 @@
+Table.FromList({"a,b", "c,d"}, Splitter.SplitTextByDelimiter(","), {"x", "y"})

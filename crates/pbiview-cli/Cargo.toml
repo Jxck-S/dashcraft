@@ -1,0 +1,53 @@
+[package]
+name = "pbiview-cli"
+description = "DashCraft command-line interface (`dashcraft`, alias `pbiview`)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+default-run = "dashcraft"
+
+[lib]
+name = "pbiview_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dashcraft"
+path = "src/bin/dashcraft.rs"
+
+# Alias under the former product name: the same program (`run_main`).
+[[bin]]
+name = "pbiview"
+path = "src/bin/pbiview.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+pbi-core = { workspace = true }
+pbi-model = { workspace = true }
+pbi-session = { workspace = true }
+pbi-render = { workspace = true }
+pbi-ops = { workspace = true }
+pbi-ai = { workspace = true }
+rpassword = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true, features = ["io-std", "io-util"] }
+tokio-util = { workspace = true }
+tempfile = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+arrow = { workspace = true }
+csv = { workspace = true }
+parquet = { workspace = true }
+insta = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+zip = { workspace = true }

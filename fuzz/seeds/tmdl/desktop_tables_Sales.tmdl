@@ -1,0 +1,67 @@
+/// Sales facts.
+table Sales
+	lineageTag: t1
+
+	measure 'Sales Amount' = SUMX(Sales, Sales[Quantity] * Sales[Net Price])
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		displayFolder: Totals
+		lineageTag: m1
+
+	/// Year to date.
+	/// Second line.
+	measure YTD =
+			VAR d = MAX('Calendar'[Date])
+
+			RETURN
+			    TOTALYTD([Sales Amount], 'Calendar'[Date])
+		lineageTag: m2
+		formatStringDefinition = SELECTEDMEASUREFORMATSTRING()
+
+	measure Padded = ```
+			  keep leading spaces  
+			```
+		isHidden
+
+	column OrderDate
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: c1
+		summarizeBy: none
+		sourceColumn: OrderDate
+		isAvailableInMdx: false
+		changedProperty = IsHidden
+
+		variation Variation
+			isDefault
+			relationship: a1
+			defaultHierarchy: LocalDateTable.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Customer Key'
+		dataType: int64
+		isHidden
+		isKey
+		formatString: 0
+		lineageTag: c2
+		summarizeBy: none
+		sourceColumn: CustomerKey
+		sortByColumn: 'Order Date'
+
+	hierarchy 'Date Hierarchy'
+		lineageTag: h1
+
+		level Year
+			lineageTag: l1
+			column: Year
+
+	partition Sales = m
+		mode: import
+		queryGroup: Parameters
+		source =
+				let
+				    Source = Sales
+				in
+				    Source
+
+	annotation PBI_ResultType = Table

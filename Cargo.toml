@@ -1,0 +1,102 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "xtask", "app/src-tauri"]
+# app/src-tauri (pbiview-app, the `dashcraft-app` binary) is added to members once scaffolded; kept out of
+# default-members so `cargo test` does not require webview system libraries.
+default-members = ["crates/*", "xtask"]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.94"
+license = "LicenseRef-Proprietary"
+publish = false
+repository = "https://github.com/your-org/dashcraft"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+dbg_macro = "warn"
+todo = "warn"
+
+[workspace.dependencies]
+# internal
+pbi-model = { path = "crates/pbi-model" }
+pbi-tmdl = { path = "crates/pbi-tmdl" }
+pbi-tmsl = { path = "crates/pbi-tmsl" }
+pbi-pbir = { path = "crates/pbi-pbir" }
+pbi-core = { path = "crates/pbi-core" }
+pbi-m = { path = "crates/pbi-m" }
+pbi-engine = { path = "crates/pbi-engine" }
+pbi-dax = { path = "crates/pbi-dax" }
+pbi-vertipaq = { path = "crates/pbi-vertipaq" }
+pbi-session = { path = "crates/pbi-session" }
+pbi-render = { path = "crates/pbi-render" }
+pbi-ops = { path = "crates/pbi-ops" }
+pbi-ai = { path = "crates/pbi-ai" }
+# serialization / utils
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["preserve_order", "float_roundtrip", "arbitrary_precision"] }
+indexmap = { version = "2.14", features = ["serde"] }
+thiserror = "2.0.21"
+anyhow = "1.0.104"
+encoding_rs = "0.8.42"
+memchr = "2.8"
+regex = "1.13"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock", "serde"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+walkdir = "2.5"
+# read-only XML DOM (RDL, ABF backup header/log; no DTDs, node limit)
+roxmltree = "0.21.1"
+sha2 = "0.10.9"
+# containers / formats
+zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
+csv = "1.4"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+# data
+arrow = { version = "59.2", default-features = false, features = ["prettyprint", "csv", "json"] }
+parquet = { version = "59.2", default-features = false, features = ["arrow", "snap", "zstd"] }
+datafusion = { version = "55.2", default-features = false, features = ["sql", "nested_expressions", "unicode_expressions", "regex_expressions", "datetime_expressions", "string_expressions"] }
+tokio = { version = "1.54", features = ["rt-multi-thread", "macros", "sync", "time"] }
+tokio-util = "0.7.20"
+# rendering
+resvg = { version = "0.48.1", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
+usvg = { version = "0.48.1", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
+tiny-skia = "0.12"
+cosmic-text = "0.19"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+# cli
+clap = { version = "4.6.7", features = ["derive"] }
+# command registry / automation
+schemars = { version = "1.2.3", features = ["preserve_order"] }
+base64 = "0.22"
+# opt-in AI layer (pbi-ai): HTTP client (rustls, no OpenSSL) and OS keychain for provider secrets
+ureq = { version = "3.5", default-features = false, features = ["rustls", "gzip", "json"] }
+keyring = "4.2"
+# no-echo key prompt for `dashcraft ai login`
+rpassword = "7.5"
+
+# tooling (xtask)
+toml = "1.1.8"
+
+# dev
+insta = { version = "1.49", features = ["json", "yaml"] }
+pretty_assertions = "1.4.1"
+tempfile = "3.27"
+
+# Keep target/ small: workspace crates get line tables only, dependencies no debuginfo.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

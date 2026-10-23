@@ -1,0 +1,4386 @@
+---
+source: crates/pbiview-cli/tests/cli.rs
+expression: pretty(&v)
+---
+{
+  "schemaVersion": 1,
+  "source": {
+    "path": "examples/acme-outfitters/AcmeOutfitters.pbip",
+    "format": "pbip",
+    "detection": {
+      "format": "pbip",
+      "label": "PBIP project",
+      "confidence": "certain",
+      "signals": [
+        "`$schema` https://developer.microsoft.com/json-schemas/fabric/pbip/pbipProperties/1.0.0/schema.json",
+        "report `Acme Outfitters - Online.Report` (PBIR; byPath `../AcmeOutfitters.SemanticModel`)",
+        "report `Acme Outfitters - Overview.Report` (PBIR; byPath `../AcmeOutfitters.SemanticModel`)",
+        "report `Acme Outfitters - Stores.Report` (PBIR; byPath `../AcmeOutfitters.SemanticModel`)",
+        "semantic model `AcmeOutfitters.SemanticModel` (TMDL)"
+      ]
+    }
+  },
+  "modelStatus": {
+    "status": "local"
+  },
+  "model": {
+    "name": "Model",
+    "description": "Acme Outfitters: a synthetic outdoor-gear retailer (fictional data, DashCraft example).",
+    "culture": "en-US",
+    "compatibilityLevel": 1601,
+    "source": {
+      "kind": "tmdl",
+      "folder": "AcmeOutfitters.SemanticModel"
+    },
+    "tables": [
+      {
+        "name": "Orders",
+        "description": "One row per order line (synthetic). Cleaned in M: rows without an id and duplicates removed, keys trimmed and upper-cased, blank discounts set to 0.",
+        "isHidden": false,
+        "kind": "regular",
+        "columns": [
+          {
+            "name": "Order ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": true,
+            "description": "Order number (SO-…). Unique after Table.Distinct.",
+            "sourceColumn": "Order ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Order Date",
+            "dataType": "dateTime",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Order Date",
+            "formatString": "yyyy-mm-dd",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Ship Date",
+            "dataType": "dateTime",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "description": "Blank for cancelled and pending orders. Inactive relationship to 'Date' (USERELATIONSHIP).",
+            "sourceColumn": "Ship Date",
+            "formatString": "yyyy-mm-dd",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Customer ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": true,
+            "isKey": false,
+            "sourceColumn": "Customer ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Store ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": true,
+            "isKey": false,
+            "sourceColumn": "Store ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Product ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": true,
+            "isKey": false,
+            "sourceColumn": "Product ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Quantity",
+            "dataType": "int64",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Quantity",
+            "formatString": "0",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "Unit Price",
+            "dataType": "double",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Unit Price",
+            "formatString": "\\$#,0.00",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Discount",
+            "dataType": "double",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Discount",
+            "formatString": "0%",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Status",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "description": "Completed, Cancelled or Pending.",
+            "sourceColumn": "Status",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Line Amount",
+            "dataType": "double",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "description": "Quantity × unit price × (1 − discount), computed in M.",
+            "sourceColumn": "Line Amount",
+            "formatString": "\\$#,0.00",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "Line Cost",
+            "dataType": "double",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "description": "Blank when the product is not in the catalog.",
+            "expression": "Orders[Quantity] * RELATED(Products[Unit Cost])",
+            "formatString": "\\$#,0.00",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "Order Size",
+            "dataType": "string",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "expression": "SWITCH(TRUE(), Orders[Line Amount] >= 1000, \"Large\", Orders[Line Amount] >= 250, \"Medium\", \"Small\")",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Is Returned",
+            "dataType": "string",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "description": "Context transition through the one-to-one relationship to Returns.",
+            "expression": "IF(ISEMPTY(RELATEDTABLE(Returns)), \"No\", \"Yes\")",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Days To Ship",
+            "dataType": "int64",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "expression": "IF(ISBLANK(Orders[Ship Date]), BLANK(), DATEDIFF(Orders[Order Date], Orders[Ship Date], DAY))",
+            "formatString": "0",
+            "summarizeBy": "none"
+          }
+        ],
+        "measures": [
+          {
+            "name": "Total Sales",
+            "expression": "SUM(Orders[Line Amount])",
+            "formatString": "\\$#,0.00",
+            "description": "Sum of the order line amounts.",
+            "isHidden": false,
+            "displayFolder": "Sales"
+          },
+          {
+            "name": "Total Cost",
+            "expression": "SUM(Orders[Line Cost])",
+            "formatString": "\\$#,0.00",
+            "isHidden": false,
+            "displayFolder": "Sales"
+          },
+          {
+            "name": "Gross Margin",
+            "expression": "[Total Sales] - [Total Cost]",
+            "formatString": "\\$#,0.00",
+            "isHidden": false,
+            "displayFolder": "Sales"
+          },
+          {
+            "name": "Margin %",
+            "expression": "DIVIDE([Gross Margin], [Total Sales])",
+            "formatString": "0.0%",
+            "isHidden": false,
+            "displayFolder": "Sales"
+          },
+          {
+            "name": "Sales (Scaled)",
+            "expression": "[Total Sales]",
+            "formatString": "\\$#,0.00",
+            "description": "Total Sales with a dynamic format string: $1.23M, $45.6K or $789.00.",
+            "isHidden": false,
+            "displayFolder": "Sales"
+          },
+          {
+            "name": "Completed Sales",
+            "expression": "CALCULATE([Total Sales], KEEPFILTERS(Orders[Status] = \"Completed\"))",
+            "formatString": "\\$#,0.00",
+            "isHidden": false,
+            "displayFolder": "Sales"
+          },
+          {
+            "name": "Shipped Sales",
+            "expression": "CALCULATE([Total Sales], USERELATIONSHIP(Orders[Ship Date], 'Date'[Date]))",
+            "formatString": "\\$#,0.00",
+            "description": "Sales by ship date (inactive relationship).",
+            "isHidden": false,
+            "displayFolder": "Sales"
+          },
+          {
+            "name": "Sales All Stores",
+            "expression": "CALCULATE([Total Sales], ALL(Stores))",
+            "formatString": "\\$#,0.00",
+            "isHidden": true,
+            "displayFolder": "Sales"
+          },
+          {
+            "name": "Store Share",
+            "expression": "DIVIDE([Total Sales], [Sales All Stores])",
+            "formatString": "0.0%",
+            "isHidden": false,
+            "displayFolder": "Sales"
+          },
+          {
+            "name": "Order Count",
+            "expression": "COUNTROWS(Orders)",
+            "formatString": "#,0",
+            "isHidden": false,
+            "displayFolder": "Orders"
+          },
+          {
+            "name": "Units Sold",
+            "expression": "SUM(Orders[Quantity])",
+            "formatString": "#,0",
+            "isHidden": false,
+            "displayFolder": "Orders"
+          },
+          {
+            "name": "Active Customers",
+            "expression": "DISTINCTCOUNTNOBLANK(Orders[Customer ID])",
+            "formatString": "#,0",
+            "description": "Distinct customer ids on orders, unknown ids included.",
+            "isHidden": false,
+            "displayFolder": "Orders"
+          },
+          {
+            "name": "Avg Order Value",
+            "expression": "AVERAGEX(\n    VALUES(Orders[Order ID]),\n    CALCULATE(SUM(Orders[Line Amount]))\n)",
+            "formatString": "\\$#,0.00",
+            "isHidden": false,
+            "displayFolder": "Orders"
+          },
+          {
+            "name": "Revenue per Unit",
+            "expression": "DIVIDE(\n    SUMX(Orders, Orders[Quantity] * Orders[Unit Price] * (1 - Orders[Discount])),\n    [Units Sold]\n)",
+            "formatString": "\\$#,0.00",
+            "isHidden": false,
+            "displayFolder": "Orders"
+          },
+          {
+            "name": "Last Order Date",
+            "expression": "MAX(Orders[Order Date])",
+            "formatString": "yyyy-mm-dd",
+            "isHidden": false,
+            "displayFolder": "Orders"
+          },
+          {
+            "name": "Unknown Product Orders",
+            "expression": "COUNTROWS(FILTER(Orders, ISBLANK(RELATED(Products[Product Name])))) + 0",
+            "formatString": "0",
+            "description": "Orders whose product id is not in the catalog.",
+            "isHidden": false,
+            "displayFolder": "Data Quality"
+          },
+          {
+            "name": "Sales YTD",
+            "expression": "TOTALYTD([Total Sales], 'Date'[Date])",
+            "formatString": "\\$#,0.00",
+            "isHidden": false,
+            "displayFolder": "Time Intelligence"
+          },
+          {
+            "name": "Sales PY",
+            "expression": "CALCULATE([Total Sales], SAMEPERIODLASTYEAR('Date'[Date]))",
+            "formatString": "\\$#,0.00",
+            "isHidden": false,
+            "displayFolder": "Time Intelligence"
+          },
+          {
+            "name": "Sales YoY %",
+            "expression": "DIVIDE([Total Sales] - [Sales PY], [Sales PY])",
+            "formatString": "+0.0%;-0.0%;0.0%",
+            "isHidden": false,
+            "displayFolder": "Time Intelligence"
+          },
+          {
+            "name": "Sales Prev Month",
+            "expression": "CALCULATE([Total Sales], DATEADD('Date'[Date], -1, MONTH))",
+            "formatString": "\\$#,0.00",
+            "isHidden": false,
+            "displayFolder": "Time Intelligence"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Orders",
+            "kind": "m",
+            "mode": "import",
+            "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"sales/orders.csv\"]}[Content], [Delimiter = \",\", Columns = 10, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Removed Rows Without Id\" = Table.SelectRows(#\"Promoted Headers\", each Text.Trim([order_id] ?? \"\") <> \"\"),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Removed Rows Without Id\", {{\"order_id\", Text.Trim, type text}, {\"customer_id\", fnCleanKey, type text}, {\"store_id\", fnCleanKey, type text}, {\"product_id\", fnCleanKey, type text}, {\"status\", each Text.Proper(Text.Trim(_)), type text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Removed Duplicates\", {{\"order_date\", type date}, {\"ship_date\", type date}, {\"quantity\", Int64.Type}, {\"unit_price\", type number}, {\"discount\", type number}}),\n    #\"Default Discount\" = Table.TransformColumns(#\"Changed Type\", {{\"discount\", each _ ?? 0, type number}}),\n    #\"Added Line Amount\" = Table.AddColumn(#\"Default Discount\", \"line_amount\", each [quantity] * [unit_price] * (1 - [discount]), type number),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Added Line Amount\", {{\"order_id\", \"Order ID\"}, {\"order_date\", \"Order Date\"}, {\"ship_date\", \"Ship Date\"}, {\"customer_id\", \"Customer ID\"}, {\"store_id\", \"Store ID\"}, {\"product_id\", \"Product ID\"}, {\"quantity\", \"Quantity\"}, {\"unit_price\", \"Unit Price\"}, {\"discount\", \"Discount\"}, {\"status\", \"Status\"}, {\"line_amount\", \"Line Amount\"}})\nin\n    #\"Renamed Columns\"",
+            "queryGroup": "Sources"
+          }
+        ],
+        "hierarchies": []
+      },
+      {
+        "name": "Customers",
+        "description": "Customers (synthetic). Account managers are parsed from Python-style lists by fnParseNames.",
+        "isHidden": false,
+        "kind": "regular",
+        "columns": [
+          {
+            "name": "Customer ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": true,
+            "sourceColumn": "Customer ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Customer Name",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Customer Name",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Email",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Email",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Email Domain",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Email Domain",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Segment",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Segment",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "City",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "City",
+            "summarizeBy": "none",
+            "dataCategory": "City"
+          },
+          {
+            "name": "State",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "State",
+            "summarizeBy": "none",
+            "dataCategory": "StateOrProvince"
+          },
+          {
+            "name": "Join Date",
+            "dataType": "dateTime",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Join Date",
+            "formatString": "yyyy-mm-dd",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Loyalty Tier",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "description": "Bronze, Silver, Gold; blanks become Unassigned.",
+            "sourceColumn": "Loyalty Tier",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Account Managers",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "description": "Parsed names joined with \"; \"; blank when the list is empty.",
+            "sourceColumn": "Account Managers",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Account Manager Count",
+            "dataType": "int64",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Account Manager Count",
+            "formatString": "0",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Lifetime Sales",
+            "dataType": "double",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "description": "Context transition: every order of the customer, all statuses.",
+            "expression": "CALCULATE(SUM(Orders[Line Amount]))",
+            "formatString": "\\$#,0",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "Has Orders",
+            "dataType": "string",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "expression": "IF(ISEMPTY(RELATEDTABLE(Orders)), \"No\", \"Yes\")",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Value Tier",
+            "dataType": "string",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "expression": "SWITCH(\n    TRUE(),\n    Customers[Lifetime Sales] >= 3000, \"High\",\n    Customers[Lifetime Sales] >= 1000, \"Medium\",\n    Customers[Lifetime Sales] > 0, \"Low\",\n    \"None\"\n)",
+            "summarizeBy": "none"
+          }
+        ],
+        "measures": [
+          {
+            "name": "Customer Count",
+            "expression": "COUNTROWS(Customers)",
+            "formatString": "#,0",
+            "description": "Customers in the filter context (cross-filtered by Orders, both directions).",
+            "isHidden": false
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Customers",
+            "kind": "m",
+            "mode": "import",
+            "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"sales/customers.csv\"]}[Content], [Delimiter = \",\", Columns = 10, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"customer_id\", fnCleanKey, type text}, {\"email\", each Text.Lower(Text.Trim(_)), type text}, {\"segment\", Text.Trim, type text}, {\"loyalty_tier\", each let t = Text.Trim(_ ?? \"\") in if t = \"\" then \"Unassigned\" else t, type text}, {\"account_managers\", each let names = fnParseNames(_ ?? \"\") in if names = \"\" then null else names, type nullable text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Added Name\" = Table.AddColumn(#\"Removed Duplicates\", \"customer_name\", each Text.Combine({Text.Trim([first_name]), Text.Trim([last_name])}, \" \"), type text),\n    #\"Added Domain\" = Table.AddColumn(#\"Added Name\", \"email_domain\", each Text.AfterDelimiter([email], \"@\"), type text),\n    #\"Added Manager Count\" = Table.AddColumn(#\"Added Domain\", \"manager_count\", each List.Count(List.RemoveNulls(List.Transform(Text.Split([account_managers] ?? \"\", \";\"), each if Text.Trim(_) = \"\" then null else _))), Int64.Type),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Added Manager Count\", {{\"join_date\", type date}}),\n    #\"Selected Columns\" = Table.SelectColumns(#\"Changed Type\", {\"customer_id\", \"customer_name\", \"email\", \"email_domain\", \"segment\", \"city\", \"state\", \"join_date\", \"loyalty_tier\", \"account_managers\", \"manager_count\"}),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Selected Columns\", {{\"customer_id\", \"Customer ID\"}, {\"customer_name\", \"Customer Name\"}, {\"email\", \"Email\"}, {\"email_domain\", \"Email Domain\"}, {\"segment\", \"Segment\"}, {\"city\", \"City\"}, {\"state\", \"State\"}, {\"join_date\", \"Join Date\"}, {\"loyalty_tier\", \"Loyalty Tier\"}, {\"account_managers\", \"Account Managers\"}, {\"manager_count\", \"Account Manager Count\"}})\nin\n    #\"Renamed Columns\"",
+            "queryGroup": "Sources"
+          }
+        ],
+        "hierarchies": []
+      },
+      {
+        "name": "Products",
+        "description": "Product catalog: Category > Subcategory > Product.",
+        "isHidden": false,
+        "kind": "regular",
+        "columns": [
+          {
+            "name": "Product ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": true,
+            "sourceColumn": "Product ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Product Name",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Product Name",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Category",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Category",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Subcategory",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Subcategory",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "List Price",
+            "dataType": "decimal",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "List Price",
+            "formatString": "\\$#,0.00",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Unit Cost",
+            "dataType": "decimal",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Unit Cost",
+            "formatString": "\\$#,0.00",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Launch Date",
+            "dataType": "dateTime",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Launch Date",
+            "formatString": "yyyy-mm-dd",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Units Sold (All Time)",
+            "dataType": "int64",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "expression": "SUMX(RELATEDTABLE(Orders), Orders[Quantity])",
+            "formatString": "#,0",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "Price Band",
+            "dataType": "string",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "expression": "SWITCH(\n    TRUE(),\n    Products[List Price] < 50, \"Under $50\",\n    Products[List Price] < 150, \"$50 to $149\",\n    \"$150 and up\"\n)",
+            "summarizeBy": "none"
+          }
+        ],
+        "measures": [],
+        "partitions": [
+          {
+            "name": "Products",
+            "kind": "m",
+            "mode": "import",
+            "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"catalog/products.csv\"]}[Content], [Delimiter = \",\", Columns = 7, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"product_id\", fnCleanKey, type text}, {\"product_name\", Text.Trim, type text}, {\"category\", Text.Trim, type text}, {\"subcategory\", Text.Trim, type text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Removed Duplicates\", {{\"list_price\", Currency.Type}, {\"unit_cost\", Currency.Type}, {\"launch_date\", type date}}),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Changed Type\", {{\"product_id\", \"Product ID\"}, {\"product_name\", \"Product Name\"}, {\"category\", \"Category\"}, {\"subcategory\", \"Subcategory\"}, {\"list_price\", \"List Price\"}, {\"unit_cost\", \"Unit Cost\"}, {\"launch_date\", \"Launch Date\"}})\nin\n    #\"Renamed Columns\"",
+            "queryGroup": "Sources"
+          }
+        ],
+        "hierarchies": [
+          {
+            "name": "Product Hierarchy",
+            "isHidden": false,
+            "levels": [
+              {
+                "name": "Category",
+                "column": "Category"
+              },
+              {
+                "name": "Subcategory",
+                "column": "Subcategory"
+              },
+              {
+                "name": "Product",
+                "column": "Product Name"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Stores",
+        "description": "Stores and online channels. Manager Email drives the dynamic security role.",
+        "isHidden": false,
+        "kind": "regular",
+        "columns": [
+          {
+            "name": "Store ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": true,
+            "sourceColumn": "Store ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Store Name",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Store Name",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Region",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Region",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Channel",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "description": "Retail, Outlet or Online.",
+            "sourceColumn": "Channel",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "City",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "City",
+            "summarizeBy": "none",
+            "dataCategory": "City"
+          },
+          {
+            "name": "State",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "State",
+            "summarizeBy": "none",
+            "dataCategory": "StateOrProvince"
+          },
+          {
+            "name": "Manager Email",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": true,
+            "isKey": false,
+            "sourceColumn": "Manager Email",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Open Date",
+            "dataType": "dateTime",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Open Date",
+            "formatString": "yyyy-mm-dd",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Square Feet",
+            "dataType": "int64",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Square Feet",
+            "formatString": "#,0",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Store Manager",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Store Manager",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Region Code",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Region Code",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Store Label",
+            "dataType": "string",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "expression": "Stores[Store Name] & \" (\" & Stores[Region] & \")\"",
+            "summarizeBy": "none"
+          }
+        ],
+        "measures": [],
+        "partitions": [
+          {
+            "name": "Stores",
+            "kind": "m",
+            "mode": "import",
+            "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"stores/stores.csv\"]}[Content], [Delimiter = \",\", Columns = 9, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"store_id\", fnCleanKey, type text}, {\"region\", Text.Trim, type text}, {\"manager_email\", each Text.Lower(Text.Trim(_)), type text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Blanks To Null\" = Table.ReplaceValue(#\"Removed Duplicates\", \"\", null, Replacer.ReplaceValue, {\"city\", \"state\", \"square_feet\"}),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Blanks To Null\", {{\"open_date\", type date}, {\"square_feet\", Int64.Type}}),\n    #\"Added Manager\" = Table.AddColumn(#\"Changed Type\", \"store_manager\", each Text.Proper(Text.Replace(Text.BeforeDelimiter([manager_email], \"@\"), \".\", \" \")), type text),\n    #\"Added Region Code\" = Table.AddColumn(#\"Added Manager\", \"region_code\", each Text.Upper(Text.Start([region], 3)), type text),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Added Region Code\", {{\"store_id\", \"Store ID\"}, {\"store_name\", \"Store Name\"}, {\"region\", \"Region\"}, {\"channel\", \"Channel\"}, {\"city\", \"City\"}, {\"state\", \"State\"}, {\"manager_email\", \"Manager Email\"}, {\"open_date\", \"Open Date\"}, {\"square_feet\", \"Square Feet\"}, {\"store_manager\", \"Store Manager\"}, {\"region_code\", \"Region Code\"}})\nin\n    #\"Renamed Columns\"",
+            "queryGroup": "Sources"
+          }
+        ],
+        "hierarchies": [
+          {
+            "name": "Geography",
+            "isHidden": false,
+            "levels": [
+              {
+                "name": "Region",
+                "column": "Region"
+              },
+              {
+                "name": "Store",
+                "column": "Store Name"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Targets",
+        "description": "Monthly sales targets per region (many-to-many with Stores on Region).",
+        "isHidden": false,
+        "kind": "regular",
+        "columns": [
+          {
+            "name": "Region",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Region",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Month",
+            "dataType": "dateTime",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Month",
+            "formatString": "yyyy-mm",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Target Amount",
+            "dataType": "decimal",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Target Amount",
+            "formatString": "\\$#,0",
+            "summarizeBy": "sum"
+          }
+        ],
+        "measures": [
+          {
+            "name": "Target",
+            "expression": "SUM(Targets[Target Amount])",
+            "formatString": "\\$#,0",
+            "isHidden": false
+          },
+          {
+            "name": "Target Attainment %",
+            "expression": "DIVIDE([Total Sales], [Target])",
+            "formatString": "0.0%",
+            "isHidden": false
+          },
+          {
+            "name": "Target Stretch",
+            "expression": "[Target] * 1.2",
+            "formatString": "\\$#,0",
+            "description": "Gauge maximum.",
+            "isHidden": true
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Targets",
+            "kind": "m",
+            "mode": "import",
+            "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"planning/targets.csv\"]}[Content], [Delimiter = \",\", Columns = 3, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Removed Blank Rows\" = Table.SelectRows(#\"Promoted Headers\", each Text.Trim([region] ?? \"\") <> \"\"),\n    #\"Trimmed Region\" = Table.TransformColumns(#\"Removed Blank Rows\", {{\"region\", Text.Trim, type text}}),\n    #\"Added Month\" = Table.AddColumn(#\"Trimmed Region\", \"month_start\", each Date.FromText([month] & \"-01\"), type date),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Added Month\", {{\"target_amount\", Currency.Type}}),\n    #\"Selected Columns\" = Table.SelectColumns(#\"Changed Type\", {\"region\", \"month_start\", \"target_amount\"}),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Selected Columns\", {{\"region\", \"Region\"}, {\"month_start\", \"Month\"}, {\"target_amount\", \"Target Amount\"}})\nin\n    #\"Renamed Columns\"",
+            "queryGroup": "Sources"
+          }
+        ],
+        "hierarchies": []
+      },
+      {
+        "name": "Returns",
+        "description": "Returned orders: at most one return per order (one-to-one with Orders).",
+        "isHidden": false,
+        "kind": "regular",
+        "columns": [
+          {
+            "name": "Return ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Return ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Order ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": true,
+            "sourceColumn": "Order ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Return Date",
+            "dataType": "dateTime",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Return Date",
+            "formatString": "yyyy-mm-dd",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Quantity Returned",
+            "dataType": "int64",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Quantity Returned",
+            "formatString": "0",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "Reason",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Reason",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Refund Amount",
+            "dataType": "decimal",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Refund Amount",
+            "formatString": "\\$#,0.00",
+            "summarizeBy": "sum"
+          }
+        ],
+        "measures": [
+          {
+            "name": "Returns Count",
+            "expression": "COUNTROWS(Returns)",
+            "formatString": "#,0",
+            "isHidden": false
+          },
+          {
+            "name": "Refunds",
+            "expression": "SUM(Returns[Refund Amount])",
+            "formatString": "\\$#,0.00",
+            "isHidden": false
+          },
+          {
+            "name": "Return Rate",
+            "expression": "DIVIDE([Returns Count], [Order Count])",
+            "formatString": "0.0%",
+            "isHidden": false
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Returns",
+            "kind": "m",
+            "mode": "import",
+            "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"sales/returns.csv\"]}[Content], [Delimiter = \",\", Columns = 6, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"return_id\", Text.Trim, type text}, {\"order_id\", Text.Trim, type text}, {\"reason\", each Text.Proper(Text.Trim(_)), type text}}),\n    #\"Removed Duplicates\" = Table.Distinct(#\"Cleaned Text\"),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Removed Duplicates\", {{\"return_date\", type date}, {\"quantity_returned\", Int64.Type}, {\"refund_amount\", Currency.Type}}),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Changed Type\", {{\"return_id\", \"Return ID\"}, {\"order_id\", \"Order ID\"}, {\"return_date\", \"Return Date\"}, {\"quantity_returned\", \"Quantity Returned\"}, {\"reason\", \"Reason\"}, {\"refund_amount\", \"Refund Amount\"}})\nin\n    #\"Renamed Columns\"",
+            "queryGroup": "Sources"
+          }
+        ],
+        "hierarchies": []
+      },
+      {
+        "name": "Web Sessions",
+        "description": "Website and app sessions. No relationship to any other table: filters on it never reach the sales tables.",
+        "isHidden": false,
+        "kind": "regular",
+        "columns": [
+          {
+            "name": "Session ID",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Session ID",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Session Date",
+            "dataType": "dateTime",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Session Date",
+            "formatString": "yyyy-mm-dd",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Device",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Device",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Traffic Source",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Traffic Source",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Pages Viewed",
+            "dataType": "int64",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Pages Viewed",
+            "formatString": "0",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "Converted",
+            "dataType": "boolean",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Converted",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Is Campaign",
+            "dataType": "boolean",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Is Campaign",
+            "summarizeBy": "none"
+          }
+        ],
+        "measures": [
+          {
+            "name": "Sessions",
+            "expression": "COUNTROWS('Web Sessions')",
+            "formatString": "#,0",
+            "isHidden": false
+          },
+          {
+            "name": "Converted Sessions",
+            "expression": "CALCULATE([Sessions], 'Web Sessions'[Converted] = TRUE())",
+            "formatString": "#,0",
+            "isHidden": false
+          },
+          {
+            "name": "Conversion Rate",
+            "expression": "DIVIDE([Converted Sessions], [Sessions])",
+            "formatString": "0.0%",
+            "isHidden": false
+          },
+          {
+            "name": "Avg Pages per Session",
+            "expression": "AVERAGE('Web Sessions'[Pages Viewed])",
+            "formatString": "0.0",
+            "isHidden": false
+          },
+          {
+            "name": "Sessions (All Devices)",
+            "expression": "CALCULATE([Sessions], ALL('Web Sessions'[Device]))",
+            "formatString": "#,0",
+            "description": "Ignores filters on Device.",
+            "isHidden": false
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Web Sessions",
+            "kind": "m",
+            "mode": "import",
+            "expression": "let\n    Source = AzureStorage.Blobs(StorageContainerUrl),\n    #\"Source CSV\" = Csv.Document(Source{[Name = \"web/web_sessions.csv\"]}[Content], [Delimiter = \",\", Columns = 6, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),\n    #\"Promoted Headers\" = Table.PromoteHeaders(#\"Source CSV\", [PromoteAllScalars = true]),\n    #\"Cleaned Text\" = Table.TransformColumns(#\"Promoted Headers\", {{\"device\", each Text.Proper(Text.Trim(_)), type text}}),\n    #\"Changed Type\" = Table.TransformColumnTypes(#\"Cleaned Text\", {{\"session_date\", type date}, {\"pages_viewed\", Int64.Type}, {\"converted\", type logical}}),\n    #\"Added Campaign Flag\" = Table.AddColumn(#\"Changed Type\", \"is_campaign\", each Text.Contains([traffic_source], \"Campaign\"), type logical),\n    #\"Renamed Columns\" = Table.RenameColumns(#\"Added Campaign Flag\", {{\"session_id\", \"Session ID\"}, {\"session_date\", \"Session Date\"}, {\"device\", \"Device\"}, {\"traffic_source\", \"Traffic Source\"}, {\"pages_viewed\", \"Pages Viewed\"}, {\"converted\", \"Converted\"}, {\"is_campaign\", \"Is Campaign\"}})\nin\n    #\"Renamed Columns\"",
+            "queryGroup": "Sources"
+          }
+        ],
+        "hierarchies": []
+      },
+      {
+        "name": "Date",
+        "description": "Calendar 2024-2025, marked as the date table.",
+        "isHidden": false,
+        "kind": "calculatedTable",
+        "dataCategory": "Time",
+        "columns": [
+          {
+            "name": "Date",
+            "dataType": "dateTime",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": true,
+            "sourceColumn": "[Date]",
+            "formatString": "yyyy-mm-dd",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Year",
+            "dataType": "int64",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "[Year]",
+            "formatString": "0",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Month Number",
+            "dataType": "int64",
+            "kind": "calculatedTableColumn",
+            "isHidden": true,
+            "isKey": false,
+            "sourceColumn": "[Month Number]",
+            "formatString": "0",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Month",
+            "dataType": "string",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "[Month]",
+            "summarizeBy": "none",
+            "sortByColumn": "Month Number"
+          },
+          {
+            "name": "Year Month",
+            "dataType": "string",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "[Year Month]",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Quarter",
+            "dataType": "string",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "[Quarter]",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Month Start",
+            "dataType": "dateTime",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "[Month Start]",
+            "formatString": "yyyy-mm-dd",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Day Type",
+            "dataType": "string",
+            "kind": "calculated",
+            "isHidden": false,
+            "isKey": false,
+            "expression": "IF(WEEKDAY('Date'[Date], 2) > 5, \"Weekend\", \"Weekday\")",
+            "summarizeBy": "none"
+          }
+        ],
+        "measures": [],
+        "partitions": [
+          {
+            "name": "Date",
+            "kind": "calculated",
+            "mode": "import",
+            "expression": "ADDCOLUMNS(\n    CALENDAR(DATE(2024, 1, 1), DATE(2025, 12, 31)),\n    \"Year\", YEAR([Date]),\n    \"Month Number\", MONTH([Date]),\n    \"Month\", FORMAT([Date], \"mmm\"),\n    \"Year Month\", FORMAT([Date], \"yyyy-mm\"),\n    \"Quarter\", \"Q\" & QUARTER([Date]),\n    \"Month Start\", DATE(YEAR([Date]), MONTH([Date]), 1)\n)"
+          }
+        ],
+        "hierarchies": [
+          {
+            "name": "Calendar",
+            "isHidden": false,
+            "levels": [
+              {
+                "name": "Year",
+                "column": "Year"
+              },
+              {
+                "name": "Quarter",
+                "column": "Quarter"
+              },
+              {
+                "name": "Month",
+                "column": "Month"
+              },
+              {
+                "name": "Date",
+                "column": "Date"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Time Calc",
+        "description": "Calculation group applied to any measure: Current, YTD, PY and YoY %.",
+        "isHidden": false,
+        "kind": "calculationGroup",
+        "columns": [
+          {
+            "name": "Time Calculation",
+            "dataType": "string",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Name",
+            "summarizeBy": "none",
+            "sortByColumn": "Ordinal"
+          },
+          {
+            "name": "Ordinal",
+            "dataType": "int64",
+            "kind": "data",
+            "isHidden": true,
+            "isKey": false,
+            "sourceColumn": "Ordinal",
+            "formatString": "0",
+            "summarizeBy": "sum"
+          }
+        ],
+        "measures": [],
+        "partitions": [
+          {
+            "name": "Time Calc",
+            "kind": "calculationGroup",
+            "mode": "import"
+          }
+        ],
+        "hierarchies": []
+      },
+      {
+        "name": "Products Never Sold",
+        "description": "Calculated table: catalog products without any order.",
+        "isHidden": false,
+        "kind": "calculatedTable",
+        "columns": [
+          {
+            "name": "Product ID",
+            "dataType": "string",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "[Product ID]",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Product",
+            "dataType": "string",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "[Product]",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Category",
+            "dataType": "string",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "[Category]",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "List Price",
+            "dataType": "decimal",
+            "kind": "calculatedTableColumn",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "[List Price]",
+            "formatString": "\\$#,0.00",
+            "summarizeBy": "none"
+          }
+        ],
+        "measures": [
+          {
+            "name": "Products Never Sold Count",
+            "expression": "COUNTROWS('Products Never Sold') + 0",
+            "formatString": "0",
+            "isHidden": false
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Products Never Sold",
+            "kind": "calculated",
+            "mode": "import",
+            "expression": "VAR SoldProducts =\n    SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), \"Product ID\", Orders[Product ID])\nVAR Catalog =\n    SELECTCOLUMNS(ALL(Products), \"Product ID\", Products[Product ID])\nVAR NeverSold = EXCEPT(Catalog, SoldProducts)\nRETURN\n    SELECTCOLUMNS(\n        FILTER(\n            ALL(Products),\n            Products[Product ID] IN NeverSold\n                && ISEMPTY(RELATEDTABLE(Orders))\n        ),\n        \"Product ID\", Products[Product ID],\n        \"Product\", Products[Product Name],\n        \"Category\", Products[Category],\n        \"List Price\", Products[List Price]\n    )"
+          }
+        ],
+        "hierarchies": []
+      },
+      {
+        "name": "Last Refreshed",
+        "description": "Single row stamped with the refresh time (UTC). Not used by any expected value.",
+        "isHidden": true,
+        "kind": "regular",
+        "columns": [
+          {
+            "name": "Last Refreshed (UTC)",
+            "dataType": "dateTime",
+            "kind": "data",
+            "isHidden": false,
+            "isKey": false,
+            "sourceColumn": "Last Refreshed (UTC)",
+            "formatString": "yyyy-mm-dd hh:nn",
+            "summarizeBy": "none"
+          }
+        ],
+        "measures": [],
+        "partitions": [
+          {
+            "name": "Last Refreshed",
+            "kind": "m",
+            "mode": "import",
+            "expression": "let\n    Source = #table(type table [#\"Last Refreshed (UTC)\" = datetime], {{DateTimeZone.RemoveZone(DateTimeZone.UtcNow())}})\nin\n    Source",
+            "queryGroup": "Sources"
+          }
+        ],
+        "hierarchies": []
+      }
+    ],
+    "relationships": [
+      {
+        "name": "c79d4066-724d-5669-b57b-f6bf11da6f40",
+        "from": {
+          "table": "Orders",
+          "column": "Customer ID"
+        },
+        "to": {
+          "table": "Customers",
+          "column": "Customer ID"
+        },
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "bothDirections",
+        "isActive": true,
+        "securityFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "b064dd21-773c-5c43-9fc0-1fa3327ae319",
+        "from": {
+          "table": "Orders",
+          "column": "Product ID"
+        },
+        "to": {
+          "table": "Products",
+          "column": "Product ID"
+        },
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "oneDirection",
+        "isActive": true,
+        "securityFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "d4926a14-f8ee-5523-be56-0dd865b87eee",
+        "from": {
+          "table": "Orders",
+          "column": "Store ID"
+        },
+        "to": {
+          "table": "Stores",
+          "column": "Store ID"
+        },
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "oneDirection",
+        "isActive": true,
+        "securityFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "5fd8dd36-8b63-5abf-b8b9-50b8de54f509",
+        "from": {
+          "table": "Orders",
+          "column": "Order Date"
+        },
+        "to": {
+          "table": "Date",
+          "column": "Date"
+        },
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "oneDirection",
+        "isActive": true,
+        "securityFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "976ded3b-d763-50ba-be93-faf5d31cd63c",
+        "from": {
+          "table": "Orders",
+          "column": "Ship Date"
+        },
+        "to": {
+          "table": "Date",
+          "column": "Date"
+        },
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "oneDirection",
+        "isActive": false,
+        "securityFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "561c8d0e-e2ca-5ea0-b1cc-2954869daedc",
+        "from": {
+          "table": "Returns",
+          "column": "Order ID"
+        },
+        "to": {
+          "table": "Orders",
+          "column": "Order ID"
+        },
+        "fromCardinality": "one",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "bothDirections",
+        "isActive": true,
+        "securityFilteringBehavior": "bothDirections"
+      },
+      {
+        "name": "8f93a1dc-7185-5ba7-a262-fc82bdaf7ddf",
+        "from": {
+          "table": "Targets",
+          "column": "Region"
+        },
+        "to": {
+          "table": "Stores",
+          "column": "Region"
+        },
+        "fromCardinality": "many",
+        "toCardinality": "many",
+        "crossFilteringBehavior": "oneDirection",
+        "isActive": true,
+        "securityFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "add3c6ca-dc4b-5b99-8e8c-0f18a493c9f2",
+        "from": {
+          "table": "Targets",
+          "column": "Month"
+        },
+        "to": {
+          "table": "Date",
+          "column": "Date"
+        },
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "oneDirection",
+        "isActive": true,
+        "securityFilteringBehavior": "oneDirection"
+      }
+    ],
+    "expressions": [
+      {
+        "name": "StorageContainerUrl",
+        "kind": "m",
+        "isParameter": true,
+        "parameterType": "Text",
+        "description": "Fictional Azure Blob container with the sample CSVs. Never contacted: DashCraft resolves it\noffline through blob-map.json.",
+        "queryGroup": "Parameters",
+        "expression": "\"https://acmeoutfittersdemo.blob.core.windows.net/sample-data\""
+      },
+      {
+        "name": "fnCleanKey",
+        "kind": "m",
+        "isParameter": false,
+        "description": "Trims and upper-cases a business key (customer, store and product ids).",
+        "queryGroup": "Functions",
+        "expression": "(x as text) as text => Text.Upper(Text.Trim(x))"
+      },
+      {
+        "name": "fnParseNames",
+        "kind": "m",
+        "isParameter": false,
+        "description": "Turns a Python-style list of names, such as ['Ana Ruiz', \"O'Neil Park\"], into \"Ana Ruiz; O'Neil Park\".",
+        "queryGroup": "Functions",
+        "expression": "(raw as text) as text =>\nlet\n    Trimmed = Text.Trim(raw),\n    Inner = if Text.Start(Trimmed, 1) = \"[\" then Text.Range(Trimmed, 1, Text.Length(Trimmed) - 2) else Trimmed,\n    Names = List.Transform(Text.Split(Inner, \",\"), each Text.Trim(Text.Trim(_), {\"'\", \"\"\"\"})),\n    NonEmpty = List.Select(Names, each _ <> \"\"),\n    Result = if List.IsEmpty(NonEmpty) then \"\" else Text.Combine(NonEmpty, \"; \")\nin\n    Result"
+      }
+    ],
+    "roles": [
+      {
+        "name": "Region West",
+        "description": "Sees the West region only: its stores, their orders, returns and targets.",
+        "modelPermission": "read",
+        "tablePermissions": [
+          {
+            "table": "Stores",
+            "filterExpression": "Stores[Region] = \"West\""
+          }
+        ]
+      },
+      {
+        "name": "Store Manager",
+        "description": "Dynamic security: a manager sees the stores whose Manager Email is the signed-in user.",
+        "modelPermission": "read",
+        "tablePermissions": [
+          {
+            "table": "Stores",
+            "filterExpression": "Stores[Manager Email] = USERPRINCIPALNAME()"
+          }
+        ]
+      }
+    ]
+  },
+  "extraModels": [],
+  "reports": [
+    {
+      "name": "Acme Outfitters - Overview",
+      "datasetReference": {
+        "kind": "byPath",
+        "path": "../AcmeOutfitters.SemanticModel"
+      },
+      "customTheme": "AcmeOutfitters.json",
+      "activePage": "ef796b39c816a4afa4f1",
+      "filters": [
+        {
+          "name": "fcb366b654a6462f1566",
+          "kind": "Categorical",
+          "field": {
+            "kind": "column",
+            "table": "Orders",
+            "name": "Status",
+            "ref": "Orders[Status]"
+          },
+          "condition": "NOT Orders[Status] IN ('Cancelled')",
+          "isHiddenInViewMode": false,
+          "isLockedInViewMode": false,
+          "howCreated": "User"
+        }
+      ],
+      "pages": [
+        {
+          "name": "ef796b39c816a4afa4f1",
+          "displayName": "Executive Summary",
+          "width": 1280.0,
+          "height": 720.0,
+          "displayOption": "FitToPage",
+          "isHidden": false,
+          "filters": [],
+          "visuals": [
+            {
+              "name": "4962619bce10ce9dfb1c",
+              "visualType": "pageNavigator",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 760.0,
+                "y": 14.0,
+                "z": 2000.0,
+                "width": 496.0,
+                "height": 36.0,
+                "tabOrder": 2000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "569b9ae1b4cfad5aa48d",
+              "visualType": "lineChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 340.0,
+                "y": 292.0,
+                "z": 8000.0,
+                "width": 600.0,
+                "height": 192.0,
+                "tabOrder": 8000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Month",
+                  "ref": "Date[Month]",
+                  "queryRef": "Date.Month",
+                  "nativeQueryRef": "Month"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Sales PY",
+                  "ref": "Orders[Sales PY]",
+                  "queryRef": "Orders.Sales PY",
+                  "nativeQueryRef": "Sales PY"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "578558f36aded7690edd",
+              "visualType": "slicer",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 400.0,
+                "y": 76.0,
+                "z": 4000.0,
+                "width": 220.0,
+                "height": 64.0,
+                "tabOrder": 4000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Region",
+                  "ref": "Stores[Region]",
+                  "queryRef": "Stores.Region",
+                  "nativeQueryRef": "Region"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "5cd0757711b84d2d8214",
+              "visualType": "actionButton",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 956.0,
+                "y": 496.0,
+                "z": 12000.0,
+                "width": 300.0,
+                "height": 48.0,
+                "tabOrder": 12000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "5db7384676d59b0fb322",
+              "visualType": "slicer",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 76.0,
+                "z": 3000.0,
+                "width": 360.0,
+                "height": 64.0,
+                "tabOrder": 3000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Year",
+                  "ref": "Date[Year]",
+                  "queryRef": "Date.Year",
+                  "nativeQueryRef": "Year"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "6ef6d064d0265cfd95aa",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 8.0,
+                "z": 1000.0,
+                "width": 680.0,
+                "height": 48.0,
+                "tabOrder": 1000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "923adeb43119cf2eccfc",
+              "visualType": "shape",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "width": 1280.0,
+                "height": 64.0,
+                "tabOrder": 0
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "b8b18fd95a6ed3ba97a1",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 956.0,
+                "y": 560.0,
+                "z": 13000.0,
+                "width": 300.0,
+                "height": 144.0,
+                "tabOrder": 13000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "bdf9d92d87bec8350cc4",
+              "visualType": "clusteredColumnChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 956.0,
+                "y": 292.0,
+                "z": 9000.0,
+                "width": 300.0,
+                "height": 192.0,
+                "tabOrder": 9000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Products",
+                  "name": "Category",
+                  "ref": "Products[Category]",
+                  "queryRef": "Products.Category",
+                  "nativeQueryRef": "Category"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "c9aea193ee9b20c67335",
+              "visualType": "kpi",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 292.0,
+                "z": 7000.0,
+                "width": 300.0,
+                "height": 192.0,
+                "tabOrder": 7000
+              },
+              "fields": [
+                {
+                  "role": "Indicator",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "TrendLine",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Year Month",
+                  "ref": "Date[Year Month]",
+                  "queryRef": "Date.Year Month",
+                  "nativeQueryRef": "Year Month"
+                },
+                {
+                  "role": "Goal",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target",
+                  "ref": "Targets[Target]",
+                  "queryRef": "Targets.Target",
+                  "nativeQueryRef": "Target"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "c9f87905246642c35687",
+              "visualType": "donutChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 496.0,
+                "z": 10000.0,
+                "width": 300.0,
+                "height": 208.0,
+                "tabOrder": 10000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Channel",
+                  "ref": "Stores[Channel]",
+                  "queryRef": "Stores.Channel",
+                  "nativeQueryRef": "Channel"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "d1534ca5259c4de6151d",
+              "visualType": "card",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1040.0,
+                "y": 152.0,
+                "z": 6000.0,
+                "width": 216.0,
+                "height": 124.0,
+                "tabOrder": 6000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Sales (Scaled)",
+                  "ref": "Orders[Sales (Scaled)]",
+                  "queryRef": "Orders.Sales (Scaled)",
+                  "nativeQueryRef": "Sales (Scaled)"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "ed03ff7722a2eaf64065",
+              "visualType": "clusteredBarChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 340.0,
+                "y": 496.0,
+                "z": 11000.0,
+                "width": 600.0,
+                "height": 208.0,
+                "tabOrder": 11000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Region",
+                  "ref": "Stores[Region]",
+                  "queryRef": "Stores.Region",
+                  "nativeQueryRef": "Region"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target",
+                  "ref": "Targets[Target]",
+                  "queryRef": "Targets.Target",
+                  "nativeQueryRef": "Target"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "f7a9c9413fef68532313",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 152.0,
+                "z": 5000.0,
+                "width": 1000.0,
+                "height": 124.0,
+                "tabOrder": 5000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Order Count",
+                  "ref": "Orders[Order Count]",
+                  "queryRef": "Orders.Order Count",
+                  "nativeQueryRef": "Order Count"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Avg Order Value",
+                  "ref": "Orders[Avg Order Value]",
+                  "queryRef": "Orders.Avg Order Value",
+                  "nativeQueryRef": "Avg Order Value"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Margin %",
+                  "ref": "Orders[Margin %]",
+                  "queryRef": "Orders.Margin %",
+                  "nativeQueryRef": "Margin %"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Active Customers",
+                  "ref": "Orders[Active Customers]",
+                  "queryRef": "Orders.Active Customers",
+                  "nativeQueryRef": "Active Customers"
+                }
+              ],
+              "filters": []
+            }
+          ]
+        },
+        {
+          "name": "59126dbf5023ae95f4dc",
+          "displayName": "Product Detail",
+          "width": 1280.0,
+          "height": 1080.0,
+          "displayOption": "FitToWidth",
+          "isHidden": false,
+          "filters": [],
+          "visuals": [
+            {
+              "name": "020da48b0ec95bb9aa1c",
+              "visualType": "scatterChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 838.0,
+                "z": 11000.0,
+                "width": 620.0,
+                "height": 220.0,
+                "tabOrder": 11000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Products",
+                  "name": "Product Name",
+                  "ref": "Products[Product Name]",
+                  "queryRef": "Products.Product Name",
+                  "nativeQueryRef": "Product Name"
+                },
+                {
+                  "role": "Series",
+                  "kind": "column",
+                  "table": "Products",
+                  "name": "Category",
+                  "ref": "Products[Category]",
+                  "queryRef": "Products.Category",
+                  "nativeQueryRef": "Category"
+                },
+                {
+                  "role": "X",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Units Sold",
+                  "ref": "Orders[Units Sold]",
+                  "queryRef": "Orders.Units Sold",
+                  "nativeQueryRef": "Units Sold"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "1443235a1cafb8cc114a",
+              "visualType": "clusteredBarChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 660.0,
+                "y": 838.0,
+                "z": 12000.0,
+                "width": 596.0,
+                "height": 220.0,
+                "tabOrder": 12000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Products",
+                  "name": "Subcategory",
+                  "ref": "Products[Subcategory]",
+                  "queryRef": "Products.Subcategory",
+                  "nativeQueryRef": "Subcategory"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Units Sold",
+                  "ref": "Orders[Units Sold]",
+                  "queryRef": "Orders.Units Sold",
+                  "nativeQueryRef": "Units Sold"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "2bc4995228830afb03fb",
+              "visualType": "actionButton",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1208.0,
+                "y": 12.0,
+                "z": 2000.0,
+                "width": 48.0,
+                "height": 40.0,
+                "tabOrder": 2000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "2ef83213665da5b85d71",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 260.0,
+                "y": 80.0,
+                "z": 5000.0,
+                "width": 760.0,
+                "height": 126.0,
+                "tabOrder": 5000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Units Sold",
+                  "ref": "Orders[Units Sold]",
+                  "queryRef": "Orders.Units Sold",
+                  "nativeQueryRef": "Units Sold"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Margin %",
+                  "ref": "Orders[Margin %]",
+                  "queryRef": "Orders.Margin %",
+                  "nativeQueryRef": "Margin %"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Revenue per Unit",
+                  "ref": "Orders[Revenue per Unit]",
+                  "queryRef": "Orders.Revenue per Unit",
+                  "nativeQueryRef": "Revenue per Unit"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "52eaae062b660efcf364",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1036.0,
+                "y": 80.0,
+                "z": 6000.0,
+                "width": 220.0,
+                "height": 126.0,
+                "tabOrder": 6000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Products Never Sold",
+                  "name": "Products Never Sold Count",
+                  "ref": "'Products Never Sold'[Products Never Sold Count]",
+                  "queryRef": "Products Never Sold.Products Never Sold Count",
+                  "nativeQueryRef": "Products Never Sold Count"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "59abfff274b9da052748",
+              "visualType": "shape",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "width": 1280.0,
+                "height": 64.0,
+                "tabOrder": 0
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "5eac79b1096df863260d",
+              "visualType": "card",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1036.0,
+                "y": 222.0,
+                "z": 7000.0,
+                "width": 220.0,
+                "height": 100.0,
+                "tabOrder": 7000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Unknown Product Orders",
+                  "ref": "Orders[Unknown Product Orders]",
+                  "queryRef": "Orders.Unknown Product Orders",
+                  "nativeQueryRef": "Unknown Product Orders"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "919615d40ce0dca8a7ba",
+              "visualType": "pivotTable",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 260.0,
+                "y": 222.0,
+                "z": 8000.0,
+                "width": 760.0,
+                "height": 284.0,
+                "tabOrder": 8000
+              },
+              "fields": [
+                {
+                  "role": "Rows",
+                  "kind": "hierarchyLevel",
+                  "table": "Products",
+                  "name": "Category",
+                  "hierarchy": "Product Hierarchy",
+                  "ref": "Products[Product Hierarchy].[Category]",
+                  "queryRef": "Products.Product Hierarchy.Category",
+                  "nativeQueryRef": "Category"
+                },
+                {
+                  "role": "Rows",
+                  "kind": "hierarchyLevel",
+                  "table": "Products",
+                  "name": "Subcategory",
+                  "hierarchy": "Product Hierarchy",
+                  "ref": "Products[Product Hierarchy].[Subcategory]",
+                  "queryRef": "Products.Product Hierarchy.Subcategory",
+                  "nativeQueryRef": "Subcategory"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Units Sold",
+                  "ref": "Orders[Units Sold]",
+                  "queryRef": "Orders.Units Sold",
+                  "nativeQueryRef": "Units Sold"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Margin %",
+                  "ref": "Orders[Margin %]",
+                  "queryRef": "Orders.Margin %",
+                  "nativeQueryRef": "Margin %"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "a6054178e1d001688cde",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 8.0,
+                "z": 1000.0,
+                "width": 680.0,
+                "height": 48.0,
+                "tabOrder": 1000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "ae52f390e9a9b569c31f",
+              "visualType": "slicer",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 80.0,
+                "z": 3000.0,
+                "width": 220.0,
+                "height": 220.0,
+                "tabOrder": 3000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Products",
+                  "name": "Category",
+                  "ref": "Products[Category]",
+                  "queryRef": "Products.Category",
+                  "nativeQueryRef": "Category"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "deefdb166d949b468007",
+              "visualType": "slicer",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 316.0,
+                "z": 4000.0,
+                "width": 220.0,
+                "height": 90.0,
+                "tabOrder": 4000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Products",
+                  "name": "List Price",
+                  "ref": "Products[List Price]",
+                  "queryRef": "Products.List Price",
+                  "nativeQueryRef": "List Price"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "e2a918f1b79f547dfc54",
+              "visualType": "treemap",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 660.0,
+                "y": 522.0,
+                "z": 10000.0,
+                "width": 596.0,
+                "height": 300.0,
+                "tabOrder": 10000
+              },
+              "fields": [
+                {
+                  "role": "Group",
+                  "kind": "column",
+                  "table": "Products",
+                  "name": "Subcategory",
+                  "ref": "Products[Subcategory]",
+                  "queryRef": "Products.Subcategory",
+                  "nativeQueryRef": "Subcategory"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "fc4760750cac58a5aa34",
+              "visualType": "tableEx",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 522.0,
+                "z": 9000.0,
+                "width": 620.0,
+                "height": 300.0,
+                "tabOrder": 9000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Products",
+                  "name": "Product Name",
+                  "ref": "Products[Product Name]",
+                  "queryRef": "Products.Product Name",
+                  "nativeQueryRef": "Product Name"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Units Sold",
+                  "ref": "Orders[Units Sold]",
+                  "queryRef": "Orders.Units Sold",
+                  "nativeQueryRef": "Units Sold"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Margin %",
+                  "ref": "Orders[Margin %]",
+                  "queryRef": "Orders.Margin %",
+                  "nativeQueryRef": "Margin %"
+                }
+              ],
+              "filters": [
+                {
+                  "name": "5fd14b4af183614bbede",
+                  "kind": "TopN",
+                  "field": {
+                    "kind": "column",
+                    "table": "Products",
+                    "name": "Product Name",
+                    "ref": "Products[Product Name]"
+                  },
+                  "condition": "(unsupported condition)",
+                  "isHiddenInViewMode": false,
+                  "isLockedInViewMode": false,
+                  "howCreated": "User"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "de11804d145ce7e78111",
+          "displayName": "Time Intelligence",
+          "width": 1280.0,
+          "height": 720.0,
+          "displayOption": "FitToPage",
+          "isHidden": false,
+          "filters": [],
+          "visuals": [
+            {
+              "name": "0be665cce25f93e37e88",
+              "visualType": "pivotTable",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 440.0,
+                "y": 268.0,
+                "z": 9000.0,
+                "width": 816.0,
+                "height": 200.0,
+                "tabOrder": 9000
+              },
+              "fields": [
+                {
+                  "role": "Rows",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Year",
+                  "ref": "Date[Year]",
+                  "queryRef": "Date.Year",
+                  "nativeQueryRef": "Year"
+                },
+                {
+                  "role": "Rows",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Month",
+                  "ref": "Date[Month]",
+                  "queryRef": "Date.Month",
+                  "nativeQueryRef": "Month"
+                },
+                {
+                  "role": "Columns",
+                  "kind": "column",
+                  "table": "Time Calc",
+                  "name": "Time Calculation",
+                  "ref": "'Time Calc'[Time Calculation]",
+                  "queryRef": "Time Calc.Time Calculation",
+                  "nativeQueryRef": "Time Calculation"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "24f8ad03f5a0230faab0",
+              "visualType": "multiRowCard",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 268.0,
+                "z": 8000.0,
+                "width": 400.0,
+                "height": 200.0,
+                "tabOrder": 8000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Sales YTD",
+                  "ref": "Orders[Sales YTD]",
+                  "queryRef": "Orders.Sales YTD",
+                  "nativeQueryRef": "Sales YTD"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Sales PY",
+                  "ref": "Orders[Sales PY]",
+                  "queryRef": "Orders.Sales PY",
+                  "nativeQueryRef": "Sales PY"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Sales YoY %",
+                  "ref": "Orders[Sales YoY %]",
+                  "queryRef": "Orders.Sales YoY %",
+                  "nativeQueryRef": "Sales YoY %"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Sales Prev Month",
+                  "ref": "Orders[Sales Prev Month]",
+                  "queryRef": "Orders.Sales Prev Month",
+                  "nativeQueryRef": "Sales Prev Month"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Shipped Sales",
+                  "ref": "Orders[Shipped Sales]",
+                  "queryRef": "Orders.Shipped Sales",
+                  "nativeQueryRef": "Shipped Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "398b24904a1feb7d0755",
+              "visualType": "slicer",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 260.0,
+                "y": 76.0,
+                "z": 3000.0,
+                "width": 320.0,
+                "height": 64.0,
+                "tabOrder": 3000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Date",
+                  "ref": "Date[Date]",
+                  "queryRef": "Date.Date",
+                  "nativeQueryRef": "Date"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "50869f8a65b027c7e618",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 8.0,
+                "z": 1000.0,
+                "width": 680.0,
+                "height": 48.0,
+                "tabOrder": 1000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "73a4b46ae84c53908089",
+              "visualType": "shape",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "width": 1280.0,
+                "height": 64.0,
+                "tabOrder": 0
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "7db2a139761251b9162a",
+              "visualType": "areaChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 656.0,
+                "y": 484.0,
+                "z": 11000.0,
+                "width": 600.0,
+                "height": 220.0,
+                "tabOrder": 11000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Year Month",
+                  "ref": "Date[Year Month]",
+                  "queryRef": "Date.Year Month",
+                  "nativeQueryRef": "Year Month"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Shipped Sales",
+                  "ref": "Orders[Shipped Sales]",
+                  "queryRef": "Orders.Shipped Sales",
+                  "nativeQueryRef": "Shipped Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "b41d675081c224f256ea",
+              "visualType": "slicer",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 76.0,
+                "z": 2000.0,
+                "width": 220.0,
+                "height": 64.0,
+                "tabOrder": 2000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Year Month",
+                  "ref": "Date[Year Month]",
+                  "queryRef": "Date.Year Month",
+                  "nativeQueryRef": "Year Month"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "bb525ba6bb81d291695d",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 656.0,
+                "y": 152.0,
+                "z": 6000.0,
+                "width": 300.0,
+                "height": 100.0,
+                "tabOrder": 6000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": [
+                {
+                  "name": "6eeb5e8c90bc2668c369",
+                  "kind": "Categorical",
+                  "field": {
+                    "kind": "column",
+                    "table": "Time Calc",
+                    "name": "Time Calculation",
+                    "ref": "'Time Calc'[Time Calculation]"
+                  },
+                  "condition": "'Time Calc'[Time Calculation] IN ('PY')",
+                  "isHiddenInViewMode": false,
+                  "isLockedInViewMode": false,
+                  "howCreated": "User"
+                }
+              ]
+            },
+            {
+              "name": "c507b8509ba0b970a4ee",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 972.0,
+                "y": 152.0,
+                "z": 7000.0,
+                "width": 284.0,
+                "height": 100.0,
+                "tabOrder": 7000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": [
+                {
+                  "name": "da0321eb0a71d773477a",
+                  "kind": "Categorical",
+                  "field": {
+                    "kind": "column",
+                    "table": "Time Calc",
+                    "name": "Time Calculation",
+                    "ref": "'Time Calc'[Time Calculation]"
+                  },
+                  "condition": "'Time Calc'[Time Calculation] IN ('YoY %')",
+                  "isHiddenInViewMode": false,
+                  "isLockedInViewMode": false,
+                  "howCreated": "User"
+                }
+              ]
+            },
+            {
+              "name": "cfa6b3b57d4eab8e6066",
+              "visualType": "lineChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 484.0,
+                "z": 10000.0,
+                "width": 616.0,
+                "height": 220.0,
+                "tabOrder": 10000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Year Month",
+                  "ref": "Date[Year Month]",
+                  "queryRef": "Date.Year Month",
+                  "nativeQueryRef": "Year Month"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Sales PY",
+                  "ref": "Orders[Sales PY]",
+                  "queryRef": "Orders.Sales PY",
+                  "nativeQueryRef": "Sales PY"
+                }
+              ],
+              "filters": [
+                {
+                  "name": "72bdea4dd07e5878909d",
+                  "kind": "RelativeDate",
+                  "field": {
+                    "kind": "column",
+                    "table": "Date",
+                    "name": "Date",
+                    "ref": "Date[Date]"
+                  },
+                  "condition": "Date[Date] BETWEEN ? AND ?",
+                  "isHiddenInViewMode": false,
+                  "isLockedInViewMode": false,
+                  "howCreated": "User"
+                }
+              ]
+            },
+            {
+              "name": "e1d275355b1648435593",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 340.0,
+                "y": 152.0,
+                "z": 5000.0,
+                "width": 300.0,
+                "height": 100.0,
+                "tabOrder": 5000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": [
+                {
+                  "name": "76c1dbab8b3b87cccf42",
+                  "kind": "Categorical",
+                  "field": {
+                    "kind": "column",
+                    "table": "Time Calc",
+                    "name": "Time Calculation",
+                    "ref": "'Time Calc'[Time Calculation]"
+                  },
+                  "condition": "'Time Calc'[Time Calculation] IN ('YTD')",
+                  "isHiddenInViewMode": false,
+                  "isLockedInViewMode": false,
+                  "howCreated": "User"
+                }
+              ]
+            },
+            {
+              "name": "e2ec1886bb9df4e1d51a",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 152.0,
+                "z": 4000.0,
+                "width": 300.0,
+                "height": 100.0,
+                "tabOrder": 4000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": [
+                {
+                  "name": "2ce0030f948a541a4a64",
+                  "kind": "Categorical",
+                  "field": {
+                    "kind": "column",
+                    "table": "Time Calc",
+                    "name": "Time Calculation",
+                    "ref": "'Time Calc'[Time Calculation]"
+                  },
+                  "condition": "'Time Calc'[Time Calculation] IN ('Current')",
+                  "isHiddenInViewMode": false,
+                  "isLockedInViewMode": false,
+                  "howCreated": "User"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Acme Outfitters - Online",
+      "datasetReference": {
+        "kind": "byPath",
+        "path": "../AcmeOutfitters.SemanticModel"
+      },
+      "customTheme": "AcmeOutfitters.json",
+      "activePage": "a60af4d6244c3a6206a5",
+      "filters": [
+        {
+          "name": "af9cb4d60d7bbe61fcf6",
+          "kind": "Categorical",
+          "field": {
+            "kind": "column",
+            "table": "Stores",
+            "name": "Channel",
+            "ref": "Stores[Channel]"
+          },
+          "condition": "Stores[Channel] IN ('Online')",
+          "isHiddenInViewMode": false,
+          "isLockedInViewMode": false,
+          "howCreated": "User"
+        },
+        {
+          "name": "69d588850ab35f59e7d8",
+          "kind": "Categorical",
+          "field": {
+            "kind": "column",
+            "table": "Web Sessions",
+            "name": "Device",
+            "ref": "'Web Sessions'[Device]"
+          },
+          "condition": "'Web Sessions'[Device] IN ('Mobile')",
+          "isHiddenInViewMode": false,
+          "isLockedInViewMode": false,
+          "howCreated": "User"
+        }
+      ],
+      "pages": [
+        {
+          "name": "a60af4d6244c3a6206a5",
+          "displayName": "Online Overview",
+          "width": 1280.0,
+          "height": 720.0,
+          "displayOption": "FitToPage",
+          "isHidden": false,
+          "filters": [],
+          "visuals": [
+            {
+              "name": "3d4874ac0bcfb9c0f53d",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 240.0,
+                "y": 76.0,
+                "z": 4000.0,
+                "width": 1016.0,
+                "height": 124.0,
+                "tabOrder": 4000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Order Count",
+                  "ref": "Orders[Order Count]",
+                  "queryRef": "Orders.Order Count",
+                  "nativeQueryRef": "Order Count"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Active Customers",
+                  "ref": "Orders[Active Customers]",
+                  "queryRef": "Orders.Active Customers",
+                  "nativeQueryRef": "Active Customers"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Customers",
+                  "name": "Customer Count",
+                  "ref": "Customers[Customer Count]",
+                  "queryRef": "Customers.Customer Count",
+                  "nativeQueryRef": "Customer Count",
+                  "displayName": "Customers Reached"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Avg Order Value",
+                  "ref": "Orders[Avg Order Value]",
+                  "queryRef": "Orders.Avg Order Value",
+                  "nativeQueryRef": "Avg Order Value"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "6ee78332f30e000101aa",
+              "visualType": "basicShape",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 392.0,
+                "z": 12000.0,
+                "width": 200.0,
+                "height": 24.0,
+                "tabOrder": 12000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "7e5b54ef35df8a9a09b9",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 432.0,
+                "z": 13000.0,
+                "width": 200.0,
+                "height": 272.0,
+                "tabOrder": 13000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "a5ba137f5f714613904e",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1012.0,
+                "y": 216.0,
+                "z": 7000.0,
+                "width": 244.0,
+                "height": 124.0,
+                "tabOrder": 7000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "a7c66460647c2f31f219",
+              "visualType": "shape",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "width": 1280.0,
+                "height": 64.0,
+                "tabOrder": 0
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "a7ffc46c144f47dfb492",
+              "visualType": "slicer",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 76.0,
+                "z": 3000.0,
+                "width": 200.0,
+                "height": 300.0,
+                "tabOrder": 3000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Loyalty Tier",
+                  "ref": "Customers[Loyalty Tier]",
+                  "queryRef": "Customers.Loyalty Tier",
+                  "nativeQueryRef": "Loyalty Tier"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "b65c61ae204a9bf6f9ed",
+              "visualType": "funnel",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 240.0,
+                "y": 356.0,
+                "z": 8000.0,
+                "width": 330.0,
+                "height": 348.0,
+                "tabOrder": 8000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Web Sessions",
+                  "name": "Traffic Source",
+                  "ref": "'Web Sessions'[Traffic Source]",
+                  "queryRef": "Web Sessions.Traffic Source",
+                  "nativeQueryRef": "Traffic Source"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Web Sessions",
+                  "name": "Sessions",
+                  "ref": "'Web Sessions'[Sessions]",
+                  "queryRef": "Web Sessions.Sessions",
+                  "nativeQueryRef": "Sessions"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "bde8debb2da31c9b193a",
+              "visualType": "pieChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 586.0,
+                "y": 356.0,
+                "z": 9000.0,
+                "width": 330.0,
+                "height": 168.0,
+                "tabOrder": 9000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Web Sessions",
+                  "name": "Device",
+                  "ref": "'Web Sessions'[Device]",
+                  "queryRef": "Web Sessions.Device",
+                  "nativeQueryRef": "Device"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Web Sessions",
+                  "name": "Sessions",
+                  "ref": "'Web Sessions'[Sessions]",
+                  "queryRef": "Web Sessions.Sessions",
+                  "nativeQueryRef": "Sessions"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "c359151cf9df2b5ad588",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 496.0,
+                "y": 216.0,
+                "z": 6000.0,
+                "width": 500.0,
+                "height": 124.0,
+                "tabOrder": 6000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Web Sessions",
+                  "name": "Conversion Rate",
+                  "ref": "'Web Sessions'[Conversion Rate]",
+                  "queryRef": "Web Sessions.Conversion Rate",
+                  "nativeQueryRef": "Conversion Rate"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Web Sessions",
+                  "name": "Avg Pages per Session",
+                  "ref": "'Web Sessions'[Avg Pages per Session]",
+                  "queryRef": "Web Sessions.Avg Pages per Session",
+                  "nativeQueryRef": "Avg Pages per Session"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Web Sessions",
+                  "name": "Sessions (All Devices)",
+                  "ref": "'Web Sessions'[Sessions (All Devices)]",
+                  "queryRef": "Web Sessions.Sessions (All Devices)",
+                  "nativeQueryRef": "Sessions (All Devices)"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "cd1ddb13861fd987ed89",
+              "visualType": "clusteredBarChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 932.0,
+                "y": 356.0,
+                "z": 10000.0,
+                "width": 324.0,
+                "height": 168.0,
+                "tabOrder": 10000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Segment",
+                  "ref": "Customers[Segment]",
+                  "queryRef": "Customers.Segment",
+                  "nativeQueryRef": "Segment"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "dc3526a14816153b5bf4",
+              "visualType": "actionButton",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1136.0,
+                "y": 14.0,
+                "z": 2000.0,
+                "width": 120.0,
+                "height": 36.0,
+                "tabOrder": 2000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "ec2cae0a6609976b1686",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 8.0,
+                "z": 1000.0,
+                "width": 680.0,
+                "height": 48.0,
+                "tabOrder": 1000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "f251dbc74c2b67f5305d",
+              "visualType": "card",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 240.0,
+                "y": 216.0,
+                "z": 5000.0,
+                "width": 240.0,
+                "height": 124.0,
+                "tabOrder": 5000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Web Sessions",
+                  "name": "Sessions",
+                  "ref": "'Web Sessions'[Sessions]",
+                  "queryRef": "Web Sessions.Sessions",
+                  "nativeQueryRef": "Sessions"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "f28cc556633b1995df76",
+              "visualType": "hundredPercentStackedColumnChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 586.0,
+                "y": 540.0,
+                "z": 11000.0,
+                "width": 670.0,
+                "height": 164.0,
+                "tabOrder": 11000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Quarter",
+                  "ref": "Date[Quarter]",
+                  "queryRef": "Date.Quarter",
+                  "nativeQueryRef": "Quarter"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Series",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Loyalty Tier",
+                  "ref": "Customers[Loyalty Tier]",
+                  "queryRef": "Customers.Loyalty Tier",
+                  "nativeQueryRef": "Loyalty Tier"
+                }
+              ],
+              "filters": []
+            }
+          ]
+        },
+        {
+          "name": "95c48410a9ac03ae2a38",
+          "displayName": "Customer Detail",
+          "width": 1280.0,
+          "height": 960.0,
+          "displayOption": "FitToWidth",
+          "isHidden": false,
+          "filters": [
+            {
+              "name": "077820b2e1730e3722b8",
+              "kind": "Categorical",
+              "field": {
+                "kind": "column",
+                "table": "Customers",
+                "name": "Segment",
+                "ref": "Customers[Segment]"
+              },
+              "condition": "Customers[Segment] IN ('Corporate')",
+              "isHiddenInViewMode": false,
+              "isLockedInViewMode": false,
+              "howCreated": "User"
+            }
+          ],
+          "visuals": [
+            {
+              "name": "170bf192d4f507117a5c",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 80.0,
+                "z": 3000.0,
+                "width": 480.0,
+                "height": 124.0,
+                "tabOrder": 3000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Customers",
+                  "name": "Customer Count",
+                  "ref": "Customers[Customer Count]",
+                  "queryRef": "Customers.Customer Count",
+                  "nativeQueryRef": "Customer Count"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "1f11f6d134656218a0c1",
+              "visualType": "shape",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "width": 1280.0,
+                "height": 64.0,
+                "tabOrder": 0
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "6bad6bbf6329e1af75c5",
+              "visualType": "actionButton",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1208.0,
+                "y": 12.0,
+                "z": 2000.0,
+                "width": 48.0,
+                "height": 40.0,
+                "tabOrder": 2000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "87a4a735f2b95d3c2e6e",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 8.0,
+                "z": 1000.0,
+                "width": 680.0,
+                "height": 48.0,
+                "tabOrder": 1000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "8ceb07ec7d4177d908d0",
+              "visualType": "stackedBarChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 800.0,
+                "y": 436.0,
+                "z": 6000.0,
+                "width": 456.0,
+                "height": 184.0,
+                "tabOrder": 6000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "State",
+                  "ref": "Customers[State]",
+                  "queryRef": "Customers.State",
+                  "nativeQueryRef": "State"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Series",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Value Tier",
+                  "ref": "Customers[Value Tier]",
+                  "queryRef": "Customers.Value Tier",
+                  "nativeQueryRef": "Value Tier"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "b57b07f8b020ec9b8a81",
+              "visualType": "pivotTable",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 800.0,
+                "y": 220.0,
+                "z": 5000.0,
+                "width": 456.0,
+                "height": 200.0,
+                "tabOrder": 5000
+              },
+              "fields": [
+                {
+                  "role": "Rows",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Segment",
+                  "ref": "Customers[Segment]",
+                  "queryRef": "Customers.Segment",
+                  "nativeQueryRef": "Segment"
+                },
+                {
+                  "role": "Columns",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Loyalty Tier",
+                  "ref": "Customers[Loyalty Tier]",
+                  "queryRef": "Customers.Loyalty Tier",
+                  "nativeQueryRef": "Loyalty Tier"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "dc8dc10588284195b4a9",
+              "visualType": "tableEx",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 220.0,
+                "z": 4000.0,
+                "width": 760.0,
+                "height": 400.0,
+                "tabOrder": 4000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Customer Name",
+                  "ref": "Customers[Customer Name]",
+                  "queryRef": "Customers.Customer Name",
+                  "nativeQueryRef": "Customer Name"
+                },
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Account Managers",
+                  "ref": "Customers[Account Managers]",
+                  "queryRef": "Customers.Account Managers",
+                  "nativeQueryRef": "Account Managers"
+                },
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Account Manager Count",
+                  "ref": "Customers[Account Manager Count]",
+                  "queryRef": "Customers.Account Manager Count",
+                  "nativeQueryRef": "Account Manager Count"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Acme Outfitters - Stores",
+      "datasetReference": {
+        "kind": "byPath",
+        "path": "../AcmeOutfitters.SemanticModel"
+      },
+      "customTheme": "AcmeOutfitters.json",
+      "activePage": "ef3ce6b6fadf22960137",
+      "filters": [
+        {
+          "name": "b0d63946d6634cc987ce",
+          "kind": "Categorical",
+          "field": {
+            "kind": "column",
+            "table": "Stores",
+            "name": "Channel",
+            "ref": "Stores[Channel]"
+          },
+          "condition": "Stores[Channel] IN ('Retail', 'Outlet')",
+          "isHiddenInViewMode": false,
+          "isLockedInViewMode": false,
+          "howCreated": "User"
+        }
+      ],
+      "pages": [
+        {
+          "name": "ef3ce6b6fadf22960137",
+          "displayName": "Store Performance",
+          "width": 1280.0,
+          "height": 720.0,
+          "displayOption": "FitToPage",
+          "isHidden": false,
+          "filters": [],
+          "visuals": [
+            {
+              "name": "05ac8028fb6e14374ec7",
+              "visualType": "stackedColumnChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 600.0,
+                "y": 228.0,
+                "z": 8000.0,
+                "width": 330.0,
+                "height": 236.0,
+                "tabOrder": 8000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Store Name",
+                  "ref": "Stores[Store Name]",
+                  "queryRef": "Stores.Store Name",
+                  "nativeQueryRef": "Store Name"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Series",
+                  "kind": "column",
+                  "table": "Products",
+                  "name": "Category",
+                  "ref": "Products[Category]",
+                  "queryRef": "Products.Category",
+                  "nativeQueryRef": "Category"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "1279aa9cd39ad01e1554",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 8.0,
+                "z": 1000.0,
+                "width": 680.0,
+                "height": 48.0,
+                "tabOrder": 1000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "69f47593f5e0a4aefd36",
+              "visualType": "hundredPercentStackedBarChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 656.0,
+                "y": 480.0,
+                "z": 12000.0,
+                "width": 300.0,
+                "height": 224.0,
+                "tabOrder": 12000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Store Name",
+                  "ref": "Stores[Store Name]",
+                  "queryRef": "Stores.Store Name",
+                  "nativeQueryRef": "Store Name"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Series",
+                  "kind": "column",
+                  "table": "Customers",
+                  "name": "Segment",
+                  "ref": "Customers[Segment]",
+                  "queryRef": "Customers.Segment",
+                  "nativeQueryRef": "Segment"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "6aecd77deab2cb76c2e5",
+              "visualType": "slicer",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 148.0,
+                "z": 5000.0,
+                "width": 240.0,
+                "height": 64.0,
+                "tabOrder": 5000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Date",
+                  "ref": "Date[Date]",
+                  "queryRef": "Date.Date",
+                  "nativeQueryRef": "Date"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "6f647d31a8428ad62fb0",
+              "visualType": "gauge",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 946.0,
+                "y": 228.0,
+                "z": 9000.0,
+                "width": 310.0,
+                "height": 236.0,
+                "tabOrder": 9000
+              },
+              "fields": [
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "TargetValue",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target",
+                  "ref": "Targets[Target]",
+                  "queryRef": "Targets.Target",
+                  "nativeQueryRef": "Target"
+                },
+                {
+                  "role": "MaxValue",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target Stretch",
+                  "ref": "Targets[Target Stretch]",
+                  "queryRef": "Targets.Target Stretch",
+                  "nativeQueryRef": "Target Stretch"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "8ee1ff74df542ac157fc",
+              "visualType": "lineClusteredColumnComboChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 480.0,
+                "z": 10000.0,
+                "width": 300.0,
+                "height": 224.0,
+                "tabOrder": 10000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Year Month",
+                  "ref": "Date[Year Month]",
+                  "queryRef": "Date.Year Month",
+                  "nativeQueryRef": "Year Month"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Y2",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target",
+                  "ref": "Targets[Target]",
+                  "queryRef": "Targets.Target",
+                  "nativeQueryRef": "Target"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "9b2792b8239b52dc5cbc",
+              "visualType": "shape",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "width": 1280.0,
+                "height": 64.0,
+                "tabOrder": 0
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "9b4e31f5f08b8acaa5ed",
+              "visualType": "waterfallChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 340.0,
+                "y": 480.0,
+                "z": 11000.0,
+                "width": 300.0,
+                "height": 224.0,
+                "tabOrder": 11000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Date",
+                  "name": "Quarter",
+                  "ref": "Date[Quarter]",
+                  "queryRef": "Date.Quarter",
+                  "nativeQueryRef": "Quarter"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Gross Margin",
+                  "ref": "Orders[Gross Margin]",
+                  "queryRef": "Orders.Gross Margin",
+                  "nativeQueryRef": "Gross Margin"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "a7199dc503d24da7b45e",
+              "visualType": "map",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 972.0,
+                "y": 480.0,
+                "z": 13000.0,
+                "width": 284.0,
+                "height": 224.0,
+                "tabOrder": 13000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "City",
+                  "ref": "Stores[City]",
+                  "queryRef": "Stores.City",
+                  "nativeQueryRef": "City"
+                },
+                {
+                  "role": "Size",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "aeed43591f2afff982af",
+              "visualType": "actionButton",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1000.0,
+                "y": 14.0,
+                "z": 2000.0,
+                "width": 120.0,
+                "height": 36.0,
+                "tabOrder": 2000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "ba3b1b7c5a9cede8452c",
+              "visualType": "slicer",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 76.0,
+                "z": 4000.0,
+                "width": 240.0,
+                "height": 64.0,
+                "tabOrder": 4000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Region",
+                  "ref": "Stores[Region]",
+                  "queryRef": "Stores.Region",
+                  "nativeQueryRef": "Region"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "c81376feb163c3047446",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 280.0,
+                "y": 76.0,
+                "z": 6000.0,
+                "width": 976.0,
+                "height": 136.0,
+                "tabOrder": 6000
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target",
+                  "ref": "Targets[Target]",
+                  "queryRef": "Targets.Target",
+                  "nativeQueryRef": "Target"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target Attainment %",
+                  "ref": "Targets[Target Attainment %]",
+                  "queryRef": "Targets.Target Attainment %",
+                  "nativeQueryRef": "Target Attainment %"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Returns",
+                  "name": "Return Rate",
+                  "ref": "Returns[Return Rate]",
+                  "queryRef": "Returns.Return Rate",
+                  "nativeQueryRef": "Return Rate"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Gross Margin",
+                  "ref": "Orders[Gross Margin]",
+                  "queryRef": "Orders.Gross Margin",
+                  "nativeQueryRef": "Gross Margin"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "d4431298c2010cc0f494",
+              "visualType": "tableEx",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 228.0,
+                "z": 7000.0,
+                "width": 560.0,
+                "height": 236.0,
+                "tabOrder": 7000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Store Name",
+                  "ref": "Stores[Store Name]",
+                  "queryRef": "Stores.Store Name",
+                  "nativeQueryRef": "Store Name"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target",
+                  "ref": "Targets[Target]",
+                  "queryRef": "Targets.Target",
+                  "nativeQueryRef": "Target"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target Attainment %",
+                  "ref": "Targets[Target Attainment %]",
+                  "queryRef": "Targets.Target Attainment %",
+                  "nativeQueryRef": "Target Attainment %"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "dc300d95929adff1db1a",
+              "visualType": "actionButton",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1136.0,
+                "y": 14.0,
+                "z": 3000.0,
+                "width": 120.0,
+                "height": 36.0,
+                "tabOrder": 3000
+              },
+              "fields": [],
+              "filters": []
+            }
+          ]
+        },
+        {
+          "name": "50c645140e8e10eea677",
+          "displayName": "Store Detail",
+          "width": 1280.0,
+          "height": 900.0,
+          "displayOption": "FitToWidth",
+          "isHidden": true,
+          "filters": [
+            {
+              "name": "2f25b96e45cfa2bd2910",
+              "kind": "Categorical",
+              "field": {
+                "kind": "column",
+                "table": "Stores",
+                "name": "Region",
+                "ref": "Stores[Region]"
+              },
+              "condition": "Stores[Region] IN ('East')",
+              "isHiddenInViewMode": false,
+              "isLockedInViewMode": false,
+              "howCreated": "User"
+            }
+          ],
+          "visuals": [
+            {
+              "name": "3b28913dac9013392389",
+              "visualType": "multiRowCard",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 80.0,
+                "z": 2000.0,
+                "width": 1232.0,
+                "height": 280.0,
+                "tabOrder": 2000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Store Name",
+                  "ref": "Stores[Store Name]",
+                  "queryRef": "Stores.Store Name",
+                  "nativeQueryRef": "Store Name"
+                },
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Store Manager",
+                  "ref": "Stores[Store Manager]",
+                  "queryRef": "Stores.Store Manager",
+                  "nativeQueryRef": "Store Manager"
+                },
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "City",
+                  "ref": "Stores[City]",
+                  "queryRef": "Stores.City",
+                  "nativeQueryRef": "City"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "4cc43d133c541edb8c33",
+              "visualType": "clusteredColumnChart",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 640.0,
+                "y": 376.0,
+                "z": 4000.0,
+                "width": 616.0,
+                "height": 300.0,
+                "tabOrder": 4000
+              },
+              "fields": [
+                {
+                  "role": "Category",
+                  "kind": "column",
+                  "table": "Returns",
+                  "name": "Reason",
+                  "ref": "Returns[Reason]",
+                  "queryRef": "Returns.Reason",
+                  "nativeQueryRef": "Reason"
+                },
+                {
+                  "role": "Y",
+                  "kind": "measure",
+                  "table": "Returns",
+                  "name": "Returns Count",
+                  "ref": "Returns[Returns Count]",
+                  "queryRef": "Returns.Returns Count",
+                  "nativeQueryRef": "Returns Count"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "4deb2424b9269f15f86c",
+              "visualType": "tableEx",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 376.0,
+                "z": 3000.0,
+                "width": 600.0,
+                "height": 300.0,
+                "tabOrder": 3000
+              },
+              "fields": [
+                {
+                  "role": "Values",
+                  "kind": "column",
+                  "table": "Returns",
+                  "name": "Reason",
+                  "ref": "Returns[Reason]",
+                  "queryRef": "Returns.Reason",
+                  "nativeQueryRef": "Reason"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Returns",
+                  "name": "Returns Count",
+                  "ref": "Returns[Returns Count]",
+                  "queryRef": "Returns.Returns Count",
+                  "nativeQueryRef": "Returns Count"
+                },
+                {
+                  "role": "Values",
+                  "kind": "measure",
+                  "table": "Returns",
+                  "name": "Refunds",
+                  "ref": "Returns[Refunds]",
+                  "queryRef": "Returns.Refunds",
+                  "nativeQueryRef": "Refunds"
+                }
+              ],
+              "filters": []
+            },
+            {
+              "name": "9ec3f2beb17aab1baec7",
+              "visualType": "textbox",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 24.0,
+                "y": 8.0,
+                "z": 1000.0,
+                "width": 680.0,
+                "height": 48.0,
+                "tabOrder": 1000
+              },
+              "fields": [],
+              "filters": []
+            },
+            {
+              "name": "e75a27703fdb37682083",
+              "visualType": "shape",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "width": 1280.0,
+                "height": 64.0,
+                "tabOrder": 0
+              },
+              "fields": [],
+              "filters": []
+            }
+          ]
+        },
+        {
+          "name": "58db5b3f75d059fec1fb",
+          "displayName": "Store Tooltip",
+          "width": 320.0,
+          "height": 240.0,
+          "displayOption": "ActualSize",
+          "isHidden": true,
+          "filters": [],
+          "visuals": [
+            {
+              "name": "c649a1da0227ceeffc35",
+              "visualType": "cardVisual",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 8.0,
+                "y": 8.0,
+                "z": 0.0,
+                "width": 304.0,
+                "height": 224.0,
+                "tabOrder": 0
+              },
+              "fields": [
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Orders",
+                  "name": "Total Sales",
+                  "ref": "Orders[Total Sales]",
+                  "queryRef": "Orders.Total Sales",
+                  "nativeQueryRef": "Total Sales"
+                },
+                {
+                  "role": "Data",
+                  "kind": "measure",
+                  "table": "Targets",
+                  "name": "Target Attainment %",
+                  "ref": "Targets[Target Attainment %]",
+                  "queryRef": "Targets.Target Attainment %",
+                  "nativeQueryRef": "Target Attainment %"
+                }
+              ],
+              "filters": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "TMDL001",
+      "message": "`dataAccessOptions` on model is not modeled; kept as an untyped property (1 occurrence(s))",
+      "origin": {
+        "path": "AcmeOutfitters.SemanticModel/definition/model.tmdl",
+        "line": 7
+      }
+    },
+    {
+      "severity": "info",
+      "code": "TMDL001",
+      "message": "`formatStringDefinition` on measure is not modeled; kept as an untyped property (1 occurrence(s))",
+      "origin": {
+        "path": "AcmeOutfitters.SemanticModel/definition/tables/Orders.tmdl",
+        "line": 37
+      }
+    }
+  ],
+  "counts": {
+    "tables": 11,
+    "columns": 81,
+    "calculatedColumns": 11,
+    "calculatedTables": 2,
+    "measures": 33,
+    "relationships": 8,
+    "expressions": 3,
+    "parameters": 1,
+    "reports": 3,
+    "pages": 8,
+    "visuals": 80,
+    "filters": 12,
+    "errors": 0,
+    "warnings": 0,
+    "infos": 2
+  }
+}

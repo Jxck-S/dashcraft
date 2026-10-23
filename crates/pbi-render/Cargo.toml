@@ -1,0 +1,36 @@
+[package]
+name = "pbi-render"
+description = "Theme, layout, semantic query to DataView, visuals to SVG and PNG"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pbi-model = { workspace = true }
+pbi-pbir = { workspace = true }
+pbi-session = { workspace = true }
+pbi-dax = { workspace = true }
+pbi-engine = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+indexmap = { workspace = true }
+thiserror = { workspace = true }
+resvg = { workspace = true }
+usvg = { workspace = true }
+tiny-skia = { workspace = true }
+cosmic-text = { workspace = true }
+image = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+arrow = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+pbi-core = { workspace = true }
+insta = { workspace = true }

@@ -1,0 +1,116 @@
+/// Product catalog: Category > Subcategory > Product.
+table Products
+	lineageTag: c502d5b7-0b28-545a-a748-d302f0d99c2f
+
+	column 'Product ID'
+		dataType: string
+		isKey
+		lineageTag: ff1343f7-8793-56aa-a51d-dd9282a317aa
+		summarizeBy: none
+		sourceColumn: Product ID
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Product Name'
+		dataType: string
+		lineageTag: bc46b7e5-d90a-59ba-b200-5135c7b858d7
+		summarizeBy: none
+		sourceColumn: Product Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column Category
+		dataType: string
+		lineageTag: 752084e7-1906-5567-8552-6158909a8dd7
+		summarizeBy: none
+		sourceColumn: Category
+
+		annotation SummarizationSetBy = Automatic
+
+	column Subcategory
+		dataType: string
+		lineageTag: ae4f7fb6-98f3-5abc-9b0c-1b8213e7af89
+		summarizeBy: none
+		sourceColumn: Subcategory
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'List Price'
+		dataType: decimal
+		formatString: \$#,0.00
+		lineageTag: ce3fd649-1ca9-5309-a2fa-69f08797002b
+		summarizeBy: none
+		sourceColumn: List Price
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Unit Cost'
+		dataType: decimal
+		formatString: \$#,0.00
+		lineageTag: 2b2eb1d9-ea3c-5877-8d52-bd9be1524fb6
+		summarizeBy: none
+		sourceColumn: Unit Cost
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Launch Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: ceda7416-cd59-5126-85ae-a3b10bdeb1a9
+		summarizeBy: none
+		sourceColumn: Launch Date
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Units Sold (All Time)' = SUMX(RELATEDTABLE(Orders), Orders[Quantity])
+		dataType: int64
+		formatString: #,0
+		lineageTag: 3e347191-5f2b-547b-8a55-2499e3c513db
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Price Band' =
+			SWITCH(
+			    TRUE(),
+			    Products[List Price] < 50, "Under $50",
+			    Products[List Price] < 150, "$50 to $149",
+			    "$150 and up"
+			)
+		dataType: string
+		lineageTag: 94525149-085d-5a28-8d46-accf67479579
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy 'Product Hierarchy'
+		lineageTag: 0070b28c-5f08-59c4-9833-33a795dc60fd
+
+		level Category
+			lineageTag: 0d70ca91-ebba-58b4-b19a-47f5a2368ff8
+			column: Category
+
+		level Subcategory
+			lineageTag: e5818b70-fe0f-5450-81f5-2204aaf2a3ab
+			column: Subcategory
+
+		level Product
+			lineageTag: 793331c3-bc3a-5130-8450-5e7cece13b42
+			column: 'Product Name'
+
+	partition Products = m
+		mode: import
+		queryGroup: Sources
+		source =
+				let
+				    Source = AzureStorage.Blobs(StorageContainerUrl),
+				    #"Source CSV" = Csv.Document(Source{[Name = "catalog/products.csv"]}[Content], [Delimiter = ",", Columns = 7, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+				    #"Cleaned Text" = Table.TransformColumns(#"Promoted Headers", {{"product_id", fnCleanKey, type text}, {"product_name", Text.Trim, type text}, {"category", Text.Trim, type text}, {"subcategory", Text.Trim, type text}}),
+				    #"Removed Duplicates" = Table.Distinct(#"Cleaned Text"),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Removed Duplicates", {{"list_price", Currency.Type}, {"unit_cost", Currency.Type}, {"launch_date", type date}}),
+				    #"Renamed Columns" = Table.RenameColumns(#"Changed Type", {{"product_id", "Product ID"}, {"product_name", "Product Name"}, {"category", "Category"}, {"subcategory", "Subcategory"}, {"list_price", "List Price"}, {"unit_cost", "Unit Cost"}, {"launch_date", "Launch Date"}})
+				in
+				    #"Renamed Columns"
+
+	annotation PBI_ResultType = Table

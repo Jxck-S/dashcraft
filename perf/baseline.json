@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "about": "Reference timings for `cargo xtask perf`, per machine (see docs/perf.md). Numbers only: no data values. Update with `cargo xtask perf --update-baseline`.",
+  "machines": {
+    "macos-aarch64-apple-m4-pro": {
+      "machine": {
+        "key": "macos-aarch64-apple-m4-pro",
+        "os": "macos",
+        "os_version": "26.5.2",
+        "arch": "aarch64",
+        "cpu": "Apple M4 Pro",
+        "cores": 14,
+        "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)"
+      },
+      "recorded": "2026-10-23",
+      "scenarios": {
+        "P01": {
+          "metric": "p95",
+          "value_ms": 0.7134,
+          "stats": {
+            "samples": 60,
+            "min_ms": 0.6263,
+            "median_ms": 0.6619,
+            "p95_ms": 0.7134,
+            "max_ms": 0.7707,
+            "mean_ms": 0.6672
+          },
+          "quick": false
+        },
+        "P02": {
+          "metric": "median",
+          "value_ms": 104.4276,
+          "stats": {
+            "samples": 5,
+            "min_ms": 102.634,
+            "median_ms": 104.4276,
+            "p95_ms": 106.3808,
+            "max_ms": 106.3808,
+            "mean_ms": 104.3258
+          },
+          "quick": false
+        },
+        "P03": {
+          "metric": "median",
+          "value_ms": 0.7709,
+          "stats": {
+            "samples": 30,
+            "min_ms": 0.6974,
+            "median_ms": 0.7709,
+            "p95_ms": 0.9141,
+            "max_ms": 0.9864,
+            "mean_ms": 0.7755
+          },
+          "quick": false
+        },
+        "P04": {
+          "metric": "median",
+          "value_ms": 25.9407,
+          "stats": {
+            "samples": 10,
+            "min_ms": 24.832,
+            "median_ms": 25.9407,
+            "p95_ms": 28.3278,
+            "max_ms": 28.3278,
+            "mean_ms": 26.2453
+          },
+          "quick": false
+        },
+        "P05": {
+          "metric": "median",
+          "value_ms": 149.1583,
+          "stats": {
+            "samples": 10,
+            "min_ms": 142.0381,
+            "median_ms": 149.1583,
+            "p95_ms": 153.044,
+            "max_ms": 153.044,
+            "mean_ms": 148.8226
+          },
+          "quick": false
+        },
+        "P06": {
+          "metric": "median",
+          "value_ms": 4.5228,
+          "stats": {
+            "samples": 10,
+            "min_ms": 4.4647,
+            "median_ms": 4.5228,
+            "p95_ms": 4.7441,
+            "max_ms": 4.7441,
+            "mean_ms": 4.5666
+          },
+          "quick": false
+        },
+        "P07": {
+          "metric": "median",
+          "value_ms": 1.5511,
+          "stats": {
+            "samples": 30,
+            "min_ms": 1.449,
+            "median_ms": 1.5511,
+            "p95_ms": 1.7115,
+            "max_ms": 1.7144,
+            "mean_ms": 1.5624
+          },
+          "quick": false
+        },
+        "P08": {
+          "metric": "p95",
+          "value_ms": 0.3425,
+          "stats": {
+            "samples": 40,
+            "min_ms": 0.2851,
+            "median_ms": 0.2905,
+            "p95_ms": 0.3425,
+            "max_ms": 0.3702,
+            "mean_ms": 0.2966
+          },
+          "quick": false
+        }
+      }
+    }
+  }
+}

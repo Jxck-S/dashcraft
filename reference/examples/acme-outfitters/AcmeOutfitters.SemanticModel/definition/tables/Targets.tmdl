@@ -1,0 +1,64 @@
+/// Monthly sales targets per region (many-to-many with Stores on Region).
+table Targets
+	lineageTag: 22a7cdc7-73ea-5992-a376-4e170277fb25
+
+	measure Target = SUM(Targets[Target Amount])
+		formatString: \$#,0
+		lineageTag: 2fbd8c5e-6d66-5519-867e-7a62332f0471
+
+		annotation PBI_FormatHint = {"currencyCulture":"en-US"}
+
+	measure 'Target Attainment %' = DIVIDE([Total Sales], [Target])
+		formatString: 0.0%
+		lineageTag: 2bd0d76c-543d-5b5c-9cda-7f444624b20a
+
+	/// Gauge maximum.
+	measure 'Target Stretch' = [Target] * 1.2
+		formatString: \$#,0
+		isHidden
+		lineageTag: 8135579c-0fbd-5414-9e26-de41c31ad979
+
+	column Region
+		dataType: string
+		lineageTag: 774a6158-dd72-5da2-8d19-87fdbf3e2a9a
+		summarizeBy: none
+		sourceColumn: Region
+
+		annotation SummarizationSetBy = Automatic
+
+	column Month
+		dataType: dateTime
+		formatString: yyyy-mm
+		lineageTag: ab6f481b-c819-554f-9f19-00a5dbda31f5
+		summarizeBy: none
+		sourceColumn: Month
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Target Amount'
+		dataType: decimal
+		formatString: \$#,0
+		lineageTag: 4b6d3729-ccee-5e22-a799-b09ad2cc1fe1
+		summarizeBy: sum
+		sourceColumn: Target Amount
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Targets = m
+		mode: import
+		queryGroup: Sources
+		source =
+				let
+				    Source = AzureStorage.Blobs(StorageContainerUrl),
+				    #"Source CSV" = Csv.Document(Source{[Name = "planning/targets.csv"]}[Content], [Delimiter = ",", Columns = 3, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted Headers" = Table.PromoteHeaders(#"Source CSV", [PromoteAllScalars = true]),
+				    #"Removed Blank Rows" = Table.SelectRows(#"Promoted Headers", each Text.Trim([region] ?? "") <> ""),
+				    #"Trimmed Region" = Table.TransformColumns(#"Removed Blank Rows", {{"region", Text.Trim, type text}}),
+				    #"Added Month" = Table.AddColumn(#"Trimmed Region", "month_start", each Date.FromText([month] & "-01"), type date),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Added Month", {{"target_amount", Currency.Type}}),
+				    #"Selected Columns" = Table.SelectColumns(#"Changed Type", {"region", "month_start", "target_amount"}),
+				    #"Renamed Columns" = Table.RenameColumns(#"Selected Columns", {{"region", "Region"}, {"month_start", "Month"}, {"target_amount", "Target Amount"}})
+				in
+				    #"Renamed Columns"
+
+	annotation PBI_ResultType = Table

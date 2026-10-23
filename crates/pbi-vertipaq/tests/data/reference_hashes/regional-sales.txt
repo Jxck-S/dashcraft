@@ -1,0 +1,81 @@
+table	Accounts	rows=300
+column	Accounts	Account Name	type=2	nulls=0	distinct=299	sha256=b14f2996be41909399bcfba9b9eb28f93c6bdec1efa1eb0d829d8aafb748b82f
+column	Accounts	State or Province	type=2	nulls=0	distinct=48	sha256=3e1bd48d414a1cf68072d831f5a55508f516ed03932cffa2e93ba6bce60431e6
+column	Accounts	Country	type=2	nulls=0	distinct=1	sha256=57261882a952917adef7eafd33faef11029fe7ceaec44d50a80f79ac595f5ccd
+column	Accounts	AccountID	type=2	nulls=0	distinct=300	sha256=bf70ff0e91e95c9b007507e325dbd64c245015472f7327f28e2afa9f6525e2fe
+column	Accounts	AccountSeq	type=6	nulls=0	distinct=300	sha256=aed0cd3ab7112296d8940c4e98c09c2fd642ff88f8a79260587041800c250a0e
+column	Accounts	IndustrySeq	type=6	nulls=0	distinct=44	sha256=801be5f4b9de4a5e0e5c1133dc1839bba315362ccd373b52516f9fcc2d4bb07c
+column	Accounts	AccountOwnerSeq	type=6	nulls=0	distinct=19	sha256=81d02457fca0e4a1c0f123a9324ab9ca341c7e6901480045af369c0f5dfcdf69
+column	Accounts	Account Number	type=2	nulls=0	distinct=300	sha256=034d7093ede9a891b77009dedad829740d074aca034e2e0b3e9d894e24dd2fcd
+column	Accounts	TerritorySeq	type=6	nulls=0	distinct=48	sha256=10ea052bd18ace4b1950f9dbeb249a227ca08a6d77f07c693f3a51aa51ad5b3e
+table	Calculations	rows=1
+column	Calculations	Value	type=6	nulls=0	distinct=1	sha256=a44b7e258be82a6d6ee64101174e7f6a52b0d9821946f5845fd06b3618f1194e
+table	Campaigns	rows=12
+column	Campaigns	CampaignSeq	type=6	nulls=0	distinct=12	sha256=eeebec9b9b20980e1226e40e9c23318accde6b407a5f8c2b1ab13a1c3bf20bd1
+column	Campaigns	Campaign Type	type=2	nulls=0	distinct=6	sha256=4134e45fe6cac0e5dd074bc98c660b8652cad021f2e1f3a303950f21427a473a
+column	Campaigns	Campaign	type=2	nulls=0	distinct=12	sha256=1f08c0ee812880e80ca61a9c10a7bdecbef445e8da2532fdba1d3f0f0a649a3e
+table	Contacts	rows=1
+column	Contacts	Contact	type=2	nulls=0	distinct=1	sha256=589fc7697cdf9258683820eb0a417fc30c4c85d602eaa07eea49a1a1617991c6
+column	Contacts	Job Title	type=2	nulls=0	distinct=1	sha256=728627cc063d3810d177f3eb6403112617bbab77626a1177ab98ec64a585590c
+column	Contacts	ContactSeq	type=6	nulls=0	distinct=1	sha256=a44b7e258be82a6d6ee64101174e7f6a52b0d9821946f5845fd06b3618f1194e
+column	Contacts	AccountSeq	type=6	nulls=0	distinct=1	sha256=b03e16148f9b5bf1926208e962243e0b4653cdbed9664572f58a48c6f8b2cc37
+table	Industries	rows=45
+column	Industries	Industry	type=2	nulls=0	distinct=45	sha256=467feeac059223709451e0e4d70a5c2bef6afa22e37b57e3951574f0a412e038
+column	Industries	IndustrySeq	type=6	nulls=0	distinct=45	sha256=bcdd1cf3a7614ce1e9b8b31f0d0cc74a75fe93d402aaad4af96d0faafc285ab1
+table	Opportunities	rows=20000
+column	Opportunities	Purchase Process	type=2	nulls=0	distinct=3	sha256=61e93d3d68ad77d554655b82ca6b1e950a4e07b1dca92aff7573b91cc09d4530
+column	Opportunities	Decision Maker Identified	type=11	nulls=0	distinct=2	sha256=23960d1ff667d4b3b8a6911fb4eaac55ba918bdaded79cc41c2e4135dd2488b1
+column	Opportunities	Status	type=2	nulls=0	distinct=3	sha256=d5c1defe3851eca5c8c83d47a38da7fd215c6effed0c24a14a5559ebfff9a41d
+column	Opportunities	Sales Stage	type=2	nulls=0	distinct=4	sha256=4ae5e7ba67f87da2f057d4ba49c5a836338a1b2931be47a1dee6a434724bd51d
+column	Opportunities	Value	type=6	nulls=0	distinct=6754	sha256=d754d088d292fa687bd0ec8662b7faa4abd6356a49b5fdc9edb3947da781a0b4
+column	Opportunities	Weeks Open	type=6	nulls=0	distinct=23	sha256=e4b8bd075a5f80da530da080d5b05c0f47367390640f354646c602b895f77faf
+column	Opportunities	DaysToClose	type=6	nulls=0	distinct=128	sha256=15ef4da3e1e31ba22d87f40bb20cd41a3c2629fc9f4e32dd8b31e26cbad714e5
+column	Opportunities	Discount	type=8	nulls=0	distinct=37	sha256=056a0d627239adba692b4db36a44ff2a48176f408c1cc34a514afefcce096380
+column	Opportunities	Probability	type=8	nulls=0	distinct=4	sha256=ac98c9a6ad164002b586fc4ea994c0801a5b91cee324c8ca4038a0d1cdc8d517
+column	Opportunities	Rating	type=2	nulls=0	distinct=3	sha256=82ba4177dfd7290b3d44ebae16464bc3fdd0aacd0bc94cf3f09fb90e663fcbaa
+column	Opportunities	Days Remaining In Pipeline	type=6	nulls=0	distinct=167	sha256=b0b82e3f509177d98c26fef345811db897069bb817e8fe0da81b759106722a32
+column	Opportunities	Probability (raw)	type=8	nulls=0	distinct=864	sha256=388e67261a66d1cd90f4f208e5278031595696bf310734db552d75400725eb84
+column	Opportunities	AccountSeq	type=6	nulls=0	distinct=296	sha256=a99a4c0e1929c0076e1d49a1161480ba77dacb96139610d07d1bf4493f5a4b01
+column	Opportunities	OpportunitySeq	type=6	nulls=0	distinct=20000	sha256=9ac50cb3e68ff52a0d0303d5936b1e3f0090f174234e2d9715f9863458effd16
+column	Opportunities	ProductSeq	type=6	nulls=0	distinct=9	sha256=5204edad4b77ac900331fdacf6974547a2b804db95bf6adb4b211ab3cf27183f
+column	Opportunities	SystemUserSeq	type=6	nulls=0	distinct=19	sha256=1ad5e1580dec0cce984a79a2829194c09eca13bcaab78a4af75158fb802a7095
+column	Opportunities	CampaignSeq	type=6	nulls=6732	distinct=12	sha256=4d10c0893b3ad46b33210f34b2b374509a4baede8cb6e958dccd8d2744ef0847
+column	Opportunities	Blank	type=6	nulls=20000	distinct=0	sha256=d52c23e8f9e094874013f9e4a98001c3200f424fb7f34cd8d0fc7f0b208c7c14
+column	Opportunities	DateDiff-Days	type=6	nulls=0	distinct=872	sha256=142a62135ee4fd23a40afafe61fde7b579aedce769dda8f8e04cf4b17576ef8b
+column	Opportunities	Opportunity Created On	type=9	nulls=0	distinct=872	sha256=099efe41e87efdc212a1ecc1543d63d6a80ff1dc1219c2b5e5099328a617baef
+column	Opportunities	CloseDate	type=9	nulls=0	distinct=963	sha256=c637bf86bdd615dbbae2d835ab8b4b49c8381ab88432a0f3ec86bc17b7bfe2e6
+column	Opportunities	Days Remaining In Pipeline (bins)	type=6	nulls=0	distinct=36	sha256=6d216609251277203c0a495526f72e989a2e1cf8fd110b7964b53322c3651009
+table	Opportunity Calendar	rows=1461
+column	Opportunity Calendar	Date	type=9	nulls=0	distinct=1461	sha256=2cdbed7378e1da5d3221489da97c04e0ccb1d3872f4c00868b4b6a380850c6a6
+column	Opportunity Calendar	DAY	type=9	nulls=0	distinct=1461	sha256=2cdbed7378e1da5d3221489da97c04e0ccb1d3872f4c00868b4b6a380850c6a6
+column	Opportunity Calendar	DaySeq	type=6	nulls=0	distinct=1461	sha256=6d3f47984113edc2749fbc7d63f28f7f670ad9ac8c92d7d48c99902b0dfc94e6
+column	Opportunity Calendar	YEAR	type=6	nulls=0	distinct=4	sha256=9e1693a059b034bb0e1546df48d43d83e907741ef8a598ef2ad79019718e36b9
+column	Opportunity Calendar	MONTH NUMBER	type=6	nulls=0	distinct=12	sha256=9bfbac87448965a7d6a8d05754a28433a43a88e168b04a43de0e6b7a323bc05c
+column	Opportunity Calendar	MONTH	type=2	nulls=0	distinct=12	sha256=a4730f6ecf353cbb3d972b813376eee2c174377279c121d83bc30d35bb0dd2dd
+column	Opportunity Calendar	YEAR MONTH NUMBER	type=6	nulls=0	distinct=48	sha256=c3277c12c9fa23950cb9845eec72c55119dc6b32e24b157fc856836c4f00d932
+column	Opportunity Calendar	YEAR MONTH	type=2	nulls=0	distinct=48	sha256=8de7c18f4d77e7e001b73a7ca7b0aa5213ac9da8adcf1b59ab2a366c7ddf613c
+column	Opportunity Calendar	YEAR WEEK	type=2	nulls=0	distinct=212	sha256=08d58137cb264b94cd7b370c471860cd834ab0b364447d1835295fd1229faeef
+column	Opportunity Calendar	WEEK	type=9	nulls=0	distinct=209	sha256=6613a7346ea2d9545548ce93af24ada17f12bc0ace382bbe59e6e5fcffd90a6d
+column	Opportunity Calendar	RELATIVE WEEK	type=8	nulls=0	distinct=209	sha256=82a6edb9c9354c0aa65eab14cf7f6c761a44d7d43c1972e79f3efeb5d89ebdf8
+column	Opportunity Calendar	RELATIVE DAY	type=9	nulls=0	distinct=1461	sha256=2aa3693f57bfecc2b3643432d0f3c333ddd9c2f9d840734ff350bcd929b04889
+column	Opportunity Calendar	RELATIVE 07 DAY PERIOD	type=8	nulls=0	distinct=209	sha256=6f0acf9cf87cf73e9a574ca2168db9e5fd83ab335493cdcda6d6137c98df07ff
+column	Opportunity Calendar	RELATIVE 30 DAY PERIOD	type=8	nulls=0	distinct=49	sha256=fd339dc169f8b59d969a031523e205b201ce7959424cf21113e705b23b9afa27
+column	Opportunity Calendar	RELATIVE MONTH	type=6	nulls=0	distinct=48	sha256=752b7251276d1c2be8c561a162246464f14833ad6a5407ed90ece9bfe652143e
+table	Opportunity Forecast Adjustment	rows=11
+column	Opportunity Forecast Adjustment	Forecast Adjustment	type=6	nulls=0	distinct=11	sha256=e796ca4e3b74ec19fea059e610cb09187239c2fc28de785a6f271d7c5a5479f4
+column	Opportunity Forecast Adjustment	Blank	type=6	nulls=0	distinct=1	sha256=41cda53a2ab059a7a9f400373b2be69df5d26a3c6f0883f1c3f6015355eb6b8e
+table	Owners	rows=20
+column	Owners	Owner	type=2	nulls=0	distinct=20	sha256=71e32b7f0879fea5749758b39647af3e405d93e6b85b1de7803fcf98d8fe67d8
+column	Owners	Manager	type=2	nulls=0	distinct=3	sha256=a03a5cfc3c3648ddd38828619c9ec2085b0319967e016d23be8e6f0b94ec436f
+column	Owners	SystemUserSeq	type=6	nulls=0	distinct=20	sha256=0bda40c892c361fa5de10cbd0a4cfe3208f6eea7ad229383a7d2dfb790e2fda2
+column	Owners	systemuserid	type=2	nulls=0	distinct=20	sha256=6c0689cf43db804826a8972ee66af52e72d16d95f4a5a282140e998e59ae4e75
+table	Products	rows=9
+column	Products	Product	type=2	nulls=0	distinct=9	sha256=99adbed4174a57cbb7abd749c89c07bc89f1098f376826399934a98a504eb2cb
+column	Products	ProductSeq	type=6	nulls=0	distinct=9	sha256=e297ba6a1534773d20eb9c69cc14bbadde1f0f4093912b49cdfb23a972ba661b
+column	Products	Product Category	type=2	nulls=0	distinct=3	sha256=79f53ecf3a2ca001015088c5847f8195f5879d8bf88f302d60c753092eef01e2
+table	Territories	rows=51
+column	Territories	Region	type=2	nulls=0	distinct=1	sha256=fb78a9e938648bddaddfba0e524303d1deb2d149421d872d80ab166f853089b5
+column	Territories	Territory	type=2	nulls=0	distinct=4	sha256=b4771f154fc8d6f894767a37c8342c699974157e5abb48cccd33c3453bc35594
+column	Territories	Country	type=2	nulls=0	distinct=1	sha256=aab5a7b312f0f5b288022ac43d1c48054b8bdce60f8cd20a8a50e65c5b0a68e5
+column	Territories	TerritorySeq	type=2	nulls=0	distinct=51	sha256=6d54f96ad46144ea46ecc70a132c7eb9162ff288a11f1e09ded08281113dc36d
+column	Territories	State Or Province	type=2	nulls=0	distinct=51	sha256=959a4b0126aa74fd26b074e80eff6729a1640e7b53582087e030b75bbb84ca38

@@ -1,0 +1,118 @@
+{
+  "id": 0,
+  "resourcePackages": [
+    {
+      "resourcePackage": {
+        "name": "SharedResources",
+        "type": 2,
+        "items": [
+          {
+            "type": 202,
+            "path": "BaseThemes/CY24SU10.json",
+            "name": "CY24SU10"
+          }
+        ],
+        "disabled": false
+      }
+    },
+    {
+      "resourcePackage": {
+        "name": "RegisteredResources",
+        "type": 1,
+        "items": [
+          {
+            "type": 201,
+            "path": "AcmeOutfitters.json",
+            "name": "AcmeOutfitters.json"
+          }
+        ],
+        "disabled": false
+      }
+    }
+  ],
+  "sections": [
+    {
+      "id": 0,
+      "name": "ef3ce6b6fadf22960137",
+      "displayName": "Store Performance",
+      "filters": "[]",
+      "ordinal": 0,
+      "visualContainers": [
+        {
+          "x": 280.25,
+          "y": 76,
+          "z": 6000,
+          "width": 975.5,
+          "height": 136,
+          "config": "{\"name\":\"c81376feb163c3047446\",\"layouts\":[{\"id\":0,\"position\":{\"x\":280.25,\"y\":76,\"z\":6000,\"width\":975.5,\"height\":136,\"tabOrder\":6000}}],\"singleVisual\":{\"visualType\":\"cardVisual\",\"projections\":{\"Data\":[{\"queryRef\":\"Orders.Total Sales\"}]},\"prototypeQuery\":{\"Version\":2,\"From\":[{\"Name\":\"o\",\"Entity\":\"Orders\",\"Type\":0}],\"Select\":[{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Total Sales\"},\"Name\":\"Orders.Total Sales\",\"NativeReferenceName\":\"Total Sales\"}],\"OrderBy\":[{\"Direction\":2,\"Expression\":{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Total Sales\"}}}]},\"drillFilterOtherVisuals\":true,\"hasDefaultSort\":true,\"objects\":{\"border\":[{\"properties\":{\"show\":{\"expr\":{\"Literal\":{\"Value\":\"false\"}}}},\"selector\":{\"id\":\"default\"}}],\"value\":[{\"properties\":{\"fontColor\":{\"solid\":{\"color\":{\"expr\":{\"ThemeDataColor\":{\"ColorId\":0,\"Percent\":-0.6}}}}}},\"selector\":{\"id\":\"default\"}}]},\"vcObjects\":{\"border\":[{\"properties\":{\"show\":{\"expr\":{\"Literal\":{\"Value\":\"true\"}}}}}]}}}",
+          "filters": "[{\"name\":\"a3f1c2d4e5b6a7c8d9e0\",\"expression\":{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Entity\":\"Orders\"}},\"Property\":\"Total Sales\"}},\"type\":\"Advanced\",\"howCreated\":1}]",
+          "query": "{\"Commands\":[{\"SemanticQueryDataShapeCommand\":{\"Query\":{\"Version\":2,\"From\":[{\"Name\":\"o\",\"Entity\":\"Orders\",\"Type\":0}],\"Select\":[{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Total Sales\"},\"Name\":\"Orders.Total Sales\",\"NativeReferenceName\":\"Total Sales\"}],\"OrderBy\":[{\"Direction\":2,\"Expression\":{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Total Sales\"}}}]}}}]}",
+          "dataTransforms": "{\"projectionOrdering\":{\"Data\":[0]}}"
+        },
+        {
+          "x": 24,
+          "y": 76,
+          "z": 4000,
+          "width": 240,
+          "height": 64,
+          "config": "{\"name\":\"ba3b1b7c5a9cede8452c\",\"layouts\":[{\"id\":0,\"position\":{\"x\":24,\"y\":76,\"z\":4000,\"width\":240,\"height\":64,\"tabOrder\":4000}}],\"singleVisual\":{\"visualType\":\"slicer\",\"projections\":{\"Values\":[{\"queryRef\":\"Stores.Region\",\"active\":true}]},\"prototypeQuery\":{\"Version\":2,\"From\":[{\"Name\":\"s\",\"Entity\":\"Stores\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"Region\"},\"Name\":\"Stores.Region\",\"NativeReferenceName\":\"Region\"}]},\"drillFilterOtherVisuals\":true,\"objects\":{\"data\":[{\"properties\":{\"mode\":{\"expr\":{\"Literal\":{\"Value\":\"'Dropdown'\"}}}}}]}}}",
+          "filters": "[]",
+          "query": "{\"Commands\":[{\"SemanticQueryDataShapeCommand\":{\"Query\":{\"Version\":2,\"From\":[{\"Name\":\"s\",\"Entity\":\"Stores\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"Region\"},\"Name\":\"Stores.Region\",\"NativeReferenceName\":\"Region\"}]}}}]}",
+          "dataTransforms": "{\"projectionOrdering\":{\"Values\":[0]}}"
+        },
+        {
+          "x": 24,
+          "y": 228,
+          "z": 7000,
+          "width": 560,
+          "height": 236,
+          "config": "{\"name\":\"d4431298c2010cc0f494\",\"layouts\":[{\"id\":0,\"position\":{\"x\":24,\"y\":228,\"z\":7000,\"width\":560,\"height\":236,\"tabOrder\":7000}}],\"singleVisual\":{\"visualType\":\"tableEx\",\"projections\":{\"Values\":[{\"queryRef\":\"Stores.Store Name\"},{\"queryRef\":\"Stores.Channel\"},{\"queryRef\":\"Orders.Total Sales\"},{\"queryRef\":\"CountNonNull(Orders.Order ID)\"}]},\"prototypeQuery\":{\"Version\":2,\"From\":[{\"Name\":\"s\",\"Entity\":\"Stores\",\"Type\":0},{\"Name\":\"o\",\"Entity\":\"Orders\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"Store Name\"},\"Name\":\"Stores.Store Name\",\"NativeReferenceName\":\"Store Name\"},{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"Channel\"},\"Name\":\"Stores.Channel\",\"NativeReferenceName\":\"Channel\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Total Sales\"},\"Name\":\"Orders.Total Sales\",\"NativeReferenceName\":\"Total Sales\"},{\"Aggregation\":{\"Expression\":{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Order ID\"}},\"Function\":5},\"Name\":\"CountNonNull(Orders.Order ID)\",\"NativeReferenceName\":\"Count of Order ID\"}],\"OrderBy\":[{\"Direction\":2,\"Expression\":{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Total Sales\"}}}]},\"columnProperties\":{\"Stores.Channel\":{\"displayName\":\"Store Type\"}},\"drillFilterOtherVisuals\":true}}",
+          "filters": "[{\"name\":\"b7e2d9c1f0a3b4c5d6e7\",\"expression\":{\"Column\":{\"Expression\":{\"SourceRef\":{\"Entity\":\"Stores\"}},\"Property\":\"Channel\"}},\"filter\":{\"Version\":2,\"From\":[{\"Name\":\"s\",\"Entity\":\"Stores\",\"Type\":0}],\"Where\":[{\"Condition\":{\"In\":{\"Expressions\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"Channel\"}}],\"Values\":[[{\"Literal\":{\"Value\":\"'Retail'\"}}]]}}},{\"Condition\":{\"Not\":{\"Expression\":{\"Comparison\":{\"ComparisonKind\":0,\"Left\":{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"City\"}},\"Right\":{\"Literal\":{\"Value\":\"null\"}}}}}}}]},\"type\":\"Categorical\",\"howCreated\":1,\"isHiddenInViewMode\":false}]",
+          "query": "{\"Commands\":[{\"SemanticQueryDataShapeCommand\":{\"Query\":{\"Version\":2,\"From\":[{\"Name\":\"s\",\"Entity\":\"Stores\",\"Type\":0},{\"Name\":\"o\",\"Entity\":\"Orders\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"Store Name\"},\"Name\":\"Stores.Store Name\",\"NativeReferenceName\":\"Store Name\"},{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"Channel\"},\"Name\":\"Stores.Channel\",\"NativeReferenceName\":\"Channel\"},{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Total Sales\"},\"Name\":\"Orders.Total Sales\",\"NativeReferenceName\":\"Total Sales\"},{\"Aggregation\":{\"Expression\":{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Order ID\"}},\"Function\":5},\"Name\":\"CountNonNull(Orders.Order ID)\",\"NativeReferenceName\":\"Count of Order ID\"}],\"OrderBy\":[{\"Direction\":2,\"Expression\":{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"o\"}},\"Property\":\"Total Sales\"}}}]}}}]}",
+          "dataTransforms": "{\"projectionOrdering\":{\"Values\":[0,1,2,3]}}"
+        },
+        {
+          "x": 24,
+          "y": 8,
+          "z": 1000,
+          "width": 680,
+          "height": 48,
+          "config": "{\"name\":\"1279aa9cd39ad01e1554\",\"layouts\":[{\"id\":0,\"position\":{\"x\":24,\"y\":8,\"z\":1000,\"width\":680,\"height\":48,\"tabOrder\":1000}}],\"singleVisual\":{\"visualType\":\"textbox\",\"drillFilterOtherVisuals\":true,\"objects\":{\"general\":[{\"properties\":{\"paragraphs\":[{\"textRuns\":[{\"value\":\"Store performance\",\"textStyle\":{\"fontFamily\":\"Segoe UI Semibold\",\"fontSize\":\"20pt\"}}]}]}}]}}}",
+          "filters": "[]"
+        }
+      ],
+      "config": "{\"relationships\":[{\"source\":\"ba3b1b7c5a9cede8452c\",\"target\":\"c81376feb163c3047446\",\"type\":1},{\"source\":\"ba3b1b7c5a9cede8452c\",\"target\":\"1279aa9cd39ad01e1554\",\"type\":3}]}",
+      "displayOption": 1,
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "id": 1,
+      "name": "50c645140e8e10eea677",
+      "displayName": "Store Detail",
+      "filters": "[{\"name\":\"2f25b96e45cfa2bd2910\",\"expression\":{\"Column\":{\"Expression\":{\"SourceRef\":{\"Entity\":\"Stores\"}},\"Property\":\"Region\"}},\"filter\":{\"Version\":2,\"From\":[{\"Name\":\"s\",\"Entity\":\"Stores\",\"Type\":0}],\"Where\":[{\"Condition\":{\"In\":{\"Expressions\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"Region\"}}],\"Values\":[[{\"Literal\":{\"Value\":\"'East'\"}}]]}}}]},\"type\":\"Categorical\",\"howCreated\":1,\"isHiddenInViewMode\":true,\"isLockedInViewMode\":true}]",
+      "ordinal": 1,
+      "visualContainers": [
+        {
+          "x": 24,
+          "y": 80,
+          "z": 2000,
+          "width": 1232,
+          "height": 280,
+          "config": "{\"name\":\"3b28913dac9013392389\",\"layouts\":[{\"id\":0,\"position\":{\"x\":24,\"y\":80,\"z\":2000,\"width\":1232,\"height\":280,\"tabOrder\":2000}}],\"singleVisual\":{\"visualType\":\"multiRowCard\",\"projections\":{\"Values\":[{\"queryRef\":\"Returns.Returns Count\"}]},\"prototypeQuery\":{\"Version\":2,\"From\":[{\"Name\":\"r\",\"Entity\":\"Returns\",\"Type\":0}],\"Select\":[{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"r\"}},\"Property\":\"Returns Count\"},\"Name\":\"Returns.Returns Count\",\"NativeReferenceName\":\"Returns Count\"}]},\"display\":{\"mode\":\"hidden\"}}}",
+          "filters": "[]",
+          "query": "{\"Commands\":[{\"SemanticQueryDataShapeCommand\":{\"Query\":{\"Version\":2,\"From\":[{\"Name\":\"r\",\"Entity\":\"Returns\",\"Type\":0}],\"Select\":[{\"Measure\":{\"Expression\":{\"SourceRef\":{\"Source\":\"r\"}},\"Property\":\"Returns Count\"},\"Name\":\"Returns.Returns Count\",\"NativeReferenceName\":\"Returns Count\"}]}}}]}",
+          "dataTransforms": "{\"projectionOrdering\":{\"Values\":[0]}}"
+        }
+      ],
+      "config": "{\"visibility\":1}",
+      "displayOption": 2,
+      "width": 1280,
+      "height": 900
+    }
+  ],
+  "config": "{\"version\":\"5.59\",\"themeCollection\":{\"baseTheme\":{\"name\":\"CY24SU10\",\"version\":\"5.59\",\"type\":2},\"customTheme\":{\"name\":\"AcmeOutfitters.json\",\"version\":\"5.59\",\"type\":1}},\"activeSectionIndex\":0,\"defaultDrillFilterOtherVisuals\":true,\"settings\":{\"useStylableVisualContainerHeader\":true,\"exportDataMode\":1},\"objects\":{\"outspacePane\":[{\"properties\":{\"expanded\":{\"expr\":{\"Literal\":{\"Value\":\"false\"}}}}}]}}",
+  "layoutOptimization": 0,
+  "filters": "[{\"name\":\"b0d63946d6634cc987ce\",\"expression\":{\"Column\":{\"Expression\":{\"SourceRef\":{\"Entity\":\"Stores\"}},\"Property\":\"Channel\"}},\"filter\":{\"Version\":2,\"From\":[{\"Name\":\"s\",\"Entity\":\"Stores\",\"Type\":0}],\"Where\":[{\"Condition\":{\"In\":{\"Expressions\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"s\"}},\"Property\":\"Channel\"}}],\"Values\":[[{\"Literal\":{\"Value\":\"'Retail'\"}}],[{\"Literal\":{\"Value\":\"'Outlet'\"}}]]}}}]},\"type\":\"Categorical\",\"howCreated\":1}]",
+  "publicCustomVisuals": []
+}

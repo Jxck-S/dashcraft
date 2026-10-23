@@ -1,0 +1,1 @@
+List.Accumulate({1, 2, 3}, 0, (s, x) => s + x)

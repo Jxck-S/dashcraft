@@ -1,0 +1,1 @@
+Text.Insert("ac", 1, "b")

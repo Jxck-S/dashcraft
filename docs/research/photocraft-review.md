@@ -1,0 +1,240 @@
+<!-- Research by a Copilot research agent, 2026-10-22, from the public storytold/* GitHub repos (read-only). Claims are tagged [verified]/[inferred] in the text. -->
+# Research report: storytold/photocraft and the "*Craft" family — lessons for pbiview/DashCraft
+
+**Scope note:** everything below is derived from reading actual files via the GitHub API/raw content (no cloning). Claims are tagged **[verified]** (I read the cited file/lines) or **[inferred]** (reasonable deduction not directly confirmed in text). Sizes/line counts/dates are as of the commits fetched on 2026‑10‑22.
+
+## At a glance
+
+| Dimension | PhotoCraft (and the *Craft family) |
+|---|---|
+| Language | 100% Rust, "no JavaScript or TypeScript" **[verified: `AGENTS.md`]** |
+| UI shell | **egui/eframe on wgpu — no Tauri, no Electron, no webview, no JS.** Same Rust compiles to WASM (trunk + wasm-bindgen) for a browser build **[verified: `AGENTS.md`, `docs/architecture.md:14-16`]** |
+| Rendering | CPU compositor (`compose`, the correctness oracle) + wgpu compositor (`gpu`); tested against each other to ≤1/255 **[verified: `docs/architecture.md:333-349`]** |
+| Color | Own pure-Rust ICC engine (`cms`); GPU matrix/TRC or 3D‑LUT display path **[verified: `docs/architecture.md:352`]** |
+| Document model | Immutable snapshots, COW 256² tiles behind `Arc`, `arc-swap` publish, op/transaction history **[verified: `docs/architecture.md:303-321`]** |
+| File formats | Own PSD/PSB crate, own RAW decoder, own HEIF decoder, own native `.pcraft` format (content‑addressed, zstd) **[verified: `docs/architecture.md:§8-9`]** |
+| Text | `parley`/`skrifa`/`harfrust` shaping+layout, rendered to a **cached raster per layer state** **[verified: `docs/architecture.md:120`, `crates/compose/src/lib.rs` fill/text cache refs; partly inferred for exact cache key]** |
+| Plugins | Sandboxed WebAssembly, `wasmi` host, ABI v1 **[verified: `docs/architecture.md:126`]** |
+| Automation | ~700-command registry; CLI, JSON control protocol, and an MCP server (via `rmcp`) all dispatch the *same* commands **[verified: `AGENTS.md`, `crates/automation/src/server.rs`]** |
+| AI | Not in photocraft itself yet (gap **G15**, "no ML runtime"). A **separate shared repo**, `craft-ai-integrations`, builds a provider/role/consent abstraction (OpenAI-compatible, FLUX, Vertex, ComfyUI, local SAM2/SAM3 via `rten`/`candle`) not yet adopted by any *Craft app **[verified, see §A]** |
+| License | Dual MIT OR Apache-2.0, `unsafe_code = "forbid"` (one exception crate) **[verified: `LICENSE-*`, `AGENTS.md` §3]** |
+| Legal/clean-room | Explicit "behaviour and look only, never copy proprietary code" rule + Adobe trademark disclaimer in README **[verified]** |
+| Testing | ~8,040 `#[test]`s, PSD-corpus oracle diffing against Photoshop's own composite, fuzzing, criterion benchmarks, generated parity/scorecard docs **[verified: `docs/architecture.md:8-10`, `docs/scorecard.md`]** |
+| CI/release | Shared reusable GitHub Actions org-wide (`craft-common-actions`), multi-platform signed installers **[verified]** |
+| Dev process | Markdown-driven, agent-first: `AGENTS.md`, `ROADMAP.md`, `docs/gaps.md`, `docs/decisions.md` (ADR-like), generated scorecards — explicitly written so autonomous coding agents can pick up work **[verified]** |
+| Scale | ~539,000 LOC, 25 lib crates, 4 apps, 71k GitHub stars, 3,040 open issues, alpha stage (~45% "ready for real work") **[verified: `docs/architecture.md`, repo metadata]** |
+
+---
+
+## 1. Tech stack (verified details)
+
+- **No Tauri/Electron.** `AGENTS.md` states outright: *"No Tauri, Electron or webview shells… Never add Tauri (or any webview/JS UI framework) as a dependency."* The desktop app is `egui`/`eframe` drawn through `wgpu`; the same Rust cross-compiles to `wasm32` for a browser demo via `trunk`/`wasm-bindgen` (`docs/architecture.md:14-16`, `apps/photocraft-web`, `apps/photocraft-web-boot`).
+- **Rendering engine:** two compositors consuming one shared `DrawOp` plan produced by `compose::plan()` — a CPU reference compositor (rayon, per-tile) used for export/tests/CLI/wasm-fallback, and a GPU compositor (`crates/gpu`, wgpu compute/render, WGSL, `rgba16float`/`rgba32float` accumulators, one pipeline per blend family instead of a giant switch) (`docs/architecture.md:340-349`). CPU/GPU parity is a CI-gated test on a software Vulkan adapter (lavapipe/WARP).
+- **Color management:** a pure-Rust ICC engine (`crates/cms`, also published standalone in `craft-libs`), with a documented, fairly elaborate display-transform pipeline (matrix/TRC shaper path vs 3D-LUT fallback, per-document working space, per-monitor profile detection on macOS/X11/Wayland) (`docs/architecture.md:352`).
+- **Format support:** PSD/PSB is a from-scratch, standalone crate (`crates/psd`) with **no dependency on the document model**, lazy channel decoding (so a 2 GB PSB opens fast), and lossless round-trip of unknown blocks. Layers, masks, blend modes, smart objects, adjustment layers, text layers, layer effects and vector masks are all modeled (`docs/architecture.md:§8`). RAW (`crates/raw`), HEIF (`crates/heif`) and an Affinity-file reader (`crates/affinity`) are separate, standalone, feature-gated crates — "adding a format is one crate feature; it must never need a change in core types" (`docs/architecture.md:94-96`).
+- **Plugin/filter architecture:** sandboxed WebAssembly plugins hosted by `wasmi`, with resource limits and a registry (`crates/plugins`, `docs/architecture.md:126`, `docs/plugins.md`).
+- **Scripting/automation:** ~700 registered engine commands, Photoshop `.atn` Action import (112 mapped event types), a droplet runner, a JSON control protocol, and an MCP server — detailed in §B below.
+- **Platform/packaging:** macOS (signed+notarized universal binary), Windows (MSI, Azure Trusted Signing), Linux (AppImage/deb/rpm/Flatpak/tarball), FreeBSD, Arch, even RISC-V64, built by a **shared, reusable GitHub Actions pipeline** (`craft-common-actions/release.yml`) called by every *Craft app (verified below, §5/§B).
+
+---
+
+## 2. Architecture (verified details)
+
+**Layered crate workspace**, enforced at build time by `cargo xtask layers` (`xtask/src/layers.rs`), with 25 crates in `photocraft/crates/` across 6 layers (`AGENTS.md` §2):
+
+```
+L0 geom cms color raster   (+ standalone: psd, codecs, tablet)
+L1 doc                      document model (pure data, serde)
+L2 ops paint algo text vector
+L3 compose gpu format
+L4 io plugins
+L5 engine                   (Session + command registry)
+L6 ui-egui automation       (egui shell; MCP server)
+```
+
+Rule: *"A crate may depend only on lower layers… Nothing below `ui-egui` may use egui, eframe, winit or rfd."* This is the mechanism that keeps the engine UI-agnostic — the stated motivation is explicitly to avoid GIMP's historical mistake of baking UI-toolkit and pixel-format assumptions into the core (`docs/architecture.md:§1.1`, a documented "lessons from GIMP" analysis citing GIMP's GTK2→GTK3 port and the 2000–2018 GEGL bit-depth rewrite).
+
+**Document model** (`crates/doc`, `docs/architecture.md:§5`):
+```rust
+pub struct Document { pub root: LayerGroup, pub channels, pub paths, pub guides, pub selection, … }
+pub struct Layer { pub blend, pub opacity, pub mask, pub effects, pub content: LayerContent, … }
+pub enum LayerContent { Raster(TiledSurface), Group(..), Adjustment(..), Fill(..), Text(TextLayer), Shape(..), Smart(SmartObject) }
+```
+Pixels live in `raster::TiledSurface<F>`, a sparse map `TileCoord → Arc<Tile<F>>` at 256×256, mutated via `Arc::make_mut` (copy-on-write). **This is the architectural keystone for performance:** a document "snapshot" is `O(layers)`, not `O(pixels)`, because unedited tiles are shared `Arc`s.
+
+**History/undo** (`crates/ops`): every mutation is an `Op` grouped into a labeled `Transaction`; because tiles are Arc-shared, undo only re-points `Arc`s — "no pixel copies are made" (`docs/architecture.md:313-317`). Brush strokes batch into one transaction, publishing damage regions incrementally so "the viewport updates live."
+
+**Engine thread model** (`docs/architecture.md:§11`):
+```
+UI thread --dispatch()--> Engine thread (owns docs, applies ops, publishes snapshots via arc-swap)
+                              |-- spawns --> Job pool (rayon): filters, AI, export, autosave
+Render (UI thread): Viewport::render_gpu(snapshot) into a wgpu texture
+```
+Readers (UI, background jobs, autosave) consume **lock-free** `Arc<DocSnapshot>`s; a background job computes from snapshot N and "rebases" if the doc changed meanwhile.
+
+### Performance techniques — directly relevant to your scroll-lag bug
+
+This is the most load-bearing section for your problem, so I'm citing the actual mechanisms, not just the doc prose.
+
+1. **Separation of "what changed" from "what's visible."** The canvas never recomputes the whole document on every pan/zoom frame. `Viewport::render_gpu(snap, gpu, target, damage: &Region)` takes an explicit damage region; only invalidated tiles recomposite (`docs/architecture.md:254-257`). A **"revision" and "preview key"** pair act as a memoization key for every cache (`crates/ui-egui/src/canvas.rs:1466-1511`, `CanvasCache{ tex_revision, tex_preview_key, texture }` — a texture is only rebuilt if `cache.tex_revision != revision || cache.tex_preview_key != preview_key`). Scrolling/panning/zooming changes *neither*, so it never re-triggers compositing or re-layout — it only changes the camera transform used to sample the existing texture.
+
+2. **Background, incremental, resumable full-redraws (`crates/ui-egui/src/background_redraw.rs`, 418 lines, read in full).** When a full CPU recomposite is needed (GPU budget exceeded, or an unsupported feature), it is **never done synchronously on the UI thread**. Instead:
+   - the canvas is cut into `1024²` blocks (power-of-two, aligned to tile boundaries);
+   - blocks nearest the *currently visible* viewport rect are prioritized (`order()`, sorts by distance-to-view-center, visible-first) — i.e., exactly a "render what's on screen first" virtualization strategy;
+   - a background thread pool composites blocks in parallel batches of 4 and streams finished blocks back over an `mpsc::sync_channel`;
+   - each frame, `poll()` uploads whatever blocks finished so far — "the window keeps drawing and answering while the rest of the canvas fills in";
+   - an in-progress redraw is **restarted, not rebuilt from scratch**, if a new edit arrives, keeping already-finished blocks;
+   - the last 1–2 finished full composites are memoized (`KeptComposites`/`Kept`, keyed by `Arc::ptr_eq`-or-content-equality of the whole document) so that flipping back to a recently-seen state (undo/redo, toggling a layer's eye icon) **re-uploads cached texels instead of recompositing**.
+   
+   This is a textbook answer to "don't block the UI thread re-laying-out/re-rendering a whole page on every interaction step" — prioritized, incremental, cancellable, resumable, cached.
+
+3. **GPU residency + effect-map caching keyed by generation, not by frame.** The GPU compositor keeps "a residency cache keyed by `(TileId, generation)`" and "cached group and effect results that are invalidated by generation" (`docs/architecture.md:343-346`); `crates/compose/src/lib.rs:2011-2089` implements a global, byte-bounded cache of layer-effect maps, holding `Weak` references so cache entries die with their layer state rather than being recomputed every frame.
+
+4. **Fill/text layers cache their rasterized output, not just their source data.** The document model comment is explicit: `Text(TextLayer /* runs, paragraph styles, warp; cached raster */)` (`docs/architecture.md:297`). In the compositor, `layer.fill_cache` is checked before recomputing fill/gradient rendering (`crates/compose/src/lib.rs:1300,1622-1625`, "a cached render in use… may not be opaque"). Combined with the Arc-snapshot model, this means **text shaping/layout and fill rasterization happen once per content-revision of that layer, not once per frame** — panning/zooming/scrolling the canvas re-samples the cached raster tiles, it never re-shapes glyphs.
+
+5. **Thumbnail/navigator caching is revision+rect-diffed, not rect-redrawn:** `crates/ui-egui/src/canvas.rs:1405-1423` — *"One edit since the cached image, with the area it changed: update just that part"* — i.e. the navigator panel tracks the *damage rect* of the last edit and only re-renders that sub-rectangle of its thumbnail, not the whole thumbnail.
+
+6. **Explicit, numeric performance budgets tracked as code, including a pan/zoom scenario that mirrors your bug.** `perf/budgets.toml` defines scenario **P15**: *"Zoom / pan frame time on a 15000×10000 16-bit document", target ≤16 ms/frame*, currently flagged `not_measurable` because there's no headless canvas-frame test harness yet (pan/zoom sample the GPU texture inside the egui paint callback) (`perf/budgets.toml:215-220`, mirrored in `docs/scorecard.md:88`). The project's own `ROADMAP.md` honestly reports **22 of 25 performance budgets are currently missed** and Performance is rated only 25% ready — so PhotoCraft has *not* fully solved its own interaction-latency problems either, but it has built the harness (budgets.toml + baseline.json + `cargo xtask perf`) to track and gate regressions on exactly this class of bug.
+
+7. **Rule codified in `AGENTS.md` itself:** *"Performance is a feature. Benchmark heavy operations on a 24–36 MP image in release. Work per tile in parallel (rayon), skip empty tiles, **never scan a full surface per frame (cache per revision)**, and record before/after timings in the dev log."* This "cache per revision, never scan per frame" rule is stated as a top-level golden rule, not a one-off optimization — directly on point for your scroll re-layout issue.
+
+8. **Pen-input low-latency path** is architected separately from full recompositing: coalesced high-rate input samples → tool state machine on the engine thread → dab rasterization directly into COW tiles → damage published → **"viewport re-composites only the damaged tiles"** (`docs/architecture.md:457`). The target latency is "the stroke appears within the next frame," achieved by never touching unrelated tiles.
+
+**Caveat (verified limitation):** egui is an **immediate-mode GUI** — every widget's layout logic does re-run each frame by design. PhotoCraft's answer to this is *not* to fight egui's immediate-mode re-layout of UI chrome, but to make sure the *expensive* work (pixel compositing, text shaping, effect maps) lives behind caches keyed on data revision, decoupled from the UI's per-frame pass, and the canvas itself is a single GPU texture sampled by the camera transform rather than re-drawn per frame. That's the transferable idea for you even though your stack (Svelte, presumably retained-mode DOM/Canvas) is architecturally different.
+
+---
+
+## 3. Replicating Photoshop's look, behaviour, and legal posture (verified)
+
+- **UI fidelity approach:** data-driven, not hand-coded per dialog. *"Tools produce overlay primitives… as data. Filter and adjustment dialogs are generated from parameter schemas… A new toolkit implements one renderer… not ~150 bespoke dialogs"* (`docs/architecture.md:§1` principle 3). Menus are generated from the same `CommandSpec.menu` metadata that drives the CLI/MCP (`crates/ui-egui/src/menu_catalog.rs`), and a generated `docs/parity-checklist.md` tracks all 628 Photoshop menu items against what's wired.
+- **Icons/fonts licensing (explicitly *not* Adobe assets):** Lucide icons (ISC/MIT), Inter and JetBrains Mono fonts (OFL), SCOWL spelling dictionary, libfacedetection weights (BSD-3) — every asset entered in `ATTRIBUTION.md` with path/author/source/license, enforced as a process rule ("assets without an attribution entry must not be committed") (`NOTICE`, `AGENTS.md` §3). CJK fonts are sourced from a **separate shared repo**, `storytold/craft-fonts`, pulled in only at build time via `CRAFT_FONTS_DIR` — fonts are explicitly never committed to the app repos.
+- **Compatibility/fidelity testing:** PSD files embed Photoshop's own merged composite; PhotoCraft runs its compositor over the layers and **diffs against that embedded oracle composite** — "a free, large conformance test suite," automated by `testkit` over a corpus (`docs/architecture.md:§7.4`). There's a dedicated, separate repo `storytold/photocraft-corpus` of **Photoshop- and GIMP-authored oracle files** fetched at pinned, SHA-256-verified commits (`AGENTS.md` §4, "Test corpora"). A numeric parity floor (`crates/ui-egui/src/parity.rs::FLOOR`) is a CI-enforced ratchet — it can be raised but never lowered.
+- **Clean-room/legal stance, stated explicitly (`docs/architecture.md:§1`, `AGENTS.md` §3):**
+  > *"We study other editors' behaviour only, and we must not copy proprietary source (Rust, WGSL, C++ or JS), even where it ships as readable source. Specs come from public format docs (Adobe PSD spec, ISO/ICC), academic papers (PatchMatch, Poisson blending, ARAP) and observed behaviour. Never paste code from another product."*
+  README carries an explicit trademark disclaimer: *"Adobe, Photoshop, Illustrator, Premiere Pro, Lightroom, Acrobat, After Effects and InDesign are trademarks… PhotoCraft is an independent, open-source project and is not affiliated with, sponsored by or endorsed by Adobe Inc.; these names are used only to describe the workflows it is compatible with."* The ArtCraft brand/logo itself is carved out of the OSS license as a separate, non-forkable trademark (`NOTICE`, `docs/brand/LICENSE-brand.txt`).
+
+---
+
+## 4. Methodologies & workflow (verified)
+
+- **Explicit agent-facing docs, read first:** `AGENTS.md` (18.7 KB) is the entry point ("Read this file first, then `docs/`"), pointing to `docs/architecture.md`, `docs/development.md`, `docs/contributing.md`, `docs/control-protocol.md`, `docs/ui-design.md`, `ROADMAP.md`, `docs/gaps.md`, `docs/roadmap.md`, and per-dimension parity docs. `CLAUDE.md` exists in sibling repos as a short pointer ("CLAUDE.md holds the day-to-day working instructions… if the two disagree, AGENTS.md wins" — `pdfcraft/AGENTS.md:3`).
+- **"Picking work" is formalized as a doc-driven priority queue**, not an issue tracker triage: read `ROADMAP.md` → `docs/gaps.md` (ranked list, e.g. **G15 AI/generative, 300–600h**) → `docs/scorecard.md` (measured budgets/corpus floors) → `cargo xtask parity` output → `log/devlog.md` "Still open" bullets.
+- **Golden rules are enforced by tooling, not just prose:** `clippy.toml` + crate-level `#![deny(clippy::unwrap_used, …)]` forbid `unwrap`/`expect`/`panic` in shipped code; `unsafe_code = "forbid"` workspace-wide with exactly one documented, audited exception crate (`photocraft-tablet`, for AppKit/Win32 pen-input FFI, every block carrying a `SAFETY:` comment); a `panic_hunt` fuzz test adversarially fuzzes every command's params and must stay green.
+- **Lightweight ADRs:** `docs/decisions.md` records point-in-time implementation decisions with dates and issue numbers (e.g. "2026-10-17: keeping a replaced file's ACL and named streams (#7073)", explaining *why* `ReplaceFileW`/`exacl` were chosen over hand-rolled alternatives) — a genuine, if informal, ADR log.
+- **Testing strategy:** ~8,040 `#[test]` functions; round-trip + synthetic-generator + oracle-diff + `cargo-fuzz` tests for every format crate (5 fuzz crates in the workspace); `criterion` benchmarks for hot algorithms; CPU/GPU parity tests on a software Vulkan adapter in CI; a dedicated, versioned performance-budget file (`perf/budgets.toml` + `perf/baseline.json`) checked by `cargo xtask perf`; and ~20 standalone performance-investigation docs (e.g. `docs/iris-blur-performance.md`, `docs/tilt-shift-performance.md`, `docs/text-raster-performance.md`) — i.e., performance regressions get a written case study, not just a number.
+- **CI/CD and release:** org-wide reusable workflows in `storytold/craft-common-actions` (macOS universal/notarized, Windows MSI/Azure-signed, Linux deb/rpm/AppImage/Flatpak, FreeBSD, Arch, RISC-V64, WASM); SonarCloud + CodeRabbit (`.coderabbit.yaml`) + `cargo-deny` (`deny.toml`) across repos; a `.git-blame-ignore-revs` file to keep `git blame` useful across formatting-only commits.
+- **Contribution/credit model:** `contributors/contributors.json` (generated from commit stats) + `contributors/people.toml` (opt-in display names), surfaced in the app's About dialog — explicitly instructing agents to check whether their human operator wants on-record credit.
+- **Dev-log discipline for agent handoff:** *"Sessions can end abruptly (crashes, context limits), so the dev log plus a green tree is how the next agent picks up. Keep the tree building at every step."* (`AGENTS.md` §5) — this is a deliberate design-for-interruption pattern for AI-agent-driven development.
+
+---
+
+## 5. Comparisons across the *Craft family (verified)
+
+The org (`gh api orgs/storytold/repos`) contains **16 "*Craft" application repos** cloning one playbook: `photocraft` (Photoshop), `pdfcraft` (Acrobat), `filmcraft` (Premiere), `vectorcraft` (Illustrator), `lightcraft` (Lightroom), `designcraft` (InDesign), `effectcraft` (After Effects), `gridcraft` (Excel), `cadcraft` (AutoCAD), `deckcraft` (PowerPoint), `soundcraft` (Pro Tools), `wordcraft` (Word), `figcraft` (Figma-like), `AniCraft` (2D animation) — plus the umbrella `artcraft`/`artcraftx` projects and a backend, `artcraft-services`.
+
+**Shared infrastructure, confirmed by direct inspection:**
+- **`storytold/craft-libs`** — a Rust monorepo of reusable, app-agnostic crates consumed by git-pinned revision (`craft-<name> = { git = "...", rev = "<commit>" }`): `craft-platform`, `craft-ai-core`, `craft-pdf`, `craft-atomic` (crash-safe atomic file writes, used by PhotoCraft's save path), `craft-cms` (the same ICC engine design as photocraft's own `cms`), `craft-docpath`, `craft-i18n`, `craft-media` (MP4/MOV/Matroska demuxers from FilmCraft, promoted to shared), `craft-print`, `craft-quit`, `craft-settings`, `craft-ui`.
+- **`storytold/craft-fonts`** — centralized font assets (CJK etc.), pulled by every app at build time via an env var, never committed per-repo.
+- **`storytold/craft-common-actions`** — the shared, parameterized multi-platform release pipeline every app's `release.yml` calls with `uses: storytold/craft-common-actions/.github/workflows/release.yml@main`.
+- **`storytold/craft-repo-status-app`** — a cross-repo Tauri 2 tray dashboard that polls every `*craft` repo's issues/PRs/releases/downloads and ranks "what to fix first" by an urgency heuristic — i.e., they dogfood a Tauri app for *internal tooling* even though it's explicitly excluded from the end-user editor apps.
+- **`storytold/craft-ai-integrations`** — the shared AI layer (see §A).
+- **`storytold/photocraft-corpus`**, and similarly-named per-app corpora — shared test-fixture repos kept separate from the app repo so oracle files aren't bloating the main git history.
+- **Identical conventions repo-to-repo**, confirmed by grep across `AGENTS.md` files of `lightcraft`, `filmcraft`, `designcraft`, `vectorcraft`, `effectcraft`, `pdfcraft`, `gridcraft`: the same layering rule, the same "never crash," the same clean-room clause, the same dual MIT/Apache + brand-carve-out license pattern, the same `docs/target-app-parity.md` / `docs/gaps.md` / `ROADMAP.md` scaffolding, and explicit cross-references to each other ("Siblings with the same conventions: `../designcraft`, `../photocraft`, …").
+- A non-public repo, `craftrules`, is referenced from every `AGENTS.md` as the canonical source of cross-app standards (e.g. `standards/never-crash.md`, `standards/fonts.md`, `standards/progress-docs.md`, `release/playbook.md`) — confirming a deliberate separation between *public app code* and *private org-wide engineering standards*.
+
+**Differences:** each app's domain crates are obviously bespoke (`photocraft-psd` vs `pdfcraft`'s PDF object model vs `gridcraft`'s formula engine), and each app picks its own subset of shared crates (e.g., `gridcraft` doesn't need `craft-media`). `craft-repo-status-app` is the one org tool that *does* use Tauri — a deliberate exception for an internal dashboard, not a contradiction of the "no Tauri in the apps" rule.
+
+---
+
+## A. AI features in PhotoCraft and the *Craft family
+
+**Headline, verified finding:** PhotoCraft's own AI/generative capability is currently a documented **gap, not a shipped feature**. `ROADMAP.md` rates "AI / generative" at **10% ready, 300–600h remaining**, and `docs/gaps.md` §G15 states plainly: *"Missing: Generative Fill and Expand, Generative Upscale, Neural Filters, Sky Replacement, Super Zoom, ML Select Subject/Sky. **There is no ML runtime** (AUTO-219-7). Classical substitutes [exist for some]."* The architecture doc lists a planned `ml` crate (`InferenceBackend` trait; `ort` native / `burn`/`candle` web; tasks: `segment_point/box` via SAM2, `matte_subject`, `depth`, `sky`) explicitly under **"Not built (yet) from the plan"** (`docs/architecture.md:26`). I confirmed directly that `crates/ml` does not exist (`404` from the GitHub contents API) and that `Cargo.lock`/`Cargo.toml` contain no `rten`, `candle`, `onnxruntime`/`ort`, `sam3`, or `craft-ai-*` dependencies on photocraft's `main` branch. Classical (non-ML) substitutes are what's shipped instead: flood-fill magic wand, graph-cut/superpixel quick-select, PatchMatch-style content-aware fill, Poisson-blend healing (`docs/architecture.md:§10` algorithm table) — i.e., the "intelligence" layer is currently algorithmic, not model-based.
+
+**Where the real AI work is happening: a separate, shared, pre-adoption platform.** `storytold/craft-ai-integrations` ("Interim AI layer for the Craft apps") is a standalone Rust workspace, not yet depended on by any `*craft` app (I ran an org-wide code search for `craft-ai-client`, `ToolDesk`, `AiClient`, `craft-ai-core` and the only hits outside `craft-ai-integrations` itself are design docs in `craft-libs`; zero hits inside `photocraft`, `lightcraft`, `filmcraft`, `designcraft`, `vectorcraft`, `effectcraft`, `pdfcraft`, `gridcraft`). Its own status doc is candid about this: *"App adoption. PhotoCraft's dev build uses the SAM 3 clients directly, not the shared role, connection and consent flow… [that] is not inference adoption."* (`craft-ai-integrations/docs/STATUS.md` — note this refers to an unmerged/internal dev build, since `main` shows no such dependency; treat as **unverified beyond what's on `main`**.)
+
+**Architecture of that shared AI layer (verified by reading source):**
+- **Capability contract, not hard-coded features.** A `Role` is declared with a stable `RoleId`, a label, exactly one `CapabilityId` (e.g. `image.describe`, `image.segment`, `image.inpaint`), and the `InputRole`s it needs. Any model/provider that advertises a matching capability+input set can be bound to that role: *"A tool is a declaration, not code"* (`craft-ai-integrations/README.md`, `docs/ADOPT-A-TOOL.md`).
+- **The pure contract crate, `craft-ai-core`, has been promoted to the shared `craft-libs` monorepo** (serde-only, no I/O, wasm-safe) so every *Craft app can depend on one stable, versioned data model for connections/models/tools/requests/jobs/consent (`craft-libs/README.md`, `craft-libs/docs/ai-shared-layer.md` — explicitly marked **"proposed for review… no app mounts it end to end yet"**).
+- **Provider adapters (hosted):** `craft-ai-openai` (OpenAI-compatible text+images, streaming, tool calls, structured output, with hard byte/line caps on streamed replies), `craft-ai-bfl` (Black Forest Labs FLUX image/video), `craft-ai-vertex` (Gemini images via Vertex express mode), `craft-ai-seedance` (BytePlus ModelArk video), `craft-ai-artcraft` (an ArtCraft-operated API-key route), `craft-ai-declarative` (define a hosted provider via a **data file, no Rust**).
+- **Local/offline model runtimes:** `craft-ai-engine` (the runner contract), `craft-ai-engine-candle` (SAM 3, Apache-2.0-only build, runs via Candle — CPU/Metal), `craft-ai-engine-rten` (SAM 2.1 via `rten`, "a pure Rust engine that reads the publisher's `.onnx` files as they are" — i.e., **ONNX inference without ONNX Runtime's C++ binding**), `craft-ai-comfyui`/`craft-ai-comfy-env` (drives a local ComfyUI install for arbitrary workflows, including an imported subject-selection graph), `craft-ai-sam3` (point/box/text-prompt segmentation client).
+- **Model governance:** `craft-ai-features::recipe.rs` defines a pure-data `LocalRecipe`/`ModelFile` schema — folder, filename, exact `size_bytes`, lower-case hex **SHA-256**, a `Source` (Hugging Face repo+file+revision, or a direct URL), and a `Licence{name, url, accept_required, note}` that must be shown and accepted before download. This is a clean, reusable pattern: **models are declared as verifiable, licensed artifacts, not silently bundled or auto-fetched.**
+- **Privacy/consent/credentials:** `craft-ai-core`/`craft-ai-native`/`craft-ai-client` implement consent "scoped to app, connection, destination and capability, per kind of data, and may expire"; secrets go through OS keychain / passphrase-encrypted file / environment, **never through the shared JSON store**; `craft-ai-http` pins one TLS policy (trust the platform cert store) across every adapter. TLS-interception and most hosted providers are explicitly marked **"not verified"** in `STATUS.md` — an unusually honest disclosure of untested surface.
+- **Design limit, stated outright:** *"The runtime is in-process: apps link `craft-ai-client` and run adapters themselves… no dynamic adapter registry for arbitrary user code, no general tool executor, no automatic model installation."* There is no MCP server inside `craft-ai-integrations` itself — it's a library, consumed by each app's own UI/automation layer (which, per above, isn't wired up anywhere yet).
+
+**Net assessment:** the *Craft family's AI strategy is "build the reusable contract and provider plumbing first, as a separate, slower-moving, heavily-disclaimed project; let each app adopt capabilities as named Roles once the plumbing is proven," rather than bolting a generative-fill button onto each app independently. That is itself a transferable lesson (§6).
+
+---
+
+## B. CLI-first / "built for agents" design and reusability
+
+**Core pattern, verified:** one command registry drives everything. `crates/engine/src/commands.rs` defines:
+```rust
+pub struct CommandSpec {
+    pub id: &'static str,       // e.g. "image.adjustments.shadowsHighlights"
+    pub label: &'static str, pub menu: &'static [&'static str], pub shortcut: Option<&'static str>,
+    pub params: &'static str,   // human/agent-readable param doc (ranges + defaults), e.g.
+                                 // r#"{"shadowAmount":0..100=35, ...}"#
+    pub enabled: fn(&Session) -> Result<(), String>,
+    pub run: fn(&mut Session, &Value) -> Result<Value>,
+    pub journal: bool,
+}
+```
+(`crates/engine/src/commands.rs:1-27`, example registration `crates/engine/src/adjust_cmds.rs:497-542`). ~700 such specs exist across `*_cmds.rs` modules; `AGENTS.md` rule #1: *"New user-visible behaviour = a command in the engine … The UI, CLI, control channel and MCP all dispatch commands by id."* Params are typed as loose JSON (`serde_json::Value`) with a human-readable range/default string for discovery, not a `schemars`-level JSON Schema at this layer — the stricter typed schema (via `schemars::JsonSchema` derives) is applied one layer up, specifically at the **MCP tool boundary** (see below), not uniformly through the whole command surface. Worth noting as a limitation if you want stronger typing everywhere.
+
+**Four consumers, one engine, confirmed by file inspection:**
+1. **`photocraft` desktop app** — `eframe`/`wgpu`/`ui-egui`, plus a TCP "control protocol" server (`--control <port>`) for authenticated, loopback-only automation: UI inspection, synthetic pointer-event replay, offscreen screenshots (`docs/control-protocol.md`, 87 KB doc with sections on Methods, Engine commands, Background jobs, Preferences, headless server, transport limits, rendering modes).
+2. **`photocraft-cli`** (`apps/photocraft-cli/src/lib.rs`, 41 KB) — a **hand-rolled, no-`clap`**, explicit `SUBCOMMANDS: &[Subcommand]` table (`name`, allowed `--flag value` keys, allowed bare flags, a `run` fn pointer) with strict unknown-flag rejection (*"a typo such as `--fromat` can't be silently ignored (#423)"*). Subcommands: `convert`, `info`, `run` (open → apply N `--cmd/--params` pairs in order → save, printing each result as JSON), `batch` (apply a Photoshop `.atn` action set or a JSON step list over a directory), `droplet`, `commands` (list the registry, `--json`), `mcp` (MCP server over stdio), `serve` (a long-lived JSON-line RPC server over stdio or TCP: `engine.execute`, `jobs.list/cancel`, `doc.open/new/save/inspect/render/...`, `batch`, `methods`).
+3. **MCP server** (`crates/automation`, built on the official Rust `rmcp` SDK): `server.rs` (54 KB) registers typed tools via `#[tool_router]`/`#[tool]`, with **per-tool param structs deriving `schemars::JsonSchema`** and `#[serde(deny_unknown_fields)]` (e.g. `OpenParams { path: String }`, `PlaceParams`), giving MCP clients real JSON Schema even though the underlying `CommandSpec.params` is looser. Exposed tools (per `docs/mcp.md`, read in full): `command_list`, `command_run`, `command_batch` (ordered, `stop_on_error`, non-atomic — explicitly documented, no rollback), `doc_inspect`, `render_preview` (bounded PNG, capped `max_side`), `ui_inspect`/`ui_screenshot` (bridge mode only). Two backends behind one `enum Backend { Headless(Arc<Mutex<Headless>>), Bridge(Arc<BridgeClient>) }` (`server.rs:22-28`) — i.e. the **same MCP tool implementation works whether driving an in-process headless engine or a real running desktop window** over the control protocol. Install/registration is a one-liner: `claude mcp add photocraft -- photocraft-cli mcp --automation-read-root DIR --automation-write-root DIR`.
+4. **Headless file-system sandboxing for agents** (`crates/automation/src/workspace.rs`, read in full header): a **capability-based filesystem policy** using the `cap-std` crate — separate read-root and write-root `Dir` capabilities, explicit rejection of parent traversal/absolute escapes/symlink escapes, so an MCP/CLI-driven agent is confined to declared roots rather than relying on path-string validation. This is a concrete, reusable security pattern for any CLI/MCP surface that touches a filesystem on an agent's behalf.
+
+**Progress/cancellation/robustness in the MCP layer, verified from `docs/mcp.md`:** MCP progress notifications are supported via `_meta.progressToken`, throttled to ≤10/sec; cancellation removes only files the job itself created; a worker panic becomes a tool error (not a crash) due to the "last-resort guard" rule; batch steps are validated strictly (unknown keys → JSON-RPC `-32602` **before** execution, not silently ignored).
+
+**Reusable cross-repo infrastructure for this pattern** (verified): the "everything is a command, reachable headlessly" rule is copy-pasted near-verbatim into sibling apps' `AGENTS.md` (e.g. `pdfcraft/AGENTS.md:98`: *"Everything is reachable headlessly… A feature is not done until its tool exists and has an end-to-end test."*), and `docs/mcp.md` explicitly notes convention-sharing across apps: *"PhotoCraft follows the same conventions as FilmCraft #28."* The MCP/control-protocol pattern, the `cap-std` sandboxing approach, and the CLI-arg-table approach appear to be a convention propagated by the (private) `craftrules` standards repo referenced from every `AGENTS.md`, rather than duplicated independently per app — but I could not verify `craftrules`' contents directly since it isn't public.
+
+**Reusable build tooling (`xtask`), verified:** `xtask/src/{layers,corpus,corpus_pins,i18n_coverage,perf,scorecard,stats,version,pinned,sha256,ico}.rs` — i.e. architecture-layering checks, pinned/SHA-256-verified test-corpus fetching, i18n coverage measurement, performance-budget checking, and a generated scorecard are all first-class `cargo xtask <verb>` subcommands wired into `AGENTS.md`'s "before you finish a task" checklist (`cargo test`, `cargo clippy`, `cargo xtask layers`, `cargo xtask wasm`, `cargo xtask parity`, `cargo xtask scorecard`, `cargo xtask perf --quick`, `cargo xtask test-corpus`) — i.e., the CLI isn't just for *users/agents operating the app*, it's equally the harness *contributors/agents use to validate their own changes*, gating the same checks CI runs.
+
+---
+
+## 6. Recommendations for pbiview / DashCraft
+
+### Directly actionable for your scroll-lag bug (highest priority)
+1. **Separate "layout revision" from "viewport state."** PhotoCraft's single biggest lesson: nothing expensive (compositing, text shaping, effect maps) is keyed on the camera/viewport; everything is keyed on a monotonically-increasing **document/content revision number**, and the viewport transform is applied only at sample/blit time. Concretely for your table renderer: compute column widths, row heights, and text layout/shaping **once per (data, schema, available-width) revision**, cache the laid-out rows (ideally per-row or per-tile, not per-page), and make scroll/pan purely a "which cached rows are visible + what offset to draw them at" operation. This is the direct fix for "re-lays out a whole page on every scroll step" — don't re-layout on scroll at all; only re-layout when the inputs to layout (data, column widths, zoom/DPI, font) actually change.
+2. **Adopt virtualization + prioritized/incremental rendering for large tables**, mirroring `background_redraw.rs`: when a redraw is unavoidable (e.g., huge table, slow DAX query backing a visual), chunk it, render visible rows/tiles first, stream results in as they complete, and let a cheap "kept last render" cache serve instant redraws of recently-seen states (e.g., flipping between two slicer selections you've already rendered).
+3. **Add explicit, numeric performance budgets as code**, PhotoCraft-style (`perf/budgets.toml` + `cargo xtask perf`): define a budget like *"scroll frame time on a 50k-row table ≤16 ms,"* track it in CI with a measured baseline, and treat regressions as build-breaking. This gives you the scaffolding to know whether a fix actually worked, rather than relying on manual "feels smoother" checks — and it's cheap to build (their own version is only a TOML + JSON baseline file plus one `xtask` subcommand).
+4. **Cache text shaping/measurement explicitly, keyed by (text, style, available width).** PhotoCraft's `TextLayer` is explicitly annotated "cached raster," and fill/effect results are gated behind `layer.fill_cache`/generation-keyed caches so shaping never repeats per frame. For DashCraft's report canvas/SVG renderer, add a shaping-result cache (e.g., keyed on a hash of the run text + font + size + wrap width) so panning/zooming/scrolling a report page re-uses glyph runs instead of re-shaping.
+
+### Architecture
+5. **Keep your current layered-crate design, but enforce it mechanically** the way `cargo xtask layers` does — a small custom lint/build-time check that a lower-layer crate (e.g. `pbi-dax`, `pbi-model`) never depends on `pbiview`/Tauri types is cheap insurance against the engine/UI boundary eroding as the codebase grows. You already have the right shape (library crates + CLI + Tauri IPC); this just makes it durable under multiple contributors/agents.
+6. **Consider Arc/COW snapshots for your document/report model** if you don't already have them: immutable, structurally-shared snapshots make undo, background refresh, and UI reads lock-free and cheap, and they're the mechanism that lets PhotoCraft avoid "is this safe to read while a background job writes" bugs entirely.
+
+### Testing / fidelity
+7. **Adopt an "oracle" testing strategy** for your Power BI file-format and rendering work: if you can obtain real `.pbix`/`.pbit` files with a trustworthy reference render (even partial, e.g. visual-level screenshots or the embedded thumbnail), diff your renderer's output against them the way PhotoCraft diffs its compositor against PSD's embedded Photoshop composite. Keep such corpora in a **separate repo** (like `photocraft-corpus`), pinned by commit and checksum, fetched opt-in — keeps your main repo lean and your licensing story clean (don't commit anyone's real `.pbix` with proprietary data into the main history).
+8. **Generated, numeric parity/gap docs** (`docs/gaps.md`, `docs/target-app-parity.md`, `docs/scorecard.md`, a ratcheted `FLOOR` constant) are a strong pattern for keeping an AI-agent swarm honest about real progress vs. "looks done." Cheap to adopt: a markdown doc + a small xtask script that regenerates it from test results.
+
+### Docs/agent workflow
+9. **Add an `AGENTS.md`** (if you don't have a close equivalent) structured the way theirs is: a 5-minute orientation table pointing at architecture/dev/contributing docs, explicit "never crash" and "everything is a command" style golden rules enforced by lint config (not just prose), a "picking work" priority algorithm, and a dev-log convention for session handoff. This is specifically valuable if you intend to keep using autonomous coding agents on pbiview.
+10. **Write a short clean-room/legal policy doc** analogous to their §1 clean-room principle, given you're reimplementing a proprietary product's file formats and behavior: spell out "we implement from public format docs/observed behavior only, never paste or decompile Microsoft code," and add the equivalent Microsoft trademark disclaimer to your README/NOTICE. Decide and document your position on bundling/approximating Segoe UI and Power BI's default color themes/icons (their answer was: never ship the vendor's actual assets, substitute permissively-licensed equivalents, and list everything in an `ATTRIBUTION.md`).
+
+### CLI/MCP and AI (direct response to your added questions)
+11. **You're already structurally aligned with their best pattern** (core library crates + thin CLI + thin Tauri IPC layer). The one gap to close: **make your CLI's command surface and your Tauri IPC commands literally the same registry**, the way `CommandSpec` is shared by UI/CLI/MCP. Concretely: define one `pbi-engine` command table (`id`, `label`, typed params via `schemars::JsonSchema`, a `run` fn), and have both `pbiview <subcommand>` and your Tauri `#[tauri::command]` handlers dispatch into it by id, rather than maintaining parallel argument-parsing/validation logic in the CLI and in Tauri commands.
+12. **Add an MCP server as a thin adapter over that same registry**, following their `Backend::{Headless, Bridge}` split: a `pbiview mcp` subcommand wrapping `rmcp`, with per-tool `schemars`-derived param structs (`doc_open`, `measure_explain`, `report_lint`, `render_preview`, etc.), and — critically — adopt their **capability-scoped filesystem sandboxing via `cap-std`** (explicit read-root/write-root, reject traversal/symlink escape) for any tool that touches files on an agent's behalf. This is a small, well-specified, high-value piece of infrastructure to copy almost directly.
+13. **For your schemaVersion'd JSON outputs**, their `params`-as-doc-string approach is *weaker* than what you already do — keep your stricter JSON-Schema/schemaVersion approach for your own CLI's main outputs (`inspect`/`measures`/`export`), but apply the same discipline at the MCP boundary that they do (typed per-tool param structs with `deny_unknown_fields`), since that's the layer actual AI agents will call.
+14. **For AI features (NL→DAX/M, explain-a-measure, lint-and-fix, chart-from-question), mirror the *Craft family's capability/provider separation rather than hard-wiring a single vendor:**
+    - Define a small, pure, serde-only **contract crate** (`pbi-ai-core`, analogous to `craft-ai-core`): a `Capability` enum (`dax.explain`, `dax.generate`, `m.generate`, `report.lint`, `chart.suggest`), a `Role`/binding model (which model/provider serves which capability), a `Request`/`Job`/`Consent` model. Keep it wasm-safe/IO-free so it can be reused by both the CLI and the Tauri app.
+    - Implement **provider adapters behind a trait** (OpenAI-compatible HTTP, Azure OpenAI, local llama.cpp/Ollama) so users can choose a local/offline model or a hosted one — don't bake in a single vendor's API.
+    - Treat **consent and credential handling as a first-class, reusable module**, not ad hoc: scope consent per capability/destination, store API keys in the OS keychain (not your settings JSON), and make "no adapter registered for the chosen model" a clear, explicit error rather than a silent fallback — exactly their documented design stance.
+    - **Be conservative and incremental**, following their own trajectory: they built the shared contract and provider plumbing *before* wiring it into any app's UI, and are candid in `STATUS.md` about what's "tested against scripted servers only" vs. "run for real" vs. "not verified." For DashCraft, ship "explain this measure" / "lint this report" as the first, lowest-risk capabilities (read-only, text-in/text-out, easy to sandbox and easy for a user to verify), before anything that writes DAX/M back into the model or report automatically.
+    - Expose these same AI capabilities as MCP tools over the same registry from recommendation #12 (`measure_explain`, `report_lint`, `dax_generate` with `wait`/job polling for longer model calls) — so your MCP/agent surface and your in-app AI assistant are the same code path, which is precisely the "built for agents" discipline that makes the *Craft family's command/engine design work.
+
+### What to avoid
+- **Don't let AI/ML feel mandatory or bundled-by-default**: the *Craft family's explicit design is opt-in, disclosed-licensing, user-supplied-or-consented models/keys, with honest "not verified" disclosure sections. For a BI tool handling potentially sensitive data, this caution is *more* important than for a photo editor, not less — keep any cloud-LLM calls explicit, consented, and clearly logged.
+- **Don't duplicate CLI argument parsing and Tauri command validation separately** — that's exactly the drift their "everything is a command" rule exists to prevent.
+- **Don't treat performance work as "optimize when it's slow"** — their `perf/budgets.toml` pattern shows the value of *naming the specific interaction scenario* (their P15 "zoom/pan on a 15000×10000 doc" is literally your "scroll a large table" problem) as a tracked, numbered budget from early on, even before you've fixed it — so you always know in CI whether a change made it better or worse.
+
+---
+
+### Gaps / things I could not verify
+- I could not access the private `craftrules` repo referenced from every `AGENTS.md` as the canonical source of cross-app standards (fonts, never-crash, release playbook, progress-docs) — its *content* is therefore inferred only from how it's cited, not read directly.
+- `craft-ai-integrations/docs/STATUS.md`'s claim that "PhotoCraft's dev build uses the SAM 3 clients directly" could not be corroborated against `photocraft`'s public `main` branch (no such dependency exists there); treat that specific claim as referring to an internal/unmerged branch, not the public repository state I inspected.
+- I did not exhaustively diff every sibling app's full source (pdfcraft/filmcraft/etc. crate internals) — comparisons in §5 are based on `AGENTS.md`/README-level conventions plus targeted org-wide code search, which is a reasonably strong but not line-by-line verification of "shared patterns."
+- Exact internals of `crates/text/src/layout.rs`'s shaping cache (`optical::Cache`) were inspected only partially; the claim that text shaping results are cached per-layer-revision is supported by the document-model comment and the compositor's `fill_cache`/effect-map caching pattern, but I did not trace the exact cache key used for glyph-shaping results specifically (flagged as a minor inference, not a direct read of that exact cache's key struct).

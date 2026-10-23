@@ -1,0 +1,25 @@
+[package]
+name = "pbi-m"
+description = "Power Query M lexer, parser and evaluator (subset)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+arrow = { workspace = true }
+thiserror = { workspace = true }
+indexmap = { workspace = true }
+csv = { workspace = true }
+chrono = { workspace = true }
+encoding_rs = { workspace = true }
+regex = { workspace = true }
+tracing = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

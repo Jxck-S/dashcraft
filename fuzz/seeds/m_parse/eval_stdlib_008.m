@@ -1,0 +1,1 @@
+Table.Combine({#table({"a"}, {{1}}), #table({"a", "b"}, {{2, 3}})})

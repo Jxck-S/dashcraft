@@ -1,0 +1,1 @@
+let r = try Number.FromText("x") otherwise -1, e = try error [Reason = "R", Message = "M"] in {r, e[HasError], e[Error][Message]}

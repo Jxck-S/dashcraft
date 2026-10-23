@@ -1,0 +1,1 @@
+let d = #datetime(2024, 2, 29, 23, 59, 59) in {Date.AddMonths(Date.From(d), 12), DateTime.ToText(d, "yyyy-MM-dd"), Date.DayOfWeek(Date.From(d)), DateTimeZone.UtcNow(), Duration.TotalHours(#duration(1, 2, 3, 4))}

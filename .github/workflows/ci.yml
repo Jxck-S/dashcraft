@@ -1,0 +1,221 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
+  # Keep file:line in backtraces but shrink target/ (and the cache) considerably.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+
+jobs:
+  rust:
+    name: Rust (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        shell: bash
+        run: |
+          rustup set profile minimal
+          # rustup >= 1.28 installs the toolchain + components pinned in
+          # rust-toolchain.toml; older rustup installs it on `rustup show`.
+          rustup toolchain install || rustup show
+          rustc --version && cargo --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: cargo fmt
+        if: runner.os == 'Linux'
+        run: cargo fmt --all --check
+
+      # Plain `cargo clippy` / `cargo test` (no --workspace) act on the
+      # workspace's default-members (crates/*), which excludes the Tauri app
+      # (needs webview system libraries; covered by the `app` job). This guard
+      # fails if any *other* member is missing from default-members, so nothing
+      # is silently skipped.
+      - name: Check default-members cover the workspace
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          skipped=$(cargo metadata --format-version 1 --no-deps --locked \
+            | jq -r '. as $m
+                | ($m.workspace_members - $m.workspace_default_members) as $ids
+                | $m.packages[] | select(.id as $id | $ids | index($id)) | .name' \
+            | grep -vx 'pbiview-app' || true)
+          if [ -n "$skipped" ]; then
+            echo "::error::Workspace members missing from default-members (not linted/tested by CI): $skipped"
+            exit 1
+          fi
+
+      # Crate dependency direction (docs/ARCHITECTURE.md, xtask/src/layers.rs): no upward or
+      # unlisted same-layer edges, no UI toolkit outside pbiview-app. `cargo metadata` covers
+      # every platform, so one OS is enough.
+      - name: Architecture layers (cargo xtask layers)
+        if: runner.os == 'Linux'
+        run: cargo xtask layers
+
+      - name: cargo clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: cargo test
+        run: cargo test --locked --no-fail-fast
+
+  # Performance budgets (perf/budgets.toml, docs/perf.md). Informational: shared runners are
+  # slower and noisier than the baseline machine and have no gitignored data, so results are
+  # reported (job summary + artifact) but never fail the workflow.
+  perf:
+    name: Performance budgets (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        shell: bash
+        run: |
+          rustup set profile minimal
+          rustup toolchain install || rustup show
+          rustc --version && cargo --version
+
+      # Release artifacts: a cache of their own, apart from the debug builds of `rust`.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: perf
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: cargo xtask perf --quick
+        run: cargo xtask perf --quick --no-fail --locked
+
+      - name: Job summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f target/perf/report.md ]; then
+            cat target/perf/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: perf-report
+          path: target/perf/
+          retention-days: 14
+          if-no-files-found: warn
+
+  detect:
+    name: Detect optional components
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.detect.outputs.app }}
+    steps:
+      - uses: actions/checkout@v7
+      # hashFiles() is not available in job-level `if:`, so evaluate it here.
+      - id: detect
+        run: echo "app=${{ hashFiles('app/package.json') != '' }}" >> "$GITHUB_OUTPUT"
+
+  app:
+    name: App (${{ matrix.os }})
+    needs: detect
+    if: needs.detect.outputs.app == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev libxdo-dev patchelf
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        shell: bash
+        run: |
+          rustup set profile minimal
+          rustup toolchain install || rustup show
+          rustc --version && cargo --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: app
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: npm ci
+        working-directory: app
+        run: npm ci
+
+      - name: npm run check
+        working-directory: app
+        run: npm run check --if-present
+
+      # Also produces app/dist, which tauri::generate_context!() embeds at compile time.
+      - name: npm run build
+        working-directory: app
+        run: npm run build
+
+      # Non-blocking: dependency bumps (Dependabot) would otherwise all fail here. The release
+      # workflow regenerates the inventory anyway; this only reminds to commit it.
+      - name: License inventory up to date (THIRD_PARTY_NOTICES.md)
+        if: runner.os == 'Linux'
+        run: |
+          if ! python3 scripts/license-inventory.py --check; then
+            echo "::warning file=THIRD_PARTY_NOTICES.md::License inventory is stale; run scripts/license-inventory.py and commit the result."
+          fi
+
+      - name: cargo clippy (pbiview-app)
+        if: hashFiles('app/src-tauri/Cargo.toml') != ''
+        run: cargo clippy -p pbiview-app --all-targets --locked -- -D warnings
+
+  deny:
+    name: cargo-deny (${{ matrix.checks }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+    # A newly published RustSec advisory should not block unrelated PRs; it is
+    # still reported (annotations + red job) and the nightly/PR author can act.
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check ${{ matrix.checks }}

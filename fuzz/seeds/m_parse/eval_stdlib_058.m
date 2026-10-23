@@ -1,0 +1,1 @@
+List.Sum({1, null, 2.5})

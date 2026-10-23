@@ -1,0 +1,1 @@
+List.Transform({1, 2}, each _ * 10)

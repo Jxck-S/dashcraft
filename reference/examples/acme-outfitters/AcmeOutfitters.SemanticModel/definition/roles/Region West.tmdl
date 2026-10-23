@@ -1,0 +1,5 @@
+/// Sees the West region only: its stores, their orders, returns and targets.
+role 'Region West'
+	modelPermission: read
+
+	tablePermission Stores = Stores[Region] = "West"

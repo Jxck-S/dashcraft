@@ -1,0 +1,128 @@
+---
+source: crates/pbi-render/tests/render_snapshots.rs
+expression: text
+---
+Acme Outfitters - Online / Customer Detail (FitToWidth, 1280×960, 7 visuals)
+page svg: 39541 bytes, fnv1a 1f35b47bc286b20d
+
+1f11f6d134656218a0c1 shape 1280×64 at (0, 0): svg 8bb221be624a3329, 0 data points
+
+87a4a735f2b95d3c2e6e textbox 680×48 at (24, 8): svg e70a283025d9631a, 0 data points
+  | Acme Outfitters
+  |   |  Corporate customers (page filter)
+
+6bad6bbf6329e1af75c5 actionButton 48×40 at (1208, 12): svg 9691af4d4653b6f1, 0 data points
+
+170bf192d4f507117a5c cardVisual 480×124 at (24, 80): svg 237e641fde67cc9c, 0 data points
+  | 29
+  | Customer Count
+  | $22,734.80
+  | Total Sales
+
+dc8dc10588284195b4a9 tableEx 760×400 at (24, 220): svg 159cbb1e18df1fa5, 72 data points
+  | Corporate customers buying online
+  | Felix Vargas
+  | 0
+  | $2,330.30
+  | Sam Khan
+  | Lena Ford; Priya Shah
+  | 2
+  | $2,325.25
+  | Kofi Ito
+  | O'Neil Park
+  | 1
+  | $1,981.80
+  | Jonah Baker
+  | D'Arcy Lane
+  | 1
+  | $1,522.00
+  | Caleb O'Brien
+  | Marcus Bell
+  | 1
+  | $1,519.05
+  | Liam Kim
+  | 0
+  | $1,367.50
+  | Yara Ellis
+  | Ana Ruiz; Priya Shah
+  | 2
+  | $1,333.00
+  | Tara Vargas
+  | D'Arcy Lane
+  | 1
+  | $1,227.40
+  | Amir Zimmer
+  | Jo Kim; Lena Ford
+  | 2
+  | $917.00
+  | Victor Ellis
+  | Ana Ruiz; Tomas Vega
+  | 2
+  | $891.00
+  | Bianca Jensen
+  | 0
+  | $831.60
+  | Pablo Evans
+  | O'Neil Park
+  | 1
+  | $807.00
+  | Nadia Fischer
+  | Priya Shah
+  | 1
+  | $727.00
+  | Olive Adams
+  | Ana Ruiz; Jo Kim
+  | 2
+  | $594.00
+  | Nadia Nguyen
+  | 0
+  | $557.10
+  | Jonah Adams
+  | 0
+  | $548.00
+  | Olive Ellis
+  | D'Arcy Lane; Marcus Bell
+  | 2
+  | $532.80
+  | Rosa Silva
+  | 0
+  | $510.20
+  | Customer Name
+  | Account Managers
+  | Account Manager Count
+  | Total Sales
+
+b57b07f8b020ec9b8a81 pivotTable 456×200 at (800, 220): svg 6460e6b405bac757, 6 data points
+  | Sales by segment and tier
+  | Corporate
+  | $8,959.25
+  | $4,310.75
+  | $2,828.75
+  | $6,636.05
+  | $22,734.80
+  | Segment
+  | Bronze
+  | Gold
+  | Silver
+  | Unassigned
+  | Total
+  | Total
+  | $8,959.25
+  | $4,310.75
+  | $2,828.75
+  | $6,636.05
+  | $22,734.80
+
+8ceb07ec7d4177d908d0 stackedBarChart 456×184 at (800, 436): svg d00780b42aa8ee17, 8 data points
+  | Sales by state and value tier
+  | Value Tier
+  | High
+  | Low
+  | Medium
+  | $0K
+  | $5K
+  | Total Sales
+  | State
+  | WA
+  | CO
+  | AZ

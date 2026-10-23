@@ -1,0 +1,56 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "ef3ce6b6fadf22960137",
+  "displayName": "Store Performance",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "objects": {
+    "background": [
+      {
+        "properties": {
+          "color": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "Literal": {
+                    "Value": "'#F7F5EF'"
+                  }
+                }
+              }
+            }
+          },
+          "transparency": {
+            "expr": {
+              "Literal": {
+                "Value": "0L"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "visualInteractions": [
+    {
+      "source": "05ac8028fb6e14374ec7",
+      "target": "8ee1ff74df542ac157fc",
+      "type": "NoFilter"
+    },
+    {
+      "source": "05ac8028fb6e14374ec7",
+      "target": "d4431298c2010cc0f494",
+      "type": "DataFilter"
+    },
+    {
+      "source": "69f47593f5e0a4aefd36",
+      "target": "8ee1ff74df542ac157fc",
+      "type": "HighlightFilter"
+    },
+    {
+      "source": "9b4e31f5f08b8acaa5ed",
+      "target": "6f647d31a8428ad62fb0",
+      "type": "NoFilter"
+    }
+  ]
+}

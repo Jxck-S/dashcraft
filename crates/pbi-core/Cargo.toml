@@ -1,0 +1,37 @@
+[package]
+name = "pbi-core"
+description = "Format detection, safe containers and readers producing a unified document"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pbi-model = { workspace = true }
+pbi-tmdl = { workspace = true }
+pbi-tmsl = { workspace = true }
+pbi-pbir = { workspace = true }
+pbi-vertipaq = { workspace = true }
+pbi-dax = { workspace = true }
+pbi-m = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+indexmap = { workspace = true }
+thiserror = { workspace = true }
+encoding_rs = { workspace = true }
+zip = { workspace = true }
+walkdir = { workspace = true }
+tracing = { workspace = true }
+# Read-only XML DOM for RDL (no DTDs, node limit; MIT OR Apache-2.0).
+roxmltree = { workspace = true }
+
+[dev-dependencies]
+# Synthetic ABF backups (Power Pivot tests).
+pbi-vertipaq = { workspace = true, features = ["test-support"] }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+insta = { workspace = true }

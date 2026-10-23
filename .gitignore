@@ -1,0 +1,33 @@
+/target/
+**/target/
+**/*.rs.bk
+.DS_Store
+# credentials — never commit
+**/azpbi/
+**/msal_token_cache*
+**/*.sess
+.env
+# app
+/app/node_modules/
+/app/dist/
+/app/.svelte-kit/
+/app/src-tauri/target/
+/app/src-tauri/gen/
+# fuzz
+/fuzz/target/
+/fuzz/corpus/
+/fuzz/artifacts/
+# test output
+**/*.snap.new
+/out/
+# local-only reference material — never commit (see reference/README.md)
+/reference/golden/
+/reference/private/
+/reference/samples/downloads/
+# never commit real reports or data anywhere in the repo
+*.pbix
+!/reference/samples/microsoft/*.pbix
+*.pbit
+!/reference/samples/microsoft/*.pbit
+*.abf
+!/fuzz/seeds/**/*.abf

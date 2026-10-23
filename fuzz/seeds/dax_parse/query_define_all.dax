@@ -1,0 +1,11 @@
+DEFINE
+    FUNCTION AddTax = (amount : NUMERIC VAL) => amount * 1.2
+    MEASURE Sales[Total] = SUM ( Sales[Amount] )
+    VAR _min = 10
+    TABLE Big = FILTER ( Sales, Sales[Amount] > _min )
+    COLUMN Sales[Taxed] = AddTax ( Sales[Amount] )
+EVALUATE
+    SUMMARIZECOLUMNS ( Sales[Region], "Total", [Total], "Rows", COUNTROWS ( Big ) )
+ORDER BY [Total] DESC, Sales[Region]
+START AT 100
+EVALUATE { 1, 2, 3 }

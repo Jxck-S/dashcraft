@@ -1,0 +1,1 @@
+List.Min({3, null, 7, 1})

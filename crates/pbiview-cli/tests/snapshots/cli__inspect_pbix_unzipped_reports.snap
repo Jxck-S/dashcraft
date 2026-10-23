@@ -1,0 +1,517 @@
+---
+source: crates/pbiview-cli/tests/cli.rs
+expression: "pretty(&v[\"reports\"])"
+---
+[
+  {
+    "name": "Unzipped",
+    "datasetReference": {
+      "kind": "embedded"
+    },
+    "baseTheme": "Fluent2-CY26SU08",
+    "customTheme": "Classroom10888586425032654.json",
+    "activePage": "ReportSection",
+    "filters": [],
+    "pages": [
+      {
+        "name": "ReportSection",
+        "displayName": "Opportunity Overview",
+        "width": 1920.0,
+        "height": 1080.0,
+        "displayOption": "FitToPage",
+        "isHidden": false,
+        "filters": [],
+        "visuals": [
+          {
+            "name": "6a5e17d07518a05c0199",
+            "visualType": "actionButton",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 48.19022457067371,
+              "y": 961.2681638044913,
+              "z": 7000.0,
+              "width": 672.1268163804491,
+              "height": 40.58124174372523,
+              "tabOrder": 0
+            },
+            "fields": [],
+            "filters": []
+          },
+          {
+            "name": "772b1906500006b78011",
+            "visualType": "barChart",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 741.67856593967,
+              "y": 681.5888673102985,
+              "z": 4000.0,
+              "width": 1134.8368798289857,
+              "height": 321.0506755340701,
+              "tabOrder": 5
+            },
+            "fields": [
+              {
+                "role": "Category",
+                "kind": "column",
+                "table": "Sales stage",
+                "name": "Sales Stage",
+                "ref": "'Sales stage'[Sales Stage]",
+                "queryRef": "SalesStage.Sales Stage",
+                "nativeQueryRef": "Sales Stage"
+              },
+              {
+                "role": "Y",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Opportunity Count",
+                "ref": "Calculations[Opportunity Count]",
+                "queryRef": "Fact.Opportunity Count",
+                "nativeQueryRef": "Opportunity Count"
+              }
+            ],
+            "filters": []
+          },
+          {
+            "name": "77960fe4d6dd7e864e6c",
+            "visualType": "slicer",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 1635.9313077939232,
+              "y": 38.044914134742406,
+              "z": 0.0,
+              "width": 240.95112285336856,
+              "height": 76.08982826948481,
+              "tabOrder": 30
+            },
+            "fields": [
+              {
+                "role": "Values",
+                "kind": "column",
+                "table": "Product",
+                "name": "Product Code",
+                "ref": "Product[Product Code]",
+                "queryRef": "Product.Product Code"
+              }
+            ],
+            "filters": []
+          },
+          {
+            "name": "8a2c970418c8c8b490ba",
+            "visualType": "barChart",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 48.07175890349713,
+              "y": 255.8104313078954,
+              "z": 6000.0,
+              "width": 331.3517667276766,
+              "height": 284.9968563564472,
+              "tabOrder": 20
+            },
+            "fields": [
+              {
+                "role": "Category",
+                "kind": "column",
+                "table": "Account",
+                "name": "Region",
+                "ref": "Account[Region]",
+                "queryRef": "Account.Region",
+                "nativeQueryRef": "Region"
+              },
+              {
+                "role": "Category",
+                "kind": "column",
+                "table": "Account",
+                "name": "State",
+                "ref": "Account[State]",
+                "queryRef": "Account.State",
+                "nativeQueryRef": "State"
+              },
+              {
+                "role": "Y",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Revenue",
+                "ref": "Calculations[Revenue]",
+                "queryRef": "Fact.Revenue",
+                "nativeQueryRef": "Revenue"
+              }
+            ],
+            "filters": []
+          },
+          {
+            "name": "91b894da4c7a504a0d7c",
+            "visualType": "shapeMap",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 48.19022457067371,
+              "y": 565.6010568031704,
+              "z": 2000.0,
+              "width": 677.1994715984148,
+              "height": 377.9128137384412,
+              "tabOrder": 10
+            },
+            "fields": [
+              {
+                "role": "Category",
+                "kind": "column",
+                "table": "Account",
+                "name": "State",
+                "ref": "Account[State]",
+                "queryRef": "Account.State"
+              },
+              {
+                "role": "Value",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Revenue",
+                "ref": "Calculations[Revenue]",
+                "queryRef": "Opportunities.Revenue"
+              }
+            ],
+            "filters": []
+          },
+          {
+            "name": "d76a83b307156a9b4281",
+            "visualType": "cardVisual",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 48.19022457067371,
+              "y": 38.044914134742406,
+              "z": 8000.0,
+              "width": 677.1994715984148,
+              "height": 190.224570673712,
+              "tabOrder": 35
+            },
+            "fields": [
+              {
+                "role": "Data",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Revenue",
+                "ref": "Calculations[Revenue]",
+                "queryRef": "Opportunities.Revenue",
+                "nativeQueryRef": "Revenue"
+              },
+              {
+                "role": "Data",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Opportunity Count",
+                "ref": "Calculations[Opportunity Count]",
+                "queryRef": "Opportunities.Opportunity Count",
+                "nativeQueryRef": "Opportunity Count"
+              }
+            ],
+            "filters": []
+          },
+          {
+            "name": "eaf58d9fd08140688010",
+            "visualType": "treemap",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 388.0581241743725,
+              "y": 256.1690885072655,
+              "z": 1000.0,
+              "width": 337.33157199471594,
+              "height": 284.0686922060766,
+              "tabOrder": 15
+            },
+            "fields": [
+              {
+                "role": "Group",
+                "kind": "column",
+                "table": "Account",
+                "name": "Region",
+                "ref": "Account[Region]",
+                "queryRef": "Account.Region"
+              },
+              {
+                "role": "Values",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Opportunity Count",
+                "ref": "Calculations[Opportunity Count]",
+                "queryRef": "Fact.Opportunity Count"
+              }
+            ],
+            "filters": [
+              {
+                "name": "Filter24f6a9d57e56ecd0a279",
+                "kind": "Categorical",
+                "field": {
+                  "kind": "column",
+                  "table": "Sales stage",
+                  "name": "Sales Stage",
+                  "ref": "'Sales stage'[Sales Stage]"
+                },
+                "isHiddenInViewMode": false,
+                "isLockedInViewMode": false,
+                "howCreated": "User"
+              }
+            ]
+          },
+          {
+            "name": "efc42a2f1a28997b4092",
+            "visualType": "lineStackedColumnComboChart",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 741.67856593967,
+              "y": 113.3120031296718,
+              "z": 3000.0,
+              "width": 1134.8368798289857,
+              "height": 549.3915303256814,
+              "tabOrder": 25
+            },
+            "fields": [
+              {
+                "role": "Category",
+                "kind": "column",
+                "table": "Calendar",
+                "name": "Year Month",
+                "ref": "Calendar[Year Month]",
+                "queryRef": "Calendar.Year Month",
+                "nativeQueryRef": "Year Month"
+              },
+              {
+                "role": "Y",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Revenue",
+                "ref": "Calculations[Revenue]",
+                "queryRef": "Fact.Revenue",
+                "nativeQueryRef": "Revenue"
+              },
+              {
+                "role": "Y2",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Opportunity Count",
+                "ref": "Calculations[Opportunity Count]",
+                "queryRef": "Fact.Opportunity Count",
+                "nativeQueryRef": "Opportunity Count"
+              }
+            ],
+            "filters": []
+          }
+        ]
+      },
+      {
+        "name": "ReportSection9380eec50a2a0165bb4b",
+        "displayName": "Detail",
+        "width": 1920.0,
+        "height": 1080.0,
+        "displayOption": "FitToPage",
+        "isHidden": false,
+        "filters": [
+          {
+            "name": "Filter1ce2d7ed595ee9095ce0",
+            "kind": "Categorical",
+            "field": {
+              "kind": "column",
+              "table": "Account",
+              "name": "Region",
+              "ref": "Account[Region]"
+            },
+            "isHiddenInViewMode": false,
+            "isLockedInViewMode": false,
+            "howCreated": "Drillthrough"
+          },
+          {
+            "name": "Filter4644741952a7721ce66d",
+            "kind": "Categorical",
+            "field": {
+              "kind": "column",
+              "table": "Account",
+              "name": "State",
+              "ref": "Account[State]"
+            },
+            "isHiddenInViewMode": false,
+            "isLockedInViewMode": false,
+            "howCreated": "Drillthrough"
+          }
+        ],
+        "visuals": [
+          {
+            "name": "2b022e3ea05009a0e305",
+            "visualType": "actionButton",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 0.0,
+              "y": 26.651484343228955,
+              "z": 1000.0,
+              "width": 63.29727531516877,
+              "height": 66.62871085807238,
+              "tabOrder": 5
+            },
+            "fields": [],
+            "filters": []
+          },
+          {
+            "name": "df4f5199190e7a2291de",
+            "visualType": "pivotTable",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 63.29727531516877,
+              "y": 26.651484343228955,
+              "z": 0.0,
+              "width": 1795.6437576250507,
+              "height": 1012.7564050427003,
+              "tabOrder": 0
+            },
+            "fields": [
+              {
+                "role": "Rows",
+                "kind": "column",
+                "table": "Opportunity",
+                "name": "Opportunity Size",
+                "ref": "Opportunity[Opportunity Size]",
+                "queryRef": "Opportunity.Opportunity Size"
+              },
+              {
+                "role": "Rows",
+                "kind": "column",
+                "table": "Account",
+                "name": "Region",
+                "ref": "Account[Region]",
+                "queryRef": "Account.Region"
+              },
+              {
+                "role": "Rows",
+                "kind": "column",
+                "table": "Partner",
+                "name": "Partner",
+                "ref": "Partner[Partner]",
+                "queryRef": "Partner.Partner"
+              },
+              {
+                "role": "Values",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Opportunity Count",
+                "ref": "Calculations[Opportunity Count]",
+                "queryRef": "Fact.Opportunity Count",
+                "displayName": "Opportunities"
+              },
+              {
+                "role": "Values",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Revenue",
+                "ref": "Calculations[Revenue]",
+                "queryRef": "Fact.Revenue"
+              },
+              {
+                "role": "Values",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Factored Revenue",
+                "ref": "Calculations[Factored Revenue]",
+                "queryRef": "Fact.Factored Revenue"
+              },
+              {
+                "role": "Values",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Avg Revenue",
+                "ref": "Calculations[Avg Revenue]",
+                "queryRef": "Fact.Avg Revenue"
+              }
+            ],
+            "filters": []
+          }
+        ]
+      },
+      {
+        "name": "ReportSectionf4c4d2dee7b9c36a1669",
+        "displayName": "Tooltip",
+        "width": 600.0,
+        "height": 450.0,
+        "displayOption": "FitToPage",
+        "isHidden": true,
+        "filters": [],
+        "visuals": [
+          {
+            "name": "e8ebd9f08a255541ab4c",
+            "visualType": "cardVisual",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 0.0,
+              "y": 7.287515250101667,
+              "z": 1000.0,
+              "width": 599.6583977226514,
+              "height": 92.65555103700692,
+              "tabOrder": 1000
+            },
+            "fields": [
+              {
+                "role": "Data",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Opportunity Count",
+                "ref": "Calculations[Opportunity Count]",
+                "queryRef": "Calculations.Opportunity Count",
+                "nativeQueryRef": "Opportunity Count"
+              },
+              {
+                "role": "Rows",
+                "kind": "column",
+                "table": "Calendar",
+                "name": "Year Month",
+                "ref": "Calendar[Year Month]",
+                "queryRef": "Calendar.Year Month",
+                "nativeQueryRef": "Year Month"
+              }
+            ],
+            "filters": []
+          },
+          {
+            "name": "f2743f4e08200c0ed75b",
+            "visualType": "donutChart",
+            "isGroup": false,
+            "isHidden": false,
+            "position": {
+              "x": 0.0,
+              "y": 108.27165514436763,
+              "z": 0.0,
+              "width": 599.6583977226514,
+              "height": 341.47214314762095,
+              "tabOrder": 0
+            },
+            "fields": [
+              {
+                "role": "Category",
+                "kind": "column",
+                "table": "Account",
+                "name": "Segment",
+                "ref": "Account[Segment]",
+                "queryRef": "Account.Segment",
+                "nativeQueryRef": "Segment"
+              },
+              {
+                "role": "Y",
+                "kind": "measure",
+                "table": "Calculations",
+                "name": "Revenue",
+                "ref": "Calculations[Revenue]",
+                "queryRef": "Fact.Revenue",
+                "nativeQueryRef": "Revenue"
+              }
+            ],
+            "filters": []
+          }
+        ]
+      }
+    ]
+  }
+]

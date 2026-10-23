@@ -1,0 +1,1 @@
+let t = type table [A = text, optional B = number], v = Value.Type(1) in {Type.Is(v, type number), Value.ReplaceType(#table({"A"}, {{"x"}}), t), 1 is number, "a" as text}

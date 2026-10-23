@@ -1,0 +1,1 @@
+Text.Middle("abcdef", 2, 10)

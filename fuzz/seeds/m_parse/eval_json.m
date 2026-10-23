@@ -1,0 +1,1 @@
+let j = Json.Document("{""a"": [1, 2.5, null, true], ""b"": {""c"": ""d""}}") in Record.ToTable(j)

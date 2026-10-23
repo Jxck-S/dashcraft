@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Installed by the DashCraft .deb and AppImage to /usr/share/mime/packages/dashcraft.xml (the shared-mime-info
+     dpkg trigger runs update-mime-database). Types match bundle.fileAssociations[].mimeType in
+     app/src-tauri/tauri.conf.json; see docs/packaging.md. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-dashcraft-pbix">
+    <comment>Power BI report</comment>
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.pbix"/>
+  </mime-type>
+  <mime-type type="application/x-dashcraft-pbit">
+    <comment>Power BI template</comment>
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.pbit"/>
+  </mime-type>
+  <mime-type type="application/x-dashcraft-pbip">
+    <comment>Power BI project</comment>
+    <sub-class-of type="application/json"/>
+    <glob pattern="*.pbip"/>
+  </mime-type>
+  <mime-type type="application/x-dashcraft-bim">
+    <comment>Tabular model (TMSL)</comment>
+    <sub-class-of type="application/json"/>
+    <glob pattern="*.bim"/>
+  </mime-type>
+  <mime-type type="application/x-dashcraft-vpax">
+    <comment>VertiPaq Analyzer export</comment>
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.vpax"/>
+  </mime-type>
+</mime-info>

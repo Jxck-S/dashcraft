@@ -1,0 +1,1 @@
+(x : NUMERIC, t : TABLE) => SUMX(t, [Amount] * x)

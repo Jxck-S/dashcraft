@@ -1,0 +1,1 @@
+SWITCH(TRUE(), Orders[Line Amount] >= 1000, "Large", Orders[Line Amount] >= 250, "Medium", "Small")

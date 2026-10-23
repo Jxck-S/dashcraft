@@ -1,0 +1,1 @@
+Text.StartsWith("Hello", "He")

@@ -1,0 +1,2 @@
+function AddOne = (x: int64) => x + 1
+	lineageTag: f1

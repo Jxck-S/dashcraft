@@ -1,0 +1,1 @@
+Text.Combine({"a", null, "b"}, ", ")

@@ -1,0 +1,113 @@
+/// Calendar 2024-2025, marked as the date table.
+table Date
+	lineageTag: ce75907f-9966-579a-90e4-8642b718d2b4
+	dataCategory: Time
+
+	column Date
+		dataType: dateTime
+		isKey
+		isNameInferred
+		formatString: yyyy-mm-dd
+		lineageTag: b6ba6ce5-ba17-52e0-970c-6e0d06fdc7d4
+		summarizeBy: none
+		sourceColumn: [Date]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Year
+		dataType: int64
+		isNameInferred
+		formatString: 0
+		lineageTag: 63942eaa-922d-541d-a5aa-9a832b179637
+		summarizeBy: none
+		sourceColumn: [Year]
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Number'
+		dataType: int64
+		isHidden
+		isNameInferred
+		formatString: 0
+		lineageTag: d15384f1-1c4f-5286-8e59-dd868d9aa857
+		summarizeBy: none
+		sourceColumn: [Month Number]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Month
+		dataType: string
+		isNameInferred
+		lineageTag: 423b0ef4-8ac0-53be-9d3a-dd07d4630e22
+		summarizeBy: none
+		sourceColumn: [Month]
+		sortByColumn: 'Month Number'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Year Month'
+		dataType: string
+		isNameInferred
+		lineageTag: a000dc22-ff55-5c6b-b505-169b8511dfaf
+		summarizeBy: none
+		sourceColumn: [Year Month]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Quarter
+		dataType: string
+		isNameInferred
+		lineageTag: a8471720-0c35-5379-8602-62b6cd69abbe
+		summarizeBy: none
+		sourceColumn: [Quarter]
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Start'
+		dataType: dateTime
+		isNameInferred
+		formatString: yyyy-mm-dd
+		lineageTag: a6918dc7-aa17-52dd-b849-841a287c7a49
+		summarizeBy: none
+		sourceColumn: [Month Start]
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Day Type' = IF(WEEKDAY('Date'[Date], 2) > 5, "Weekend", "Weekday")
+		dataType: string
+		lineageTag: e8f90589-0022-569b-9361-2f3ae0db3a05
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy Calendar
+		lineageTag: 28860f3d-a889-516d-a2cc-2d0cc18938d8
+
+		level Year
+			lineageTag: 5146f5cf-a7c8-51f4-b4ee-1984e181bfa4
+			column: Year
+
+		level Quarter
+			lineageTag: 02e44093-c8d1-5ed5-9bfe-970b263fbd04
+			column: Quarter
+
+		level Month
+			lineageTag: 452707c0-ce20-5e92-92ec-e0ba8e48a343
+			column: Month
+
+		level Date
+			lineageTag: a57eabc3-6140-5e66-abe7-65140e0efd6e
+			column: Date
+
+	partition Date = calculated
+		mode: import
+		source =
+				ADDCOLUMNS(
+				    CALENDAR(DATE(2024, 1, 1), DATE(2025, 12, 31)),
+				    "Year", YEAR([Date]),
+				    "Month Number", MONTH([Date]),
+				    "Month", FORMAT([Date], "mmm"),
+				    "Year Month", FORMAT([Date], "yyyy-mm"),
+				    "Quarter", "Q" & QUARTER([Date]),
+				    "Month Start", DATE(YEAR([Date]), MONTH([Date]), 1)
+				)

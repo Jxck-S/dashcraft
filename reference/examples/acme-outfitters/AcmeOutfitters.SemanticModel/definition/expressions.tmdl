@@ -1,0 +1,30 @@
+/// Fictional Azure Blob container with the sample CSVs. Never contacted: DashCraft resolves it
+/// offline through blob-map.json.
+expression StorageContainerUrl = "https://acmeoutfittersdemo.blob.core.windows.net/sample-data" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: ceb1bed5-a7d6-569a-9f5f-d58ee132c214
+	queryGroup: Parameters
+
+	annotation PBI_ResultType = Text
+
+/// Trims and upper-cases a business key (customer, store and product ids).
+expression fnCleanKey = (x as text) as text => Text.Upper(Text.Trim(x))
+	lineageTag: 11ee2aaf-71e5-5390-9523-01f44b7515c1
+	queryGroup: Functions
+
+	annotation PBI_ResultType = Function
+
+/// Turns a Python-style list of names, such as ['Ana Ruiz', "O'Neil Park"], into "Ana Ruiz; O'Neil Park".
+expression fnParseNames =
+		(raw as text) as text =>
+		let
+		    Trimmed = Text.Trim(raw),
+		    Inner = if Text.Start(Trimmed, 1) = "[" then Text.Range(Trimmed, 1, Text.Length(Trimmed) - 2) else Trimmed,
+		    Names = List.Transform(Text.Split(Inner, ","), each Text.Trim(Text.Trim(_), {"'", """"})),
+		    NonEmpty = List.Select(Names, each _ <> ""),
+		    Result = if List.IsEmpty(NonEmpty) then "" else Text.Combine(NonEmpty, "; ")
+		in
+		    Result
+	lineageTag: 968f9bc3-ca54-5169-a931-fd974c457fe0
+	queryGroup: Functions
+
+	annotation PBI_ResultType = Function

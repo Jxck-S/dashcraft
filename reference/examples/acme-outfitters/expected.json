@@ -1,0 +1,1928 @@
+{
+  "schemaVersion": 1,
+  "generator": "scripts/examples/gen_acme.py",
+  "seed": 20251231,
+  "dataAsOf": "2025-12-31",
+  "notes": [
+    "Values are computed by the generator in plain Python over the generated rows, not by DashCraft.",
+    "'formatted' applies the measure's format string (display units None), as Power BI shows it.",
+    "Card contexts: report filters + page filters + saved slicer selections (honouring visualInteractions) + visual filters.",
+    "Relative date filters ('last 10 years') keep every row: the data ends 2025-12-31.",
+    "A Not In filter (inverted slicer) keeps the blank member of unmatched keys, as Power BI does.",
+    "'knownEngineGap' marks an expectation DashCraft does not meet yet (see EXPECTED.md)."
+  ],
+  "pbip": "AcmeOutfitters.pbip",
+  "blobMap": "blob-map.json",
+  "rowCounts": {
+    "Orders": 3900,
+    "Customers": 400,
+    "Products": 120,
+    "Stores": 15,
+    "Targets": 120,
+    "Returns": 168,
+    "Web Sessions": 1600,
+    "Date": 731,
+    "Products Never Sold": 6,
+    "Time Calc": 4,
+    "Last Refreshed": 1
+  },
+  "rawCsvRows": {
+    "stores.csv": 16,
+    "products.csv": 122,
+    "customers.csv": 403,
+    "orders.csv": 3919,
+    "returns.csv": 169,
+    "web_sessions.csv": 1600,
+    "targets.csv": 121
+  },
+  "dataQuality": {
+    "unmatchedCustomerIds": [
+      "C0997",
+      "C0998",
+      "C0999"
+    ],
+    "ordersWithUnmatchedCustomer": 6,
+    "ordersWithUnknownProduct": 4,
+    "productsNeverSold": [
+      "P0005",
+      "P0041",
+      "P0094",
+      "P0099",
+      "P0114",
+      "P0120"
+    ]
+  },
+  "calculatedTables": {
+    "Products Never Sold": {
+      "rows": 6,
+      "productIds": [
+        "P0005",
+        "P0041",
+        "P0094",
+        "P0099",
+        "P0114",
+        "P0120"
+      ]
+    },
+    "Date": {
+      "rows": 731,
+      "from": "2024-01-01",
+      "to": "2025-12-31"
+    }
+  },
+  "measures": {
+    "unfiltered": {
+      "Total Sales": {
+        "value": 894300.5,
+        "formatted": "$894,300.50"
+      },
+      "Total Cost": {
+        "value": 489883.85,
+        "formatted": "$489,883.85"
+      },
+      "Gross Margin": {
+        "value": 404416.65,
+        "formatted": "$404,416.65"
+      },
+      "Margin %": {
+        "value": 0.4522156143,
+        "formatted": "45.2%"
+      },
+      "Sales (Scaled)": {
+        "value": 894300.5,
+        "formatted": "$894.3K"
+      },
+      "Completed Sales": {
+        "value": 811667.1,
+        "formatted": "$811,667.10"
+      },
+      "Shipped Sales": {
+        "value": 894300.5,
+        "formatted": "$894,300.50"
+      },
+      "Sales All Stores": {
+        "value": 894300.5,
+        "formatted": "$894,300.50"
+      },
+      "Store Share": {
+        "value": 1,
+        "formatted": "100.0%"
+      },
+      "Order Count": {
+        "value": 3900,
+        "formatted": "3,900"
+      },
+      "Units Sold": {
+        "value": 6415,
+        "formatted": "6,415"
+      },
+      "Active Customers": {
+        "value": 395,
+        "formatted": "395"
+      },
+      "Avg Order Value": {
+        "value": 229.3078205128,
+        "formatted": "$229.31"
+      },
+      "Revenue per Unit": {
+        "value": 139.4077162899,
+        "formatted": "$139.41"
+      },
+      "Last Order Date": {
+        "value": "2025-12-31",
+        "formatted": "2025-12-31"
+      },
+      "Unknown Product Orders": {
+        "value": 4,
+        "formatted": "4"
+      },
+      "Sales YTD": {
+        "value": 488272.75,
+        "formatted": "$488,272.75"
+      },
+      "Sales PY": {
+        "value": 406027.75,
+        "formatted": "$406,027.75"
+      },
+      "Sales YoY %": {
+        "value": 1.2025600467,
+        "formatted": "+120.3%"
+      },
+      "Sales Prev Month": {
+        "value": 834954.65,
+        "formatted": "$834,954.65"
+      },
+      "Customer Count": {
+        "value": 400,
+        "formatted": "400"
+      },
+      "Products Never Sold Count": {
+        "value": 6,
+        "formatted": "6"
+      },
+      "Returns Count": {
+        "value": 168,
+        "formatted": "168"
+      },
+      "Refunds": {
+        "value": 24088.2,
+        "formatted": "$24,088.20"
+      },
+      "Return Rate": {
+        "value": 0.0430769231,
+        "formatted": "4.3%"
+      },
+      "Target": {
+        "value": 844000,
+        "formatted": "$844,000"
+      },
+      "Target Attainment %": {
+        "value": 1.0595977488,
+        "formatted": "106.0%"
+      },
+      "Target Stretch": {
+        "value": 1012800,
+        "formatted": "$1,012,800"
+      },
+      "Sessions": {
+        "value": 1600,
+        "formatted": "1,600"
+      },
+      "Converted Sessions": {
+        "value": 141,
+        "formatted": "141"
+      },
+      "Conversion Rate": {
+        "value": 0.088125,
+        "formatted": "8.8%"
+      },
+      "Avg Pages per Session": {
+        "value": 8.214375,
+        "formatted": "8.2"
+      },
+      "Sessions (All Devices)": {
+        "value": 1600,
+        "formatted": "1,600"
+      }
+    },
+    "byReport": {
+      "Acme Outfitters - Overview": {
+        "reportFilters": [
+          "'Orders'[Status] not in ['Cancelled']"
+        ],
+        "values": {
+          "Total Sales": {
+            "value": 829629,
+            "formatted": "$829,629.00"
+          },
+          "Total Cost": {
+            "value": 454847.39,
+            "formatted": "$454,847.39"
+          },
+          "Gross Margin": {
+            "value": 374781.61,
+            "formatted": "$374,781.61"
+          },
+          "Margin %": {
+            "value": 0.4517460335,
+            "formatted": "45.2%"
+          },
+          "Sales (Scaled)": {
+            "value": 829629,
+            "formatted": "$829.6K"
+          },
+          "Completed Sales": {
+            "value": 811667.1,
+            "formatted": "$811,667.10"
+          },
+          "Shipped Sales": {
+            "value": 829629,
+            "formatted": "$829,629.00"
+          },
+          "Sales All Stores": {
+            "value": 829629,
+            "formatted": "$829,629.00"
+          },
+          "Store Share": {
+            "value": 1,
+            "formatted": "100.0%"
+          },
+          "Order Count": {
+            "value": 3629,
+            "formatted": "3,629"
+          },
+          "Units Sold": {
+            "value": 5961,
+            "formatted": "5,961"
+          },
+          "Active Customers": {
+            "value": 395,
+            "formatted": "395"
+          },
+          "Avg Order Value": {
+            "value": 228.610912097,
+            "formatted": "$228.61"
+          },
+          "Revenue per Unit": {
+            "value": 139.1761449421,
+            "formatted": "$139.18"
+          },
+          "Last Order Date": {
+            "value": "2025-12-31",
+            "formatted": "2025-12-31"
+          },
+          "Unknown Product Orders": {
+            "value": 4,
+            "formatted": "4"
+          },
+          "Sales YTD": {
+            "value": 457432.15,
+            "formatted": "$457,432.15"
+          },
+          "Sales PY": {
+            "value": 372196.85,
+            "formatted": "$372,196.85"
+          },
+          "Sales YoY %": {
+            "value": 1.2290059682,
+            "formatted": "+122.9%"
+          },
+          "Sales Prev Month": {
+            "value": 773512,
+            "formatted": "$773,512.00"
+          },
+          "Customer Count": {
+            "value": 392,
+            "formatted": "392"
+          },
+          "Products Never Sold Count": {
+            "value": 6,
+            "formatted": "6"
+          },
+          "Returns Count": {
+            "value": 168,
+            "formatted": "168"
+          },
+          "Refunds": {
+            "value": 24088.2,
+            "formatted": "$24,088.20"
+          },
+          "Return Rate": {
+            "value": 0.0462937448,
+            "formatted": "4.6%"
+          },
+          "Target": {
+            "value": 844000,
+            "formatted": "$844,000"
+          },
+          "Target Attainment %": {
+            "value": 0.9829727488,
+            "formatted": "98.3%"
+          },
+          "Target Stretch": {
+            "value": 1012800,
+            "formatted": "$1,012,800"
+          },
+          "Sessions": {
+            "value": 1600,
+            "formatted": "1,600"
+          },
+          "Converted Sessions": {
+            "value": 141,
+            "formatted": "141"
+          },
+          "Conversion Rate": {
+            "value": 0.088125,
+            "formatted": "8.8%"
+          },
+          "Avg Pages per Session": {
+            "value": 8.214375,
+            "formatted": "8.2"
+          },
+          "Sessions (All Devices)": {
+            "value": 1600,
+            "formatted": "1,600"
+          }
+        }
+      },
+      "Acme Outfitters - Stores": {
+        "reportFilters": [
+          "'Stores'[Channel] in ['Retail', 'Outlet']"
+        ],
+        "values": {
+          "Total Sales": {
+            "value": 609500.1,
+            "formatted": "$609,500.10"
+          },
+          "Total Cost": {
+            "value": 335194.49,
+            "formatted": "$335,194.49"
+          },
+          "Gross Margin": {
+            "value": 274305.61,
+            "formatted": "$274,305.61"
+          },
+          "Margin %": {
+            "value": 0.4500501477,
+            "formatted": "45.0%"
+          },
+          "Sales (Scaled)": {
+            "value": 609500.1,
+            "formatted": "$609.5K"
+          },
+          "Completed Sales": {
+            "value": 550256.15,
+            "formatted": "$550,256.15"
+          },
+          "Shipped Sales": {
+            "value": 609500.1,
+            "formatted": "$609,500.10"
+          },
+          "Sales All Stores": {
+            "value": 894300.5,
+            "formatted": "$894,300.50"
+          },
+          "Store Share": {
+            "value": 0.6815383643,
+            "formatted": "68.2%"
+          },
+          "Order Count": {
+            "value": 2681,
+            "formatted": "2,681"
+          },
+          "Units Sold": {
+            "value": 4396,
+            "formatted": "4,396"
+          },
+          "Active Customers": {
+            "value": 390,
+            "formatted": "390"
+          },
+          "Avg Order Value": {
+            "value": 227.3405818724,
+            "formatted": "$227.34"
+          },
+          "Revenue per Unit": {
+            "value": 138.6487943585,
+            "formatted": "$138.65"
+          },
+          "Last Order Date": {
+            "value": "2025-12-31",
+            "formatted": "2025-12-31"
+          },
+          "Unknown Product Orders": {
+            "value": 2,
+            "formatted": "2"
+          },
+          "Sales YTD": {
+            "value": 334715.85,
+            "formatted": "$334,715.85"
+          },
+          "Sales PY": {
+            "value": 274784.25,
+            "formatted": "$274,784.25"
+          },
+          "Sales YoY %": {
+            "value": 1.2181042036,
+            "formatted": "+121.8%"
+          },
+          "Sales Prev Month": {
+            "value": 566965.3,
+            "formatted": "$566,965.30"
+          },
+          "Customer Count": {
+            "value": 388,
+            "formatted": "388"
+          },
+          "Products Never Sold Count": {
+            "value": 6,
+            "formatted": "6"
+          },
+          "Returns Count": {
+            "value": 120,
+            "formatted": "120"
+          },
+          "Refunds": {
+            "value": 16240.05,
+            "formatted": "$16,240.05"
+          },
+          "Return Rate": {
+            "value": 0.0447594181,
+            "formatted": "4.5%"
+          },
+          "Target": {
+            "value": 572000,
+            "formatted": "$572,000"
+          },
+          "Target Attainment %": {
+            "value": 1.0655596154,
+            "formatted": "106.6%"
+          },
+          "Target Stretch": {
+            "value": 686400,
+            "formatted": "$686,400"
+          },
+          "Sessions": {
+            "value": 1600,
+            "formatted": "1,600"
+          },
+          "Converted Sessions": {
+            "value": 141,
+            "formatted": "141"
+          },
+          "Conversion Rate": {
+            "value": 0.088125,
+            "formatted": "8.8%"
+          },
+          "Avg Pages per Session": {
+            "value": 8.214375,
+            "formatted": "8.2"
+          },
+          "Sessions (All Devices)": {
+            "value": 1600,
+            "formatted": "1,600"
+          }
+        }
+      },
+      "Acme Outfitters - Online": {
+        "reportFilters": [
+          "'Stores'[Channel] in ['Online']",
+          "'Web Sessions'[Device] in ['Mobile']"
+        ],
+        "values": {
+          "Total Sales": {
+            "value": 284800.4,
+            "formatted": "$284,800.40"
+          },
+          "Total Cost": {
+            "value": 154689.36,
+            "formatted": "$154,689.36"
+          },
+          "Gross Margin": {
+            "value": 130111.04,
+            "formatted": "$130,111.04"
+          },
+          "Margin %": {
+            "value": 0.4568499202,
+            "formatted": "45.7%"
+          },
+          "Sales (Scaled)": {
+            "value": 284800.4,
+            "formatted": "$284.8K"
+          },
+          "Completed Sales": {
+            "value": 261410.95,
+            "formatted": "$261,410.95"
+          },
+          "Shipped Sales": {
+            "value": 284800.4,
+            "formatted": "$284,800.40"
+          },
+          "Sales All Stores": {
+            "value": 894300.5,
+            "formatted": "$894,300.50"
+          },
+          "Store Share": {
+            "value": 0.3184616357,
+            "formatted": "31.8%"
+          },
+          "Order Count": {
+            "value": 1219,
+            "formatted": "1,219"
+          },
+          "Units Sold": {
+            "value": 2019,
+            "formatted": "2,019"
+          },
+          "Active Customers": {
+            "value": 347,
+            "formatted": "347"
+          },
+          "Avg Order Value": {
+            "value": 233.6344544709,
+            "formatted": "$233.63"
+          },
+          "Revenue per Unit": {
+            "value": 141.0601287766,
+            "formatted": "$141.06"
+          },
+          "Last Order Date": {
+            "value": "2025-12-31",
+            "formatted": "2025-12-31"
+          },
+          "Unknown Product Orders": {
+            "value": 2,
+            "formatted": "2"
+          },
+          "Sales YTD": {
+            "value": 153556.9,
+            "formatted": "$153,556.90"
+          },
+          "Sales PY": {
+            "value": 131243.5,
+            "formatted": "$131,243.50"
+          },
+          "Sales YoY %": {
+            "value": 1.1700152769,
+            "formatted": "+117.0%"
+          },
+          "Sales Prev Month": {
+            "value": 267989.35,
+            "formatted": "$267,989.35"
+          },
+          "Customer Count": {
+            "value": 344,
+            "formatted": "344"
+          },
+          "Products Never Sold Count": {
+            "value": 6,
+            "formatted": "6"
+          },
+          "Returns Count": {
+            "value": 48,
+            "formatted": "48"
+          },
+          "Refunds": {
+            "value": 7848.15,
+            "formatted": "$7,848.15"
+          },
+          "Return Rate": {
+            "value": 0.0393765381,
+            "formatted": "3.9%"
+          },
+          "Target": {
+            "value": 272000,
+            "formatted": "$272,000"
+          },
+          "Target Attainment %": {
+            "value": 1.0470602941,
+            "formatted": "104.7%"
+          },
+          "Target Stretch": {
+            "value": 326400,
+            "formatted": "$326,400"
+          },
+          "Sessions": {
+            "value": 678,
+            "formatted": "678"
+          },
+          "Converted Sessions": {
+            "value": 58,
+            "formatted": "58"
+          },
+          "Conversion Rate": {
+            "value": 0.0855457227,
+            "formatted": "8.6%"
+          },
+          "Avg Pages per Session": {
+            "value": 8.0265486726,
+            "formatted": "8.0"
+          },
+          "Sessions (All Devices)": {
+            "value": 1600,
+            "formatted": "1,600"
+          }
+        }
+      }
+    }
+  },
+  "calculationGroup": {
+    "table": "Time Calc",
+    "column": "Time Calculation",
+    "measure": "Total Sales",
+    "context": "Acme Outfitters - Overview, page Time Intelligence: report filter + Year Month = 2025-06",
+    "month": "2025-06",
+    "items": {
+      "Current": {
+        "value": 41267.95,
+        "formatted": "$41,267.95"
+      },
+      "YTD": {
+        "value": 204412.55,
+        "formatted": "$204,412.55"
+      },
+      "PY": {
+        "value": 35804.75,
+        "formatted": "$35,804.75"
+      },
+      "YoY %": {
+        "value": 0.152583107,
+        "formatted": "+15.3%"
+      }
+    }
+  },
+  "rls": [
+    {
+      "roles": [
+        "Region West"
+      ],
+      "userName": null,
+      "visibleRows": {
+        "Orders": 880,
+        "Customers": 400,
+        "Products": 120,
+        "Stores": 4,
+        "Targets": 24,
+        "Returns": 34,
+        "Web Sessions": 1600,
+        "Date": 731,
+        "Products Never Sold": 6,
+        "Last Refreshed": 1,
+        "Time Calc": 4
+      },
+      "measures": {
+        "Total Sales": {
+          "value": 196776.65,
+          "formatted": "$196,776.65"
+        },
+        "Order Count": {
+          "value": 880,
+          "formatted": "880"
+        },
+        "Target": {
+          "value": 185500,
+          "formatted": "$185,500"
+        },
+        "Returns Count": {
+          "value": 34,
+          "formatted": "34"
+        },
+        "Sessions": {
+          "value": 1600,
+          "formatted": "1,600"
+        }
+      }
+    },
+    {
+      "roles": [
+        "Store Manager"
+      ],
+      "userName": "riley.chen@acmeoutfitters.example",
+      "visibleRows": {
+        "Orders": 503,
+        "Customers": 400,
+        "Products": 120,
+        "Stores": 2,
+        "Targets": 24,
+        "Returns": 23,
+        "Web Sessions": 1600,
+        "Date": 731,
+        "Products Never Sold": 6,
+        "Last Refreshed": 1,
+        "Time Calc": 4
+      },
+      "measures": {
+        "Total Sales": {
+          "value": 112350.9,
+          "formatted": "$112,350.90"
+        },
+        "Order Count": {
+          "value": 503,
+          "formatted": "503"
+        },
+        "Target": {
+          "value": 185500,
+          "formatted": "$185,500"
+        },
+        "Returns Count": {
+          "value": 23,
+          "formatted": "23"
+        },
+        "Sessions": {
+          "value": 1600,
+          "formatted": "1,600"
+        }
+      }
+    },
+    {
+      "roles": [
+        "Store Manager"
+      ],
+      "userName": "nobody@acmeoutfitters.example",
+      "visibleRows": {
+        "Orders": 0,
+        "Customers": 400,
+        "Products": 120,
+        "Stores": 0,
+        "Targets": 0,
+        "Returns": 0,
+        "Web Sessions": 1600,
+        "Date": 731,
+        "Products Never Sold": 6,
+        "Last Refreshed": 1,
+        "Time Calc": 4
+      },
+      "measures": {
+        "Total Sales": {
+          "value": null,
+          "formatted": "(Blank)"
+        },
+        "Order Count": {
+          "value": null,
+          "formatted": "(Blank)"
+        },
+        "Target": {
+          "value": null,
+          "formatted": "(Blank)"
+        },
+        "Returns Count": {
+          "value": null,
+          "formatted": "(Blank)"
+        },
+        "Sessions": {
+          "value": 1600,
+          "formatted": "1,600"
+        }
+      }
+    },
+    {
+      "roles": [
+        "Region West",
+        "Store Manager"
+      ],
+      "userName": "riley.chen@acmeoutfitters.example",
+      "visibleRows": {
+        "Orders": 880,
+        "Customers": 400,
+        "Products": 120,
+        "Stores": 4,
+        "Targets": 24,
+        "Returns": 34,
+        "Web Sessions": 1600,
+        "Date": 731,
+        "Products Never Sold": 6,
+        "Last Refreshed": 1,
+        "Time Calc": 4
+      },
+      "measures": {
+        "Total Sales": {
+          "value": 196776.65,
+          "formatted": "$196,776.65"
+        },
+        "Order Count": {
+          "value": 880,
+          "formatted": "880"
+        },
+        "Target": {
+          "value": 185500,
+          "formatted": "$185,500"
+        },
+        "Returns Count": {
+          "value": 34,
+          "formatted": "34"
+        },
+        "Sessions": {
+          "value": 1600,
+          "formatted": "1,600"
+        }
+      }
+    }
+  ],
+  "unrelatedReportFilter": {
+    "report": "Acme Outfitters - Online",
+    "filter": "'Web Sessions'[Device] in ['Mobile']",
+    "Sessions": {
+      "withReportFilters": {
+        "value": 678,
+        "formatted": "678"
+      },
+      "withoutDeviceFilter": {
+        "value": 1600,
+        "formatted": "1,600"
+      }
+    },
+    "Sessions (All Devices)": {
+      "value": 1600,
+      "formatted": "1,600"
+    },
+    "Total Sales": {
+      "withReportFilters": {
+        "value": 284800.4,
+        "formatted": "$284,800.40"
+      },
+      "withoutDeviceFilter": {
+        "value": 284800.4,
+        "formatted": "$284,800.40"
+      }
+    }
+  },
+  "reports": [
+    {
+      "report": "Acme Outfitters - Overview",
+      "folder": "Acme Outfitters - Overview.Report",
+      "reportFilters": [
+        "'Orders'[Status] not in ['Cancelled']"
+      ],
+      "pages": [
+        {
+          "page": "Executive Summary",
+          "pageId": "ef796b39c816a4afa4f1",
+          "displayOption": "FitToPage",
+          "visibility": "AlwaysVisible",
+          "type": "Default",
+          "pageFilters": [],
+          "slicers": [
+            {
+              "visual": "5db7384676d59b0fb322",
+              "visualKey": "year",
+              "selection": "'Date'[Year] in [2025]"
+            }
+          ],
+          "cards": [
+            {
+              "visual": "f7a9c9413fef68532313",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 457432.15,
+              "formatted": "$457,432.15"
+            },
+            {
+              "visual": "f7a9c9413fef68532313",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Order Count",
+              "value": 2024,
+              "formatted": "2,024"
+            },
+            {
+              "visual": "f7a9c9413fef68532313",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Avg Order Value",
+              "value": 226.0040266798,
+              "formatted": "$226.00"
+            },
+            {
+              "visual": "f7a9c9413fef68532313",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Margin %",
+              "value": 0.4529148421,
+              "formatted": "45.3%"
+            },
+            {
+              "visual": "f7a9c9413fef68532313",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Active Customers",
+              "value": 374,
+              "formatted": "374"
+            },
+            {
+              "visual": "d1534ca5259c4de6151d",
+              "visualKey": "scaled",
+              "visualType": "card",
+              "measure": "Sales (Scaled)",
+              "value": 457432.15,
+              "formatted": "$457.4K"
+            }
+          ],
+          "visuals": [
+            {
+              "visual": "c9aea193ee9b20c67335",
+              "visualKey": "kpi",
+              "visualType": "kpi",
+              "description": "Indicator and goal at the last trend point (2025-12)",
+              "trendPoint": "2025-12",
+              "indicator": {
+                "value": 56117,
+                "formatted": "$56,117.00"
+              },
+              "goal": {
+                "value": 56000,
+                "formatted": "$56,000"
+              }
+            }
+          ]
+        },
+        {
+          "page": "Product Detail",
+          "pageId": "59126dbf5023ae95f4dc",
+          "displayOption": "FitToWidth",
+          "visibility": "AlwaysVisible",
+          "type": "Default",
+          "pageFilters": [],
+          "slicers": [
+            {
+              "visual": "ae52f390e9a9b569c31f",
+              "visualKey": "category",
+              "selection": "'Products'[Category] in ['Camping', 'Hiking']"
+            },
+            {
+              "visual": "deefdb166d949b468007",
+              "visualKey": "price",
+              "selection": "'Products'[List Price] >= 50 and <= 400"
+            }
+          ],
+          "cards": [
+            {
+              "visual": "2ef83213665da5b85d71",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 345894,
+              "formatted": "$345,894.00"
+            },
+            {
+              "visual": "2ef83213665da5b85d71",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Units Sold",
+              "value": 2299,
+              "formatted": "2,299"
+            },
+            {
+              "visual": "2ef83213665da5b85d71",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Margin %",
+              "value": 0.45409267,
+              "formatted": "45.4%"
+            },
+            {
+              "visual": "2ef83213665da5b85d71",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Revenue per Unit",
+              "value": 150.4541104828,
+              "formatted": "$150.45"
+            },
+            {
+              "visual": "52eaae062b660efcf364",
+              "visualKey": "never_sold",
+              "visualType": "cardVisual",
+              "measure": "Products Never Sold Count",
+              "value": 6,
+              "formatted": "6"
+            },
+            {
+              "visual": "5eac79b1096df863260d",
+              "visualKey": "unknown",
+              "visualType": "card",
+              "measure": "Unknown Product Orders",
+              "value": 0,
+              "formatted": "0"
+            }
+          ],
+          "visuals": [
+            {
+              "visual": "919615d40ce0dca8a7ba",
+              "visualKey": "matrix",
+              "visualType": "pivotTable",
+              "description": "Grand total and category subtotals",
+              "total": {
+                "Total Sales": {
+                  "value": 345894,
+                  "formatted": "$345,894.00"
+                },
+                "Units Sold": {
+                  "value": 2299,
+                  "formatted": "2,299"
+                },
+                "Margin %": {
+                  "value": 0.45409267,
+                  "formatted": "45.4%"
+                }
+              },
+              "rows": [
+                {
+                  "Category": "Camping",
+                  "Total Sales": {
+                    "value": 168564.5,
+                    "formatted": "$168,564.50"
+                  },
+                  "Units Sold": {
+                    "value": 1047,
+                    "formatted": "1,047"
+                  },
+                  "Margin %": {
+                    "value": 0.4403224878,
+                    "formatted": "44.0%"
+                  }
+                },
+                {
+                  "Category": "Hiking",
+                  "Total Sales": {
+                    "value": 177329.5,
+                    "formatted": "$177,329.50"
+                  },
+                  "Units Sold": {
+                    "value": 1252,
+                    "formatted": "1,252"
+                  },
+                  "Margin %": {
+                    "value": 0.4671822229,
+                    "formatted": "46.7%"
+                  }
+                }
+              ]
+            },
+            {
+              "visual": "fc4760750cac58a5aa34",
+              "visualKey": "top10",
+              "visualType": "tableEx",
+              "description": "Top 10 products by Total Sales (Top N visual filter), sorted descending",
+              "rows": [
+                {
+                  "Product Name": "Juniper Synthetic Bag",
+                  "Total Sales": {
+                    "value": 27670.95,
+                    "formatted": "$27,670.95"
+                  },
+                  "Units Sold": {
+                    "value": 94,
+                    "formatted": "94"
+                  },
+                  "Margin %": {
+                    "value": 0.4016750419,
+                    "formatted": "40.2%"
+                  }
+                },
+                {
+                  "Product Name": "Juniper Bag Liner",
+                  "Total Sales": {
+                    "value": 18900,
+                    "formatted": "$18,900.00"
+                  },
+                  "Units Sold": {
+                    "value": 106,
+                    "formatted": "106"
+                  },
+                  "Margin %": {
+                    "value": 0.4594,
+                    "formatted": "45.9%"
+                  }
+                },
+                {
+                  "Product Name": "Juniper Pack 45L",
+                  "Total Sales": {
+                    "value": 17741.3,
+                    "formatted": "$17,741.30"
+                  },
+                  "Units Sold": {
+                    "value": 96,
+                    "formatted": "96"
+                  },
+                  "Margin %": {
+                    "value": 0.4646254784,
+                    "formatted": "46.5%"
+                  }
+                },
+                {
+                  "Product Name": "Juniper Family Tent",
+                  "Total Sales": {
+                    "value": 17467.5,
+                    "formatted": "$17,467.50"
+                  },
+                  "Units Sold": {
+                    "value": 66,
+                    "formatted": "66"
+                  },
+                  "Margin %": {
+                    "value": 0.4202352941,
+                    "formatted": "42.0%"
+                  }
+                },
+                {
+                  "Product Name": "Alder Pack 65L",
+                  "Total Sales": {
+                    "value": 17133.6,
+                    "formatted": "$17,133.60"
+                  },
+                  "Units Sold": {
+                    "value": 67,
+                    "formatted": "67"
+                  },
+                  "Margin %": {
+                    "value": 0.3702619414,
+                    "formatted": "37.0%"
+                  }
+                },
+                {
+                  "Product Name": "Alder Gaiters",
+                  "Total Sales": {
+                    "value": 15654.1,
+                    "formatted": "$15,654.10"
+                  },
+                  "Units Sold": {
+                    "value": 80,
+                    "formatted": "80"
+                  },
+                  "Margin %": {
+                    "value": 0.5514018692,
+                    "formatted": "55.1%"
+                  }
+                },
+                {
+                  "Product Name": "Juniper 2P Tent",
+                  "Total Sales": {
+                    "value": 14202.15,
+                    "formatted": "$14,202.15"
+                  },
+                  "Units Sold": {
+                    "value": 67,
+                    "formatted": "67"
+                  },
+                  "Margin %": {
+                    "value": 0.5247494217,
+                    "formatted": "52.5%"
+                  }
+                },
+                {
+                  "Product Name": "Juniper Hydration Pack",
+                  "Total Sales": {
+                    "value": 11914.15,
+                    "formatted": "$11,914.15"
+                  },
+                  "Units Sold": {
+                    "value": 51,
+                    "formatted": "51"
+                  },
+                  "Margin %": {
+                    "value": 0.4066198596,
+                    "formatted": "40.7%"
+                  }
+                },
+                {
+                  "Product Name": "Alder Approach Shoe",
+                  "Total Sales": {
+                    "value": 11581.8,
+                    "formatted": "$11,581.80"
+                  },
+                  "Units Sold": {
+                    "value": 62,
+                    "formatted": "62"
+                  },
+                  "Margin %": {
+                    "value": 0.4911222781,
+                    "formatted": "49.1%"
+                  }
+                },
+                {
+                  "Product Name": "Juniper Kids Pack",
+                  "Total Sales": {
+                    "value": 11435.2,
+                    "formatted": "$11,435.20"
+                  },
+                  "Units Sold": {
+                    "value": 55,
+                    "formatted": "55"
+                  },
+                  "Margin %": {
+                    "value": 0.4936336925,
+                    "formatted": "49.4%"
+                  }
+                }
+              ],
+              "total": {
+                "Total Sales": {
+                  "value": 163700.75,
+                  "formatted": "$163,700.75"
+                },
+                "Units Sold": {
+                  "value": 744,
+                  "formatted": "744"
+                },
+                "Margin %": {
+                  "value": 0.4519619489,
+                  "formatted": "45.2%"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "page": "Time Intelligence",
+          "pageId": "de11804d145ce7e78111",
+          "displayOption": "FitToPage",
+          "visibility": "AlwaysVisible",
+          "type": "Default",
+          "pageFilters": [],
+          "slicers": [
+            {
+              "visual": "b41d675081c224f256ea",
+              "visualKey": "month",
+              "selection": "'Date'[Year Month] in ['2025-06']",
+              "noFilterTargets": [
+                "calc_matrix",
+                "line",
+                "area"
+              ]
+            },
+            {
+              "visual": "398b24904a1feb7d0755",
+              "visualKey": "relative",
+              "selection": "'Date'[Date] in the last 10 years (relative date)",
+              "noFilterTargets": [
+                "month",
+                "current",
+                "ytd",
+                "py",
+                "yoy",
+                "measures",
+                "calc_matrix",
+                "line",
+                "area"
+              ]
+            }
+          ],
+          "cards": [
+            {
+              "visual": "e2ec1886bb9df4e1d51a",
+              "visualKey": "current",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 41267.95,
+              "formatted": "$41,267.95",
+              "calculationItem": "Current"
+            },
+            {
+              "visual": "e1d275355b1648435593",
+              "visualKey": "ytd",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 204412.55,
+              "formatted": "$204,412.55",
+              "calculationItem": "YTD"
+            },
+            {
+              "visual": "bb525ba6bb81d291695d",
+              "visualKey": "py",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 35804.75,
+              "formatted": "$35,804.75",
+              "calculationItem": "PY"
+            },
+            {
+              "visual": "c507b8509ba0b970a4ee",
+              "visualKey": "yoy",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 0.152583107,
+              "formatted": "+15.3%",
+              "calculationItem": "YoY %"
+            },
+            {
+              "visual": "24f8ad03f5a0230faab0",
+              "visualKey": "measures",
+              "visualType": "multiRowCard",
+              "measure": "Sales YTD",
+              "value": 204412.55,
+              "formatted": "$204,412.55"
+            },
+            {
+              "visual": "24f8ad03f5a0230faab0",
+              "visualKey": "measures",
+              "visualType": "multiRowCard",
+              "measure": "Sales PY",
+              "value": 35804.75,
+              "formatted": "$35,804.75"
+            },
+            {
+              "visual": "24f8ad03f5a0230faab0",
+              "visualKey": "measures",
+              "visualType": "multiRowCard",
+              "measure": "Sales YoY %",
+              "value": 0.152583107,
+              "formatted": "+15.3%"
+            },
+            {
+              "visual": "24f8ad03f5a0230faab0",
+              "visualKey": "measures",
+              "visualType": "multiRowCard",
+              "measure": "Sales Prev Month",
+              "value": 45297.75,
+              "formatted": "$45,297.75"
+            },
+            {
+              "visual": "24f8ad03f5a0230faab0",
+              "visualKey": "measures",
+              "visualType": "multiRowCard",
+              "measure": "Shipped Sales",
+              "value": 40393.9,
+              "formatted": "$40,393.90"
+            }
+          ],
+          "visuals": [
+            {
+              "visual": "0be665cce25f93e37e88",
+              "visualKey": "calc_matrix",
+              "visualType": "pivotTable",
+              "description": "Total Sales per calculation item: year rows and the grand total (month slicer does not filter it)",
+              "rows": [
+                {
+                  "Year": 2024,
+                  "Current": {
+                    "value": 372196.85,
+                    "formatted": "$372,196.85"
+                  },
+                  "YTD": {
+                    "value": 372196.85,
+                    "formatted": "$372,196.85"
+                  },
+                  "PY": {
+                    "value": null,
+                    "formatted": "(Blank)"
+                  },
+                  "YoY %": {
+                    "value": null,
+                    "formatted": "(Blank)"
+                  }
+                },
+                {
+                  "Year": 2025,
+                  "Current": {
+                    "value": 457432.15,
+                    "formatted": "$457,432.15"
+                  },
+                  "YTD": {
+                    "value": 457432.15,
+                    "formatted": "$457,432.15"
+                  },
+                  "PY": {
+                    "value": 372196.85,
+                    "formatted": "$372,196.85"
+                  },
+                  "YoY %": {
+                    "value": 0.2290059682,
+                    "formatted": "+22.9%"
+                  }
+                }
+              ],
+              "total": {
+                "Current": {
+                  "value": 829629,
+                  "formatted": "$829,629.00"
+                },
+                "YTD": {
+                  "value": 457432.15,
+                  "formatted": "$457,432.15"
+                },
+                "PY": {
+                  "value": 372196.85,
+                  "formatted": "$372,196.85"
+                },
+                "YoY %": {
+                  "value": 1.2290059682,
+                  "formatted": "+122.9%"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "report": "Acme Outfitters - Stores",
+      "folder": "Acme Outfitters - Stores.Report",
+      "reportFilters": [
+        "'Stores'[Channel] in ['Retail', 'Outlet']"
+      ],
+      "pages": [
+        {
+          "page": "Store Performance",
+          "pageId": "ef3ce6b6fadf22960137",
+          "displayOption": "FitToPage",
+          "visibility": "AlwaysVisible",
+          "type": "Default",
+          "pageFilters": [],
+          "slicers": [
+            {
+              "visual": "ba3b1b7c5a9cede8452c",
+              "visualKey": "region",
+              "selection": "'Stores'[Region] in ['West']"
+            },
+            {
+              "visual": "6aecd77deab2cb76c2e5",
+              "visualKey": "dates",
+              "selection": "'Date'[Date] >= 2025-01-01 and < 2026-01-01"
+            }
+          ],
+          "cards": [
+            {
+              "visual": "c81376feb163c3047446",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 111981.75,
+              "formatted": "$111,981.75"
+            },
+            {
+              "visual": "c81376feb163c3047446",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Target",
+              "value": 102500,
+              "formatted": "$102,500"
+            },
+            {
+              "visual": "c81376feb163c3047446",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Target Attainment %",
+              "value": 1.092504878,
+              "formatted": "109.3%"
+            },
+            {
+              "visual": "c81376feb163c3047446",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Return Rate",
+              "value": 0.0387755102,
+              "formatted": "3.9%"
+            },
+            {
+              "visual": "c81376feb163c3047446",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Gross Margin",
+              "value": 50094.88,
+              "formatted": "$50,094.88"
+            }
+          ],
+          "visuals": [
+            {
+              "visual": "d4431298c2010cc0f494",
+              "visualKey": "stores",
+              "visualType": "tableEx",
+              "description": "Per store: Target is the store's region target (many-to-many); the total is not the sum of the rows",
+              "rows": [
+                {
+                  "Store Name": "Seattle Flagship",
+                  "Total Sales": {
+                    "value": 36369.45,
+                    "formatted": "$36,369.45"
+                  },
+                  "Target": {
+                    "value": 102500,
+                    "formatted": "$102,500"
+                  },
+                  "Target Attainment %": {
+                    "value": 0.3548239024,
+                    "formatted": "35.5%"
+                  }
+                },
+                {
+                  "Store Name": "Portland Pearl",
+                  "Total Sales": {
+                    "value": 27001.6,
+                    "formatted": "$27,001.60"
+                  },
+                  "Target": {
+                    "value": 102500,
+                    "formatted": "$102,500"
+                  },
+                  "Target Attainment %": {
+                    "value": 0.2634302439,
+                    "formatted": "26.3%"
+                  }
+                },
+                {
+                  "Store Name": "Salt Lake City Sugar House",
+                  "Total Sales": {
+                    "value": 26465.85,
+                    "formatted": "$26,465.85"
+                  },
+                  "Target": {
+                    "value": 102500,
+                    "formatted": "$102,500"
+                  },
+                  "Target Attainment %": {
+                    "value": 0.2582034146,
+                    "formatted": "25.8%"
+                  }
+                },
+                {
+                  "Store Name": "Boise Outlet",
+                  "Total Sales": {
+                    "value": 22144.85,
+                    "formatted": "$22,144.85"
+                  },
+                  "Target": {
+                    "value": 102500,
+                    "formatted": "$102,500"
+                  },
+                  "Target Attainment %": {
+                    "value": 0.2160473171,
+                    "formatted": "21.6%"
+                  }
+                }
+              ],
+              "total": {
+                "Total Sales": {
+                  "value": 111981.75,
+                  "formatted": "$111,981.75"
+                },
+                "Target": {
+                  "value": 102500,
+                  "formatted": "$102,500"
+                },
+                "Target Attainment %": {
+                  "value": 1.092504878,
+                  "formatted": "109.3%"
+                }
+              }
+            },
+            {
+              "visual": "6f647d31a8428ad62fb0",
+              "visualKey": "gauge",
+              "visualType": "gauge",
+              "value": {
+                "value": 111981.75,
+                "formatted": "$111,981.75"
+              },
+              "target": {
+                "value": 102500,
+                "formatted": "$102,500"
+              },
+              "max": {
+                "value": 123000,
+                "formatted": "$123,000"
+              }
+            }
+          ]
+        },
+        {
+          "page": "Store Detail",
+          "pageId": "50c645140e8e10eea677",
+          "displayOption": "FitToWidth",
+          "visibility": "HiddenInViewMode",
+          "type": "Default",
+          "pageFilters": [
+            "'Stores'[Region] in ['East']"
+          ],
+          "slicers": [],
+          "cards": [],
+          "visuals": [
+            {
+              "visual": "3b28913dac9013392389",
+              "visualKey": "stores",
+              "visualType": "multiRowCard",
+              "rows": [
+                {
+                  "Store Name": "Boston Back Bay",
+                  "Store Manager": "Jordan Lee",
+                  "City": "Boston",
+                  "Total Sales": {
+                    "value": 64315.3,
+                    "formatted": "$64,315.30"
+                  }
+                },
+                {
+                  "Store Name": "Burlington Lakeside",
+                  "Store Manager": "Sam Patel",
+                  "City": "Burlington",
+                  "Total Sales": {
+                    "value": 28661.15,
+                    "formatted": "$28,661.15"
+                  }
+                },
+                {
+                  "Store Name": "Philadelphia Outlet",
+                  "Store Manager": "Drew Kowalski",
+                  "City": "Philadelphia",
+                  "Total Sales": {
+                    "value": 42013.9,
+                    "formatted": "$42,013.90"
+                  }
+                }
+              ]
+            },
+            {
+              "visual": "4deb2424b9269f15f86c",
+              "visualKey": "returns",
+              "visualType": "tableEx",
+              "rows": [
+                {
+                  "Reason": "Changed Mind",
+                  "Returns Count": {
+                    "value": 10,
+                    "formatted": "10"
+                  },
+                  "Refunds": {
+                    "value": 1629.95,
+                    "formatted": "$1,629.95"
+                  }
+                },
+                {
+                  "Reason": "Damaged In Transit",
+                  "Returns Count": {
+                    "value": 6,
+                    "formatted": "6"
+                  },
+                  "Refunds": {
+                    "value": 275.7,
+                    "formatted": "$275.70"
+                  }
+                },
+                {
+                  "Reason": "Not As Described",
+                  "Returns Count": {
+                    "value": 7,
+                    "formatted": "7"
+                  },
+                  "Refunds": {
+                    "value": 1040.35,
+                    "formatted": "$1,040.35"
+                  }
+                },
+                {
+                  "Reason": "Wrong Size",
+                  "Returns Count": {
+                    "value": 10,
+                    "formatted": "10"
+                  },
+                  "Refunds": {
+                    "value": 1034.5,
+                    "formatted": "$1,034.50"
+                  }
+                }
+              ],
+              "total": {
+                "Returns Count": {
+                  "value": 33,
+                  "formatted": "33"
+                },
+                "Refunds": {
+                  "value": 3980.5,
+                  "formatted": "$3,980.50"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "page": "Store Tooltip",
+          "pageId": "58db5b3f75d059fec1fb",
+          "displayOption": "ActualSize",
+          "visibility": "HiddenInViewMode",
+          "type": "Tooltip",
+          "pageFilters": [],
+          "slicers": [],
+          "cards": [
+            {
+              "visual": "c649a1da0227ceeffc35",
+              "visualKey": "tip",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 609500.1,
+              "formatted": "$609,500.10"
+            },
+            {
+              "visual": "c649a1da0227ceeffc35",
+              "visualKey": "tip",
+              "visualType": "cardVisual",
+              "measure": "Target Attainment %",
+              "value": 1.0655596154,
+              "formatted": "106.6%"
+            }
+          ],
+          "visuals": []
+        }
+      ]
+    },
+    {
+      "report": "Acme Outfitters - Online",
+      "folder": "Acme Outfitters - Online.Report",
+      "reportFilters": [
+        "'Stores'[Channel] in ['Online']",
+        "'Web Sessions'[Device] in ['Mobile']"
+      ],
+      "pages": [
+        {
+          "page": "Online Overview",
+          "pageId": "a60af4d6244c3a6206a5",
+          "displayOption": "FitToPage",
+          "visibility": "AlwaysVisible",
+          "type": "Default",
+          "pageFilters": [],
+          "slicers": [
+            {
+              "visual": "a7ffc46c144f47dfb492",
+              "visualKey": "tier",
+              "selection": "'Customers'[Loyalty Tier] not in ['Unassigned']"
+            }
+          ],
+          "cards": [
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 235768.3,
+              "formatted": "$235,768.30"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Order Count",
+              "value": 1024,
+              "formatted": "1,024"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Active Customers",
+              "value": 293,
+              "formatted": "293"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Customer Count",
+              "value": 290,
+              "formatted": "290"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "visualType": "cardVisual",
+              "measure": "Avg Order Value",
+              "value": 230.2424804688,
+              "formatted": "$230.24"
+            },
+            {
+              "visual": "f251dbc74c2b67f5305d",
+              "visualKey": "sessions",
+              "visualType": "card",
+              "measure": "Sessions",
+              "value": 678,
+              "formatted": "678"
+            },
+            {
+              "visual": "c359151cf9df2b5ad588",
+              "visualKey": "web",
+              "visualType": "cardVisual",
+              "measure": "Conversion Rate",
+              "value": 0.0855457227,
+              "formatted": "8.6%"
+            },
+            {
+              "visual": "c359151cf9df2b5ad588",
+              "visualKey": "web",
+              "visualType": "cardVisual",
+              "measure": "Avg Pages per Session",
+              "value": 8.0265486726,
+              "formatted": "8.0"
+            },
+            {
+              "visual": "c359151cf9df2b5ad588",
+              "visualKey": "web",
+              "visualType": "cardVisual",
+              "measure": "Sessions (All Devices)",
+              "value": 1600,
+              "formatted": "1,600"
+            }
+          ],
+          "visuals": [
+            {
+              "visual": "bde8debb2da31c9b193a",
+              "visualKey": "devices",
+              "visualType": "pieChart",
+              "description": "Only the Mobile slice: the report filter on the unrelated table applies to session visuals",
+              "categories": [
+                {
+                  "Device": "Mobile",
+                  "Sessions": {
+                    "value": 678,
+                    "formatted": "678"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "page": "Customer Detail",
+          "pageId": "95c48410a9ac03ae2a38",
+          "displayOption": "FitToWidth",
+          "visibility": "AlwaysVisible",
+          "type": "Default",
+          "pageFilters": [
+            "'Customers'[Segment] in ['Corporate']"
+          ],
+          "slicers": [],
+          "cards": [
+            {
+              "visual": "170bf192d4f507117a5c",
+              "visualKey": "count",
+              "visualType": "cardVisual",
+              "measure": "Customer Count",
+              "value": 29,
+              "formatted": "29"
+            },
+            {
+              "visual": "170bf192d4f507117a5c",
+              "visualKey": "count",
+              "visualType": "cardVisual",
+              "measure": "Total Sales",
+              "value": 22734.8,
+              "formatted": "$22,734.80"
+            }
+          ],
+          "visuals": [
+            {
+              "visual": "dc8dc10588284195b4a9",
+              "visualKey": "table",
+              "visualType": "tableEx",
+              "rowCount": 29,
+              "total": {
+                "Total Sales": {
+                  "value": 22734.8,
+                  "formatted": "$22,734.80"
+                }
+              }
+            },
+            {
+              "visual": "b57b07f8b020ec9b8a81",
+              "visualKey": "matrix",
+              "visualType": "pivotTable",
+              "columns": [
+                {
+                  "Loyalty Tier": "Bronze",
+                  "Total Sales": {
+                    "value": 8959.25,
+                    "formatted": "$8,959.25"
+                  }
+                },
+                {
+                  "Loyalty Tier": "Gold",
+                  "Total Sales": {
+                    "value": 4310.75,
+                    "formatted": "$4,310.75"
+                  }
+                },
+                {
+                  "Loyalty Tier": "Silver",
+                  "Total Sales": {
+                    "value": 2828.75,
+                    "formatted": "$2,828.75"
+                  }
+                },
+                {
+                  "Loyalty Tier": "Unassigned",
+                  "Total Sales": {
+                    "value": 6636.05,
+                    "formatted": "$6,636.05"
+                  }
+                }
+              ],
+              "total": {
+                "Total Sales": {
+                  "value": 22734.8,
+                  "formatted": "$22,734.80"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "knownEngineGaps": []
+}

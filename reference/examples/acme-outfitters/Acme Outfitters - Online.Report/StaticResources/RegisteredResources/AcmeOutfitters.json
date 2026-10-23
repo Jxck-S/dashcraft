@@ -1,0 +1,88 @@
+{
+  "name": "Acme Outfitters",
+  "dataColors": [
+    "#2F6B4F",
+    "#D9822B",
+    "#4A90A4",
+    "#8E4A6B",
+    "#8FA857",
+    "#5B6770",
+    "#C9A227",
+    "#B5452E",
+    "#6C8EBF",
+    "#A07E5E"
+  ],
+  "foreground": "#252423",
+  "foregroundNeutralSecondary": "#5B6770",
+  "background": "#FFFFFF",
+  "backgroundLight": "#F3EFE4",
+  "tableAccent": "#2F6B4F",
+  "good": "#2F6B4F",
+  "neutral": "#C9A227",
+  "bad": "#B5452E",
+  "hyperlink": "#2C6E8F",
+  "textClasses": {
+    "callout": {
+      "fontSize": 24,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#1F3A2E"
+    },
+    "title": {
+      "fontSize": 12,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#1F3A2E"
+    },
+    "header": {
+      "fontSize": 12,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#1F3A2E"
+    },
+    "label": {
+      "fontSize": 10,
+      "fontFace": "Segoe UI",
+      "color": "#252423"
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "border": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#D9D4C7"
+              }
+            },
+            "radius": 8
+          }
+        ],
+        "background": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "transparency": 0
+          }
+        ]
+      }
+    },
+    "page": {
+      "*": {
+        "background": [
+          {
+            "color": {
+              "solid": {
+                "color": "#F7F5EF"
+              }
+            },
+            "transparency": 0
+          }
+        ]
+      }
+    }
+  }
+}

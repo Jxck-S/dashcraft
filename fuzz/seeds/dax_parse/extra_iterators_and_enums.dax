@@ -1,0 +1,4 @@
+SUMX (
+    TOPN ( 10, VALUES ( Customer[Name] ), [Sales], DESC ),
+    RANKX ( ALL ( Customer[Name] ), [Sales], , ASC, Dense ) * PERCENTILE.INC ( Sales[Qty], 0.5 )
+) + T.DIST ( 0.5, 2, TRUE ) + TRUE () + FALSE + CROSSFILTER ( Sales[K], Dim[K], BOTH )

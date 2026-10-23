@@ -1,0 +1,2 @@
+role Admins
+	modelPermission: administrator

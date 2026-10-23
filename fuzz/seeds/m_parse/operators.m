@@ -1,0 +1,1 @@
+let a = -1 + 2 * 3 / 4 - 5, b = not (a > 1 and a <= 2 or a <> 3), c = "x" & "y", d = a ?? b, e = 1 is number, f = 2 as nullable number, g = [x = 1][x]?, h = {1, 2}{0}?, i = try error "e" otherwise 0, j = (x) => x, k = @j, l = #date(2024, 1, 2) + #duration(1, 0, 0, 0), m = #binary({1, 2}), n = type function (x as text) as number in {a, b, c, d, e, f, g, h, i, k(1), l, m, n}

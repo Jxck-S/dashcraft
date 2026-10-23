@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "Acme Outfitters - Overview"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "f246feed-1eb0-587b-b984-a7fb4c2f02c4"
+  }
+}
