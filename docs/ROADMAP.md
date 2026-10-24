@@ -84,27 +84,59 @@ Legend: `[x]` done, `[ ]` not done. Item IDs match the work-tracking IDs used in
 
 ## Next
 
-Not scheduled; in rough priority order.
+The work after M5 is planned as milestones M6 to M31 in [DESKTOP-PLAN.md](DESKTOP-PLAN.md): the
+end-to-end plan to a Power BI Desktop equivalent, with steps, acceptance criteria, dependencies,
+the ADRs to write first and what is blocked on a human. M27 to M30 are optional and not needed
+for 1.0.
 
-- [ ] `m4-windows-groundtruth`: a ground-truth session on a Windows machine with Power BI Desktop (**blocked** until one is available). Black-box only: no decompiling or debugging of Desktop binaries; screenshots and icons are never committed.
-  - UI Automation dump of the ribbon tabs, groups, buttons, tooltips and positions, to check the Desktop-style shell.
-  - DAX differential testing: random and curated queries over the example model, compared between `pbi-dax` and Desktop's local Analysis Services instance.
-  - More golden images: Desktop-rendered pages of the example's reports and of the visual types that only have synthetic tests.
-  - More Desktop-saved fixtures (synthetic content only): a PBIR-Legacy PBIP, a real `.pbi/cache.abf`, a Power Pivot workbook, a DAX Studio VPAX, a Report Builder RDL.
-  - Desktop-canonical TMDL and PBIR output to validate the writers byte for byte.
-- [ ] Editing and saving PBIP: the command layer (`pbi-model::command`, undo/redo, change events) and the PBIP writers exist; next are editing commands in the registry (`pbi-ops`: set a measure's expression, rename, move a visual, save), then editors in the UI wired to them, DAX/M-aware rename rewriting, and Save.
-- [ ] Highlight interactions (`HighlightFilter` highlighting instead of filtering; highlight values in DataViews).
-- [ ] Bookmarks and drillthrough (read `bookmarks/*.json`, apply bookmark state, drillthrough pages and filters); report-page tooltips.
-- [ ] Pie and donut slice separators: adjacent slices with the same color (a conditional color, or repeated `dataPoint` colors) merge into one wedge; draw the service's thin separators between slices.
-- [ ] Conditional formats of column headers, totals, titles, card callouts, gauges and KPIs (reported "not applied" today, [VISUALS.md](VISUALS.md#conditional-formatting)).
-- [ ] Per-legend conditional chart colors (a measure colors each legend value) and conditional colors of line, area, combo, waterfall and gauge charts.
-- [ ] Expression-based titles and other `fx` text properties (titles, subtitles, button text from a measure).
-- [ ] Synced slicers (`syncGroup`) and draggable range / relative-date slicers.
-- [ ] DIN- and Calibri-metric fonts under a permissive license, to close the remaining golden-image gaps.
-- [ ] Report-level measures (`reportExtensions.json`), `image` visuals and more visual types (maps, `ribbonChart`, AI visuals); scatter play-axis animation.
-- [ ] Object-level security; RLS role filters that read other secured tables.
-- [ ] Fabric remote mode for `byConnection` reports (optional; device-code auth, credentials in the OS keychain).
-- Out of scope: DirectQuery live execution; publishing to the Power BI service in v1; writing PBIX; executing custom visuals, R/Python visuals or custom connectors.
+- [ ] [M6](DESKTOP-PLAN.md#m6-editable-document-state-and-save): editable document state and save (one revisioned state, atomic undoable edits through the registry and MCP, Save/Save As PBIP).
+- [ ] [M7](DESKTOP-PLAN.md#m7-language-foundation): language foundation (DAX, M and TMDL language services and formatters, formula bar IntelliSense).
+- [ ] [M8](DESKTOP-PLAN.md#m8-recovery-external-changes-and-semantic-diff): recovery, external changes and semantic diff.
+- [ ] [M9](DESKTOP-PLAN.md#m9-reading-view-parity): reading view parity (highlight, drill, drillthrough, bookmarks, tooltip pages, synced slicers, header menus, images).
+- [ ] [M10](DESKTOP-PLAN.md#m10-modeling-core): modeling core (tables, columns, measures, Enter data, hierarchies, relationships, Model and Table view editing).
+- [ ] [M11](DESKTOP-PLAN.md#m11-advanced-modeling-and-security): advanced modeling and security (calculation groups, field and what-if parameters, roles, RLS, OLS, perspectives, translations, synonyms).
+- [ ] [M12](DESKTOP-PLAN.md#m12-dax-and-tmdl-authoring-views): DAX and TMDL authoring views (DAX query view and TMDL view editing, dependency views, quick measures).
+- [ ] [M13](DESKTOP-PLAN.md#m13-dax-engine-parity): DAX engine parity (pinned DAX inventory, remaining functions, visual calculations, differential testing; independent).
+- [ ] [M14](DESKTOP-PLAN.md#m14-power-query-editor-core): Power Query Editor core (feature matrix, applied steps, preview, profiling, core transforms, Close & Apply).
+- [ ] [M15](DESKTOP-PLAN.md#m15-power-query-transform-parity): Power Query transform parity (all transforms, fuzzy merge and grouping, Column from Examples, query diagnostics).
+- [ ] [M16](DESKTOP-PLAN.md#m16-get-data-local-connectors-and-m-library): Get Data, local connectors and M library (CSV, Excel, JSON, XML, Parquet, folders; privacy levels; cultures).
+- [ ] [M17](DESKTOP-PLAN.md#m17-data-engine-at-scale): data engine at scale (compressed multithreaded storage, 10M+ rows, data cache, incremental refresh, aggregations).
+- [ ] [M18](DESKTOP-PLAN.md#m18-report-authoring-canvas-pages-and-pbir-creation): report authoring: canvas, pages and PBIR creation.
+- [ ] [M19](DESKTOP-PLAN.md#m19-format-pane-and-visual-property-descriptors): Format pane and visual property descriptors.
+- [ ] [M20](DESKTOP-PLAN.md#m20-report-authoring-filters-interactions-bookmarks-themes-mobile): report authoring: filters, interactions, bookmarks, themes, mobile layout, visual calculations.
+- [ ] [M21](DESKTOP-PLAN.md#m21-standard-visuals-completeness): standard visuals completeness (ribbon chart, Analytics pane, small multiples, newer slicers, conditional formatting).
+- [ ] [M22](DESKTOP-PLAN.md#m22-maps-and-geodata): maps and geodata (offline).
+- [ ] [M23](DESKTOP-PLAN.md#m23-statistical-visuals-qa-and-insights): statistical visuals, offline Q&A and Analyze insights (local).
+- [ ] [M24](DESKTOP-PLAN.md#m24-desktop-shell-ribbon-settings-performance-analyzer-and-documents): Desktop shell (ribbon, Options, Performance analyzer, Optimize, documents, export, opt-in update checks).
+- [ ] [M25](DESKTOP-PLAN.md#m25-accessibility-and-localization): accessibility and localization.
+- [ ] [M26](DESKTOP-PLAN.md#m26-file-formats-and-desktop-interoperability): file formats and Desktop interoperability (output contract verified, PBIT parity, upgrades, sensitivity-label preservation).
+- [ ] [M27](DESKTOP-PLAN.md#m27-pbix-writing-optional): PBIX writing (optional, legal-gated, outside the default build).
+- [ ] [M28](DESKTOP-PLAN.md#m28-ai-assisted-editing-optional): AI-assisted editing (optional).
+- [ ] [M29](DESKTOP-PLAN.md#m29-custom-visuals-sandbox-optional): custom visuals sandbox (optional, ADR-gated).
+- [ ] [M30](DESKTOP-PLAN.md#m30-online-integration-optional): online integration: network connectors and the service (optional, ADR-gated).
+- [ ] [M31](DESKTOP-PLAN.md#m31-verification-and-10): verification and 1.0 (ground truth, goldens, differential suites, accessibility audit, signing, update installs).
+
+The items below predate the plan; each is annotated with the plan step that now owns it.
+
+- [ ] `m4-windows-groundtruth` (→ M31.1, ground-truth sessions GT-1 to GT-6): a ground-truth session on a Windows machine with Power BI Desktop (**blocked** until one is available). Black-box only: no decompiling or debugging of Desktop binaries; screenshots and icons are never committed.
+  - UI Automation dump of the ribbon tabs, groups, buttons, tooltips and positions, to check the Desktop-style shell (→ GT-1, M24.1).
+  - DAX differential testing: random and curated queries over the example model, compared between `pbi-dax` and Desktop's local Analysis Services instance (→ M13.5, GT-2).
+  - More golden images: Desktop-rendered pages of the example's reports and of the visual types that only have synthetic tests (→ GT-3, M31.3).
+  - More Desktop-saved fixtures (synthetic content only): a PBIR-Legacy PBIP, a real `.pbi/cache.abf`, a Power Pivot workbook, a DAX Studio VPAX, a Report Builder RDL (→ GT-4, M26.5, M31.4).
+  - Desktop-canonical TMDL and PBIR output to validate the writers byte for byte (→ M26.1, GT-4).
+- [ ] Editing and saving PBIP (→ M6.2–M6.8; editors in M10): the command layer (`pbi-model::command`, undo/redo, change events) and the PBIP writers exist; next are editing commands in the registry (`pbi-ops`: set a measure's expression, rename, move a visual, save), then editors in the UI wired to them, DAX/M-aware rename rewriting (→ M6.7), and Save (→ M6.6).
+- [ ] Highlight interactions (`HighlightFilter` highlighting instead of filtering; highlight values in DataViews) (→ M9.1).
+- [ ] Bookmarks and drillthrough (read `bookmarks/*.json`, apply bookmark state, drillthrough pages and filters); report-page tooltips (→ M9.5, M9.4, M9.3).
+- [ ] Pie and donut slice separators: adjacent slices with the same color (a conditional color, or repeated `dataPoint` colors) merge into one wedge; draw the service's thin separators between slices (→ M21.8).
+- [ ] Conditional formats of column headers, totals, titles, card callouts, gauges and KPIs (reported "not applied" today, [VISUALS.md](VISUALS.md#conditional-formatting)) (→ M21.7).
+- [ ] Per-legend conditional chart colors (a measure colors each legend value) and conditional colors of line, area, combo, waterfall and gauge charts (→ M21.7).
+- [ ] Expression-based titles and other `fx` text properties (titles, subtitles, button text from a measure) (→ M21.7).
+- [ ] Synced slicers (`syncGroup`) and draggable range / relative-date slicers (→ M9.6, M9.7).
+- [ ] DIN- and Calibri-metric fonts under a permissive license, to close the remaining golden-image gaps (→ M31.6).
+- [ ] Report-level measures (`reportExtensions.json`), `image` visuals and more visual types (maps, `ribbonChart`, AI visuals); scatter play-axis animation (→ M9.9, M22, M21.1, M23.2–M23.5, M21.8).
+- [ ] Object-level security; RLS role filters that read other secured tables (→ M11.5, M11.4).
+- [ ] Fabric remote mode for `byConnection` reports (optional; device-code auth, credentials in the OS keychain) (→ M30.4).
+- Out of scope: DirectQuery live execution; publishing to the Power BI service in v1; writing PBIX; executing custom visuals, R/Python visuals or custom connectors (→ [non-goals](DESKTOP-PLAN.md#explicit-non-goals); writing PBIX is reconsidered only in the optional, legal-gated M27, custom visuals only in the optional, ADR-gated M29, publishing only in the optional M30.5).
 
 ## Acceptance values
 

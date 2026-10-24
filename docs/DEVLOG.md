@@ -5,6 +5,30 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-10-24
+
+### Desktop milestone plan and README refresh
+
+- **What:** new [DESKTOP-PLAN.md](DESKTOP-PLAN.md): 26 milestones (M6 to M31; M27 to M30
+  optional) from the viewer to a full Power BI Desktop equivalent, each with numbered steps,
+  crates and registry commands, acceptance criteria on the Acme Outfitters example and the
+  Microsoft samples, tests, dependencies, blockers and size; a Mermaid dependency graph, a
+  summary table, 18 proposed ADRs (0010 to 0027), cross-cutting workstreams (ground truth,
+  performance, security, accessibility), an output contract for canonical writers and explicit
+  non-goals. ROADMAP "Next" items point at their plan steps. README rewritten for the current
+  state, without emoji, with a milestone summary.
+- **Why:** the owner asked for the full flow to a Power BI Desktop copy as a plan before more
+  implementation.
+- **Numbers:** a first draft (17 milestones) was reviewed (8 high, 8 medium, 2 low findings: one
+  revisioned document state for edits, queries and saves; the Power Query track no longer waits
+  for DAX engine parity; file-format verification depends on report authoring; broad milestones
+  split; measurable coverage against pinned inventories; accessibility criteria in every UI
+  milestone; sandbox, network and PBIX-writing gates tightened). Docs synced: 47 registry
+  commands, 349 M library names, 294 DAX functions, perf numbers from `perf/baseline.json`.
+- **Open:** the plan's open questions for the owner (committing Desktop-produced output from the
+  synthetic example, the Windows ground-truth machine, PBIX writing, optional milestones,
+  network exceptions for update checks and local files, versioning, pilot locale, map data).
+
 ## 2026-10-23
 
 ### Render verification without goldens, fixes and docs alignment

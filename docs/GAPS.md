@@ -30,7 +30,7 @@ rename) scored the one-pass group-by, MCP, the AI layer and the app on the regis
 | # | Area | Avg score | Rows ✅ / 🟡 / ❌ | Biggest gaps |
 |---|---|---|---|---|
 | 1 | [File formats](#1-file-formats) | 3.1 | 11 / 7 / 7 | Bookmarks, report-level measures, images, `DataMashup` only kept; Fabric remote mode |
-| 2 | [M language and library](#2-m-language-and-library) | 3.1 | 5 / 2 / 3 | Library breadth (336 names), cultures, other data sources |
+| 2 | [M language and library](#2-m-language-and-library) | 3.1 | 5 / 2 / 3 | Library breadth (349 names), cultures, other data sources |
 | 3 | [DAX](#3-dax) | 3.3 | 4 / 5 / 1 | No differential testing; financial, `INFO.*` and visual-calculation functions; exact auto-exist |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh, drill-down |
 | 5 | [Visuals](#5-visuals) | 2.1 | 15 / 6 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
@@ -87,14 +87,14 @@ Source: `crates/pbi-m`; deviations in the `pbi_m::eval` module docs.
 |---|---|---|---|---|
 | Lexer, parser, printer (full grammar, spans, recovery) | ✅ | 5 | `crates/pbi-m/tests/{parser,roundtrip}.rs`; fuzz `m_parse` | — |
 | Lazy evaluator: closures, `each`, `try`/`otherwise`, `meta`, sections, types | ✅ | 4 | `crates/pbi-m/tests/eval.rs`; fuzz `m_eval` | `table{[key]}?` with several matches; UTF-16 text positions |
-| Standard library: **336 names** = 268 native functions + 19 `*.Type` values + enum constants (static count of `src/stdlib` registrations). Functions: `Table.*` 45, `List.*` 41, `Text.*` 36, `Number.*` 20, `Date.*` 17, `Record.*` 15, `DateTimeZone.*` 13, `Duration.*` 11, `Value.*` 10, `DateTime.*` 8, `Time.*` 6, others 46 | 🟡 | 3 | `pbi_m::library_names()`; `crates/pbi-m/tests/stdlib.rs` (`library_lists_spec_functions`) | Grow by fixture demand; Power Query's library is several times larger (exact count unknown here) |
+| Standard library: **349 names** from `pbi_m::library_names()` = 261 functions + 32 `*.Type` values + 56 enum constants (plus 7 `#` intrinsics such as `#date`, `#table`). Names by prefix: `Table.*` 46, `List.*` 42, `Text.*` 37, `Number.*` 29, `Date.*` 18, `Record.*` 16, `DateTimeZone.*` 14, `Duration.*` 12, `Value.*` 10, `DateTime.*` 9, `Time.*` 7, others 109 | 🟡 | 3 | `pbi_m::library_names()`; `crates/pbi-m/tests/stdlib.rs` (`library_lists_spec_functions`) | Grow by fixture demand; Power Query's library is several times larger (exact count unknown here) |
 | Example partitions load with the expected row counts (Acme Outfitters `expected.json`) | ✅ | 5 | `crates/pbi-m/tests/fixture_eval.rs`, `crates/pbi-session/tests/acceptance.rs` | — |
 | `AzureStorage.Blobs` through the offline blob map | ✅ | 4 | `src/connectors/azure.rs`, `crates/pbi-m/tests/connectors.rs` | Real Azure access behind `BlobResolver` (optional, keychain) |
 | Other data sources (`Sql.*`, `Web.*`, `File.*`, `SharePoint.*`, …) | ❌ | 0 | `DATA_ACCESS_PREFIXES` → "unsupported" + "Load CSV manually…" | Offline by policy; local `File.*` behind the path policy would need an ADR |
 | Cultures (parsing, `Text.From`) | ❌ | 1 | ignored; invariant and en-US forms only | Culture-aware conversions |
 | `Decimal`/`Currency` precision | 🟡 | 2 | numbers are `f64`, rounding emulated | A decimal number type |
 | Query folding, streaming | ❌ | n/a | tables materialized, bounded by `Limits::max_rows` | Out of scope (no live sources) |
-| Performance (P05: 100k-row CSV pipeline) | ✅ | 4 | 141 ms vs 250 ms target (`perf/baseline.json`) | — |
+| Performance (P05: 100k-row CSV pipeline) | ✅ | 4 | 149 ms vs 250 ms target (`perf/baseline.json`) | — |
 
 ## 3. DAX
 
@@ -129,7 +129,7 @@ Source: `crates/pbi-dax`, [FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md) (kept i
 | User-defined functions, `DEFINE COLUMN` | 🟡 | 2 | `EXPR` parameters and `DEFINE COLUMN` missing | — |
 | Calculation groups (`SELECTEDMEASURE` & co.) | ✅ | 4 | typed `CalculationGroup`/`CalculationItem`, lossless TMDL and TMSL (`crates/pbi-tmdl/tests/calc_groups.rs`); precedence, selection expressions, sideways recursion, dynamic format strings (`crates/pbi-dax/tests/model_features.rs`, `crates/pbi-session/tests/security.rs`); per-cell format strings in visuals (`crates/pbi-render/tests/conditional_format.rs`) | Hide subtotals of `nonvisual` items; differential tests (blocked: Windows) |
 | Differential testing against Analysis Services | ❌ | 0 | none | Blocked: Windows ground truth (`m4-windows-groundtruth`) |
-| Performance (P04: 5 measures over 1M rows) | ✅ | 5 | 22 ms vs 100 ms target (`perf/baseline.json`): `SUMX`/`AVERAGEX`/`MINX`/`MAXX`/`COUNTX`/`COUNTAX` compile simple column arithmetic to columnar loops (was 114 ms) | — |
+| Performance (P04: 5 measures over 1M rows) | ✅ | 5 | 26 ms vs 100 ms target (`perf/baseline.json`): `SUMX`/`AVERAGEX`/`MINX`/`MAXX`/`COUNTX`/`COUNTAX` compile simple column arithmetic to columnar loops (was 114 ms) | — |
 
 ## 4. Engine features
 
@@ -236,19 +236,19 @@ Source: `crates/pbi-render/tests/golden.rs`, `render_snapshots.rs`,
 
 ## 8. Performance
 
-Source: [docs/perf.md](perf.md), `perf/budgets.toml`, `perf/baseline.json` (Apple M4 Pro, recorded
-2026-10-22; P03, P06 and P08 2026-10-23). Score: 5 ≤ half the target · 4 ≤ target · 3 ≤ max · 1 over max.
+Source: [docs/perf.md](perf.md), `perf/budgets.toml`, `perf/baseline.json` (Apple M4 Pro, all eight
+scenarios recorded 2026-10-23 on an idle machine). Score: 5 ≤ half the target · 4 ≤ target · 3 ≤ max · 1 over max.
 
 | Scenario | Status | Score | Evidence (metric, ms) | Next step |
 |---|---|---|---|---|
-| P01 `table-scroll-step` (50k rows, p95; target 16 / max 33) | ✅ | 5 | 0.68 (was 25.6 before the render cache) | — |
-| P02 `table-page-cold` (target 1000 / max 3000) | ✅ | 5 | 97 (query 47, render 49; was 13 567 before the one-pass group-by) | Lower `max_ms` to keep the gain ([perf.md](perf.md#changing-scenarios-and-budgets)) |
-| P03 `example-page-no-data` (16 / 50; the Acme Outfitters Executive Summary page, 14 visuals) | ✅ | 5 | 0.73 | Re-record with the next idle-machine baseline |
-| P04 `dax-measures-1m` (100 / 500) | ✅ | 5 | 22 (`SUMX` 19; was 114 before the columnar iterators) | — |
-| P05 `m-csv-100k` (250 / 1000) | ✅ | 4 | 141 | — |
-| P06 `pbix-data-open` (20 / 100; the Revenue Opportunities sample PBIX, 9 tables) | ✅ | 5 | 4.7 | Re-record with the next idle-machine baseline |
-| P07 `busy-page-svg` (4 / 16) | ✅ | 5 | 1.5 | — |
-| P08 `example-table-scroll-step` (p95; 16 / 33; the example's Customer Detail table, 29 rows) | ✅ | 5 | 0.35 | Re-record with the next idle-machine baseline |
+| P01 `table-scroll-step` (50k rows, p95; target 16 / max 33) | ✅ | 5 | 0.71 (was 25.6 before the render cache) | — |
+| P02 `table-page-cold` (target 1000 / max 3000) | ✅ | 5 | 104 (was 13 567 before the one-pass group-by) | Lower `max_ms` to keep the gain ([perf.md](perf.md#changing-scenarios-and-budgets)) |
+| P03 `example-page-no-data` (16 / 50; the Acme Outfitters Executive Summary page, 14 visuals) | ✅ | 5 | 0.77 | — |
+| P04 `dax-measures-1m` (100 / 500) | ✅ | 5 | 26 (was 114 before the columnar iterators) | — |
+| P05 `m-csv-100k` (250 / 1000) | ✅ | 4 | 149 | — |
+| P06 `pbix-data-open` (20 / 100; the Revenue Opportunities sample PBIX, 9 tables) | ✅ | 5 | 4.5 | — |
+| P07 `busy-page-svg` (4 / 16) | ✅ | 5 | 1.6 | — |
+| P08 `example-table-scroll-step` (p95; 16 / 33; the example's Customer Detail table, 29 rows) | ✅ | 5 | 0.34 | — |
 | Scenarios for app open, end-to-end refresh, canvas latency in the webview | ❌ | ? | none | Add `perf_*` scenarios |
 
 ## 9. Command registry, MCP, AI

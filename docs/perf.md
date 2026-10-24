@@ -113,22 +113,23 @@ cargo run --release -p pbi-render --example bench_scroll -- $E/AcmeOutfitters.pb
 
 ## Current numbers
 
-Baseline on an Apple M4 Pro (14 cores), macOS 26.5, rustc 1.99.1, full iteration counts,
-recorded 2026-10-22 after the render cache and the DAX fast paths (idle machine). P03, P06 and
-P08 moved to the committed example and sample on 2026-10-23; their entries were recorded then
-(`cargo xtask perf --update-baseline --scenario P03,P06,P08`, on a machine that was not fully
-idle; re-record them with the next full baseline):
+Baseline on an Apple M4 Pro (14 cores), macOS 26.5, rustc 1.99.1, full iteration counts, all
+eight scenarios recorded 2026-10-23 on an idle machine (`cargo xtask perf --update-baseline`),
+after the render cache, the DAX fast paths and the move of P03, P06 and P08 to the committed
+example and sample:
 
-| ID | Result (ms) | Target / max | Status | Where the time goes (`info`) |
+| ID | Result (ms) | Target / max | Status | What it measures |
 |---|--:|---|---|---|
-| P01 | 0.68 (p95) | 16 / 33 | ok | render 0.13, SVG 0.51 |
-| P02 | 97 | 1000 / 3000 | ok | query 47, render 49, SVG 0.5 |
-| P03 | 0.73 | 16 / 50 | ok | 14 visuals, 23 KB of SVG |
-| P04 | 22 | 100 / 500 | ok | `SUMX` 19; `SUM` 1.2, `CALCULATE` 0.5–1.4, `COUNTROWS` 0.04 |
-| P05 | 141 | 250 / 1000 | ok | 74 948 result rows |
-| P06 | 4.7 | 20 / 100 | ok | 205 KB `DataModel`, 9 tables, 69 columns |
-| P07 | 1.5 | 4 / 16 | ok | 186 KB of SVG, 866 hit regions |
-| P08 | 0.35 (p95) | 16 / 33 | ok | 29 rows; render 0.06, SVG 0.25, 37 KB |
+| P01 | 0.71 (p95) | 16 / 33 | ok | 50k-row table scroll step |
+| P02 | 104 | 1000 / 3000 | ok | cold first render of a 50k-row table page (query + render + SVG) |
+| P03 | 0.77 | 16 / 50 | ok | the example's Executive Summary page without data (14 visuals) |
+| P04 | 26 | 100 / 500 | ok | five measures over 1M fact rows (`SUMX` is the largest share) |
+| P05 | 149 | 250 / 1000 | ok | 100k-row CSV through an M pipeline (74 948 result rows) |
+| P06 | 4.5 | 20 / 100 | ok | opening the Revenue Opportunities sample's `DataModel` (9 tables) |
+| P07 | 1.6 | 4 / 16 | ok | busy page to SVG (186 KB of SVG, 866 hit regions) |
+| P08 | 0.34 (p95) | 16 / 33 | ok | the example's Customer Detail table scroll step (29 rows) |
+
+The per-scenario breakdowns (`info`) are in `target/perf/report.json` after a run.
 
 ### Fixed misses
 
@@ -144,7 +145,7 @@ what the scenarios catch.
   model and hashed every row. Visuals are now cached by a content hash, page data carries an
   id so its hash is computed once per query, and the grid model and layout are reused across
   scroll steps (`pbi-render` `visuals/cache.rs`, `fingerprint.rs`).
-- **P04, `SUMX` was interpreted row by row** (111 ms over 1 M rows): simple column arithmetic
+- **P04, `SUMX` was interpreted row by row** (111 of the scenario's 114 ms over 1 M rows): simple column arithmetic
   inside the iterators is compiled once and evaluated over the column dictionaries
   (about 19 ns/row).
 
