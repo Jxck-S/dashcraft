@@ -29,7 +29,7 @@ reimplementation of Power BI Desktop ([ADR-0004](docs/adr/0004-desktop-ready-arc
 
 | Read | For |
 |---|---|
-| [README.md](README.md) | Front door: features, format and visual matrices, CLI table |
+| [README.md](README.md) | Front door: what DashCraft is, screenshots, quick start; details in [docs/FEATURES.md](docs/FEATURES.md) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Pipeline, crate graph, responsibilities, extension points |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Milestones M0–M5, the "Next" list, open human decisions |
 | [docs/GAPS.md](docs/GAPS.md) | Gaps scorecard: what is missing, scored 0–5 per area |

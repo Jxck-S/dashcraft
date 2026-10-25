@@ -15,6 +15,21 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   public and every push is reviewed for internal data.
 - **Why:** the owner chose MIT (the *Craft projects use MIT OR Apache-2.0) and publishes the source.
 
+### README restructure with app screenshots
+
+- **What:** `README.md` rewritten to a short front page (336 → 205 lines): icon, tagline, badges,
+  a hero screenshot, four highlights, a screenshot grid (report interaction, Table, Model and DAX
+  query views), agents, internals, get started, status, a documentation index. Five screenshots
+  of the app on the synthetic Acme Outfitters example in `docs/images/` (PNG, about 600 KB in all).
+  The detail moved: features, the format and visual matrices and DAX/M coverage to the new
+  `docs/FEATURES.md`; build, gates and test-data rules to the new `docs/DEVELOPMENT.md`; the
+  security posture to the new `docs/SECURITY.md`; releases and the v1 acceptance criteria to
+  `docs/ROADMAP.md`. The gaps, milestone, performance, CLI and architecture tables were
+  duplicates of `GAPS.md`, `DESKTOP-PLAN.md`, `perf.md`, `CLI.md` and `ARCHITECTURE.md` and are
+  now links. Links into the old README sections (`GAPS.md`, `VISUALS.md`, `AGENTS.md`) updated.
+- **Why:** the README had grown into a reference manual; the owner asked for a shorter front page
+  organized like the PhotoCraft README, with a screenshot of the app.
+
 ### Desktop milestone plan and README refresh
 
 - **What:** new [DESKTOP-PLAN.md](DESKTOP-PLAN.md): 26 milestones (M6 to M31; M27 to M30
