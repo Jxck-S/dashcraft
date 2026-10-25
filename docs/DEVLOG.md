@@ -7,6 +7,15 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-10-24
 
+### CI fix: app clippy on Linux and Windows; Dependabot majors
+
+- **What:** `PendingOpen::set` (`app/src-tauri/src/lib.rs`) is compiled only on macOS/iOS and in
+  tests, its only callers, so `dead_code` no longer fails `cargo clippy -p pbiview-app` on Linux and
+  Windows. `.github/dependabot.yml` ignores arrow/parquet majors (DataFusion 55.2 is on arrow 59;
+  the arrow 60 PR could not build) and TypeScript majors (`svelte-check` 4.7 peers on TS ≤ 6).
+- **Why:** `main` CI was red (App jobs on ubuntu-latest and windows-latest), and so was every
+  Dependabot PR.
+
 ### MIT License and publication
 
 - **What:** the project is licensed under MIT (`LICENSE`; `license = "MIT"` in the workspace and
