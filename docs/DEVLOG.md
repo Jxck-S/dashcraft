@@ -15,8 +15,13 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   the arrow 60 PR could not build) and TypeScript majors (`svelte-check` 4.7 peers on TS ≤ 6).
   `DirContainer` sorts its skipped entries by path like its entries: they came in `readdir`
   order, so `dir_symlinks_are_skipped_and_swaps_are_refused` failed at random on ext4.
+  A root `.gitattributes` (`* text=auto eol=lf`; the CRLF fuzz seed and Microsoft's sample
+  licence kept as committed; binary formats marked) gives Windows checkouts LF: the Windows
+  runner checked out CRLF, which failed 13 tests in 8 targets (byte-identical TMDL/TMSL
+  round-trips, the `COMMANDS.md`/`AI.md`/`ops.gen.ts` freshness checks, fixture-text edits).
 - **Why:** `main` CI was red (App jobs on ubuntu-latest and windows-latest; the symlink test at
-  random on Rust ubuntu-latest), and so was every Dependabot PR.
+  random on Rust ubuntu-latest; Rust windows-latest from CRLF checkouts), and so was every
+  Dependabot PR.
 
 ### MIT License and publication
 
