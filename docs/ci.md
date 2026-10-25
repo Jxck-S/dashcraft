@@ -11,6 +11,12 @@ workflow is the exception: it uses nightly.
 
 ## `ci.yml`: push and PR to `main`
 
+CI is skipped when a change touches only Markdown, `docs/` (including `docs/images/`),
+`release.yml`, `fuzz.yml` or `dependabot.yml`. It still runs for the Markdown the tests read:
+`docs/COMMANDS.md`, `docs/AI.md`, everything under `crates/` (`FUNCTIONS.md`, the AI prompts)
+and `reference/`, and `THIRD_PARTY_NOTICES.md`. A test that starts reading another file needs
+that file added to the `paths` list. **Run workflow** runs CI on demand.
+
 | Job | Runs on | What it does |
 |---|---|---|
 | `rust` | macos-14 (arm64), windows-latest, ubuntu-latest | `cargo fmt --all --check` (Linux only), default-members guard (Linux only), `cargo xtask layers` (Linux only, [below](#architecture-layers-cargo-xtask-layers)), `cargo clippy --all-targets --locked -- -D warnings`, `cargo test --locked --no-fail-fast` |

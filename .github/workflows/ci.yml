@@ -1,10 +1,27 @@
 name: CI
 
+# Skipped when a change touches only docs, images under docs/ or the release/fuzz/Dependabot
+# configuration. Later patterns win: the files tests read (generated docs, crate docs and
+# prompts, fixtures, the license inventory) still run CI. `main` has no required checks, so a
+# skipped run blocks nothing; "Run workflow" runs it on demand.
 on:
   push:
     branches: [main]
+    paths: &code-paths
+      - '**'
+      - '!**.md'
+      - '!docs/**'
+      - '!.github/workflows/release.yml'
+      - '!.github/workflows/fuzz.yml'
+      - '!.github/dependabot.yml'
+      - 'docs/COMMANDS.md'
+      - 'docs/AI.md'
+      - 'crates/**'
+      - 'reference/**'
+      - 'THIRD_PARTY_NOTICES.md'
   pull_request:
     branches: [main]
+    paths: *code-paths
   workflow_dispatch:
 
 permissions:
