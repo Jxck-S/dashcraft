@@ -38,6 +38,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - `.gitignore` refuses `*.pbix`, `*.pbit` and `*.abf` files except the committed Microsoft samples and fuzz seeds.
 
 ### Fixed
+- Skipped entries of a folder (symlinks, ignored and unreadable files) are listed in path order on every OS, like the other entries.
 - TMDL ↔ TMSL conversion keeps dynamic format strings: the `formatStringDefinition` object form is converted in both directions.
 - One-to-one relationships relate each side's unmatched rows to the other table's blank row.
 - The people transform ("Parse people field", `text.parsePeople`) accepts plain lists of names as well as lists of person records.

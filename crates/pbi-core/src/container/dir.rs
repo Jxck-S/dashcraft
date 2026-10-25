@@ -159,6 +159,7 @@ impl DirContainer {
             }
         }
         entries.sort_by(|a, b| a.path.cmp(&b.path));
+        skipped.sort_by(|a, b| a.path.cmp(&b.path));
         Ok(Self {
             root: canonical,
             label,

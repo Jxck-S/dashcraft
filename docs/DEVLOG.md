@@ -7,6 +7,22 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-10-24
 
+### CI fix: app clippy on Linux and Windows; Dependabot majors
+
+- **What:** `PendingOpen::set` (`app/src-tauri/src/lib.rs`) is compiled only on macOS/iOS and in
+  tests, its only callers, so `dead_code` no longer fails `cargo clippy -p pbiview-app` on Linux and
+  Windows. `.github/dependabot.yml` ignores arrow/parquet majors (DataFusion 55.2 is on arrow 59;
+  the arrow 60 PR could not build) and TypeScript majors (`svelte-check` 4.7 peers on TS ≤ 6).
+  `DirContainer` sorts its skipped entries by path like its entries: they came in `readdir`
+  order, so `dir_symlinks_are_skipped_and_swaps_are_refused` failed at random on ext4.
+  A root `.gitattributes` (`* text=auto eol=lf`; the CRLF fuzz seed and Microsoft's sample
+  licence kept as committed; binary formats marked) gives Windows checkouts LF: the Windows
+  runner checked out CRLF, which failed 13 tests in 8 targets (byte-identical TMDL/TMSL
+  round-trips, the `COMMANDS.md`/`AI.md`/`ops.gen.ts` freshness checks, fixture-text edits).
+- **Why:** `main` CI was red (App jobs on ubuntu-latest and windows-latest; the symlink test at
+  random on Rust ubuntu-latest; Rust windows-latest from CRLF checkouts), and so was every
+  Dependabot PR.
+
 ### MIT License and publication
 
 - **What:** the project is licensed under MIT (`LICENSE`; `license = "MIT"` in the workspace and
