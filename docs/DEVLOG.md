@@ -46,6 +46,25 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Why:** the README had grown into a reference manual; the owner asked for a shorter front page
   organized like the PhotoCraft README, with a screenshot of the app.
 
+### Release: arm64 installers, rpm, manual release with version override
+
+- **What:** `.github/workflows/release.yml`: a manual run (`workflow_dispatch`) now releases
+  the version in `Cargo.toml` or a `version` override (e.g. `0.3.0-rc.1`, marked pre-release),
+  creates the tag `v<version>` on the selected commit and the draft release; `dry_run` keeps
+  the old build-only behaviour. New targets on native Arm64 runners: Windows arm64 (NSIS) on
+  `windows-11-arm`, Linux arm64 (AppImage, deb, rpm) on `ubuntu-22.04-arm`; rpm for Linux x64;
+  CLI archives and SBOMs for both arm64 targets (bundle and CLI matrices 4 → 6).
+  New `scripts/set-version.sh` sets the version in `Cargo.toml`, `Cargo.lock` and the npm
+  manifests (byte-identical when the version is unchanged); the workflow uses it for an override.
+  `docs/packaging.md`, `docs/ci.md` updated.
+- **Why:** the owner asked for installers on the platforms PhotoCraft ships (its shared release
+  workflow builds Windows x64/x86/arm64, Linux x86_64/aarch64 with rpm, Flatpak and more) and for
+  a manual release trigger with a version override for release candidates. Kept: two thin macOS
+  builds instead of a universal one (documented choice). Not added: Windows x86, riscv64,
+  Flatpak, Arch, FreeBSD.
+- **Numbers:** `actionlint` clean. Not yet run on GitHub: the first dry run will confirm the
+  Arm64 runners, the arm64 AppImage and the rpm file names.
+
 ### Desktop milestone plan and README refresh
 
 - **What:** new [DESKTOP-PLAN.md](DESKTOP-PLAN.md): 26 milestones (M6 to M31; M27 to M30

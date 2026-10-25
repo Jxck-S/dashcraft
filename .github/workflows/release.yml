@@ -1,13 +1,24 @@
 name: Release
 
 # Tag push `v*`: builds every artifact and attaches it to a *draft* GitHub release.
-# Manual run (workflow_dispatch): dry run — same builds, artifacts only on the workflow run.
+# Manual run (workflow_dispatch): releases the version in Cargo.toml, or the `version` input
+# when set (e.g. 0.3.0-rc.1): creates tag v<version> on the selected commit and the same draft
+# release. With `dry_run`, the same builds with artifacts only on the workflow run.
 # Details: docs/packaging.md and docs/ci.md.
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version override, e.g. 0.3.0-rc.1 (empty: the version in Cargo.toml)'
+        type: string
+        default: ''
+      dry_run:
+        description: 'Dry run: build everything, but create no tag and no release'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -28,6 +39,8 @@ jobs:
     timeout-minutes: 30
     outputs:
       version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      override: ${{ steps.version.outputs.override }}
       label: ${{ steps.version.outputs.label }}
       publish: ${{ steps.version.outputs.publish }}
       prerelease: ${{ steps.version.outputs.prerelease }}
@@ -35,13 +48,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The tag must match the version in Cargo.toml (workspace), app/package.json and, if
-      # set, tauri.conf.json; bump them in a commit before tagging.
+      # A pushed tag must match the version in Cargo.toml (workspace), app/package.json and, if
+      # set, tauri.conf.json; bump them in a commit (scripts/set-version.sh) before tagging.
+      # A manual run releases that version, or the `version` input, which the build jobs then
+      # write into the manifests with scripts/set-version.sh.
       - id: version
         env:
           EVENT: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           SHA: ${{ github.sha }}
+          INPUT_VERSION: ${{ inputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           version=$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"])')
           npm_version=$(jq -r .version app/package.json)
@@ -54,17 +71,29 @@ jobs:
             echo "::error::tauri.conf.json version $conf_version != Cargo.toml workspace version $version"
             exit 1
           fi
+          override=false
           if [ "$EVENT" = push ]; then
             if [ "$REF_NAME" != "v$version" ]; then
               echo "::error::Tag $REF_NAME does not match the workspace version $version (expected v$version)."
               exit 1
             fi
-            label=$REF_NAME
             publish=true
           else
-            label="v$version-dev.${SHA::7}"
-            publish=false
+            input=${INPUT_VERSION#v}
+            if [ -n "$input" ] && [ "$input" != "$version" ]; then
+              if ! [[ "$input" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+                echo "::error::Version override '$INPUT_VERSION' is not major.minor.patch[-pre]."
+                exit 1
+              fi
+              echo "::notice::Version override: $input (source: $version)."
+              version=$input
+              override=true
+            fi
+            publish=true
+            if [ "$DRY_RUN" = true ]; then publish=false; fi
           fi
+          tag="v$version"
+          if [ "$publish" = true ]; then label=$tag; else label="v$version-dev.${SHA::7}"; fi
           prerelease=false
           if [[ "$version" == *-* ]]; then prerelease=true; fi
           # WiX only accepts a numeric pre-release (1.2.3-4); other pre-releases ship NSIS only.
@@ -75,6 +104,8 @@ jobs:
           fi
           {
             echo "version=$version"
+            echo "tag=$tag"
+            echo "override=$override"
             echo "label=$label"
             echo "publish=$publish"
             echo "prerelease=$prerelease"
@@ -104,7 +135,7 @@ jobs:
             echo
             echo "---"
             echo
-            echo "**Downloads:** macOS \`.dmg\` (arm64 and x64), Windows \`.msi\` / \`-setup.exe\`, Linux \`.AppImage\` / \`.deb\`, and the \`dashcraft\` CLI (with its \`pbiview\` alias) as \`.tar.gz\` / \`.zip\` per platform. Every file has a \`.sha256\`; \`SHA256SUMS.txt\` lists them all. SBOMs (CycloneDX) are in \`dashcraft-*-sbom.zip\`; licenses in \`THIRD_PARTY_NOTICES.md\` and \`THIRD_PARTY_LICENSES.txt\`; trademark and non-affiliation notice in \`NOTICE\`."
+            echo "**Downloads:** macOS \`.dmg\` (arm64 and x64), Windows x64 \`.msi\` / \`-setup.exe\` and arm64 \`-setup.exe\`, Linux x64 and arm64 \`.AppImage\` / \`.deb\` / \`.rpm\`, and the \`dashcraft\` CLI (with its \`pbiview\` alias) as \`.tar.gz\` / \`.zip\` per platform. Every file has a \`.sha256\`; \`SHA256SUMS.txt\` lists them all. SBOMs (CycloneDX) are in \`dashcraft-*-sbom.zip\`; licenses in \`THIRD_PARTY_NOTICES.md\` and \`THIRD_PARTY_LICENSES.txt\`; trademark and non-affiliation notice in \`NOTICE\`."
             echo
             if [ "$HAS_APPLE_SIGNING" != true ] || [ "$HAS_APPLE_NOTARIZATION" != true ]; then
               echo "- macOS builds are **not notarized**: on first launch, allow it under System Settings → Privacy & Security → Open Anyway, or run \`xattr -dr com.apple.quarantine /Applications/DashCraft.app\`."
@@ -120,6 +151,12 @@ jobs:
           rustup set profile minimal
           rustup toolchain install || rustup show
           rustc --version && cargo --version
+
+      - name: Apply version override
+        if: steps.version.outputs.override == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/set-version.sh "$VERSION"
 
       - uses: actions/setup-node@v7
         with:
@@ -152,7 +189,8 @@ jobs:
           export SOURCE_DATE_EPOCH
           # One SBOM per shipped binary (dashcraft, its pbiview alias, dashcraft-app) and release target;
           # no build/dev deps.
-          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc x86_64-unknown-linux-gnu; do
+          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc \
+            x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
             cargo cyclonedx --format json --describe binaries --target "$target" --target-in-filename \
               --spec-version 1.5 --no-build-deps -q
           done
@@ -186,7 +224,26 @@ jobs:
       - name: Dry run
         if: needs.prepare.outputs.publish != 'true'
         run: |
-          echo "::notice::Manual run: no GitHub release; artifacts are attached to this workflow run."
+          echo "::notice::Dry run: no tag and no GitHub release; artifacts are attached to this workflow run."
+
+      # A manual run tags the commit it runs on. GITHUB_TOKEN pushes don't start workflows, so
+      # this doesn't trigger a second, tag-push run.
+      - name: Create the tag (manual run)
+        if: needs.prepare.outputs.publish == 'true' && github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          SHA: ${{ github.sha }}
+        run: |
+          existing=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq .object.sha 2>/dev/null || true)
+          if [ -z "$existing" ]; then
+            gh api "repos/$GH_REPO/git/refs" -X POST -f ref="refs/tags/$TAG" -f sha="$SHA" > /dev/null
+            echo "::notice::Created tag $TAG at ${SHA::7}."
+          elif [ "$existing" != "$SHA" ]; then
+            echo "::error::Tag $TAG already exists at ${existing::7}, not ${SHA::7}. Pick another version, or delete the tag."
+            exit 1
+          fi
 
       - uses: actions/download-artifact@v8
         if: needs.prepare.outputs.publish == 'true'
@@ -206,7 +263,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.prepare.outputs.tag }}
           PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
         run: |
           existing=$(gh api "repos/$GH_REPO/releases" --paginate \
@@ -252,10 +309,20 @@ jobs:
             os: windows-latest
             target: x86_64-pc-windows-msvc
             bundles: msi,nsis
+          # Native Arm64 runner (free for public repositories). NSIS only: Tauri's WiX MSI
+          # bundler targets x86 and x64.
+          - name: Windows arm64
+            os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            bundles: nsis
           - name: Linux x64
-            os: ubuntu-22.04 # oldest supported glibc => widest AppImage/deb compatibility
+            os: ubuntu-22.04 # oldest supported glibc => widest AppImage/deb/rpm compatibility
             target: x86_64-unknown-linux-gnu
-            bundles: appimage,deb
+            bundles: appimage,deb,rpm
+          - name: Linux arm64
+            os: ubuntu-22.04-arm # native Arm64 runner, same glibc baseline as x64
+            target: aarch64-unknown-linux-gnu
+            bundles: appimage,deb,rpm
     env:
       # Secrets can't be used in step `if:`; expose only whether they are set.
       HAS_APPLE_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
@@ -272,6 +339,20 @@ jobs:
             libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
             librsvg2-dev libxdo-dev patchelf file xdg-utils
 
+      # The Arm64 runner images may come without rustup.
+      - name: Install rustup if missing
+        shell: bash
+        run: |
+          if command -v rustup > /dev/null; then exit 0; fi
+          if [ "$RUNNER_OS" = Windows ]; then
+            curl -sSfL https://win.rustup.rs/aarch64 -o "$RUNNER_TEMP/rustup-init.exe"
+            "$RUNNER_TEMP/rustup-init.exe" -y --default-toolchain none --profile minimal
+            echo "$USERPROFILE/.cargo/bin" >> "$GITHUB_PATH"
+          else
+            curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+
       - name: Install Rust toolchain (rust-toolchain.toml)
         shell: bash
         env:
@@ -281,6 +362,13 @@ jobs:
           rustup toolchain install || rustup show
           rustup target add "$TARGET"
           rustc --version && cargo --version
+
+      - name: Apply version override
+        if: needs.prepare.outputs.override == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: scripts/set-version.sh "$VERSION"
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -424,6 +512,7 @@ jobs:
               grep -q '^Exec=dashcraft-app %F$' "$RUNNER_TEMP"/deb/usr/share/applications/*.desktop
               grep -q '^MimeType=application/x-dashcraft-pbix;' "$RUNNER_TEMP"/deb/usr/share/applications/*.desktop
               test -f "$RUNNER_TEMP/deb/usr/share/mime/packages/dashcraft.xml"
+              ls -la "$dir"/rpm/*.rpm
               ;;
             Windows)
               ls -la "$dir"/msi "$dir"/nsis 2>/dev/null || true
@@ -439,7 +528,7 @@ jobs:
           out=dist/bundle
           mkdir -p "$out"
           shopt -s nullglob
-          for f in "$src"/dmg/*.dmg "$src"/msi/*.msi "$src"/nsis/*-setup.exe "$src"/appimage/*.AppImage "$src"/deb/*.deb; do
+          for f in "$src"/dmg/*.dmg "$src"/msi/*.msi "$src"/nsis/*-setup.exe "$src"/appimage/*.AppImage "$src"/deb/*.deb "$src"/rpm/*.rpm; do
             cp "$f" "$out/"
           done
           cd "$out"
@@ -465,7 +554,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: gh release upload "$TAG" dist/bundle/* --clobber
 
   cli:
@@ -487,10 +576,29 @@ jobs:
             target: x86_64-pc-windows-msvc
             # Static CRT: no VC++ redistributable needed on the target machine.
             rustflags: -C target-feature=+crt-static
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            rustflags: -C target-feature=+crt-static
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v7
+
+      # The Arm64 runner images may come without rustup.
+      - name: Install rustup if missing
+        shell: bash
+        run: |
+          if command -v rustup > /dev/null; then exit 0; fi
+          if [ "$RUNNER_OS" = Windows ]; then
+            curl -sSfL https://win.rustup.rs/aarch64 -o "$RUNNER_TEMP/rustup-init.exe"
+            "$RUNNER_TEMP/rustup-init.exe" -y --default-toolchain none --profile minimal
+            echo "$USERPROFILE/.cargo/bin" >> "$GITHUB_PATH"
+          else
+            curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Install Rust toolchain (rust-toolchain.toml)
         shell: bash
@@ -501,6 +609,13 @@ jobs:
           rustup toolchain install || rustup show
           rustup target add "$TARGET"
           rustc --version && cargo --version
+
+      - name: Apply version override
+        if: needs.prepare.outputs.override == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: scripts/set-version.sh "$VERSION"
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -541,7 +656,11 @@ jobs:
           cd dist
           if [ "$RUNNER_OS" = "Windows" ]; then
             archive="$name.zip"
-            7z a -tzip "cli/$archive" "$name" > /dev/null
+            if command -v 7z > /dev/null; then
+              7z a -tzip "cli/$archive" "$name" > /dev/null
+            else
+              pwsh -NoProfile -Command "Compress-Archive -Path '$name' -DestinationPath 'cli/$archive'"
+            fi
           else
             archive="$name.tar.gz"
             tar -czf "cli/$archive" "$name"
@@ -562,7 +681,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: gh release upload "$TAG" dist/cli/* --clobber
 
   finalize:
@@ -606,7 +725,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: gh release upload "$TAG" dist/SHA256SUMS.txt --clobber
 
       # Build provenance (Sigstore). Public repos, or private repos on GitHub Enterprise Cloud
