@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 
 fn tmp_dir() -> tempfile::TempDir {
     tempfile::Builder::new()
-        .prefix("pbiview-mcp-")
+        .prefix("dashcraft-mcp-")
         .tempdir_in(env!("CARGO_TARGET_TMPDIR"))
         .unwrap()
 }
@@ -27,7 +27,7 @@ fn mcp_initializes_and_lists_tools_over_stdio() {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("spawn pbiview mcp");
+        .expect("spawn dashcraft mcp");
     let mut stdin = child.stdin.take().unwrap();
     let mut out = BufReader::new(child.stdout.take().unwrap());
     let mut send = |msg: Value| {

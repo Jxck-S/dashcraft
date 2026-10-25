@@ -21,7 +21,7 @@ that file added to the `paths` list. **Run workflow** runs CI on demand.
 |---|---|---|
 | `rust` | macos-14 (arm64), windows-latest, ubuntu-latest | `cargo fmt --all --check` (Linux only), default-members guard (Linux only), `cargo xtask layers` (Linux only, [below](#architecture-layers-cargo-xtask-layers)), `cargo clippy --all-targets --locked -- -D warnings`, `cargo test --locked --no-fail-fast` |
 | `perf` | ubuntu-latest | `cargo xtask perf --quick --no-fail --locked`: release build of the `perf_*` examples, scenarios vs `perf/budgets.toml`. **Informational** (`continue-on-error`): the table goes to the job summary and `target/perf/` is uploaded as the `perf-report` artifact (14 days). See [perf.md](perf.md) |
-| `app` | same 3 OSes, only when `app/package.json` exists | Installs webview libraries on Linux, runs `npm ci`, `npm run check`, and `npm run build` in `app/`, then `cargo clippy -p pbiview-app --all-targets --locked -- -D warnings`. On Linux it also runs `scripts/license-inventory.py --check` and emits a **warning** (not a failure) when the license inventory in `THIRD_PARTY_NOTICES.md` is stale ([packaging.md](packaging.md#license-inventory-and-sbom)) |
+| `app` | same 3 OSes, only when `app/package.json` exists | Installs webview libraries on Linux, runs `npm ci`, `npm run check`, and `npm run build` in `app/`, then `cargo clippy -p dashcraft-app --all-targets --locked -- -D warnings`. On Linux it also runs `scripts/license-inventory.py --check` and emits a **warning** (not a failure) when the license inventory in `THIRD_PARTY_NOTICES.md` is stale ([packaging.md](packaging.md#license-inventory-and-sbom)) |
 | `deny` | ubuntu-latest | `cargo deny check advisories` (non-blocking) and `cargo deny check bans licenses sources` (blocking), using `deny.toml` |
 
 ### Why `cargo clippy`/`cargo test` without `--workspace`
@@ -31,7 +31,7 @@ The workspace has `members = ["crates/*", "xtask", "app/src-tauri"]` and
 default members. That covers every library, the CLI and the `xtask` tooling, but not the
 Tauri app, which needs WebKitGTK and other system libraries on Linux.
 
-We use this instead of `--workspace --exclude pbiview-app` for three reasons:
+We use this instead of `--workspace --exclude dashcraft-app` for three reasons:
 
 - Plain `cargo test` gives the same result locally and in CI. `Cargo.toml` is the
   only place that defines what counts as "core".
@@ -40,7 +40,7 @@ We use this instead of `--workspace --exclude pbiview-app` for three reasons:
 
 The weakness is that a new member outside `crates/*` could be skipped silently. A
 guard step prevents that: it reads `cargo metadata` and fails the job if any
-workspace member other than `pbiview-app` is missing from `default-members`.
+workspace member other than `dashcraft-app` is missing from `default-members`.
 
 Tests use the committed Acme Outfitters example and Microsoft samples. Tests that
 need optional gitignored files (larger samples from `scripts/fetch-samples.sh`,
@@ -58,14 +58,14 @@ runs on a fresh clone, so those files are never present there.
 - a workspace crate in **no** layer (a new crate must be added to `LAYERS`);
 - a dependency on build tooling (`xtask`);
 - any workspace dependency of `pbi-model` or `pbi-m` (kept standalone; `pbi-m` is fuzzed alone);
-- a crate other than `pbiview-app` that reaches a **UI toolkit** crate (`tauri*`, `wry`,
+- a crate other than `dashcraft-app` that reaches a **UI toolkit** crate (`tauri*`, `wry`,
   `tao`, `specta*`, `egui*`, `eframe`, `winit`, `muda`, `rfd`, `tray-icon`, `webkit2gtk*`,
   `webview2-com*`, `gtk`) through any chain of normal or build dependencies, or through its
   own dev-dependencies. The error prints the path.
 
 | Layer | Crates |
 |---|---|
-| L6 front ends | `pbiview-cli`, `pbiview-app` |
+| L6 front ends | `dashcraft-cli`, `dashcraft-app` |
 | L5 operations | `pbi-ops` (command registry) |
 | L4 render | `pbi-render` |
 | L3 session | `pbi-session` |
@@ -132,13 +132,13 @@ inventory and SBOMs) are in [packaging.md](packaging.md). In short:
    - Linux x64 and arm64 `.AppImage`, `.deb` and `.rpm`, built on `ubuntu-22.04` and
      `ubuntu-22.04-arm` for an older glibc baseline. rpm versions can't contain `-`, so
      pre-releases ship AppImage and deb only.
-4. `cli` builds `dashcraft` and its `pbiview` alias (`crates/pbiview-cli`) for the same six
+4. `cli` builds `dashcraft` (`crates/dashcraft-cli`) for the same six
    targets and smoke-tests the native ones. It uploads `dashcraft-<tag>-<target>.tar.gz`
    (`.zip` on Windows, with README, `NOTICE`, notices and license texts) and a `.sha256` file
    for each. The Windows CLI is
    statically linked against the CRT.
 5. `finalize` uploads `SHA256SUMS.txt` for every asset. On public repositories, or with
-   the repository variable `PBIVIEW_ATTEST=true` on GitHub Enterprise Cloud, it also
+   the repository variable `DASHCRAFT_ATTEST=true` on GitHub Enterprise Cloud, it also
    creates a build-provenance attestation.
 
 Every job also stores its outputs as workflow artifacts (14 days). A manual run with
@@ -292,7 +292,7 @@ cargo xtask perf --scenario P01        # one scenario, full iteration count
 
 # App (same as the `app` job; on Linux, install the webkit2gtk-4.1 dev packages first)
 (cd app && npm ci && npm run check && npm run build)
-cargo clippy -p pbiview-app --all-targets --locked -- -D warnings
+cargo clippy -p dashcraft-app --all-targets --locked -- -D warnings
 
 # Supply chain (same as the `deny` job)
 cargo install cargo-deny --locked

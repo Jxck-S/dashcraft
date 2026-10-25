@@ -23,7 +23,7 @@ Legend: `[x]` done, `[ ]` not done. Item IDs match the work-tracking IDs used in
 | Opt-in AI | `pbi-ai` ([ADR-0008](adr/0008-ai-layer.md), [docs/AI.md](AI.md)), off by default: explain a measure, and suggest a measure (parsed and optionally evaluated locally, never applied), through OpenAI-compatible, Azure OpenAI or Ollama providers, only after a recorded consent per provider, capability and data class; `ai.preview` shows the exact request; keys only in the OS keychain (or `DASHCRAFT_AI_API_KEY`). CLI: `ai login`/`logout`. App: Options → AI, a consent dialog showing the exact request, **Explain with AI**, **Suggest a measure** |
 | App on the registry | The desktop app runs every domain operation through one `ops_execute` IPC command → `Registry::execute`, the same commands as `run`, `serve` and MCP, with a TypeScript client generated from the schemas; File → Export writes a PBIP project or PBIT template |
 | Performance | `cargo xtask perf`: 8 scenarios with budgets and a per-machine baseline, all within target ([perf.md](perf.md)). A per-visual render cache and DAX fast paths took a 50,000-row table scroll step from 25.6 ms to under 1 ms and its cold first render from 13.6 s to about 0.1 s |
-| Name | DashCraft ([ADR-0009](adr/0009-naming-dashcraft.md)): `dashcraft` binary with a `pbiview` alias, app `dashcraft-app` (identifier `io.github.jxck-s.dashcraft`), `DASHCRAFT_*` variables with `PBIVIEW_*` aliases, [NOTICE](../NOTICE) |
+| Name | DashCraft ([ADR-0009](adr/0009-naming-dashcraft.md)): `dashcraft` binary, app `dashcraft-app` (identifier `io.github.jxck-s.dashcraft`), `DASHCRAFT_*` variables, [NOTICE](../NOTICE); no aliases under the former name ([ADR-0010](adr/0010-dashcraft-everywhere.md)) |
 | Visuals | `scatterChart`, `funnel`, `gauge`, `treemap` and `waterfallChart` replace their placeholders; conditional formatting of tables, matrices and chart colors; dynamic format strings per cell |
 | Engine | Calculation groups; many-to-many (limited) relationships; row-level security "View as" (roles and user) with the `security.roles` / `security.viewAs` commands and the app's Modeling → View as dialog |
 | DAX | Library grown from 218 to 294 functions (logarithms, trigonometry, statistical distributions, `YEARFRAC`, `NETWORKDAYS`, bit functions, …) |
@@ -36,7 +36,7 @@ Where each area stands against Power BI Desktop, scored 0–5: [GAPS.md](GAPS.md
 ## M0: Foundation
 
 - [x] `m0-scaffold`: git repository; Cargo workspace with all crate stubs; pre-declared `[workspace.dependencies]`; `rust-toolchain.toml` (1.99.1, with rustfmt and clippy); `.gitignore`; `cargo build` is green.
-- [x] `m0-fixtures`: `reference/` fixture root (now the synthetic Acme Outfitters example with its CSVs, `blob-map.json` and expected values, and MIT-licensed Microsoft sample reports); optional data gitignored; `reference/README.md`; `PBIVIEW_REFERENCE` override.
+- [x] `m0-fixtures`: `reference/` fixture root (now the synthetic Acme Outfitters example with its CSVs, `blob-map.json` and expected values, and MIT-licensed Microsoft sample reports); optional data gitignored; `reference/README.md`; `DASHCRAFT_REFERENCE` override.
 - [x] `m0-docs`: ADR-0001 to ADR-0005 (including license research), `FORMATS.md`, `README.md`, `THIRD_PARTY_NOTICES.md`, `.github/copilot-instructions.md`, this roadmap.
 - [x] `m0-ci`: GitHub Actions matrix (macOS arm64, Windows x64, Ubuntu): `cargo fmt --check`, `clippy -D warnings`, `cargo test`; app build job; `cargo-deny`; a release job stub with signing gated on secrets.
 
@@ -49,7 +49,7 @@ Where each area stands against Power BI Desktop, scored 0–5: [GAPS.md](GAPS.md
 - [x] `m1-containers`: `Container` trait (folder, ZIP) with zip-slip and symlink guards and caps on size, entry count and compression ratio; content-based detection for every supported format; tests with malicious ZIPs.
 - [x] `m1-core`: content-based detection; safe containers (caps on size, entry count and compression ratio; zip-slip guard); readers for PBIP (`byPath`, and `byConnection` shown as remote), `.platform`, `.pbism`, `.pbi/localSettings.json`, `diagramLayout.json`, PBIT, PBIX phase 1a (listing, report, theme, `Version`), `.pbids`, `.bim`, standalone TMDL folder. Done in `pbi-core::reader` (`open_path`/`open_bytes` → `OpenedDocument`), plus PBIX/`.abf` schema through `pbi-vertipaq`, secret redaction, and the save groundwork `save_as_pbip` / `export_pbit` (the "PBIT exported from them" acceptance fixture is produced in `crates/pbi-core/tests/readers.rs`).
 - [x] `m1-cli`: `dashcraft inspect <path> [--json]` lists every table, column, measure, relationship, page and visual; `dashcraft open <path>`; `insta` snapshot tests over all fixtures.
-- [x] `m1-app-scaffold`: `app/` Tauri 2 + Svelte 5 + TypeScript + Vite; `pbiview-app` in workspace members (not default-members); `tauri-specta` typed IPC; dialog plugin; drag-drop and CLI-argument plumbing; three-pane layout shell.
+- [x] `m1-app-scaffold`: `app/` Tauri 2 + Svelte 5 + TypeScript + Vite; `dashcraft-app` in workspace members (not default-members); `tauri-specta` typed IPC; dialog plugin; drag-drop and CLI-argument plumbing; three-pane layout shell.
 - [x] `m1-app`: open by dialog, drag-drop or CLI; model tree; report outline; properties pane (display name, with the source name in a tooltip); `byConnection` shown as remote.
 
 ## M2: Engines, grid, exports, linter → `v0.1.0`
@@ -102,7 +102,7 @@ Where each area stands against Power BI Desktop, scored 0–5: [GAPS.md](GAPS.md
 - [x] `mcp`: `dashcraft mcp`, the agent-safe commands as MCP tools ([MCP.md](MCP.md)).
 - [x] `ai-layer`: opt-in `pbi-ai` ([ADR-0008](adr/0008-ai-layer.md), [AI.md](AI.md)) and its CLI wiring.
 - [x] `app-on-registry`: the app runs every domain operation through the registry.
-- [x] `rebrand-dashcraft`: product name DashCraft, `dashcraft` binary with a `pbiview` alias, `DASHCRAFT_*` variables, identifier `io.github.jxck-s.dashcraft`, `NOTICE` ([ADR-0009](adr/0009-naming-dashcraft.md)).
+- [x] `rebrand-dashcraft`: product name DashCraft, `dashcraft` binary, `DASHCRAFT_*` variables, identifier `io.github.jxck-s.dashcraft`, `NOTICE` ([ADR-0009](adr/0009-naming-dashcraft.md)).
 - [x] `visuals-more`: `scatterChart`, `funnel`, `gauge`, `treemap` and `waterfallChart` instead of placeholders, with hit ids and tooltips ([VISUALS.md](VISUALS.md)).
 - [x] `engine-model-features`: calculation groups, many-to-many (limited) relationships and row-level security "View as" in `pbi-session`; the `security.roles` / `security.viewAs` commands and the app's Modeling → View as dialog.
 - [x] `dax-library`: 218 → 294 DAX functions ([FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md)).

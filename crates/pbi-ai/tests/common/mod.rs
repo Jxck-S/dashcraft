@@ -20,9 +20,9 @@ use pbi_ai::{
 use pbi_ops::{CallerKind, Ctx, OpError, Registry, Workspace};
 use serde_json::{Value, json};
 
-/// `$PBIVIEW_REFERENCE`, else `<workspace>/reference`.
+/// `$DASHCRAFT_REFERENCE`, else `<workspace>/reference`.
 pub fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE")
+    std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference"))
 }

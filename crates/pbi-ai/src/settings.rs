@@ -644,8 +644,7 @@ fn restrict_permissions(_: &fs::File) -> std::io::Result<()> {
     Ok(())
 }
 
-/// The default settings file: `$DASHCRAFT_CONFIG_DIR/ai.json` (or
-/// `$PBIVIEW_CONFIG_DIR/ai.json`), else `dashcraft/ai.json` under the
+/// The default settings file: `$DASHCRAFT_CONFIG_DIR/ai.json`, else `dashcraft/ai.json` under the
 /// platform configuration folder (`$XDG_CONFIG_HOME` or `~/.config` on
 /// Linux, `~/Library/Application Support` on macOS, `%APPDATA%` on Windows).
 /// `None` when no folder can be found.
@@ -658,7 +657,7 @@ pub fn default_settings_path() -> Option<PathBuf> {
 #[must_use]
 pub fn settings_path_from(env: impl Fn(&str) -> Option<OsString>, os: &str) -> Option<PathBuf> {
     let var = |name: &str| env(name).filter(|v| !v.is_empty()).map(PathBuf::from);
-    if let Some(dir) = var("DASHCRAFT_CONFIG_DIR").or_else(|| var("PBIVIEW_CONFIG_DIR")) {
+    if let Some(dir) = var("DASHCRAFT_CONFIG_DIR") {
         return Some(dir.join("ai.json"));
     }
     let base = match os {
@@ -862,10 +861,6 @@ mod tests {
         assert_eq!(
             p(&[("DASHCRAFT_CONFIG_DIR", "/cfg"), ("HOME", "/h")], "linux"),
             Some(PathBuf::from("/cfg/ai.json"))
-        );
-        assert_eq!(
-            p(&[("PBIVIEW_CONFIG_DIR", "/old")], "macos"),
-            Some(PathBuf::from("/old/ai.json"))
         );
         assert_eq!(
             p(&[("HOME", "/h")], "macos"),

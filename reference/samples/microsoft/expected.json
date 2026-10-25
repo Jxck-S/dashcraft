@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Stable facts about the Microsoft Power BI Desktop sample files (MIT) used as DashCraft test fixtures. See README.md in this folder.",
-  "fixtureRoot": "Paths in `file` are relative to the fixture root: $PBIVIEW_REFERENCE, else <workspace>/reference. Files with committed=false are fetched by scripts/fetch-samples.sh; tests must SKIP when they are missing.",
+  "fixtureRoot": "Paths in `file` are relative to the fixture root: $DASHCRAFT_REFERENCE, else <workspace>/reference. Files with committed=false are fetched by scripts/fetch-samples.sh; tests must SKIP when they are missing.",
   "upstream": {
     "repository": "https://github.com/microsoft/powerbi-desktop-samples",
     "commit": "d5ec562d24b1890c2fd2976da625dd0920d35871",

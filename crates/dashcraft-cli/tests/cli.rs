@@ -1,8 +1,8 @@
-//! End-to-end tests of the `dashcraft` binary (and its `pbiview` alias) over
+//! End-to-end tests of the `dashcraft` binary over
 //! the committed fixtures: the synthetic Acme Outfitters example and the
 //! Microsoft samples.
 //!
-//! The binary runs with the fixture root (`$PBIVIEW_REFERENCE`, else
+//! The binary runs with the fixture root (`$DASHCRAFT_REFERENCE`, else
 //! `<workspace>/reference`) as its working directory and gets relative
 //! paths, so `source.path` and every other path in the output (and in the
 //! snapshots) is machine-independent. Missing fixtures are skipped with a
@@ -41,23 +41,22 @@ const REPORTS: [(&str, &str); 3] = [
 ];
 
 fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE")
+    std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference"))
 }
 
-fn pbiview_cmd(args: &[&str]) -> Command {
+fn dashcraft_cmd(args: &[&str]) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_dashcraft"));
     cmd.args(args)
         .current_dir(reference_root())
         .env_remove("RUST_LOG")
-        .env_remove("DASHCRAFT_APP")
-        .env_remove("PBIVIEW_APP");
+        .env_remove("DASHCRAFT_APP");
     cmd
 }
 
-fn pbiview(args: &[&str]) -> Output {
-    pbiview_cmd(args).output().expect("run pbiview")
+fn dashcraft(args: &[&str]) -> Output {
+    dashcraft_cmd(args).output().expect("run dashcraft")
 }
 
 fn stdout(o: &Output) -> String {
@@ -81,7 +80,7 @@ fn assert_exit(o: &Output, code: i32) {
 fn inspect_json(path: &str, extra: &[&str]) -> Value {
     let mut args = vec!["inspect", "--json", path];
     args.extend_from_slice(extra);
-    let o = pbiview(&args);
+    let o = dashcraft(&args);
     assert_exit(&o, 0);
     serde_json::from_str(&stdout(&o)).expect("valid JSON")
 }
@@ -103,7 +102,7 @@ fn optional_fixture(rel: &str) -> Option<PathBuf> {
 /// A fresh folder under `target/tmp`, removed when dropped.
 fn tmp_dir() -> tempfile::TempDir {
     tempfile::Builder::new()
-        .prefix("pbiview-cli-")
+        .prefix("dashcraft-cli-")
         .tempdir_in(env!("CARGO_TARGET_TMPDIR"))
         .unwrap()
 }
@@ -334,11 +333,11 @@ fn inspect_json_semantic_model_folder() {
 }
 
 /// `dashcraft <args>` run in `dir` (relative paths stay machine-independent).
-fn pbiview_in(dir: &Path, args: &[&str]) -> Output {
-    pbiview_cmd(args)
+fn dashcraft_in(dir: &Path, args: &[&str]) -> Output {
+    dashcraft_cmd(args)
         .current_dir(dir)
         .output()
-        .expect("run pbiview")
+        .expect("run dashcraft")
 }
 
 /// A copy of the example's Overview report folder whose `definition.pbir`
@@ -371,7 +370,7 @@ fn remote_report_folder(dir: &Path) -> PathBuf {
 fn inspect_json_remote_report_folder() {
     let dir = tmp_dir();
     remote_report_folder(dir.path());
-    let o = pbiview_in(dir.path(), &["inspect", "--json", "Remote.Report"]);
+    let o = dashcraft_in(dir.path(), &["inspect", "--json", "Remote.Report"]);
     assert_exit(&o, 0);
     let v: Value = serde_json::from_str(&stdout(&o)).unwrap();
     assert_eq!(v["source"]["path"], "Remote.Report");
@@ -411,7 +410,7 @@ fn inspect_json_unzipped_pbix_folder() {
     let run = |extra: &[&str]| {
         let mut args = vec!["inspect", "--json", "Unzipped"];
         args.extend_from_slice(extra);
-        let o = pbiview_in(dir.path(), &args);
+        let o = dashcraft_in(dir.path(), &args);
         assert_exit(&o, 0);
         serde_json::from_str::<Value>(&stdout(&o)).unwrap()
     };
@@ -490,12 +489,12 @@ fn no_expressions_removes_dax_and_m_text() {
         "Csv.Document",
         "acmeoutfittersdemo.blob.core.windows.net",
     ];
-    let full = stdout(&pbiview(&["inspect", "--json", PBIP]));
+    let full = stdout(&dashcraft(&["inspect", "--json", PBIP]));
     for leak in leaks {
         assert!(full.contains(leak), "fixture should contain {leak}");
     }
 
-    let o = pbiview(&["inspect", "--json", "--no-expressions", PBIP]);
+    let o = dashcraft(&["inspect", "--json", "--no-expressions", PBIP]);
     assert_exit(&o, 0);
     let text = stdout(&o);
     for leak in leaks {
@@ -514,7 +513,7 @@ fn no_expressions_removes_dax_and_m_text() {
     }
     assert_eq!(count(&v, "measures"), 33);
 
-    let o = pbiview(&["inspect", "--no-expressions", PBIP]);
+    let o = dashcraft(&["inspect", "--no-expressions", PBIP]);
     assert_exit(&o, 0);
     let text = stdout(&o);
     assert!(text.contains("Total Sales"));
@@ -529,7 +528,7 @@ fn no_expressions_removes_dax_and_m_text() {
 
 #[test]
 fn inspect_tree_smoke() {
-    let o = pbiview(&["inspect", PBIP]);
+    let o = dashcraft(&["inspect", PBIP]);
     assert_exit(&o, 0);
     let text = stdout(&o);
     for needle in [
@@ -620,7 +619,7 @@ fn inspect_other_formats_adds_their_sections() {
     assert_eq!(stats["totalSize"], 30);
     assert_eq!(stats["tables"][0]["rowsCount"], 7);
     assert_eq!(stats["tables"][0]["columns"][0]["cardinality"], 7);
-    let o = pbiview(&["inspect", path_arg(&vpax)]);
+    let o = dashcraft(&["inspect", path_arg(&vpax)]);
     assert_exit(&o, 0);
     let text = stdout(&o);
     assert!(
@@ -632,7 +631,7 @@ fn inspect_other_formats_adds_their_sections() {
 
 #[test]
 fn inspect_tree_shows_paginated_and_mashup_outlines() {
-    let o = pbiview(&["inspect", &format_sample("Sales.rdl")]);
+    let o = dashcraft(&["inspect", &format_sample("Sales.rdl")]);
     assert_exit(&o, 0);
     let text = stdout(&o);
     for needle in [
@@ -646,7 +645,7 @@ fn inspect_tree_shows_paginated_and_mashup_outlines() {
     ] {
         assert!(text.contains(needle), "missing {needle:?} in:\n{text}");
     }
-    let o = pbiview(&["inspect", &format_sample("dataflow/model.json")]);
+    let o = dashcraft(&["inspect", &format_sample("dataflow/model.json")]);
     assert_exit(&o, 0);
     let text = stdout(&o);
     for needle in [
@@ -665,7 +664,7 @@ fn inspect_tree_shows_paginated_and_mashup_outlines() {
 
 #[test]
 fn missing_path_is_a_fatal_error() {
-    let o = pbiview(&["inspect", "--json", "examples/does-not-exist.pbix"]);
+    let o = dashcraft(&["inspect", "--json", "examples/does-not-exist.pbix"]);
     assert_exit(&o, 1);
     assert!(o.stdout.is_empty());
     let err = stderr(&o);
@@ -688,7 +687,7 @@ fn zip_slip_archive_is_refused() {
     zip.write_all(b"owned").unwrap();
     zip.finish().unwrap();
 
-    let o = pbiview(&["inspect", "--json", path_arg(&evil)]);
+    let o = dashcraft(&["inspect", "--json", path_arg(&evil)]);
     assert_exit(&o, 1);
     assert!(o.stdout.is_empty());
     let err = stderr(&o);
@@ -709,7 +708,7 @@ fn error_diagnostics_exit_with_2() {
     )
     .unwrap();
 
-    let o = pbiview(&["inspect", "--json", path_arg(&folder)]);
+    let o = dashcraft(&["inspect", "--json", path_arg(&folder)]);
     assert_exit(&o, 2);
     let v: Value = serde_json::from_str(&stdout(&o)).unwrap();
     assert!(v["model"].is_null());
@@ -721,64 +720,32 @@ fn error_diagnostics_exit_with_2() {
     assert_eq!(error["origin"]["path"], "definition/model.tmdl");
     assert!(stderr(&o).contains("error diagnostic"), "{}", stderr(&o));
 
-    let o = pbiview(&["inspect", path_arg(&folder)]);
+    let o = dashcraft(&["inspect", path_arg(&folder)]);
     assert_exit(&o, 2);
     assert!(stdout(&o).contains("  Errors:"));
 
-    let o = pbiview(&["--quiet", "inspect", "--json", path_arg(&folder)]);
+    let o = dashcraft(&["--quiet", "inspect", "--json", path_arg(&folder)]);
     assert_exit(&o, 2);
     assert!(o.stderr.is_empty(), "{}", stderr(&o));
 }
 
 #[test]
 fn usage_errors_are_fatal_and_help_succeeds() {
-    let o = pbiview(&["inspect"]);
+    let o = dashcraft(&["inspect"]);
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("Usage"), "{}", stderr(&o));
-    let o = pbiview(&["convert", PBIP, "--to", "pbix", "--out", "x"]);
+    let o = dashcraft(&["convert", PBIP, "--to", "pbix", "--out", "x"]);
     assert_exit(&o, 1);
 
-    let o = pbiview(&["--help"]);
+    let o = dashcraft(&["--help"]);
     assert_exit(&o, 0);
     let help = stdout(&o);
     for cmd in ["inspect", "detect", "open", "convert"] {
         assert!(help.contains(cmd), "{help}");
     }
-    let o = pbiview(&["--version"]);
+    let o = dashcraft(&["--version"]);
     assert_exit(&o, 0);
     assert!(stdout(&o).starts_with("dashcraft "));
-}
-
-#[test]
-fn the_pbiview_alias_runs_the_same_program_under_its_name() {
-    let alias = |args: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_pbiview"))
-            .args(args)
-            .current_dir(reference_root())
-            .env_remove("RUST_LOG")
-            .env_remove("DASHCRAFT_APP")
-            .env_remove("PBIVIEW_APP")
-            .output()
-            .expect("run pbiview")
-    };
-    let o = alias(&["--version"]);
-    assert_exit(&o, 0);
-    assert!(stdout(&o).starts_with("pbiview "), "{}", stdout(&o));
-    let o = alias(&["--help"]);
-    assert_exit(&o, 0);
-    assert!(stdout(&o).contains("Usage: pbiview "), "{}", stdout(&o));
-
-    let o = alias(&["detect", "--json", PBIP]);
-    assert_exit(&o, 0);
-    assert_eq!(stdout(&o), stdout(&pbiview(&["detect", "--json", PBIP])));
-
-    let o = alias(&["inspect", "examples/does-not-exist.pbix"]);
-    assert_exit(&o, 1);
-    assert!(
-        stderr(&o).starts_with("pbiview: error: cannot open"),
-        "{}",
-        stderr(&o)
-    );
 }
 
 // ---------------------------------------------------------------------------
@@ -787,7 +754,7 @@ fn the_pbiview_alias_runs_the_same_program_under_its_name() {
 
 #[test]
 fn detect_reports_format_and_items() {
-    let o = pbiview(&["detect", "--json", PBIP]);
+    let o = dashcraft(&["detect", "--json", PBIP]);
     assert_exit(&o, 0);
     let v: Value = serde_json::from_str(&stdout(&o)).unwrap();
     assert_eq!(v["schemaVersion"], 1);
@@ -804,7 +771,7 @@ fn detect_reports_format_and_items() {
 
     let dir = tmp_dir();
     remote_report_folder(dir.path());
-    let o = pbiview_in(dir.path(), &["detect", "Remote.Report"]);
+    let o = dashcraft_in(dir.path(), &["detect", "Remote.Report"]);
     assert_exit(&o, 0);
     let text = stdout(&o);
     assert!(text.contains("PBIP report folder"), "{text}");
@@ -812,7 +779,7 @@ fn detect_reports_format_and_items() {
 
     let junk = dir.path().join("mystery.bin");
     std::fs::write(&junk, [0x00, 0x13, 0x37, 0xfe, 0x01, 0x02, 0xff]).unwrap();
-    let o = pbiview(&["detect", "--json", path_arg(&junk)]);
+    let o = dashcraft(&["detect", "--json", path_arg(&junk)]);
     assert_exit(&o, 1);
     let v: Value = serde_json::from_str(&stdout(&o)).unwrap();
     assert_eq!(v["detection"]["format"], "unknown");
@@ -828,7 +795,7 @@ fn convert_pbip_to_pbit_round_trips_through_inspect() {
     let project = inspect_json(PBIP, &[]);
     let dir = tmp_dir();
     let pbit = dir.path().join("out/AcmeOutfitters.pbit");
-    let o = pbiview(&["convert", PBIP, "--to", "pbit", "--out", path_arg(&pbit)]);
+    let o = dashcraft(&["convert", PBIP, "--to", "pbit", "--out", path_arg(&pbit)]);
     assert_exit(&o, 0);
     assert!(
         stderr(&o).contains("a PBIT holds one report"),
@@ -846,12 +813,12 @@ fn convert_pbip_to_pbit_round_trips_through_inspect() {
     assert_eq!(count(&v, "errors"), 0);
 
     // Existing outputs are kept unless --force.
-    let o = pbiview(&["convert", PBIP, "--to", "pbit", "--out", path_arg(&pbit)]);
+    let o = dashcraft(&["convert", PBIP, "--to", "pbit", "--out", path_arg(&pbit)]);
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("already exists; use --force"));
 
     let stores = "Acme Outfitters - Stores";
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "--quiet",
         "convert",
         PBIP,
@@ -873,7 +840,7 @@ fn convert_pbip_to_pbit_round_trips_through_inspect() {
     );
     assert_eq!(report["filters"][0]["field"]["ref"], "Stores[Channel]");
 
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "convert",
         PBIP,
         "--to",
@@ -893,7 +860,7 @@ fn convert_to_pbip_writes_an_equivalent_project() {
     let project = inspect_json(PBIP, &[]);
     let dir = tmp_dir();
     let out = dir.path().join("project");
-    let o = pbiview(&["convert", PBIP, "--to", "pbip", "--out", path_arg(&out)]);
+    let o = dashcraft(&["convert", PBIP, "--to", "pbip", "--out", path_arg(&out)]);
     assert_exit(&o, 0);
     assert!(stderr(&o).contains("wrote PBIP project"));
 
@@ -903,10 +870,10 @@ fn convert_to_pbip_writes_an_equivalent_project() {
     assert_eq!(v["model"]["tables"], project["model"]["tables"]);
     assert_eq!(v["reports"], project["reports"]);
 
-    let o = pbiview(&["convert", PBIP, "--to", "pbip", "--out", path_arg(&out)]);
+    let o = dashcraft(&["convert", PBIP, "--to", "pbip", "--out", path_arg(&out)]);
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("is not empty; use --force"));
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "convert",
         PBIP,
         "--to",
@@ -924,25 +891,15 @@ fn convert_to_pbip_writes_an_equivalent_project() {
 
 #[test]
 fn open_reports_a_missing_app_or_input() {
-    let o = pbiview_cmd(&["open", PBIP])
+    let o = dashcraft_cmd(&["open", PBIP])
         .env("DASHCRAFT_APP", "/nonexistent/dashcraft-app")
-        .env("PBIVIEW_APP", "/nonexistent/pbiview-app")
         .output()
         .unwrap();
     assert_exit(&o, 1);
     let err = stderr(&o);
     assert!(err.starts_with("dashcraft: error: DASHCRAFT_APP"), "{err}");
 
-    // The former variable still works when the new one is not set.
-    let o = pbiview_cmd(&["open", PBIP])
-        .env("PBIVIEW_APP", "/nonexistent/pbiview-app")
-        .output()
-        .unwrap();
-    assert_exit(&o, 1);
-    let err = stderr(&o);
-    assert!(err.starts_with("dashcraft: error: PBIVIEW_APP"), "{err}");
-
-    let o = pbiview(&["open", "examples/does-not-exist.pbix"]);
+    let o = dashcraft(&["open", "examples/does-not-exist.pbix"]);
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("no such file or directory"));
 }
@@ -957,15 +914,15 @@ fn open_passes_the_path_as_one_argument() {
     let record = dir.path().join("args.txt");
     std::fs::write(
         &app,
-        "#!/bin/sh\nprintf '%s\\n' \"$#\" \"$1\" > \"$PBIVIEW_TEST_RECORD.tmp\"\nmv \"$PBIVIEW_TEST_RECORD.tmp\" \"$PBIVIEW_TEST_RECORD\"\n",
+        "#!/bin/sh\nprintf '%s\\n' \"$#\" \"$1\" > \"$DASHCRAFT_TEST_RECORD.tmp\"\nmv \"$DASHCRAFT_TEST_RECORD.tmp\" \"$DASHCRAFT_TEST_RECORD\"\n",
     )
     .unwrap();
     std::fs::set_permissions(&app, std::fs::Permissions::from_mode(0o755)).unwrap();
 
     let (_, report) = REPORTS[1];
-    let o = pbiview_cmd(&["open", report])
+    let o = dashcraft_cmd(&["open", report])
         .env("DASHCRAFT_APP", &app)
-        .env("PBIVIEW_TEST_RECORD", &record)
+        .env("DASHCRAFT_TEST_RECORD", &record)
         .output()
         .unwrap();
     assert_exit(&o, 0);

@@ -3,7 +3,7 @@
 //!
 //! Keys live only in the OS keychain (service [`KEYRING_SERVICE`], account
 //! `ai:<provider-id>`) or, for CI and headless use, in the environment
-//! variable [`API_KEY_ENV`] (alias [`API_KEY_ENV_ALIAS`]). They are never
+//! variable [`API_KEY_ENV`]. They are never
 //! written to the settings, logs, errors, previews or command outputs.
 
 use std::collections::HashMap;
@@ -19,8 +19,6 @@ use crate::error::AiError;
 pub const KEYRING_SERVICE: &str = "dashcraft";
 /// Environment variable with an API key (CI, headless).
 pub const API_KEY_ENV: &str = "DASHCRAFT_AI_API_KEY";
-/// Alias of [`API_KEY_ENV`].
-pub const API_KEY_ENV_ALIAS: &str = "PBIVIEW_AI_API_KEY";
 /// What replaces a secret in text.
 pub const REDACTED: &str = "[redacted]";
 
@@ -89,7 +87,7 @@ pub enum KeySource {
     NotRequired,
     /// The OS keychain (or the host's secret store).
     Keychain,
-    /// `DASHCRAFT_AI_API_KEY` / `PBIVIEW_AI_API_KEY`.
+    /// `DASHCRAFT_AI_API_KEY`.
     Environment,
     /// No key found.
     Missing,
@@ -221,8 +219,7 @@ impl SecretStore for MemorySecretStore {
 /// Reads an environment variable (replaceable in tests).
 pub type EnvReader = std::sync::Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
 
-/// The key of `provider_id`: the store first, then [`API_KEY_ENV`] /
-/// [`API_KEY_ENV_ALIAS`]. A failing store (e.g. no Secret Service on a
+/// The key of `provider_id`: the store first, then [`API_KEY_ENV`]. A failing store (e.g. no Secret Service on a
 /// headless Linux box) falls back to the environment; its error is returned
 /// as the detail when no key is found.
 pub(crate) fn resolve_key(
@@ -239,10 +236,8 @@ pub(crate) fn resolve_key(
             detail = Some(e.to_string());
         }
     }
-    for var in [API_KEY_ENV, API_KEY_ENV_ALIAS] {
-        if let Some(key) = env(var).map(Secret::new).filter(|k| !k.is_empty()) {
-            return (Some(key), KeySource::Environment, None);
-        }
+    if let Some(key) = env(API_KEY_ENV).map(Secret::new).filter(|k| !k.is_empty()) {
+        return (Some(key), KeySource::Environment, None);
     }
     (None, KeySource::Missing, detail)
 }
@@ -355,8 +350,7 @@ mod tests {
     #[test]
     fn keys_come_from_the_store_then_the_environment() {
         let store = MemorySecretStore::new().with("openai", "sk-store");
-        let env: EnvReader =
-            Arc::new(|name| (name == API_KEY_ENV_ALIAS).then(|| "sk-env".to_owned()));
+        let env: EnvReader = Arc::new(|name| (name == API_KEY_ENV).then(|| "sk-env".to_owned()));
         let (k, src, _) = resolve_key(&store, &env, "openai");
         assert_eq!(
             (k.map(|k| k.expose().to_owned()), src),

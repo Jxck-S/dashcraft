@@ -10,6 +10,7 @@
 | [0006](0006-interaction-state.md) | Report interaction state lives outside the document | Accepted |
 | [0007](0007-command-registry.md) | Command registry (pbi-ops): one typed command catalog for CLI, RPC, app and agents | Accepted |
 | [0008](0008-ai-layer.md) | Opt-in AI layer (pbi-ai) as a registry plugin: capability contract, providers, consent, keychain-only keys | Accepted |
-| [0009](0009-naming-dashcraft.md) | Public product name DashCraft (formerly pbiview): `dashcraft` binary with a `pbiview` alias, `DASHCRAFT_*` variables, app identifier `io.github.jxck-s.dashcraft`, `NOTICE` | Accepted (name chosen "for now"; reversible) |
+| [0009](0009-naming-dashcraft.md) | Public product name DashCraft (formerly pbiview): `dashcraft` binary with a `pbiview` alias, `DASHCRAFT_*` variables, app identifier `io.github.jxck-s.dashcraft`, `NOTICE` | Accepted (name chosen "for now"; reversible); §2, §4, §5 superseded by ADR-0010 |
+| [0010](0010-dashcraft-everywhere.md) | DashCraft everywhere: no `pbiview` aliases or internal names (`dashcraft-cli`, `dashcraft-app`, `DASHCRAFT_*`, `dashcraft.*` keys) | Accepted |
 
 New ADRs use the next number and the sections Status, Context, Decision, Alternatives considered, Consequences. To change a decision, write a new ADR and mark the old one "Superseded by ADR-NNNN". Don't rewrite history.

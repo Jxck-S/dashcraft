@@ -118,7 +118,7 @@ pub fn builtin_property(visual_type: &str, object: &str, prop: &str) -> Option<V
 /// palette, structural colors and primary text classes.
 pub fn builtin_theme() -> Value {
     json!({
-        "name": "pbiview-builtin",
+        "name": "dashcraft-builtin",
         "dataColors": [
             "#118DFF", "#12239E", "#E66C37", "#6B007B", "#E044A7", "#744EC2", "#D9B300",
             "#D64550", "#197278", "#1AAB40", "#15C6F4", "#4092FF", "#FFA058", "#BE5DC9",

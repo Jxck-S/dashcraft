@@ -16,7 +16,7 @@ use serde_json::{Value, json};
 const CSV: &str = "examples/acme-outfitters/data/orders.csv";
 
 fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE")
+    std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference"))
 }
@@ -29,7 +29,7 @@ fn has(rel: &str) -> bool {
     ok
 }
 
-fn pbiview_cmd(args: &[&str]) -> Command {
+fn dashcraft_cmd(args: &[&str]) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_dashcraft"));
     cmd.args(args)
         .current_dir(reference_root())
@@ -37,8 +37,8 @@ fn pbiview_cmd(args: &[&str]) -> Command {
     cmd
 }
 
-fn pbiview(args: &[&str]) -> Output {
-    pbiview_cmd(args).output().expect("run pbiview")
+fn dashcraft(args: &[&str]) -> Output {
+    dashcraft_cmd(args).output().expect("run dashcraft")
 }
 
 fn stderr(o: &Output) -> String {
@@ -64,7 +64,7 @@ fn commands_lists_the_catalog() {
     if !has(PBIP) {
         return;
     }
-    let o = pbiview(&["commands", "--json"]);
+    let o = dashcraft(&["commands", "--json"]);
     assert_exit(&o, 0);
     let v = json_out(&o);
     let commands = v["commands"].as_array().unwrap();
@@ -74,15 +74,15 @@ fn commands_lists_the_catalog() {
     assert_eq!(open["agentSafe"], true);
     assert!(open.get("paramsSchema").is_none());
 
-    let schemas = json_out(&pbiview(&["commands", "--schemas", "doc.open"]));
+    let schemas = json_out(&dashcraft(&["commands", "--schemas", "doc.open"]));
     assert_eq!(schemas["paramsSchema"]["required"], json!(["path"]));
 
-    let text = pbiview(&["commands"]);
+    let text = dashcraft(&["commands"]);
     assert_exit(&text, 0);
     let text = String::from_utf8(text.stdout).unwrap();
     assert!(text.contains("render.page") && text.contains("[long, writes]"));
 
-    let md = pbiview(&["commands", "--markdown"]);
+    let md = dashcraft(&["commands", "--markdown"]);
     assert_exit(&md, 0);
     assert!(
         String::from_utf8(md.stdout)
@@ -90,7 +90,7 @@ fn commands_lists_the_catalog() {
             .contains("### `doc.open`")
     );
 
-    let bad = pbiview(&["commands", "doc.opne"]);
+    let bad = dashcraft(&["commands", "doc.opne"]);
     assert_exit(&bad, 1);
     assert!(
         stderr(&bad).contains("did you mean doc.open"),
@@ -104,11 +104,11 @@ fn run_executes_one_command() {
     let (true, Some(exp)) = (has(PBIP), expected()) else {
         return;
     };
-    let o = pbiview(&["run", "doc.detect", "-p", &format!("path={PBIP}")]);
+    let o = dashcraft(&["run", "doc.detect", "-p", &format!("path={PBIP}")]);
     assert_exit(&o, 0);
     assert_eq!(json_out(&o)["detection"]["format"], "pbip");
 
-    let o = pbiview(&["run", "report.pages", "--doc", PBIP, "-p", "report=Stores"]);
+    let o = dashcraft(&["run", "report.pages", "--doc", PBIP, "-p", "report=Stores"]);
     assert_exit(&o, 0);
     let v = json_out(&o);
     let stores = exp.report("Stores");
@@ -127,7 +127,7 @@ fn run_executes_one_command() {
         .collect();
     assert_eq!(pages, want);
 
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "run",
         "doc.inspect",
         "--doc",
@@ -137,38 +137,38 @@ fn run_executes_one_command() {
     ]);
     assert_exit(&o, 0);
     assert_eq!(json_out(&o)["counts"]["visuals"], 80);
-    let o = pbiview(&["run", "doc.lint", "--doc", PBIP, "-p", "deny=warning"]);
+    let o = dashcraft(&["run", "doc.lint", "--doc", PBIP, "-p", "deny=warning"]);
     assert_exit(&o, 0);
     assert_eq!(json_out(&o)["summary"]["warnings"], 0);
 
     // Lint warnings do not fail; --deny-style `deny` makes `ok` false → 2.
     let dir = tempfile::Builder::new()
-        .prefix("pbiview-run-")
+        .prefix("dashcraft-run-")
         .tempdir_in(env!("CARGO_TARGET_TMPDIR"))
         .unwrap();
     let stale = dir.path().join("acme");
     acme_with_stale_query_ref(&stale);
     let stale = stale.join("AcmeOutfitters.pbip");
     let stale = stale.to_str().unwrap();
-    let o = pbiview(&["run", "doc.lint", "--doc", stale]);
+    let o = dashcraft(&["run", "doc.lint", "--doc", stale]);
     assert_exit(&o, 0);
     assert_eq!(json_out(&o)["summary"]["warnings"], 1);
-    let o = pbiview(&["run", "doc.lint", "--doc", stale, "-p", "deny=warning"]);
+    let o = dashcraft(&["run", "doc.lint", "--doc", stale, "-p", "deny=warning"]);
     assert_exit(&o, 2);
 
     // Errors: exit 1 with the string code; DAX errors exit 2.
-    let o = pbiview(&["run", "report.pages", "-p", "docId=d9"]);
+    let o = dashcraft(&["run", "report.pages", "-p", "docId=d9"]);
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("[noDocument]"), "{}", stderr(&o));
-    let o = pbiview(&["run", "report.pages", "--doc", PBIP, "-p", "colour=red"]);
+    let o = dashcraft(&["run", "report.pages", "--doc", PBIP, "-p", "colour=red"]);
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("[invalidParams]"), "{}", stderr(&o));
-    let o = pbiview(&["run", "no.such"]);
+    let o = dashcraft(&["run", "no.such"]);
     assert_exit(&o, 1);
-    let o = pbiview(&["run", "doc.open", "-p", "path=missing.pbip"]);
+    let o = dashcraft(&["run", "doc.open", "-p", "path=missing.pbip"]);
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("[notFound]"), "{}", stderr(&o));
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "run",
         "dax.query",
         "--doc",
@@ -186,7 +186,7 @@ fn run_batch_interpolates_earlier_results() {
         return;
     }
     let dir = tempfile::Builder::new()
-        .prefix("pbiview-batch-")
+        .prefix("dashcraft-batch-")
         .tempdir_in(env!("CARGO_TARGET_TMPDIR"))
         .unwrap();
     let steps = dir.path().join("steps.json");
@@ -201,7 +201,7 @@ fn run_batch_interpolates_earlier_results() {
         .to_string(),
     )
     .unwrap();
-    let o = pbiview(&["run", "--batch", steps.to_str().unwrap()]);
+    let o = dashcraft(&["run", "--batch", steps.to_str().unwrap()]);
     assert_exit(&o, 0);
     let results = json_out(&o);
     let results = results.as_array().unwrap();
@@ -222,13 +222,13 @@ fn run_batch_interpolates_earlier_results() {
         .to_string(),
     )
     .unwrap();
-    let o = pbiview(&["run", "--batch", steps.to_str().unwrap(), "--doc", PBIP]);
+    let o = dashcraft(&["run", "--batch", steps.to_str().unwrap(), "--doc", PBIP]);
     assert_exit(&o, 1);
     let results = json_out(&o);
     assert_eq!(results.as_array().unwrap().len(), 2);
     assert_eq!(results[0]["result"]["reports"].as_array().unwrap().len(), 3);
     assert_eq!(results[1]["error"]["code"], "notFound");
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "run",
         "--batch",
         steps.to_str().unwrap(),
@@ -250,12 +250,12 @@ impl Server {
     fn start(extra: &[&str]) -> Self {
         let mut args = vec!["serve", "--stdio"];
         args.extend_from_slice(extra);
-        let mut child = pbiview_cmd(&args)
+        let mut child = dashcraft_cmd(&args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
-            .expect("spawn pbiview serve");
+            .expect("spawn dashcraft serve");
         let out = BufReader::new(child.stdout.take().unwrap());
         Self { child, out }
     }
@@ -353,7 +353,7 @@ fn serve_cancels_a_long_refresh() {
 #[test]
 fn ai_commands_are_wired_and_offline_by_default() {
     let cfg = tempfile::tempdir().unwrap();
-    let status = pbiview_cmd(&["run", "ai.status"])
+    let status = dashcraft_cmd(&["run", "ai.status"])
         .env("DASHCRAFT_CONFIG_DIR", cfg.path())
         .output()
         .unwrap();
@@ -361,15 +361,15 @@ fn ai_commands_are_wired_and_offline_by_default() {
     assert_eq!(json_out(&status)["enabled"], false);
 
     // `commands --markdown` stays the core catalog (docs/COMMANDS.md).
-    let md = pbiview(&["commands", "--markdown"]);
+    let md = dashcraft(&["commands", "--markdown"]);
     assert!(!String::from_utf8_lossy(&md.stdout).contains("ai.status"));
-    let all = pbiview(&["commands"]);
+    let all = dashcraft(&["commands"]);
     assert!(String::from_utf8_lossy(&all.stdout).contains("ai.explainMeasure"));
 
     if !has(PBIP) {
         return;
     }
-    let preview = pbiview_cmd(&[
+    let preview = dashcraft_cmd(&[
         "run",
         "ai.preview",
         "--doc",
@@ -391,14 +391,14 @@ fn ai_commands_are_wired_and_offline_by_default() {
 #[test]
 fn ai_login_never_takes_the_key_from_arguments() {
     // No terminal and no --stdin: refused before touching the keychain.
-    let o = pbiview_cmd(&["ai", "login", "--provider", "openai"])
+    let o = dashcraft_cmd(&["ai", "login", "--provider", "openai"])
         .stdin(Stdio::null())
         .output()
         .unwrap();
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("--stdin"), "{}", stderr(&o));
     // Invalid provider ids are rejected before the keychain is used.
-    let mut child = pbiview_cmd(&["ai", "login", "--provider", "Not Valid!", "--stdin"])
+    let mut child = dashcraft_cmd(&["ai", "login", "--provider", "Not Valid!", "--stdin"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

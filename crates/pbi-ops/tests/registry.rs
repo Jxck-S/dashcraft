@@ -182,15 +182,15 @@ fn catalog_covers_the_v1_surface() {
 fn commands_md_is_up_to_date() {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/COMMANDS.md");
     let generated = catalog_markdown(&Registry::default_catalog());
-    if std::env::var_os("PBIVIEW_BLESS").is_some() {
+    if std::env::var_os("DASHCRAFT_BLESS").is_some() {
         std::fs::write(&path, &generated).unwrap();
         return;
     }
     let committed = std::fs::read_to_string(&path).unwrap_or_default();
     assert!(
         committed == generated,
-        "docs/COMMANDS.md is stale: run `cargo run -q -p pbiview-cli --bin dashcraft -- commands --markdown > docs/COMMANDS.md` \
-         (or PBIVIEW_BLESS=1 cargo test -p pbi-ops --test registry)"
+        "docs/COMMANDS.md is stale: run `cargo run -q -p dashcraft-cli --bin dashcraft -- commands --markdown > docs/COMMANDS.md` \
+         (or DASHCRAFT_BLESS=1 cargo test -p pbi-ops --test registry)"
     );
 }
 

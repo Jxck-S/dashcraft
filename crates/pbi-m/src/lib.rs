@@ -10,7 +10,7 @@
 //!   [`Engine::evaluate_partition_to_arrow`] returns an Arrow `RecordBatch` with the model's
 //!   columns (see [`eval::arrow`]).
 //! * Errors are [`MError`]s: syntax errors with line/column, M errors (`try`-catchable),
-//!   [`MError::Unsupported`] for functions pbiview does not evaluate (never files, databases or
+//!   [`MError::Unsupported`] for functions DashCraft does not evaluate (never files, databases or
 //!   the network), resolver failures, limits and cancellation.
 //! * [`library_names`] lists the implemented library functions and constants.
 //!

@@ -33,10 +33,7 @@ pub enum AiError {
     )]
     Disabled,
     /// No settings location could be determined.
-    #[error(
-        "no location for the AI settings: set DASHCRAFT_CONFIG_DIR (or PBIVIEW_CONFIG_DIR, or \
-         HOME/APPDATA)"
-    )]
+    #[error("no location for the AI settings: set DASHCRAFT_CONFIG_DIR (or HOME/APPDATA)")]
     NoSettingsPath,
     /// Settings (or a settings update) are invalid.
     #[error("{0}")]

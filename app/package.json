@@ -1,5 +1,5 @@
 {
-  "name": "pbiview-app",
+  "name": "dashcraft-app",
   "private": true,
   "version": "0.2.0",
   "type": "module",
@@ -10,7 +10,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json && npm run test",
     "test": "node --test tests/markdown.test.ts",
     "tauri": "tauri",
-    "bindings": "cargo test -p pbiview-app --lib export_bindings",
+    "bindings": "cargo test -p dashcraft-app --lib export_bindings",
     "gen:ops": "node scripts/gen-ops.mjs --write",
     "check:ops": "node scripts/gen-ops.mjs"
   },

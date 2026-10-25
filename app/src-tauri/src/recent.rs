@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn keeps_newest_first_without_duplicates_and_persists() {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
-            "../../target/pbiview-app-tests/recent-{}",
+            "../../target/dashcraft-app-tests/recent-{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&dir);

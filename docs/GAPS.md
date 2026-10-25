@@ -54,7 +54,7 @@ Source: [FORMATS.md](../FORMATS.md), `crates/pbi-core/src/reader/`.
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
 | Content-based detection, safe containers (caps, zip-slip, no symlinks) | ✅ | 5 | `crates/pbi-core/tests/{detect,containers}.rs`; fuzz `detect`, `zip_container` | — |
-| PBIP project (several models and reports) | 🟡 | 4 | `pbi-core::reader::project`; `crates/pbiview-cli/tests/snapshots/cli__inspect_pbip.snap` | The app shows only the first model (`extraModels`) |
+| PBIP project (several models and reports) | 🟡 | 4 | `pbi-core::reader::project`; `crates/dashcraft-cli/tests/snapshots/cli__inspect_pbip.snap` | The app shows only the first model (`extraModels`) |
 | TMDL read + write | ✅ | 5 | byte-identical round-trip of every fixture file (`crates/pbi-tmdl/tests/fixtures.rs`, `desktop_sample.rs`) | Compare the writer with Desktop-saved TMDL (blocked: Windows) |
 | TMSL `model.bim` / PBIT `DataModelSchema` read + write | ✅ | 5 | `crates/pbi-tmsl/tests/tmsl.rs` (layout-preserving, UTF-16LE) | — |
 | PBIR read + write | ✅ | 5 | every fixture file re-written byte-for-byte (`crates/pbi-pbir/tests/roundtrip.rs`) | — |
@@ -232,7 +232,7 @@ Source: `crates/pbi-render/tests/golden.rs`, `render_snapshots.rs`,
 | Card values on rendered output match the example's expected values | ✅ | 5 | all 39 card values of `reference/examples/acme-outfitters/expected.json` drawn on the rendered pages (`visuals_basics_reference.rs`) and in the DataViews (`query_reference.rs`); tables, matrices, KPI, gauge and pie too | — |
 | Fonts: Selawik (Segoe UI), Carlito (Calibri) | ✅ | 4 | `crates/pbi-render/assets/fonts/`; metric-compatible substitutes; font mapping and metrics tests (`calibri_maps_to_carlito` in `src/text/fonts.rs`, `crates/pbi-render/tests/text.rs`) | — |
 | DIN text | ❌ | 1 | rendered with Selawik, ~4 % narrower | No open metric-compatible DIN is known |
-| Determinism and render regressions (same bytes on every OS; cache-equivalent renders; per-page snapshots) | ✅ | 5 | `png_is_deterministic_and_sized` (`crates/pbiview-cli/tests/render.rs`); visual-cache equivalence tests on report pages; `insta` render snapshots of every Acme page (`crates/pbi-render/tests/render_snapshots.rs`: per-visual texts, data points, warnings and SVG hashes) | — |
+| Determinism and render regressions (same bytes on every OS; cache-equivalent renders; per-page snapshots) | ✅ | 5 | `png_is_deterministic_and_sized` (`crates/dashcraft-cli/tests/render.rs`); visual-cache equivalence tests on report pages; `insta` render snapshots of every Acme page (`crates/pbi-render/tests/render_snapshots.rs`: per-visual texts, data points, warnings and SVG hashes) | — |
 
 ## 8. Performance
 
@@ -258,10 +258,10 @@ Source: `crates/pbi-ops`, [ADR-0007](adr/0007-command-registry.md), [COMMANDS.md
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
 | Registry: 47 typed commands (all agent-safe; `security.roles` and `security.viewAs` added) plus 9 opt-in `ai.*` commands (4 agent-safe), JSON Schemas, `Workspace`, `OpError`, cancellation, progress | ✅ | 4 | `crates/pbi-ops/tests/{registry,e2e}.rs`; `dashcraft commands --json` | — |
-| CLI `commands`, `run`, `run --batch` | ✅ | 4 | `crates/pbiview-cli/tests/ops.rs` | — |
+| CLI `commands`, `run`, `run --batch` | ✅ | 4 | `crates/dashcraft-cli/tests/ops.rs` | — |
 | JSON-RPC 2.0 over stdio (`serve --stdio`, `$/cancel`) | ✅ | 4 | `crates/pbi-ops/tests/rpc.rs` | — |
 | Path policy for agents (read/write roots, `..` and symlink escapes) | 🟡 | 3 | `crates/pbi-ops/tests/path_policy.rs`; check-then-use (TOCTOU) | `cap-std` handles (ADR-0007) |
-| MCP server (`dashcraft mcp`) | ✅ | 4 | `crates/pbi-ops/tests/mcp.rs`, `crates/pbiview-cli/tests/mcp.rs`; protocol revisions 2024-11-05 to 2026-07-28, roots, `--allow`/`--deny`, hints from `CommandMeta` ([MCP.md](MCP.md)) | Tested with scripted clients only; check with real MCP clients |
+| MCP server (`dashcraft mcp`) | ✅ | 4 | `crates/pbi-ops/tests/mcp.rs`, `crates/dashcraft-cli/tests/mcp.rs`; protocol revisions 2024-11-05 to 2026-07-28, roots, `--allow`/`--deny`, hints from `CommandMeta` ([MCP.md](MCP.md)) | Tested with scripted clients only; check with real MCP clients |
 | App on the registry | ✅ | 4 | every domain operation through `ops_execute` → `Registry::execute`; `app/src/lib/ops.gen.ts` (core and `ai.*` commands) kept in sync by the `ops_typescript_is_up_to_date` test in `crates/pbi-ai/tests/registry.rs` (generator in `crates/pbi-ai/tests/ops_ts/`); app tests through the mock runtime | App-only views (`document_views`, `object_details`, …) as registry commands where agents need them |
 | CLI subcommands as thin registry wrappers | 🟡 | 1 | `inspect`/`detect` DTOs shared with `pbi-ops` | ADR-0007 CLI migration plan |
 | Editing commands (registry → `Document` commands) | ❌ | 0 | `pbi-model` has `SetMeasureExpression`, `SetDescription`, `SetVisualPosition`, `Rename*`; none exposed | First editing commands + PBIP save |

@@ -1,6 +1,6 @@
 # DashCraft desktop app
 
-Tauri 2 + Svelte 5 + TypeScript + Vite. The Rust side is the `pbiview-app` crate (binary
+Tauri 2 + Svelte 5 + TypeScript + Vite. The Rust side is the `dashcraft-app` crate (binary
 `dashcraft-app`; the crate keeps its internal name, [ADR-0009](../docs/adr/0009-naming-dashcraft.md)) in
 [`src-tauri/`](src-tauri/), a member of the root Cargo workspace. It is **not** in
 `default-members`, so a plain `cargo build`/`cargo test` at the repo root skips it, and
@@ -52,7 +52,7 @@ app/
     lib/data.ts        UI helpers over the data results: table states, refresh runs, tooltips, SQL quoting
   scripts/gen-ops.mjs  runs the ops.gen.ts generator (a pbi-ai test) with or without --write
   tests/markdown.test.ts  the Markdown renderer's escaping tests (`node --test`, part of `npm run check`)
-  src-tauri/           Rust crate `pbiview-app` (lib `pbiview_app_lib` + bin `dashcraft-app`)
+  src-tauri/           Rust crate `dashcraft-app` (lib `dashcraft_app_lib` + bin `dashcraft-app`)
     src/ops.rs         `ops_execute` / `ops_cancel` / `ops_catalog`: the bridge to `pbi_ops::Registry`
     src/ai.rs          installs the AI host (`<app config dir>/ai.json`, OS keychain); ai/demo.rs: the
                        debug-only demo provider (`DASHCRAFT_AI_MOCK=1`, `cfg(debug_assertions)`)
@@ -62,8 +62,7 @@ app/
     src/mapping.rs     pbi-core / pbi-model → DTO mapping (pure, panic-free)
     src/views.rs       TMDL view, diagramLayout.json, Format pane cards, report theme (pure, capped)
     src/recent.rs      File → Recent (newest first, persisted in the app config folder)
-    src/blob.rs        swappable offline blob map (`blob-map.json`, `DASHCRAFT_BLOB_MAP`, alias
-                       `PBIVIEW_BLOB_MAP`)
+    src/blob.rs        swappable offline blob map (`blob-map.json`, `DASHCRAFT_BLOB_MAP`)
     src/state.rs       AppState: the registry (`pbi_ai::catalog()`), the workspace, blob map, recent
                        files, running requests (cancel tokens), progress sink
     tauri.conf.json    window, CSP, bundle targets (app/dmg/msi/appimage/deb)
@@ -170,7 +169,7 @@ results and DTOs. Locations below refer to the Desktop shell above.
 - **Blob map…** (Transform data ▾ → Data source settings, or File → Options and settings): pick
   the `blob-map.json` that maps `AzureStorage.Blobs` URLs to local
   CSV files (no network). It applies to the next refresh without reopening the document; × goes
-  back offline ("Stop using the blob map"). `DASHCRAFT_BLOB_MAP=<path>` (or the former `PBIVIEW_BLOB_MAP`) sets it at startup. Without a map, blob tables fail with
+  back offline ("Stop using the blob map"). `DASHCRAFT_BLOB_MAP=<path>` sets it at startup. Without a map, blob tables fail with
   the offline hint and offer the CSV fallback.
 - **Load CSV manually…** (refresh panel, Transform data ▾, Data pane menu, Table tools, Table view
   error banner): file picker (csv/tsv/txt),
@@ -374,9 +373,9 @@ npm run tauri dev -- -- path.pbix  # open a file on startup (args after the 2nd 
 Rust checks for the crate (from the repo root):
 
 ```sh
-cargo build -p pbiview-app
-cargo clippy -p pbiview-app --all-targets -- -D warnings
-cargo test -p pbiview-app          # also regenerates bindings.ts
+cargo build -p dashcraft-app
+cargo clippy -p dashcraft-app --all-targets -- -D warnings
+cargo test -p dashcraft-app          # also regenerates bindings.ts
 ```
 
 A plain `cargo build` runs in Tauri "dev" mode, which loads `devUrl` (http://localhost:1420).
@@ -464,7 +463,7 @@ Each app command carries `#[tauri::command] #[specta::specta]` and is listed in
 `src/lib/bindings.ts` from that list. No window is launched.
 
 ```sh
-npm run bindings   # = cargo test -p pbiview-app --lib export_bindings
+npm run bindings   # = cargo test -p dashcraft-app --lib export_bindings
 ```
 
 Run it after changing any command signature or IPC type, and commit the regenerated file.
@@ -482,7 +481,7 @@ Run it after changing any command signature or IPC type, and commit the regenera
 | `tmdl_view(docId)` | `TmdlViewDto` | `source: files` (the opened `.tmdl` files verbatim, paths relative to `definition/`) or `generated` (`pbi_tmdl::write_model` for TMSL / PBIX models); `files[{path, text, table}]` in Desktop folder order; `unsupported` without a local model |
 | `model_diagram(docId)` | `ModelDiagramDto \| null` | Model view layouts from `diagramLayout.json`, read leniently; `null` without the file |
 | `visual_format(docId, id)` | `VisualFormatDto` | Format pane: `visual` / `general` cards with readable values, plus `layout`; `unknownObject` for non-visual IDs |
-| `blob_map()` | `BlobMapDto` | active `blob-map.json` (`path`, `fromEnvironment`, `environmentVariable` (`DASHCRAFT_BLOB_MAP` or `PBIVIEW_BLOB_MAP`), `error`) |
+| `blob_map()` | `BlobMapDto` | active `blob-map.json` (`path`, `fromEnvironment`, `environmentVariable` (`DASHCRAFT_BLOB_MAP`), `error`) |
 | `set_blob_map(path \| null)` | `BlobMapDto` | reads and activates a map (local files only) or goes offline; keeps loaded data; `busy` while a `data.refresh` runs |
 | `recent_files()` | `RecentFileDto[]` | File → Recent, newest first (`path`, `fileName`, `openedAtMs`, `exists`) |
 | `add_recent_file(path)` | `RecentFileDto[]` | after a successful open |
@@ -530,7 +529,7 @@ message and the error kind or code. Specta forbids implicit 64-bit integers: siz
 TS `number` (`#[specta(type = Option<f64>)]`), and page sizes / positions as plain `number`
 (non-finite values are mapped to 0, so JSON never carries `null`).
 
-Tests (`cargo test -p pbiview-app`) call the commands through Tauri's mock runtime, without a
+Tests (`cargo test -p dashcraft-app`) call the commands through Tauri's mock runtime, without a
 window: the wire contract and error shapes of `ops_execute` / `ops_cancel` / `ops_catalog` and the
 app commands, request tracking and cancellation, the Acme Outfitters example
 (`reference/examples/acme-outfitters/AcmeOutfitters.pbip`) through `doc.open` + `document_views`
@@ -551,7 +550,7 @@ completed render wins" ordering (`src/canvas.rs` unit tests).
 Unit tests cover the Format pane value formatting, lenient `diagramLayout.json` reading, TMDL
 paths and order (`views.rs`) and the recent-files store (`recent.rs`, persisted to a scratch file).
 
-Fixtures come from `$PBIVIEW_REFERENCE` or `<workspace>/reference` (the Acme Outfitters example and the Microsoft samples); missing optional ones print `SKIP`.
+Fixtures come from `$DASHCRAFT_REFERENCE` or `<workspace>/reference` (the Acme Outfitters example and the Microsoft samples); missing optional ones print `SKIP`.
 
 Versions are pinned exactly (`tauri-specta =2.0.0-rc.26`, `specta =2.0.0-rc.26`,
 `specta-typescript =0.0.13`), because the 2.0 line is still a release candidate. `specta` enables
@@ -570,8 +569,8 @@ only where the user chose in the dialog.
 ## AI features (opt-in)
 
 The registry is `pbi_ai::catalog()` and `run()` installs the AI host (`src-tauri/src/ai.rs`):
-settings in `<app config dir>/ai.json` (`io.github.jxck-s.dashcraft`; `DASHCRAFT_CONFIG_DIR` /
-`PBIVIEW_CONFIG_DIR` share one file with the CLI), keys in the OS keychain (service `dashcraft`,
+settings in `<app config dir>/ai.json` (`io.github.jxck-s.dashcraft`; `DASHCRAFT_CONFIG_DIR`
+shares one file with the CLI), keys in the OS keychain (service `dashcraft`,
 shared with `dashcraft ai login`). AI is **off by default**; the UI ([docs/AI.md](../docs/AI.md#in-the-desktop-app)):
 
 - **Options → AI** (File → Options and settings → Options, or Home → AI → AI options): turn on,

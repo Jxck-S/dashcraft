@@ -129,7 +129,7 @@ fn ai_commands_have_metadata_schemas_and_valid_examples() {
 
 #[test]
 fn ai_md_reference_is_up_to_date() {
-    const BEGIN: &str = "<!-- BEGIN GENERATED: ai commands (cargo test -p pbi-ai --test registry; PBIVIEW_BLESS=1 to update) -->\n";
+    const BEGIN: &str = "<!-- BEGIN GENERATED: ai commands (cargo test -p pbi-ai --test registry; DASHCRAFT_BLESS=1 to update) -->\n";
     const END: &str = "<!-- END GENERATED: ai commands -->";
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/AI.md");
     let doc = std::fs::read_to_string(&path).unwrap_or_default();
@@ -142,20 +142,20 @@ fn ai_md_reference_is_up_to_date() {
         panic!("docs/AI.md lacks the generated-section markers");
     };
     let current = &doc[start + BEGIN.len()..end];
-    if std::env::var_os("PBIVIEW_BLESS").is_some() {
+    if std::env::var_os("DASHCRAFT_BLESS").is_some() {
         let updated = format!("{}{BEGIN}{generated}{}", &doc[..start], &doc[end..]);
         std::fs::write(&path, updated).unwrap();
         return;
     }
     assert!(
         current == generated,
-        "docs/AI.md command reference is stale: PBIVIEW_BLESS=1 cargo test -p pbi-ai --test registry"
+        "docs/AI.md command reference is stale: DASHCRAFT_BLESS=1 cargo test -p pbi-ai --test registry"
     );
 }
 
 /// `app/src/lib/ops.gen.ts` matches the desktop app's catalog (`pbi_ai::catalog()`: the core
 /// commands plus `ai.*`): one TypeScript type per parameter / result schema, a command → types
-/// map and camelCase wrappers. Regenerate with `npm run gen:ops` in `app/` (or `PBIVIEW_BLESS=1
+/// map and camelCase wrappers. Regenerate with `npm run gen:ops` in `app/` (or `DASHCRAFT_BLESS=1
 /// cargo test -p pbi-ai --test registry ops_typescript`).
 #[test]
 fn ops_typescript_is_up_to_date() {
@@ -169,7 +169,7 @@ fn ops_typescript_is_up_to_date() {
     for id in ["doc.open", "ai.explainMeasure", "ai.apiKey.set"] {
         assert!(generated.contains(&format!("'{id}'")), "{id} missing");
     }
-    if std::env::var_os("PBIVIEW_BLESS").is_some() {
+    if std::env::var_os("DASHCRAFT_BLESS").is_some() {
         std::fs::write(&path, &generated).unwrap();
         return;
     }
@@ -177,7 +177,7 @@ fn ops_typescript_is_up_to_date() {
     assert!(
         committed == generated,
         "app/src/lib/ops.gen.ts is stale: run `npm run gen:ops` in app/ \
-         (or PBIVIEW_BLESS=1 cargo test -p pbi-ai --test registry ops_typescript)"
+         (or DASHCRAFT_BLESS=1 cargo test -p pbi-ai --test registry ops_typescript)"
     );
 }
 

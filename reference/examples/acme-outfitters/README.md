@@ -37,11 +37,11 @@ Use it with the CLI:
 
 ```sh
 E=reference/examples/acme-outfitters
-cargo run -q -p pbiview-cli --bin dashcraft -- refresh $E/AcmeOutfitters.pbip --blob-map $E/blob-map.json
-cargo run -q -p pbiview-cli --bin dashcraft -- measures $E/AcmeOutfitters.pbip --blob-map $E/blob-map.json --report Stores
-cargo run -q -p pbiview-cli --bin dashcraft -- render $E/AcmeOutfitters.pbip --blob-map $E/blob-map.json \
+cargo run -q -p dashcraft-cli --bin dashcraft -- refresh $E/AcmeOutfitters.pbip --blob-map $E/blob-map.json
+cargo run -q -p dashcraft-cli --bin dashcraft -- measures $E/AcmeOutfitters.pbip --blob-map $E/blob-map.json --report Stores
+cargo run -q -p dashcraft-cli --bin dashcraft -- render $E/AcmeOutfitters.pbip --blob-map $E/blob-map.json \
   --report Overview --all-pages --out-dir target/tmp/acme
-cargo run -q -p pbiview-cli --bin dashcraft -- run security.viewAs --doc $E/AcmeOutfitters.pbip \
+cargo run -q -p dashcraft-cli --bin dashcraft -- run security.viewAs --doc $E/AcmeOutfitters.pbip \
   --blob-map $E/blob-map.json -p roles='["Store Manager"]' -p userName=riley.chen@acmeoutfitters.example
 ```
 

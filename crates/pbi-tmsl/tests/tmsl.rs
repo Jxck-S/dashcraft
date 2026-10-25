@@ -375,7 +375,7 @@ fn tmdl_expressions(tmdl: &str) -> (Vec<(String, String)>, Vec<String>) {
 /// `acme.bim` carries the same DAX and M text as the example's TMDL files.
 #[test]
 fn acme_matches_the_tmdl_example() {
-    let root = std::env::var_os("PBIVIEW_REFERENCE")
+    let root = std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference"));
     let dir = root.join("examples/acme-outfitters/AcmeOutfitters.SemanticModel/definition/tables");

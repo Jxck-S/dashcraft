@@ -2,7 +2,7 @@
 //!
 //! The scripts under `tests/data/` are copies of the example's TMDL partitions and expressions
 //! (`pbi-tmdl`'s fixture test checks that they stay equal); the CSVs are committed under
-//! `reference/examples/acme-outfitters/data/`. When the fixture root (`$PBIVIEW_REFERENCE`) has no
+//! `reference/examples/acme-outfitters/data/`. When the fixture root (`$DASHCRAFT_REFERENCE`) has no
 //! example, the tests that need it print `SKIP: ...` and pass.
 
 use std::collections::HashSet;
@@ -64,7 +64,7 @@ const STORE_COLUMNS: [&str; 11] = [
 ];
 
 fn reference_dir() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE")
+    std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference"))
 }

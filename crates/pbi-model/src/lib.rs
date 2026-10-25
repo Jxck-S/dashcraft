@@ -1,5 +1,5 @@
 //! Canonical TOM-like semantic model, report AST, document and command
-//! (undo) layer for pbiview.
+//! (undo) layer for DashCraft.
 //!
 //! # Design
 //!

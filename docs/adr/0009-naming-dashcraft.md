@@ -1,6 +1,6 @@
 # ADR-0009: Public product name DashCraft (formerly pbiview)
 
-- Status: Accepted (the name is chosen "for now"; reversible, see Consequences)
+- Status: Accepted (the name is chosen "for now"; reversible, see Consequences). §2, §4 and §5 superseded by [ADR-0010](0010-dashcraft-everywhere.md)
 - Date: 2026-10-22
 - Deciders: the project owner (name), DashCraft maintainers (implementation)
 - Related: [ADR-0001](0001-ui-tauri-svelte.md) (app identifiers), [ADR-0007](0007-command-registry.md) (CLI, MCP), [ADR-0008](0008-ai-layer.md) (keychain service, `DASHCRAFT_*` variables); research: [artcraft-infra-review.md](../research/artcraft-infra-review.md) §8 ("Craft" naming and brand); [AGENTS.md §10](../../AGENTS.md#10-naming-and-trademark-policy)

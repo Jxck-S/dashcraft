@@ -1,6 +1,6 @@
 [package]
-name = "pbiview-fuzz"
-description = "cargo-fuzz targets for the pbiview parsers and decoders (untrusted input)"
+name = "dashcraft-fuzz"
+description = "cargo-fuzz targets for the DashCraft parsers and decoders (untrusted input)"
 version = "0.0.0"
 edition = "2024"
 license = "MIT"

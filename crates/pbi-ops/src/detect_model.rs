@@ -1,4 +1,4 @@
-//! Stable JSON schema of `pbiview detect --json` and the `doc.detect`
+//! Stable JSON schema of `dashcraft detect --json` and the `doc.detect`
 //! command (`schemaVersion: 1`), shared by the CLI and the registry.
 
 use pbi_core::detect::{DatasetReference, Detection, ModelFlavour, ReportFlavour};

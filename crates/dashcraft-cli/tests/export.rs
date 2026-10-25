@@ -34,18 +34,18 @@ const CSVS: [&str; 7] = [
 ];
 
 fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE")
+    std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference"))
 }
 
-fn pbiview(args: &[&str]) -> Output {
+fn dashcraft(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_dashcraft"))
         .args(args)
         .current_dir(reference_root())
         .env_remove("RUST_LOG")
         .output()
-        .expect("run pbiview")
+        .expect("run dashcraft")
 }
 
 fn stdout(o: &Output) -> String {
@@ -98,7 +98,7 @@ struct TmpDir(PathBuf);
 impl TmpDir {
     fn new(name: &str) -> Self {
         let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-            .join(format!("pbiview-cli-{name}-{}", std::process::id()));
+            .join(format!("dashcraft-cli-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         TmpDir(dir)
@@ -133,7 +133,7 @@ fn export_model_markdown_to_stdout() {
     if !have_pbip() {
         return;
     }
-    let o = pbiview(&["export", PBIP, "--model", "--format", "md", "--out", "-"]);
+    let o = dashcraft(&["export", PBIP, "--model", "--format", "md", "--out", "-"]);
     assert_exit(&o, 0);
     let md = stdout(&o);
     assert!(md.starts_with("# AcmeOutfitters\n"), "{md}");
@@ -152,7 +152,7 @@ fn export_model_markdown_to_stdout() {
     }
     assert!(stderr(&o).is_empty(), "{}", stderr(&o));
 
-    let outline = pbiview(&[
+    let outline = dashcraft(&[
         "export",
         PBIP,
         "--model",
@@ -180,7 +180,7 @@ fn export_model_json_refuses_to_overwrite_without_force() {
     }
     let tmp = TmpDir::new("model-json");
     let out = tmp.file("docs/model.json");
-    let o = pbiview(&["export", PBIP, "--model", "--out", &out]);
+    let o = dashcraft(&["export", PBIP, "--model", "--out", &out]);
     assert_exit(&o, 0);
     assert!(stderr(&o).contains("wrote the model documentation"));
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
@@ -195,7 +195,7 @@ fn export_model_json_refuses_to_overwrite_without_force() {
         "bothDirections"
     );
 
-    let again = pbiview(&["export", PBIP, "--model", "--out", &out, "--no-expressions"]);
+    let again = dashcraft(&["export", PBIP, "--model", "--out", &out, "--no-expressions"]);
     assert_exit(&again, 1);
     assert!(
         stderr(&again).contains("already exists; use --force"),
@@ -205,7 +205,7 @@ fn export_model_json_refuses_to_overwrite_without_force() {
     let unchanged: Value = serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
     assert_eq!(unchanged, doc);
 
-    let forced = pbiview(&[
+    let forced = dashcraft(&[
         "export",
         PBIP,
         "--model",
@@ -322,7 +322,7 @@ fn export_usage_errors_are_fatal() {
             "invalid value 'nope'",
         ),
     ] {
-        let o = pbiview(&args);
+        let o = dashcraft(&args);
         assert_exit(&o, 1);
         assert!(stderr(&o).contains(message), "{args:?}: {}", stderr(&o));
     }
@@ -338,7 +338,7 @@ fn refresh_without_a_blob_map_fails_with_an_offline_hint() {
     if !have_pbip() {
         return;
     }
-    let o = pbiview(&["refresh", PBIP, "--json"]);
+    let o = dashcraft(&["refresh", PBIP, "--json"]);
     assert_exit(&o, 2);
     let out = json(&o);
     assert_eq!(out["schemaVersion"], 1);
@@ -372,11 +372,11 @@ fn refresh_without_a_blob_map_fails_with_an_offline_hint() {
         (&Value::from(3), &Value::from(7), &Value::from(1))
     );
 
-    let o = pbiview(&["refresh", PBIP, "--tables", "Last Refreshed"]);
+    let o = dashcraft(&["refresh", PBIP, "--tables", "Last Refreshed"]);
     assert_exit(&o, 0);
     assert!(stdout(&o).contains("1 table in"), "{}", stdout(&o));
 
-    let o = pbiview(&["refresh", PBIP]);
+    let o = dashcraft(&["refresh", PBIP]);
     assert_exit(&o, 2);
     let text = stdout(&o);
     assert!(
@@ -385,15 +385,15 @@ fn refresh_without_a_blob_map_fails_with_an_offline_hint() {
     );
     assert!(text.contains("3 ok, 7 failed, 1 skipped"), "{text}");
 
-    let o = pbiview(&["refresh", PBIP, "--tables", "Nope"]);
+    let o = dashcraft(&["refresh", PBIP, "--tables", "Nope"]);
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("no table named 'Nope'"));
 
     // No local data cache: `auto` evaluates M, `cache` fails.
-    let o = pbiview(&["refresh", PBIP, "--source", "auto", "--json"]);
+    let o = dashcraft(&["refresh", PBIP, "--source", "auto", "--json"]);
     assert_exit(&o, 2);
     assert_eq!(json(&o)["tables"][0]["kind"], "m");
-    let o = pbiview(&["refresh", PBIP, "--source", "cache"]);
+    let o = dashcraft(&["refresh", PBIP, "--source", "cache"]);
     assert_exit(&o, 1);
     assert!(
         stderr(&o).contains("no local data cache (.pbi/cache.abf)"),
@@ -457,7 +457,7 @@ fn refresh_measures_and_export_from_the_local_data_cache() {
     };
 
     // `auto` (the default) loads the cache: no M, no blob map.
-    let o = pbiview(&["refresh", pbip, "--json"]);
+    let o = dashcraft(&["refresh", pbip, "--json"]);
     assert_exit(&o, 0);
     assert!(
         stderr(&o).contains("using the local data cache"),
@@ -473,7 +473,7 @@ fn refresh_measures_and_export_from_the_local_data_cache() {
         assert_eq!(t["rows"].as_u64(), Some(rows_of(name)), "{name}");
     }
 
-    let o = pbiview(&["measures", pbip, "--source", "cache", "--json"]);
+    let o = dashcraft(&["measures", pbip, "--source", "cache", "--json"]);
     assert_exit(&o, 0);
     let out = json(&o);
     let measures = out["measures"].as_array().unwrap();
@@ -488,7 +488,7 @@ fn refresh_measures_and_export_from_the_local_data_cache() {
     }
 
     // `--source m` evaluates the queries instead.
-    let o = pbiview(&["refresh", pbip, "--source", "m", "--json"]);
+    let o = dashcraft(&["refresh", pbip, "--source", "m", "--json"]);
     let out = json(&o);
     assert!(
         out["tables"]
@@ -512,7 +512,7 @@ fn refresh_measures_and_export_from_the_local_data_cache() {
             out.as_str(),
         ];
         args.extend(extra);
-        let o = pbiview(&args);
+        let o = dashcraft(&args);
         assert_exit(&o, 0);
         assert!(
             stderr(&o).contains(&format!("wrote {opportunities} rows")),
@@ -548,7 +548,7 @@ fn refresh_and_measures_match_the_expected_values() {
     let Some(exp) = have_data() else {
         return;
     };
-    let o = pbiview(&["refresh", PBIP, "--blob-map", BLOB_MAP, "--json"]);
+    let o = dashcraft(&["refresh", PBIP, "--blob-map", BLOB_MAP, "--json"]);
     assert_exit(&o, 0);
     let out = json(&o);
     assert_eq!(out["ok"], true);
@@ -567,7 +567,7 @@ fn refresh_and_measures_match_the_expected_values() {
         assert_eq!(rows[table], want, "{table}");
     }
 
-    let o = pbiview(&["measures", PBIP, "--blob-map", BLOB_MAP, "--json"]);
+    let o = dashcraft(&["measures", PBIP, "--blob-map", BLOB_MAP, "--json"]);
     assert_exit(&o, 0);
     let out = json(&o);
     assert_eq!(out["schemaVersion"], 1);
@@ -584,7 +584,7 @@ fn refresh_and_measures_match_the_expected_values() {
     }
 
     for report in ["Overview", "Stores", "Online"] {
-        let o = pbiview(&["measures", PBIP, "--blob-map", BLOB_MAP, "--report", report]);
+        let o = dashcraft(&["measures", PBIP, "--blob-map", BLOB_MAP, "--report", report]);
         assert_exit(&o, 0);
         let text = stdout(&o);
         assert!(
@@ -604,7 +604,7 @@ fn refresh_and_measures_match_the_expected_values() {
             );
         }
     }
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "measures",
         PBIP,
         "--blob-map",
@@ -632,7 +632,7 @@ fn export_table_to_csv_and_parquet() {
     let total_sales = exp.value("Total Sales").as_f64().unwrap();
     let tmp = TmpDir::new("table");
     let csv_path = tmp.file("orders.csv");
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "export",
         PBIP,
         "--table",
@@ -666,7 +666,7 @@ fn export_table_to_csv_and_parquet() {
     assert!((sum - total_sales).abs() < 0.005, "{sum} vs {total_sales}");
 
     let formatted = tmp.file("orders-excel.csv");
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "export",
         PBIP,
         "--table",
@@ -685,7 +685,7 @@ fn export_table_to_csv_and_parquet() {
     assert!(bytes.starts_with("\u{feff}Order ID;Order Date;".as_bytes()));
 
     let parquet_path = tmp.file("orders.parquet");
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "export",
         PBIP,
         "--table",
@@ -711,8 +711,11 @@ fn export_table_to_csv_and_parquet() {
         .iter()
         .filter_map(|kv| Some((kv.key.clone(), kv.value.clone()?)))
         .collect();
-    assert_eq!(kv.get("pbiview.table").map(String::as_str), Some("Orders"));
-    let columns: Value = serde_json::from_str(&kv["pbiview.columns"]).unwrap();
+    assert_eq!(
+        kv.get("dashcraft.table").map(String::as_str),
+        Some("Orders")
+    );
+    let columns: Value = serde_json::from_str(&kv["dashcraft.columns"]).unwrap();
     assert_eq!(columns[0]["name"], "Order ID");
     assert_eq!(
         columns[0]["description"],

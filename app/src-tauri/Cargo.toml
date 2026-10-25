@@ -1,5 +1,5 @@
 [package]
-name = "pbiview-app"
+name = "dashcraft-app"
 description = "DashCraft desktop app (`dashcraft-app`): Tauri 2 shell around the pbi-* crates"
 version.workspace = true
 edition.workspace = true
@@ -11,12 +11,12 @@ default-run = "dashcraft-app"
 
 [lib]
 # `_lib` suffix avoids a name clash with the bin target on Windows (Tauri 2 template convention).
-name = "pbiview_app_lib"
+name = "dashcraft_app_lib"
 # Desktop only. Mobile targets would additionally need "staticlib" and "cdylib".
 crate-type = ["rlib"]
 
 # The binary is `dashcraft-app` (tauri.conf.json `mainBinaryName`); the package keeps its
-# internal `pbiview-app` name (ADR-0009).
+# internal `dashcraft-app` name (ADR-0009).
 [[bin]]
 name = "dashcraft-app"
 path = "src/main.rs"

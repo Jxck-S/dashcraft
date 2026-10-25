@@ -5,6 +5,25 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-10-25
+
+### DashCraft everywhere: `pbiview` removed from code and current docs
+
+- **What:** [ADR-0010](adr/0010-dashcraft-everywhere.md) supersedes ADR-0009 §2/§4/§5. Removed the
+  `pbiview` alias binary (`src/bin/pbiview.rs`, its test, the release smoke test and archive
+  copy) and the `PBIVIEW_APP`, `PBIVIEW_BLOB_MAP`, `PBIVIEW_CONFIG_DIR` and `PBIVIEW_AI_API_KEY`
+  fallbacks (CLI `open`, app blob map and AI settings, `pbi-ai` settings and key lookup), plus the
+  legacy `pbiview-app` / `pbiview.app` lookup in `dashcraft open`. Renamed `crates/pbiview-cli` →
+  `crates/dashcraft-cli` (`dashcraft_cli`), `pbiview-app` → `dashcraft-app` (`dashcraft_app_lib`),
+  `pbiview-fuzz` → `dashcraft-fuzz`; `PBIVIEW_REFERENCE`/`BLESS`/`TEST_RECORD`/`ATTEST` →
+  `DASHCRAFT_*`; `pbiview.*` export metadata keys and annotations → `dashcraft.*`; test helpers,
+  temp-folder prefixes and the release heredoc marker. Current docs, `NOTICE`, AGENTS.md and the
+  Copilot notes updated; CHANGELOG history, this log, ADR-0001 to 0009 and research notes keep
+  the old name.
+- **Why:** the owner asked to drop the old name: v0.2.0 is the first public release, so no user
+  depends on the aliases.
+- **Numbers:** 705 `pbiview` mentions in 121 files → 0 outside history files.
+
 ## 2026-10-24
 
 ### CI fix: app clippy on Linux and Windows; Dependabot majors

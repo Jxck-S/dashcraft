@@ -1296,6 +1296,57 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashcraft-app"
+version = "0.2.0"
+dependencies = [
+ "pbi-ai",
+ "pbi-core",
+ "pbi-m",
+ "pbi-model",
+ "pbi-ops",
+ "pbi-session",
+ "pbi-tmdl",
+ "serde",
+ "serde_json",
+ "specta",
+ "specta-typescript",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-specta",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "dashcraft-cli"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "arrow",
+ "chrono",
+ "clap",
+ "csv",
+ "insta",
+ "parquet",
+ "pbi-ai",
+ "pbi-core",
+ "pbi-model",
+ "pbi-ops",
+ "pbi-render",
+ "pbi-session",
+ "pretty_assertions",
+ "rpassword",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "zip",
+]
+
+[[package]]
 name = "dashmap"
 version = "6.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4604,57 +4655,6 @@ dependencies = [
  "sha2 0.11.1",
  "thiserror 2.0.21",
  "tracing",
-]
-
-[[package]]
-name = "pbiview-app"
-version = "0.2.0"
-dependencies = [
- "pbi-ai",
- "pbi-core",
- "pbi-m",
- "pbi-model",
- "pbi-ops",
- "pbi-session",
- "pbi-tmdl",
- "serde",
- "serde_json",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-specta",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pbiview-cli"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "arrow",
- "chrono",
- "clap",
- "csv",
- "insta",
- "parquet",
- "pbi-ai",
- "pbi-core",
- "pbi-model",
- "pbi-ops",
- "pbi-render",
- "pbi-session",
- "pretty_assertions",
- "rpassword",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "zip",
 ]
 
 [[package]]

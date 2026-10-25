@@ -21,7 +21,7 @@ cargo xtask perf --no-fail              # report, but exit 0
 ```
 
 Other options: `--warmup N` and `--iterations N` override every scenario's counts,
-`--reference DIR` points at another fixture root (default `$PBIVIEW_REFERENCE`, else
+`--reference DIR` points at another fixture root (default `$DASHCRAFT_REFERENCE`, else
 `reference/`), `--locked` is passed to `cargo build`. Every run writes
 `target/perf/report.json` (all statistics and the scenarios' `info`) and
 `target/perf/report.md` (the table, used as the CI job summary).

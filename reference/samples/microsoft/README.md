@@ -45,7 +45,7 @@ scripts/fetch-samples.sh --all   # also re-fetch and verify the committed files 
 
 ## Using them in tests
 
-- Paths are relative to the fixture root: `$PBIVIEW_REFERENCE`, else `<workspace>/reference`
+- Paths are relative to the fixture root: `$DASHCRAFT_REFERENCE`, else `<workspace>/reference`
   (e.g. `samples/microsoft/Revenue Opportunities.pbix`, `samples/downloads/Store Sales.pbix`).
 - The committed files are always present. A test that needs a file under `samples/downloads/` must
   print `SKIP: <file> missing (run scripts/fetch-samples.sh)` and pass when it is absent.

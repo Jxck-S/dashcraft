@@ -81,7 +81,7 @@ pub const LAYERS: &[Layer] = &[
     Layer {
         level: 6,
         name: "front ends",
-        crates: &["pbiview-cli", "pbiview-app"],
+        crates: &["dashcraft-cli", "dashcraft-app"],
     },
 ];
 
@@ -106,7 +106,7 @@ pub const EXCEPTIONS: &[Edge] = &[];
 pub const TOOLING: &[&str] = &["xtask"];
 
 /// The only crates allowed to use a UI toolkit.
-pub const UI_CRATES: &[&str] = &["pbiview-app"];
+pub const UI_CRATES: &[&str] = &["dashcraft-app"];
 
 /// UI-toolkit and webview crates (`*` matches any suffix).
 pub const UI_TOOLKIT: &[&str] = &[
@@ -162,7 +162,7 @@ pub struct Exempt {
 
 /// Exemptions from the network rule (checked with `cargo tree -e normal -i <crate>`).
 pub const NETWORK_EXEMPT: &[Exempt] = &[Exempt {
-    krate: "pbiview-app",
+    krate: "dashcraft-app",
     why: "Tauri 2 depends on reqwest and hyper (without a TLS backend)",
 }];
 

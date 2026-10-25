@@ -80,14 +80,14 @@ jobs:
             | jq -r '. as $m
                 | ($m.workspace_members - $m.workspace_default_members) as $ids
                 | $m.packages[] | select(.id as $id | $ids | index($id)) | .name' \
-            | grep -vx 'pbiview-app' || true)
+            | grep -vx 'dashcraft-app' || true)
           if [ -n "$skipped" ]; then
             echo "::error::Workspace members missing from default-members (not linted/tested by CI): $skipped"
             exit 1
           fi
 
       # Crate dependency direction (docs/ARCHITECTURE.md, xtask/src/layers.rs): no upward or
-      # unlisted same-layer edges, no UI toolkit outside pbiview-app. `cargo metadata` covers
+      # unlisted same-layer edges, no UI toolkit outside dashcraft-app. `cargo metadata` covers
       # every platform, so one OS is enough.
       - name: Architecture layers (cargo xtask layers)
         if: runner.os == 'Linux'
@@ -214,9 +214,9 @@ jobs:
             echo "::warning file=THIRD_PARTY_NOTICES.md::License inventory is stale; run scripts/license-inventory.py and commit the result."
           fi
 
-      - name: cargo clippy (pbiview-app)
+      - name: cargo clippy (dashcraft-app)
         if: hashFiles('app/src-tauri/Cargo.toml') != ''
-        run: cargo clippy -p pbiview-app --all-targets --locked -- -D warnings
+        run: cargo clippy -p dashcraft-app --all-targets --locked -- -D warnings
 
   deny:
     name: cargo-deny (${{ matrix.checks }})

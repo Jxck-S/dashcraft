@@ -123,10 +123,7 @@ export type AppError =
 export type BlobMapDto = {
 	/**  Absolute path of the active `blob-map.json`; `null` when offline. */
 	path: string | null,
-	/**
-	 *  The map was named by an environment variable (`DASHCRAFT_BLOB_MAP`, or the legacy
-	 *  `PBIVIEW_BLOB_MAP`).
-	 */
+	/**  The map was named by the environment variable `DASHCRAFT_BLOB_MAP`. */
 	fromEnvironment: boolean,
 	/**  The environment variable that named the map; `null` when it was chosen in the app. */
 	environmentVariable: string | null,

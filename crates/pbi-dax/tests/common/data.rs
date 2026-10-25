@@ -81,9 +81,9 @@ pub fn batch(columns: Vec<(&str, ArrayRef)>) -> RecordBatch {
     RecordBatch::try_new(Arc::new(Schema::new(fields)), arrays).unwrap()
 }
 
-/// Fixture root (`$PBIVIEW_REFERENCE` or `<workspace>/reference`).
+/// Fixture root (`$DASHCRAFT_REFERENCE` or `<workspace>/reference`).
 pub fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE")
+    std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference"))
 }

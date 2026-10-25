@@ -1,8 +1,8 @@
-//! Stable JSON schema of `pbiview inspect --json` and the `doc.inspect`
+//! Stable JSON schema of `dashcraft inspect --json` and the `doc.inspect`
 //! command (`schemaVersion: 1`).
 //!
 //! These types are a public contract for CI, scripts and agents (moved here
-//! from `pbiview-cli` so the CLI and the command registry share them; the
+//! from `dashcraft-cli` so the CLI and the command registry share them; the
 //! `JsonSchema` derives feed the command catalog). They are built from the
 //! internal `pbi_core`/`pbi_model` types, which are free to change, and are
 //! never those types serialized directly.

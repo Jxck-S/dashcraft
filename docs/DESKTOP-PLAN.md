@@ -80,7 +80,7 @@ lock. M6 replaces this with one revisioned state ([ADR-0010](#new-adrs-required)
    and output, metadata and a test through `Registry::execute`; the CLI, RPC, MCP and the app are
    thin adapters ([ADR-0007](adr/0007-command-registry.md), golden rule 8).
 4. **Respect the layers.** Dependencies point down; orchestration lives in `pbi-session` or
-   `pbi-ops`; UI toolkits only in `pbiview-app`; network and keychain crates only in their
+   `pbi-ops`; UI toolkits only in `dashcraft-app`; network and keychain crates only in their
    designated crates (golden rule 9).
 5. **One document state, edits as transactions.** Every change is a `pbi-model` `Command` with an
    exact inverse, applied atomically to one revisioned document state; view state stays out of the
@@ -399,7 +399,7 @@ independent audit.
   crates, with two exceptions: the optional geodata crate (layer 1, data only, ADR-0020) and the
   opt-in update-check plugin crate (layer 5, ADR-0027). The optional milestones add an online
   crate (layer 5, ADR-0024, ADR-0025); the custom-visual host is a second binary target of
-  `pbiview-app`, so UI-toolkit crates stay there (ADR-0023). Each new crate gets its
+  `dashcraft-app`, so UI-toolkit crates stay there (ADR-0023). Each new crate gets its
   `cargo xtask layers` entry and an ARCHITECTURE.md update in the change that adds it.
 - Candidate third-party crates (file watching, spreadsheet reading, decimal arithmetic, a
   data-parallel thread pool, PDF from SVG, XLSX writing, OS sandboxing helpers) are requested from
@@ -499,8 +499,8 @@ their write roots).
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,
 invalidation, recalculation), `pbi-core` (save in place, minimal-diff writes, identifier
 generator), `pbi-tmdl` and `pbi-pbir` (writers for created objects), `pbi-dax` and `pbi-m`
-(reference rewriting), `pbi-ops` (commands, history, transactions, notifications), `pbiview-cli`,
-`pbiview-app` (UI only). No new crate or edge.
+(reference rewriting), `pbi-ops` (commands, history, transactions, notifications), `dashcraft-cli`,
+`dashcraft-app` (UI only). No new crate or edge.
 
 **New registry commands.** `doc.save`, `doc.saveAs`, `doc.status`, `doc.reload`, `doc.undo`,
 `doc.redo`, `doc.history`, `doc.applyEdits`, `model.measure.create`, `model.measure.update`,
@@ -588,7 +588,7 @@ optional language server.
   commands for `.dax`, `.m` and `.tmdl` files in external editors.
 
 **Crates and layers.** `pbi-dax`, `pbi-m`, `pbi-tmdl` (services, layer 1 and 2, no new edges),
-`pbi-ops` (commands), `pbiview-cli` (`lsp`), `pbiview-app` (editor integration).
+`pbi-ops` (commands), `dashcraft-cli` (`lsp`), `dashcraft-app` (editor integration).
 
 **New registry commands.** `dax.complete`, `dax.signatureHelp`, `dax.hover`, `dax.diagnostics`,
 `dax.format`, `dax.tokens`, `dax.references`, `m.complete`, `m.hover`, `m.diagnostics`,
@@ -635,7 +635,7 @@ version; compare two versions of a project.
   between two documents or folders: objects added, removed and changed, with TMDL and PBIR
   snippets; the Compare view in the app.
 
-**Crates and layers.** `pbi-ops` (journal, watcher, commands), `pbi-core` (diff), `pbiview-app`.
+**Crates and layers.** `pbi-ops` (journal, watcher, commands), `pbi-core` (diff), `dashcraft-app`.
 
 **New registry commands.** `doc.recovery.list`, `doc.recovery.restore`, `doc.recovery.discard`,
 `doc.diff`, `doc.externalChanges`.
@@ -711,7 +711,7 @@ in focus mode or as a table and export its data; see images and report-level mea
 **Crates and layers.** `pbi-render` (query, DataView highlights, drill and drillthrough filters,
 tooltip pages, bookmarks, images), `pbi-pbir` (bookmark and extension types already kept),
 `pbi-model` (report-level measures in the report AST), `pbi-session` (query model with report
-measures), `pbi-ops` (`canvas.*`), `pbiview-app`.
+measures), `pbi-ops` (`canvas.*`), `dashcraft-app`.
 
 **New registry commands.** `report.bookmarks`, `canvas.applyBookmark`, `canvas.drill`,
 `canvas.drillthrough`, `canvas.back`, `canvas.tooltipPage`, `canvas.setRange`,
@@ -795,7 +795,7 @@ tables in saved layouts; see edits immediately in visuals and the grid.
 
 **Crates and layers.** `pbi-model`, `pbi-tmdl`, `pbi-tmsl` (writers for new objects), `pbi-core`
 (`diagramLayout.json` writer, linter), `pbi-engine` (type conversion, relationship rebuild),
-`pbi-session` (recalculation, cardinality checks), `pbi-ops`, `pbiview-app`.
+`pbi-session` (recalculation, cardinality checks), `pbi-ops`, `dashcraft-app`.
 
 **New registry commands.** `model.table.update`, `model.table.markAsDate`, `model.enterData`,
 `model.enterData.update`, `model.column.update`, `model.measure.move`, `model.hierarchy.update`,
@@ -883,7 +883,7 @@ function and use it in measures.
 **Crates and layers.** `pbi-model` (objects exist; new commands), `pbi-tmdl`, `pbi-tmsl`,
 `pbi-engine` (OLS enforcement, security evaluation), `pbi-dax` (field parameter and UDF
 evaluation), `pbi-session`, `pbi-render` (field parameters in queries, translations), `pbi-ops`,
-`pbiview-app`.
+`dashcraft-app`.
 
 **New registry commands.** `model.calcGroup.create`, `model.calcGroup.update`,
 `model.calcGroup.delete`, `model.calcItem.create`, `model.calcItem.update`,
@@ -948,7 +948,7 @@ depends on it; create a quick measure from a template.
   that generate DAX offline.
 
 **Crates and layers.** `pbi-dax`, `pbi-tmdl` (apply and diff), `pbi-model`, `pbi-ops`,
-`pbiview-app`.
+`dashcraft-app`.
 
 **New registry commands.** `model.applyDaxDefinitions`, `tmdl.diff`, `tmdl.apply`,
 `doc.daxQueries.list`, `doc.daxQueries.save`, `doc.tmdlScripts.list`, `doc.tmdlScripts.save`,
@@ -1077,7 +1077,7 @@ and visuals update.
 
 **Crates and layers.** `pbi-m` (step model over the syntax tree, transform builders, printer
 style, preview limits), `pbi-session` (query previews, Close & Apply mapping), `pbi-core`
-(`DataMashup` decoding), `pbi-model` (query commands), `pbi-ops`, `pbiview-app`.
+(`DataMashup` decoding), `pbi-model` (query commands), `pbi-ops`, `dashcraft-app`.
 
 **New registry commands.** `query.list`, `query.create`, `query.update`, `query.delete`,
 `query.rename`, `query.duplicate`, `query.reference`, `query.move`, `query.steps`,
@@ -1146,7 +1146,7 @@ step and read its operation timings.
   non-goal with its reason (for example R and Python steps, native database queries).
 
 **Crates and layers.** `pbi-m` (transform builders, fuzzy matching, example synthesis,
-diagnostics instrumentation), `pbi-session`, `pbi-ops`, `pbiview-app`.
+diagnostics instrumentation), `pbi-session`, `pbi-ops`, `dashcraft-app`.
 
 **New registry commands.** `query.columnFromExamples`, `query.diagnostics.start`,
 `query.diagnostics.stop`, `query.diagnoseStep`; transforms go through `query.step.insert` with new
@@ -1225,7 +1225,7 @@ in other cultures; refresh one table at a time.
 
 **Crates and layers.** `pbi-m` (resolver trait, connectors, library, cultures, decimal),
 `pbi-session` (resolver implementation, permissions, refresh control), `pbi-dax` (`FORMAT`
-cultures, currency), `pbi-engine` (decimal storage), `pbi-ops`, `pbiview-app`. No network crate;
+cultures, currency), `pbi-engine` (decimal storage), `pbi-ops`, `dashcraft-app`. No network crate;
 `cargo xtask layers` keeps HTTP out of these crates.
 
 **New registry commands.** `getData.connectors`, `getData.navigate`, `getData.createQueries`,
@@ -1375,7 +1375,7 @@ result.
 
 **Crates and layers.** `pbi-pbir` (writers and types), `pbi-model` (report commands),
 `pbi-render` (descriptors, re-render of one visual, selection outlines in the scene), `pbi-ops`
-(commands), `pbiview-app` (canvas tools, panes).
+(commands), `dashcraft-app` (canvas tools, panes).
 
 **New registry commands.** `report.descriptors`, `report.page.create`, `report.page.update`,
 `report.page.delete`, `report.page.move`, `report.page.duplicate`, `report.visual.create`,
@@ -1438,7 +1438,7 @@ canvas), copy formatting with the format painter, and see each change rendered.
   assertion that the property changes the output as described.
 
 **Crates and layers.** `pbi-render` (descriptors, property application), `pbi-pbir`,
-`pbi-model`, `pbi-ops`, `pbiview-app`.
+`pbi-model`, `pbi-ops`, `dashcraft-app`.
 
 **New registry commands.** `report.visual.setProperty`, `report.visual.resetProperty`,
 `report.visual.setConditionalFormat`, `report.formatPainter.apply`, `report.page.setProperty`,
@@ -1510,7 +1510,7 @@ personalize visuals.
 
 **Crates and layers.** `pbi-pbir` (filters, bookmarks, interactions, themes, mobile layout
 writers), `pbi-model`, `pbi-render` (theme resolution, mobile layout rendering), `pbi-ops`,
-`pbiview-app`.
+`dashcraft-app`.
 
 **New registry commands.** `report.filter.create`, `report.filter.update`,
 `report.filter.delete`, `report.filter.move`, `report.interactions.set`,
@@ -1590,7 +1590,7 @@ states look as in Desktop.
   [Coverage inventories](#coverage-inventories)) and M19 descriptors for every new visual.
 
 **Crates and layers.** `pbi-render` (visuals, analytics, small multiples), `pbi-dax` or
-`pbi-session` (analytics statistics), `pbi-ops`, `pbiview-app`.
+`pbi-session` (analytics statistics), `pbi-ops`, `dashcraft-app`.
 
 **New registry commands.** `canvas.playAxis` (frame selection); analytics and formatting go
 through `report.visual.setProperty`.
@@ -1638,7 +1638,7 @@ work from region names or latitude and longitude; unknown locations are listed, 
   as view state; M19 descriptors for the map visuals.
 
 **Crates and layers.** Optional geodata crate (layer 1, data only), `pbi-render`, `pbi-ops`,
-`pbiview-app`.
+`dashcraft-app`.
 
 **New registry commands.** `geo.resolve` (diagnostics of location resolution for a visual);
 view-state changes through `canvas.*`.
@@ -1695,7 +1695,7 @@ differs.
   behaviour, or recorded as a non-goal in the inventory with its reason.
 
 **Crates and layers.** `pbi-session` (an `insights` module over the engine), `pbi-render`
-(visuals), `pbi-ops` (commands), `pbiview-app`. No network, no `pbi-ai` involvement.
+(visuals), `pbi-ops` (commands), `dashcraft-app`. No network, no `pbi-ai` involvement.
 
 **New registry commands.** `qna.ask`, `qna.suggestions`, `qna.teach`, `report.narrative`,
 `insights.explainChange`, `insights.distributionDifference`, `insights.keyInfluencers`,
@@ -1774,9 +1774,9 @@ after seeing exactly what would be sent.
   identifier; signed manifests verified; installing updates waits for code signing (M31.11). The
   change that adds the crate updates AGENTS.md, ARCHITECTURE.md and `cargo xtask layers`.
 
-**Crates and layers.** `pbiview-app` (most of the work), the update-check plugin crate (layer 5,
+**Crates and layers.** `dashcraft-app` (most of the work), the update-check plugin crate (layer 5,
 new), `pbi-ops` (settings, Optimize and performance commands, timings in `canvas.render`),
-`pbi-render` (PDF from the scene), `pbi-session` (cancellable open), `pbiview-cli`
+`pbi-render` (PDF from the scene), `pbi-session` (cancellable open), `dashcraft-cli`
 (`export pdf`).
 
 **New registry commands.** `settings.get`, `settings.set`, `doc.settings.get`,
@@ -1838,7 +1838,7 @@ to the pilot language.
   culture.
 
 **Crates and layers.** `pbi-render` (accessibility tree from the scene), `pbi-ops`
-(`report.accessibility`), `pbiview-app`.
+(`report.accessibility`), `dashcraft-app`.
 
 **New registry commands.** `report.accessibility` (the accessible description of a page),
 `settings.locale.set`.
@@ -1904,7 +1904,7 @@ and keep it through saves and conversions.
   M6's save suite).
 
 **Crates and layers.** `pbi-tmdl`, `pbi-tmsl`, `pbi-pbir`, `pbi-core` (writers, conversions,
-contract checks, label parts), `pbi-ops`, `pbiview-cli` (`convert` options), `pbiview-app`.
+contract checks, label parts), `pbi-ops`, `dashcraft-cli` (`convert` options), `dashcraft-app`.
 
 **New registry commands.** `convert.upgrade` (legacy report, `model.bim`), `doc.importWorkbook`,
 `convert.bim`, `doc.compatibility`, `doc.sensitivityLabel` (read-only).
@@ -2020,7 +2020,7 @@ describe an M transform, and get fixes for linter findings.
 - [ ] **M28.9 Evaluation set.** Prompts over Acme whose answers are checked against
   `expected.json`, for manual runs against real providers; CI uses scripted providers only.
 
-**Crates and layers.** `pbi-ai` (capabilities, prompts, commands), `pbiview-app`. No network
+**Crates and layers.** `pbi-ai` (capabilities, prompts, commands), `dashcraft-app`. No network
 outside `pbi-ai`.
 
 **New registry commands.** `ai.writeDaxQuery`, `ai.fixDax`, `ai.describeObjects`,
@@ -2062,7 +2062,7 @@ misbehaves is stopped and replaced by a placeholder; headless renders show a pla
 
 - [ ] **M29.1 Decision (ADR-0023).** Isolation model, approvals pinned by package hash, limits,
   what the CLI does; R and Python visuals stay out.
-- [ ] **M29.2 Out-of-process host with OS sandboxing.** A second binary target of `pbiview-app`
+- [ ] **M29.2 Out-of-process host with OS sandboxing.** A second binary target of `dashcraft-app`
   started per report with the platform's sandbox (macOS: a sandbox profile denying file and network
   access; Windows: an AppContainer or restricted token inside a job object; Linux: namespaces,
   seccomp and, where available, Landlock); no inherited file, socket or process handles; memory and
@@ -2082,9 +2082,9 @@ misbehaves is stopped and replaced by a placeholder; headless renders show a pla
   drill, landing page.
 - [ ] **M29.8 Import.** Import a visual from a local file only; no marketplace access.
 
-**Crates and layers.** `pbiview-app` (host binary, sandbox setup, display), `pbi-render`
+**Crates and layers.** `dashcraft-app` (host binary, sandbox setup, display), `pbi-render`
 (DataView mapping from capabilities), `pbi-core` (package reading exists), `pbi-ops` (approval
-commands, not agent-safe). UI-toolkit crates stay in `pbiview-app`.
+commands, not agent-safe). UI-toolkit crates stay in `dashcraft-app`.
 
 **New registry commands.** `visuals.custom.list`, `visuals.custom.approve`,
 `visuals.custom.revoke`, `visuals.custom.import`.
@@ -2159,7 +2159,7 @@ report as a project.
   between commits through a permissive Git library or the user's Git; no service sync.
 
 **Crates and layers.** The online crate (layer 5, new), `pbi-m` resolver (exists after M16),
-`pbi-session` remote query source, `pbiview-cli`, `pbiview-app`.
+`pbi-session` remote query source, `dashcraft-cli`, `dashcraft-app`.
 
 **New registry commands.** `service.signIn`, `service.signOut`, `service.status`,
 `service.workspaces`, `service.publish`, `service.download`, `remote.open`, `datasource.connect`,

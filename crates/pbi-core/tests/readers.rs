@@ -2,7 +2,7 @@
 //! `export_pbit`) over the committed Acme Outfitters example, the Microsoft
 //! sample PBIX/PBIT files and synthetic inputs.
 //!
-//! Fixtures are found through `$PBIVIEW_REFERENCE`, falling back to the
+//! Fixtures are found through `$DASHCRAFT_REFERENCE`, falling back to the
 //! repository's `reference/` folder. The fetched samples
 //! (`samples/downloads/`) are skipped with a `SKIP:` message when missing.
 
@@ -34,7 +34,7 @@ use zip::write::SimpleFileOptions;
 // ---------------------------------------------------------------------------
 
 fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE")
+    std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference"))
 }

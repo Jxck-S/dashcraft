@@ -1,5 +1,5 @@
 //! Ordered batches of commands sharing one workspace, with `${name.field}`
-//! interpolation from earlier results (`pbiview run --batch`,
+//! interpolation from earlier results (`dashcraft run --batch`,
 //! `commands.batch`, and the MCP `command_batch` tool to come).
 //!
 //! A step is `{ "id": "doc.open", "params": {…}, "as": "d" }`. Before a step

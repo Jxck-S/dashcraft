@@ -3,7 +3,7 @@
 //! output of Microsoft's XPress9 library (via pbixray's `xpress9` binding,
 //! run read-only).
 //!
-//! Fixtures are located through `$PBIVIEW_REFERENCE`, falling back to the
+//! Fixtures are located through `$DASHCRAFT_REFERENCE`, falling back to the
 //! repository's `reference/` directory; a missing file prints `SKIP`.
 
 mod common;

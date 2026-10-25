@@ -13,7 +13,7 @@ The Rust toolchain pinned in `rust-toolchain.toml` (installed automatically by `
 
 ```sh
 # CLI
-cargo build --release -p pbiview-cli              # target/release/dashcraft and its pbiview alias
+cargo build --release -p dashcraft-cli              # target/release/dashcraft
 target/release/dashcraft inspect path/to/report.pbip
 target/release/dashcraft render path/to/report.pbix --png target/tmp/page.png
 
@@ -33,7 +33,7 @@ npm run tauri dev -- -- path/to/report.pbix       # development build with a fil
 npm run tauri -- build                            # release binary and installers for this OS
 ```
 
-`dashcraft open <path>` starts the installed app on a file. `pbiview` remains an alias of the `dashcraft` binary and the former `PBIVIEW_*` environment variables still work. Recipes: [USER-GUIDE.md](USER-GUIDE.md); every flag and JSON schema: [CLI.md](CLI.md).
+`dashcraft open <path>` starts the installed app on a file. Recipes: [USER-GUIDE.md](USER-GUIDE.md); every flag and JSON schema: [CLI.md](CLI.md).
 
 ## Gates and tests
 
@@ -46,8 +46,8 @@ cargo xtask perf --quick --no-fail                   # performance budgets (docs
 cargo deny check                                     # licenses, bans, advisories, sources
 cargo test -p pbi-render --test golden -- --nocapture   # SSIM only where local golden images exist
 (cd app && npm ci && npm run check && npm run build)    # app front end
-cargo clippy -p pbiview-app --all-targets -- -D warnings
-cargo test -p pbiview-app
+cargo clippy -p dashcraft-app --all-targets -- -D warnings
+cargo test -p dashcraft-app
 ```
 
 The app crate is not a default member (it needs the built front end and, on Linux, the WebKitGTK development packages). CI runs these on macOS arm64, Windows x64 and Ubuntu ([ci.md](ci.md)). Every gate, snapshot workflow (`cargo insta review`) and fuzzing command is in [AGENTS.md §7](../AGENTS.md#7-build-test-validate).
@@ -62,4 +62,4 @@ The app crate is not a default member (it needs the built front end and, on Linu
 - Real or internal reports and data are never committed or described ([AGENTS.md golden rules](../AGENTS.md#3-golden-rules) 2 to 4).
 - `reference/golden/` (optional Power BI exports for the SSIM comparison) and `reference/private/` (your own files) are local-only and gitignored; renders, exports and perf reports go under `target/`.
 - `.gitignore` refuses `*.pbix`, `*.pbit` and `*.abf` anywhere except the committed Microsoft samples and the fuzz seeds.
-- Tests that need an optional file print `SKIP: <file> missing` and pass, so CI on a fresh clone stays green. The fixture root is `$PBIVIEW_REFERENCE`, else `reference/` ([reference/README.md](../reference/README.md)).
+- Tests that need an optional file print `SKIP: <file> missing` and pass, so CI on a fresh clone stays green. The fixture root is `$DASHCRAFT_REFERENCE`, else `reference/` ([reference/README.md](../reference/README.md)).
