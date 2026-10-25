@@ -6,6 +6,33 @@ Milestones M0–M5 and their work items. Fixtures and their expected values are 
 
 Legend: `[x]` done, `[ ]` not done. Item IDs match the work-tracking IDs used in sessions.
 
+## Releases
+
+| Release | Scope | State |
+|---|---|---|
+| v0.1.0 (2026-10-21) | Phase 1, Data Explorer: readers, model tree, M and DAX engines, data grid, exports, linter, CLI | Released |
+| v0.2.0 (2026-10-22) | Phase 2, Report Renderer: visual queries, built-in visuals, SVG/PNG output, `render`, golden-image tooling, interactive canvas in a Power BI Desktop-style app. M5: the remaining [FORMATS.md](../FORMATS.md) formats, docs, installers and the release workflow ([docs/packaging.md](packaging.md)) | Released; installers are unsigned until signing certificates exist |
+| Unreleased | The work below, in `main` ([CHANGELOG.md](../CHANGELOG.md) `[Unreleased]`, [docs/ROADMAP.md](ROADMAP.md)) | Not tagged yet |
+
+### Since v0.2.0 (unreleased, in `main`)
+
+| Theme | What landed |
+|---|---|
+| Command registry | `pbi-ops` ([ADR-0007](adr/0007-command-registry.md)): 47 typed commands (all agent-safe) plus 9 opt-in `ai.*` commands, with JSON Schemas for parameters and results, a workspace of open documents, cancellation, progress events and a path policy; catalog in [docs/COMMANDS.md](COMMANDS.md) |
+| Automation | `dashcraft commands`, `run` (one command or a `--batch` file), `serve --stdio` (JSON-RPC 2.0 lines) and `mcp`, a Model Context Protocol server that offers the agent-safe commands as tools inside read/write roots ([docs/MCP.md](MCP.md)) |
+| Opt-in AI | `pbi-ai` ([ADR-0008](adr/0008-ai-layer.md), [docs/AI.md](AI.md)), off by default: explain a measure, and suggest a measure (parsed and optionally evaluated locally, never applied), through OpenAI-compatible, Azure OpenAI or Ollama providers, only after a recorded consent per provider, capability and data class; `ai.preview` shows the exact request; keys only in the OS keychain (or `DASHCRAFT_AI_API_KEY`). CLI: `ai login`/`logout`. App: Options → AI, a consent dialog showing the exact request, **Explain with AI**, **Suggest a measure** |
+| App on the registry | The desktop app runs every domain operation through one `ops_execute` IPC command → `Registry::execute`, the same commands as `run`, `serve` and MCP, with a TypeScript client generated from the schemas; File → Export writes a PBIP project or PBIT template |
+| Performance | `cargo xtask perf`: 8 scenarios with budgets and a per-machine baseline, all within target ([perf.md](perf.md)). A per-visual render cache and DAX fast paths took a 50,000-row table scroll step from 25.6 ms to under 1 ms and its cold first render from 13.6 s to about 0.1 s |
+| Name | DashCraft ([ADR-0009](adr/0009-naming-dashcraft.md)): `dashcraft` binary with a `pbiview` alias, app `dashcraft-app` (identifier `io.github.jxck-s.dashcraft`), `DASHCRAFT_*` variables with `PBIVIEW_*` aliases, [NOTICE](../NOTICE) |
+| Visuals | `scatterChart`, `funnel`, `gauge`, `treemap` and `waterfallChart` replace their placeholders; conditional formatting of tables, matrices and chart colors; dynamic format strings per cell |
+| Engine | Calculation groups; many-to-many (limited) relationships; row-level security "View as" (roles and user) with the `security.roles` / `security.viewAs` commands and the app's Modeling → View as dialog |
+| DAX | Library grown from 218 to 294 functions (logarithms, trigonometry, statistical distributions, `YEARFRAC`, `NETWORKDAYS`, bit functions, …) |
+| Fixes | `kpi` uses `TrendLine` as its trend axis; matrix levels follow sort-by columns; one-to-one relationships relate unmatched rows to the blank row; TMDL ↔ TMSL conversion keeps dynamic format strings; the people transform accepts plain name lists |
+| Fixtures | The synthetic Acme Outfitters example (PBIP, CSVs, blob map, expected values computed independently in Python) and MIT-licensed Microsoft sample reports replace the previous fixtures; render snapshots of every example page ([DEVELOPMENT.md](DEVELOPMENT.md#test-data)) |
+| Repository guards | `.gitignore` refuses `*.pbix`, `*.pbit` and `*.abf` outside the committed samples and fuzz seeds; `cargo xtask layers` enforces the crate layers in CI |
+
+Where each area stands against Power BI Desktop, scored 0–5: [GAPS.md](GAPS.md#summary). The milestones after M5 (M6 to M31): [DESKTOP-PLAN.md](DESKTOP-PLAN.md#summary-table).
+
 ## M0: Foundation
 
 - [x] `m0-scaffold`: git repository; Cargo workspace with all crate stubs; pre-declared `[workspace.dependencies]`; `rust-toolchain.toml` (1.99.1, with rustfmt and clippy); `.gitignore`; `cargo build` is green.
@@ -137,6 +164,17 @@ The items below predate the plan; each is annotated with the plan step that now 
 - [ ] Object-level security; RLS role filters that read other secured tables (→ M11.5, M11.4).
 - [ ] Fabric remote mode for `byConnection` reports (optional; device-code auth, credentials in the OS keychain) (→ M30.4).
 - Out of scope: DirectQuery live execution; publishing to the Power BI service in v1; writing PBIX; executing custom visuals, R/Python visuals or custom connectors (→ [non-goals](DESKTOP-PLAN.md#explicit-non-goals); writing PBIX is reconsidered only in the optional, legal-gated M27, custom visuals only in the optional, ADR-gated M29, publishing only in the optional M30.5).
+
+## v1 acceptance criteria
+
+| # | Criterion | Result |
+|---|---|---|
+| 1 | Opens PBIX, PBIP (one semantic model with several `*.Report` folders) and PBIT files on macOS, Windows and Linux | Met: tests on the CI matrix (macOS arm64, Windows x64, Ubuntu) with the synthetic example and the public Microsoft samples |
+| 2 | `inspect --json` lists every object; CSV-backed partitions load with the expected row counts | Met: `insta` snapshots; `pbi-session` acceptance tests against the example's expected values |
+| 3 | `render --png` within SSIM tolerance of Power BI exports; card values match the expected values | Card values met: all 39 card values of the example's `expected.json` are asserted on the rendered pages. SSIM not verified yet: the per-region comparison (threshold 0.85, no exceptions) runs only against optional local golden images, and none are committed; render snapshots of every example page catch regressions ([details](VISUALS.md#render-verification)) |
+| 4 | TMDL and PBIR round-trips, XPress9 known-good blob, one test per DAX function | Met |
+| 5 | CI matrix with fmt, clippy `-D warnings`, tests; signed release artifacts | CI met ([docs/ci.md](ci.md)); release artifacts are unsigned until signing certificates exist |
+| 6 | No script execution, untrusted-input hardening, fuzzing, no telemetry | Met (14 `cargo-fuzz` targets, nightly) |
 
 ## Acceptance values
 

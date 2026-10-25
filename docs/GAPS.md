@@ -322,7 +322,7 @@ Source: [docs/packaging.md](packaging.md), [docs/ci.md](ci.md), `.github/workflo
 
 ## 12. Security and fuzzing
 
-Source: [README "Security posture"](../README.md#security-posture), [docs/ci.md](ci.md#fuzz-targets).
+Source: [SECURITY.md](SECURITY.md), [docs/ci.md](ci.md#fuzz-targets).
 
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
