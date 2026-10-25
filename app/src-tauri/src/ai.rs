@@ -21,15 +21,13 @@ mod demo;
 /// The demo provider is installed (debug builds with `DASHCRAFT_AI_MOCK=1`).
 static DEMO: AtomicBool = AtomicBool::new(false);
 
-/// The app's AI settings file: `$DASHCRAFT_CONFIG_DIR/ai.json` (alias `PBIVIEW_CONFIG_DIR`, shared
-/// with the CLI) when set, else `<app config dir>/ai.json`, else the CLI's default location.
+/// The app's AI settings file: `$DASHCRAFT_CONFIG_DIR/ai.json` (shared with the CLI) when set, else `<app config dir>/ai.json`, else the CLI's default location.
 pub fn settings_path(
     env: impl Fn(&str) -> Option<OsString>,
     app_config_dir: Option<&Path>,
 ) -> Option<PathBuf> {
     let var = |name: &str| env(name).filter(|v| !v.is_empty()).map(PathBuf::from);
     var("DASHCRAFT_CONFIG_DIR")
-        .or_else(|| var("PBIVIEW_CONFIG_DIR"))
         .or_else(|| app_config_dir.map(Path::to_path_buf))
         .map(|dir| dir.join("ai.json"))
         .or_else(pbi_ai::default_settings_path)
@@ -70,7 +68,7 @@ mod tests {
             Some(app.join("ai.json")),
             "the app's own folder by default"
         );
-        let env = |name: &str| (name == "PBIVIEW_CONFIG_DIR").then(|| OsString::from("/shared"));
+        let env = |name: &str| (name == "DASHCRAFT_CONFIG_DIR").then(|| OsString::from("/shared"));
         assert_eq!(
             settings_path(env, Some(app)),
             Some(Path::new("/shared").join("ai.json"))

@@ -1,7 +1,5 @@
-//! DashCraft command-line interface: the `dashcraft` binary and its
-//! `pbiview` alias (the product's former name). Both binaries call
-//! [`run_main`]; help, usage and messages use the name the program was
-//! invoked as ([`common::prog`]).
+//! DashCraft command-line interface: the program behind the `dashcraft`
+//! binary ([`run_main`]); help, usage and messages name it [`common::prog`].
 //!
 //! Layout: one module per subcommand under [`cmd`] (`cmd/<name>.rs`, each
 //! with a clap `Args` struct and a `run` function), registered in the
@@ -12,7 +10,7 @@
 //! Exit codes: 0 success (warnings allowed), 1 fatal error (unreadable,
 //! refused or unsupported input, usage errors, I/O failures), 2 the input
 //! was read but has Error diagnostics. Fatal errors are printed on stderr
-//! as `dashcraft: error: …` (`pbiview: error: …` under the alias).
+//! as `dashcraft: error: …`.
 //!
 //! No telemetry and no network access: every command works offline (the
 //! opt-in `ai.*` commands excepted, docs/AI.md).
@@ -32,12 +30,7 @@ use crate::common::{Context, EXIT_FATAL, prog};
 /// DashCraft opens Power BI files offline (PBIP, PBIX, PBIT, TMDL, TMSL,
 /// PBIR): inspect, lint, refresh, export, render, and the command registry.
 #[derive(Debug, Parser)]
-#[command(
-    name = "dashcraft",
-    version,
-    propagate_version = true,
-    after_help = "`pbiview` is an alias of `dashcraft` (the former name)."
-)]
+#[command(name = "dashcraft", version, propagate_version = true)]
 struct Cli {
     /// Log progress on stderr (-v info, -vv debug, -vvv trace).
     #[arg(short, long, action = ArgAction::Count, global = true)]
@@ -50,7 +43,7 @@ struct Cli {
 }
 
 /// Runs the CLI with the process arguments: the whole program behind the
-/// `dashcraft` and `pbiview` binaries.
+/// `dashcraft` binary.
 #[must_use]
 pub fn run_main() -> ExitCode {
     let name = prog();

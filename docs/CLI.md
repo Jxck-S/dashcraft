@@ -1,13 +1,11 @@
 # `dashcraft` CLI reference
 
-The `dashcraft` binary (crate `pbiview-cli`) works offline: no network access (except the opt-in `ai.*` commands, [AI.md](AI.md)), no telemetry, and embedded scripts, custom visuals and connectors are never run. Inputs are detected by content, so any of these work: a `.pbip` file or project folder, a `*.SemanticModel` or `*.Report` folder, a `.pbix` (or an unzipped PBIX folder), a `.pbit`, a `model.bim`, a TMDL folder, and the other formats in [FORMATS.md](../FORMATS.md).
+The `dashcraft` binary (crate `dashcraft-cli`) works offline: no network access (except the opt-in `ai.*` commands, [AI.md](AI.md)), no telemetry, and embedded scripts, custom visuals and connectors are never run. Inputs are detected by content, so any of these work: a `.pbip` file or project folder, a `*.SemanticModel` or `*.Report` folder, a `.pbix` (or an unzipped PBIX folder), a `.pbit`, a `model.bim`, a TMDL folder, and the other formats in [FORMATS.md](../FORMATS.md).
 
 ```sh
-cargo build --release -p pbiview-cli      # target/release/dashcraft (and the pbiview alias)
+cargo build --release -p dashcraft-cli      # target/release/dashcraft
 dashcraft --help                          # and dashcraft <command> --help
 ```
-
-`pbiview`, the product's former name, is an alias binary built from the same code: every command, flag, output and exit code is identical, and usage and messages use the name it was invoked as (`pbiview: error: …`). Scripts written for `pbiview` keep working.
 
 For task-oriented recipes (CI checks, golden comparisons, exports), see the [user guide](USER-GUIDE.md#cli-recipes).
 
@@ -95,7 +93,7 @@ Global flags:
 - `--table` writes raw values by default (`0.5`, `1.2500` for fixed decimals, `2026-10-21T14:05:00`, BLANK as an empty field). `--formatted` applies each column's model format string instead, as Power BI shows it. Fields are quoted only when they contain the delimiter, `"` or a line break.
 - `--bom` adds a UTF-8 BOM so Excel detects the encoding.
 - `--excel-safe` guards against spreadsheet formula injection: text cells (and header names) that start with `=`, `+`, `-`, `@`, TAB or CR get a leading `'`, so a spreadsheet shows them as text instead of running them. Numbers, dates and booleans are unchanged.
-- Parquet files are Zstd-compressed by default and carry the model metadata: Arrow field metadata (`pbiview.dataType`, `pbiview.kind`, `pbiview.description`, `pbiview.formatString`, `pbiview.sourceColumn`, and `pbiview.derived` for session-derived columns) and file key-value metadata (`pbiview.schemaVersion`, `pbiview.table`, `pbiview.tableDescription`, `pbiview.culture`, and `pbiview.columns` as a JSON array).
+- Parquet files are Zstd-compressed by default and carry the model metadata: Arrow field metadata (`dashcraft.dataType`, `dashcraft.kind`, `dashcraft.description`, `dashcraft.formatString`, `dashcraft.sourceColumn`, and `dashcraft.derived` for session-derived columns) and file key-value metadata (`dashcraft.schemaVersion`, `dashcraft.table`, `dashcraft.tableDescription`, `dashcraft.culture`, and `dashcraft.columns` as a JSON array).
 - `--model --format json` writes the model doc (`schemaVersion: 1`, defined in `crates/pbi-session/src/export/model_doc.rs`): `{ name, description?, culture?, compatibilityLevel?, includesExpressions, includesHidden, summary {…counts}, tables[] { name, description?, kind, hidden, columns[] { name, dataType, kind, hidden, key, description?, sourceColumn?, expression?, formatString?, … }, measures[] { name, expression?, formatString?, description?, displayFolder?, hidden }, partitions[] { name, kind, language?: m|dax|sql, mode, expression?, … }, hierarchies[] }, relationships[] { name, from { table, column }, to { table, column }, fromCardinality, toCardinality, crossFilteringBehavior, active, securityFilteringBehavior }, parameters[] { name, type?, required, description?, value? }, expressions[], roles[] }`. Descriptions are the TMDL `///` comments.
 - `--model --format md` renders the same content as a Markdown data dictionary: summary counts, a relationship table, then per table its description, a columns table (Name, Type, Description, Source), measures with their DAX in `dax` code blocks, calculated columns, and the M partition in a `powerquery` code block; then parameters. The title defaults to the file or project name (`--title` overrides it).
 - `--no-expressions` leaves out all DAX and M; `--no-hidden` leaves out hidden objects.
@@ -178,12 +176,10 @@ $ dashcraft ai login --provider openai
 
 The app is looked up in this order:
 
-1. `$DASHCRAFT_APP` (or the former `$PBIVIEW_APP`; when both are set, `DASHCRAFT_APP` wins);
+1. `$DASHCRAFT_APP`;
 2. next to the `dashcraft` executable;
 3. on macOS, in a `DashCraft.app` bundle next to it, in `/Applications` or in `~/Applications`;
 4. on `PATH`.
-
-Each location is tried with the executable name `dashcraft-app` first, then with the name used before the rename (`pbiview-app`, bundle `pbiview.app`).
 
 The path is passed to the app as a single argument, never through a shell.
 

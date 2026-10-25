@@ -3,7 +3,7 @@
 //! through its `blob-map.json`) with its `expected.json`, and the Microsoft
 //! samples (`samples/microsoft/`, MIT) with theirs.
 //!
-//! Paths are relative to the fixture root (`$PBIVIEW_REFERENCE`, else
+//! Paths are relative to the fixture root (`$DASHCRAFT_REFERENCE`, else
 //! `<workspace>/reference`). A missing file prints `SKIP: <file> missing`
 //! and the test returns early.
 
@@ -26,9 +26,9 @@ pub const ACME: &str = "examples/acme-outfitters";
 /// Report short names (`--report`), in `expected.json` order.
 pub const ACME_REPORTS: [&str; 3] = ["Overview", "Stores", "Online"];
 
-/// `$PBIVIEW_REFERENCE`, else `<workspace>/reference`.
+/// `$DASHCRAFT_REFERENCE`, else `<workspace>/reference`.
 pub fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE").map_or_else(
+    std::env::var_os("DASHCRAFT_REFERENCE").map_or_else(
         || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference"),
         PathBuf::from,
     )

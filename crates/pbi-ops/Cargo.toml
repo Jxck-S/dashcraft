@@ -1,6 +1,6 @@
 [package]
 name = "pbi-ops"
-description = "Command registry: every pbiview capability as a named, typed, schema-described command shared by the CLI, the RPC server, the app and agents"
+description = "Command registry: every DashCraft capability as a named, typed, schema-described command shared by the CLI, the RPC server, the app and agents"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

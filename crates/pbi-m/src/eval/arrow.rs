@@ -13,7 +13,7 @@
 //!
 //! `null` cells become Arrow nulls. A cell holding an M error, or a value that cannot be
 //! coerced, fails the conversion with an error naming the row and column (Power BI Desktop
-//! instead loads such cells as blanks and reports an error count; pbiview surfaces the error).
+//! instead loads such cells as blanks and reports an error count; DashCraft surfaces the error).
 
 use std::sync::Arc;
 
@@ -33,7 +33,7 @@ use crate::stdlib::convert::{
 };
 use crate::value::{Lazy, TableValue, TypeValue, Value};
 
-/// The Arrow type pbiview uses for an M column type.
+/// The Arrow type DashCraft uses for an M column type.
 pub fn arrow_type_for(ty: &TypeValue) -> DataType {
     match ty.base() {
         PrimitiveType::Text => DataType::Utf8,

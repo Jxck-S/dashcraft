@@ -19,11 +19,12 @@ reimplementation of Power BI Desktop ([ADR-0004](docs/adr/0004-desktop-ready-arc
   treemap/waterfall visuals, conditional formatting, calculation groups, many-to-many
   relationships, RLS "View as" and 294 DAX functions. Details:
   [docs/ROADMAP.md](docs/ROADMAP.md), [CHANGELOG.md](CHANGELOG.md), [docs/GAPS.md](docs/GAPS.md).
-- Public product name: **DashCraft** (§10, [ADR-0009](docs/adr/0009-naming-dashcraft.md); the
-  project was called `pbiview`). The CLI binary is `dashcraft` with a `pbiview` alias, the app
-  binary `dashcraft-app` (identifier `io.github.jxck-s.dashcraft`), user-facing env vars `DASHCRAFT_*` with
-  `PBIVIEW_*` aliases. Crate names stay `pbi-*` / `pbiview-*`; developer and test variables keep
-  their names (`PBIVIEW_REFERENCE`, `PBIVIEW_BLESS`, `PBIVIEW_TEST_RECORD`).
+- Product name: **DashCraft** (§10, [ADR-0009](docs/adr/0009-naming-dashcraft.md),
+  [ADR-0010](docs/adr/0010-dashcraft-everywhere.md)). The CLI binary is `dashcraft`, the app
+  binary `dashcraft-app` (identifier `io.github.jxck-s.dashcraft`), environment variables
+  `DASHCRAFT_*` (including the developer and test ones: `DASHCRAFT_REFERENCE`, `DASHCRAFT_BLESS`,
+  `DASHCRAFT_TEST_RECORD`). Front-end crates are `dashcraft-cli` and `dashcraft-app`; library
+  crates are `pbi-*`.
 
 ### Five-minute orientation
 
@@ -42,12 +43,12 @@ reimplementation of Power BI Desktop ([ADR-0004](docs/adr/0004-desktop-ready-arc
 Dependencies point **down** only. `cargo xtask layers` (`xtask/src/layers.rs`) enforces it in CI:
 no upward edge, no unlisted same-layer edge, every crate in a layer, `pbi-model` and `pbi-m` free
 of workspace dependencies, UI-toolkit crates (`tauri*`, `wry`, `tao`, `specta*`, `egui*`, …) only
-in `pbiview-app`, HTTP/TLS and keychain crates (`ureq`, `rustls`, `keyring`, …) only in `pbi-ai`
-and the crates that depend on it (`pbiview-cli`, `pbiview-app`).
+in `dashcraft-app`, HTTP/TLS and keychain crates (`ureq`, `rustls`, `keyring`, …) only in `pbi-ai`
+and the crates that depend on it (`dashcraft-cli`, `dashcraft-app`).
 
 | Layer | Crates | Owns |
 |---|---|---|
-| L6 front ends | `pbiview-cli` (binaries `dashcraft` and its alias `pbiview`: `inspect`, `detect`, `open`, `convert`, `lint`, `refresh`, `measures`, `export`, `render`, `commands`, `run`, `serve`, `mcp`, `ai`), `pbiview-app` (`app/src-tauri`, binary `dashcraft-app`; workspace member, not a default member) | Adapters only: argument parsing, IPC (`ops_execute` → the registry, app-only views), UI |
+| L6 front ends | `dashcraft-cli` (binary `dashcraft`: `inspect`, `detect`, `open`, `convert`, `lint`, `refresh`, `measures`, `export`, `render`, `commands`, `run`, `serve`, `mcp`, `ai`), `dashcraft-app` (`app/src-tauri`, binary `dashcraft-app`; workspace member, not a default member) | Adapters only: argument parsing, IPC (`ops_execute` → the registry, app-only views), UI |
 | L5 operations | `pbi-ops` (command registry, MCP server; ADR-0007), `pbi-ai` (opt-in AI layer, `ai.*` commands; ADR-0008) | Every capability as a typed command; workspace of open documents; path policy; JSON-lines RPC; MCP |
 | L4 render | `pbi-render` | Theme, layout, text, semantic query → DataView, visuals → scene graph → SVG/PNG, golden-image comparison |
 | L3 session | `pbi-session` | Open → refresh (M / VertiPaq / `.pbi/cache.abf` → calculated columns → calculated tables → derived columns), CSV loading, query façade, exports. Breaks the dax ↔ engine cycle |
@@ -69,7 +70,7 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
 | `app/` | Tauri 2 + Svelte 5 + TypeScript front end; [app/README.md](app/README.md), [app/docs/desktop-ui-reference.md](app/docs/desktop-ui-reference.md) (every Desktop element and what we do with it) |
 | `xtask/`, `perf/` | Repo automation; perf scenarios (`budgets.toml`), per-machine `baseline.json`, shared `harness.rs` |
 | `fuzz/` | Own Cargo workspace, 14 `cargo-fuzz` targets, seeds, dictionaries, `run.sh` |
-| `reference/` | Fixtures (`$PBIVIEW_REFERENCE` overrides; §7): `examples/acme-outfitters/` (synthetic PBIP + CSV; its `blob-map.json` maps `AzureStorage.Blobs` URLs to the local CSVs), `samples/microsoft/` (MIT samples); `reference/README.md` says which test uses what |
+| `reference/` | Fixtures (`$DASHCRAFT_REFERENCE` overrides; §7): `examples/acme-outfitters/` (synthetic PBIP + CSV; its `blob-map.json` maps `AzureStorage.Blobs` URLs to the local CSVs), `samples/microsoft/` (MIT samples); `reference/README.md` says which test uses what |
 | `docs/` | `ARCHITECTURE`, `ROADMAP`, `GAPS`, `DEVLOG`, `CLI` (every flag and JSON schema), `COMMANDS` (generated), `USER-GUIDE`, `VISUALS` (per-visual support, render verification), `perf`, `ci` (CI, release, fuzzing), `packaging`, `MCP` (MCP server), `AI` (opt-in AI), `adr/`, `research/` (*Craft reviews) |
 | `FORMATS.md` | Format support matrix; update when a reader or data path changes |
 | `THIRD_PARTY_NOTICES.md`, `deny.toml` | Attribution for references and bundled assets (license inventory from `scripts/license-inventory.py`); `cargo-deny` license/advisory/source policy |
@@ -109,7 +110,7 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
    [ADR-0007](docs/adr/0007-command-registry.md)). The CLI subcommands, `dashcraft run`/`serve`, MCP
    (`dashcraft mcp`, [docs/MCP.md](docs/MCP.md)) and the app are thin adapters over
    `Registry::execute`.
-9. **Respect the layers** (§2). UI-toolkit crates only in `pbiview-app`; network and keychain crates
+9. **Respect the layers** (§2). UI-toolkit crates only in `dashcraft-app`; network and keychain crates
    (`ureq`, `keyring`) only in `pbi-ai` and the front ends that depend on it (`cargo xtask layers`
    checks both rules).
 10. **Don't touch the root `Cargo.toml` `[workspace.dependencies]`** unless you are the orchestrator or
@@ -238,21 +239,21 @@ cargo test -p pbi-render                           # incl. the 39 card values of
 # Golden images (SSIM only where reference/golden/<example>/<report>/<page>.png exists, else SKIP;
 # outputs in target/tmp/golden/)
 cargo test -p pbi-render --test golden -- --nocapture
-cargo run -p pbiview-cli -q -- render reference/examples/acme-outfitters/AcmeOutfitters.pbip \
+cargo run -p dashcraft-cli -q -- render reference/examples/acme-outfitters/AcmeOutfitters.pbip \
   --blob-map reference/examples/acme-outfitters/blob-map.json --report Overview \
   --png target/tmp/overview.png --force
 
-# Snapshot tests (insta: pbiview-cli `inspect --json`, pbi-session exports, pbi-render page renders)
-cargo test -p pbiview-cli --test cli       # a mismatch writes *.snap.new (gitignored)
+# Snapshot tests (insta: dashcraft-cli `inspect --json`, pbi-session exports, pbi-render page renders)
+cargo test -p dashcraft-cli --test cli       # a mismatch writes *.snap.new (gitignored)
 cargo insta review                         # accept after reading the diff (cargo install cargo-insta)
 
 # Command catalog (pbi-ops test `commands_md_is_up_to_date` fails when stale)
-cargo run -q -p pbiview-cli --bin dashcraft -- commands --markdown > docs/COMMANDS.md
+cargo run -q -p dashcraft-cli --bin dashcraft -- commands --markdown > docs/COMMANDS.md
 
 # App (CI `app` job; Linux needs the webkit2gtk-4.1 dev packages)
 (cd app && npm ci && npm run check && npm run build)   # build produces app/dist, embedded by Tauri
-cargo clippy -p pbiview-app --all-targets -- -D warnings
-cargo test -p pbiview-app                  # mock runtime, no window; also regenerates bindings.ts
+cargo clippy -p dashcraft-app --all-targets -- -D warnings
+cargo test -p dashcraft-app                  # mock runtime, no window; also regenerates bindings.ts
 (cd app && npm run bindings)               # after changing an IPC command or DTO; commit bindings.ts
 (cd app && npx tauri build --debug --no-bundle)        # debug app binary without installers
 
@@ -273,9 +274,9 @@ in existing test files.
 
 ### Fixtures and expected values
 
-Fixture root: `$PBIVIEW_REFERENCE`, else `<workspace>/reference`; [reference/README.md](reference/README.md)
-lists which tests use which files. The app reads a blob map from `DASHCRAFT_BLOB_MAP` (alias
-`PBIVIEW_BLOB_MAP`) at startup; the CLI takes `--blob-map`.
+Fixture root: `$DASHCRAFT_REFERENCE`, else `<workspace>/reference`; [reference/README.md](reference/README.md)
+lists which tests use which files. The app reads a blob map from `DASHCRAFT_BLOB_MAP` at startup;
+the CLI takes `--blob-map`.
 
 | Path | Committed | What |
 |---|---|---|
@@ -312,7 +313,7 @@ missing), docs and a CHANGELOG `[Unreleased]` line.
 - [ ] Affected perf scenarios run with no new `FAIL` or regression; expected-value asserts pass,
       render snapshot changes are intended and reviewed, and goldens pass where the optional golden
       images exist (say so in the report when they don't).
-- [ ] App changes: `npm run check`, `npm run build`, `cargo clippy -p pbiview-app`, bindings
+- [ ] App changes: `npm run check`, `npm run build`, `cargo clippy -p dashcraft-app`, bindings
       regenerated if IPC changed.
 - [ ] Docs updated where relevant: `FORMATS.md`, `docs/VISUALS.md`, `FUNCTIONS.md`, `docs/CLI.md`,
       `docs/ARCHITECTURE.md`, `docs/ROADMAP.md` (tick items), the `docs/GAPS.md` row (status,
@@ -342,12 +343,11 @@ hash once known and anything left open. Keep entries short; details go in the co
 - DashCraft is not affiliated with or endorsed by Microsoft, storytold/ArtCraft or any other
   product named "DashCraft"; the root [`NOTICE`](NOTICE) says so (linked from the README, shown
   in the app's About page and installed with it). Don't style the project like ArtCraft.
-- Crate names stay `pbi-*` / `pbiview-*`; user-facing names are DashCraft's
-  ([ADR-0009](docs/adr/0009-naming-dashcraft.md)): binary `dashcraft` with a `pbiview` alias,
-  app `dashcraft-app`, `DASHCRAFT_*` env vars with `PBIVIEW_*` aliases (the new name wins), MCP
-  server `dashcraft`. New user-facing variables get only the `DASHCRAFT_` prefix; developer and
-  test variables (`PBIVIEW_REFERENCE`, `PBIVIEW_BLESS`, `PBIVIEW_TEST_RECORD`) keep their names.
-  The name is reversible: ADR-0009 lists what a rename touches.
+- Names ([ADR-0009](docs/adr/0009-naming-dashcraft.md), [ADR-0010](docs/adr/0010-dashcraft-everywhere.md)):
+  binary `dashcraft`, app `dashcraft-app`, front-end crates `dashcraft-cli` / `dashcraft-app`,
+  library crates `pbi-*`, environment variables `DASHCRAFT_*`, export metadata keys and model
+  annotations `dashcraft.*`, MCP server `dashcraft`. No aliases under a former name. The name is
+  reversible: ADR-0009 lists what a rename touches.
 
 ## 11. Commits
 

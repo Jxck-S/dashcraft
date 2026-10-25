@@ -77,7 +77,7 @@ impl Default for AppState {
 }
 
 impl AppState {
-    /// State whose blob map comes from `DASHCRAFT_BLOB_MAP` (or `PBIVIEW_BLOB_MAP`), if set.
+    /// State whose blob map comes from `DASHCRAFT_BLOB_MAP`, if set.
     pub fn from_env() -> Self {
         Self::new(BlobMap::from_env())
     }

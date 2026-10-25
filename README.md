@@ -148,7 +148,7 @@ flag in [docs/CLI.md](docs/CLI.md).
 ```sh
 git clone https://github.com/Jxck-S/dashcraft
 cd dashcraft
-cargo build --release -p pbiview-cli                     # the dashcraft CLI
+cargo build --release -p dashcraft-cli                     # the dashcraft CLI
 target/release/dashcraft inspect path/to/report.pbix
 
 cd app && npm install

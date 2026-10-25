@@ -37,9 +37,9 @@ All settings live in one JSON file, `ai.json`, in the DashCraft configuration fo
 | Linux | `$XDG_CONFIG_HOME/dashcraft/ai.json` (else `~/.config/dashcraft/ai.json`) |
 | Windows | `%APPDATA%\dashcraft\ai.json` |
 
-`DASHCRAFT_CONFIG_DIR` (or `PBIVIEW_CONFIG_DIR`) overrides the folder. `dashcraft run ai.status` shows the path in use.
+`DASHCRAFT_CONFIG_DIR` overrides the folder. `dashcraft run ai.status` shows the path in use.
 
-The desktop app keeps its own `ai.json` in its configuration folder (macOS `~/Library/Application Support/io.github.jxck-s.dashcraft/`, Linux `$XDG_CONFIG_HOME/io.github.jxck-s.dashcraft/` or `~/.config/io.github.jxck-s.dashcraft/`, Windows `%APPDATA%\io.github.jxck-s.dashcraft\`), next to its recent-files list; with `DASHCRAFT_CONFIG_DIR` (or `PBIVIEW_CONFIG_DIR`) set, the app and the CLI share `$DASHCRAFT_CONFIG_DIR/ai.json`. API keys are shared either way: both use the same keychain entries. In the app everything below is done in **Options → AI** ([In the desktop app](#in-the-desktop-app)). The file never contains keys; a file or update that tries to add an `apiKey`, `token`, `secret` or similar field is refused.
+The desktop app keeps its own `ai.json` in its configuration folder (macOS `~/Library/Application Support/io.github.jxck-s.dashcraft/`, Linux `$XDG_CONFIG_HOME/io.github.jxck-s.dashcraft/` or `~/.config/io.github.jxck-s.dashcraft/`, Windows `%APPDATA%\io.github.jxck-s.dashcraft\`), next to its recent-files list; with `DASHCRAFT_CONFIG_DIR` set, the app and the CLI share `$DASHCRAFT_CONFIG_DIR/ai.json`. API keys are shared either way: both use the same keychain entries. In the app everything below is done in **Options → AI** ([In the desktop app](#in-the-desktop-app)). The file never contains keys; a file or update that tries to add an `apiKey`, `token`, `secret` or similar field is refused.
 
 Change settings with `ai.settings.set` (fields you leave out keep their value), or edit the file:
 
@@ -88,7 +88,7 @@ Keys are stored only in the OS keychain (macOS Keychain, Windows Credential Mana
 
 - on the command line: `dashcraft ai login` (prompts without echo);
 - in the app: File → Options and settings → Options → **AI** → **Set key…** next to the provider (a password field; the key goes to the keychain through `ai.apiKey.set` and is never shown again; **Clear key** runs `ai.apiKey.clear`);
-- for CI or headless machines without a keychain: the environment variable `DASHCRAFT_AI_API_KEY` (alias `PBIVIEW_AI_API_KEY`), used when the keychain has no key for the provider.
+- for CI or headless machines without a keychain: the environment variable `DASHCRAFT_AI_API_KEY`, used when the keychain has no key for the provider.
 
 `ai.apiKey.set` accepts a key in its parameters **only from the desktop app**; the CLI and RPC callers are refused so keys don't end up in shell history or logs. `ai.apiKey.clear` removes a stored key. Keys never appear in the settings file, logs, error messages, previews or results; provider error bodies are redacted before they are shown.
 
@@ -183,7 +183,7 @@ AI errors use the registry's codes with a stable `data.reason`:
 
 ## Command reference
 
-<!-- BEGIN GENERATED: ai commands (cargo test -p pbi-ai --test registry; PBIVIEW_BLESS=1 to update) -->
+<!-- BEGIN GENERATED: ai commands (cargo test -p pbi-ai --test registry; DASHCRAFT_BLESS=1 to update) -->
 
 ### `ai.status`
 

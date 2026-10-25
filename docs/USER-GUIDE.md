@@ -99,7 +99,7 @@ Opening a file loads its model, not its data (except for the cache, below). Data
 
 **Cached data.** The cache is Power BI Desktop's last refresh, so it can be older than the source. **Refresh from source** in the banner runs the M queries instead. Calculated objects missing from the cache are computed; a table missing from it fails with the CSV fallback.
 
-**Blob map.** DashCraft never reads Azure Blob Storage. M queries that call `AzureStorage.Blobs(url)` read local files listed in a `blob-map.json` instead. Pick it with Transform data ▾ → Data source settings → **Blob map…** (or File → Options and settings), or start the app with `DASHCRAFT_BLOB_MAP=<path>` (the former `PBIVIEW_BLOB_MAP` still works). It applies to the next refresh and lasts for the session; × stops using it. Without a map, those tables fail with an "offline" hint. Format (paths relative to the map; never put credentials in it):
+**Blob map.** DashCraft never reads Azure Blob Storage. M queries that call `AzureStorage.Blobs(url)` read local files listed in a `blob-map.json` instead. Pick it with Transform data ▾ → Data source settings → **Blob map…** (or File → Options and settings), or start the app with `DASHCRAFT_BLOB_MAP=<path>`. It applies to the next refresh and lasts for the session; × stops using it. Without a map, those tables fail with an "offline" hint. Format (paths relative to the map; never put credentials in it):
 
 ```json
 {
@@ -182,7 +182,7 @@ The app reads the files you open, the blob map and the CSVs you pick. It writes 
 
 ## CLI recipes
 
-The `dashcraft` CLI runs the same readers, engines and renderer headlessly (`pbiview`, the former name, is an alias of it). Build it with `cargo build --release -p pbiview-cli`. Exit codes: 0 success, 1 fatal error, 2 the input has errors (see [CLI.md](CLI.md#exit-codes)), which makes most commands usable as CI gates as they are.
+The `dashcraft` CLI runs the same readers, engines and renderer headlessly. Build it with `cargo build --release -p dashcraft-cli`. Exit codes: 0 success, 1 fatal error, 2 the input has errors (see [CLI.md](CLI.md#exit-codes)), which makes most commands usable as CI gates as they are.
 
 ### Inspect in CI
 

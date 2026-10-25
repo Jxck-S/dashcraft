@@ -15,12 +15,12 @@ use std::process::{Command, Output};
 
 use serde_json::{Value, json};
 
-fn pbiview(args: &[&str]) -> Output {
+fn dashcraft(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_dashcraft"))
         .args(args)
         .env_remove("RUST_LOG")
         .output()
-        .expect("run pbiview")
+        .expect("run dashcraft")
 }
 
 fn stdout(o: &Output) -> String {
@@ -43,7 +43,7 @@ fn assert_exit(o: &Output, code: i32) {
 
 fn tmp_dir() -> tempfile::TempDir {
     tempfile::Builder::new()
-        .prefix("pbiview-render-")
+        .prefix("dashcraft-render-")
         .tempdir_in(env!("CARGO_TARGET_TMPDIR"))
         .unwrap()
 }
@@ -267,7 +267,7 @@ fn png_is_deterministic_and_sized() {
         tmp.path().join("small.png"),
     );
     for out in [&a, &b] {
-        let o = pbiview(&["render", s(&pbip), "--png", s(out), "--now", NOW]);
+        let o = dashcraft(&["render", s(&pbip), "--png", s(out), "--now", NOW]);
         assert_exit(&o, 0);
         assert!(stdout(&o).contains("Overview"), "{}", stdout(&o));
     }
@@ -275,7 +275,7 @@ fn png_is_deterministic_and_sized() {
     assert_eq!(png_size(&bytes_a), (1280, 720), "640×360 page at --scale 2");
     assert!(bytes_a == bytes_b, "same inputs, different PNG bytes");
 
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "render",
         s(&pbip),
         "--png",
@@ -297,7 +297,7 @@ fn svg_shows_data_the_clock_and_slicer_selections() {
         let out = tmp.path().join(name);
         let mut args = vec!["render", s(&pbip), "--svg", s(&out)];
         args.extend_from_slice(extra);
-        let o = pbiview(&args);
+        let o = dashcraft(&args);
         assert_exit(&o, 0);
         fs::read_to_string(out).unwrap()
     };
@@ -331,7 +331,7 @@ fn json_reports_every_visual_and_errors_exit_2() {
     let tmp = tmp_dir();
     let pbip = mini_pbip(tmp.path());
     let dir = tmp.path().join("pages");
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "render",
         s(&pbip),
         "--out-dir",
@@ -429,12 +429,12 @@ fn existing_files_need_force() {
     let pbip = mini_pbip(tmp.path());
     let out = tmp.path().join("page.png");
     fs::write(&out, b"keep me").unwrap();
-    let o = pbiview(&["render", s(&pbip), "--png", s(&out)]);
+    let o = dashcraft(&["render", s(&pbip), "--png", s(&out)]);
     assert_exit(&o, 1);
     assert!(stderr(&o).contains("--force"), "{}", stderr(&o));
     assert_eq!(fs::read(&out).unwrap(), b"keep me");
 
-    let o = pbiview(&["render", s(&pbip), "--png", s(&out), "--force"]);
+    let o = dashcraft(&["render", s(&pbip), "--png", s(&out), "--force"]);
     assert_exit(&o, 0);
     assert_eq!(png_size(&fs::read(&out).unwrap()), (1280, 720));
 }
@@ -470,7 +470,7 @@ fn usage_errors_are_fatal() {
     for (extra, message) in cases {
         let mut args = vec!["render", s(&pbip)];
         args.extend_from_slice(extra);
-        let o = pbiview(&args);
+        let o = dashcraft(&args);
         assert_exit(&o, 1);
         assert!(
             stderr(&o).contains(message),
@@ -483,7 +483,7 @@ fn usage_errors_are_fatal() {
         "nothing is written on errors"
     );
 
-    let o = pbiview(&[
+    let o = dashcraft(&[
         "render",
         s(&tmp.path().join("missing.pbip")),
         "--png",
@@ -510,7 +510,7 @@ fn pages_are_found_by_name_index_and_default() {
         if let Some(p) = page {
             args.extend_from_slice(&["--page", p]);
         }
-        let o = pbiview(&args);
+        let o = dashcraft(&args);
         let json: Value = serde_json::from_str(&stdout(&o)).unwrap();
         assert_eq!(json["pages"][0]["displayName"], expected, "--page {page:?}");
     }

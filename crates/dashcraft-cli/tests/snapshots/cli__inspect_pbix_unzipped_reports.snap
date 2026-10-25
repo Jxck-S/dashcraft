@@ -1,5 +1,5 @@
 ---
-source: crates/pbiview-cli/tests/cli.rs
+source: crates/dashcraft-cli/tests/cli.rs
 expression: "pretty(&v[\"reports\"])"
 ---
 [

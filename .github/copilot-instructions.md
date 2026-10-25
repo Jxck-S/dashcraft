@@ -10,7 +10,7 @@ notes; if the two disagree, `AGENTS.md` wins (and fix the disagreement).
 
 | Topic | Section |
 |---|---|
-| What DashCraft is (internal crate names still say `pbi-*` / `pbiview-*`), phases and status | [AGENTS.md §1](../AGENTS.md#1-what-this-is), [docs/ROADMAP.md](../docs/ROADMAP.md) |
+| What DashCraft is (library crates are named `pbi-*`), phases and status | [AGENTS.md §1](../AGENTS.md#1-what-this-is), [docs/ROADMAP.md](../docs/ROADMAP.md) |
 | Crates, layers (`cargo xtask layers`), dependency edges, where files live | [AGENTS.md §2](../AGENTS.md#2-layer-map-and-where-things-live) |
 | Golden rules (clean-room, no real or internal report data, private data, credentials, offline, no execution, no panics, registry-first, layers, workspace deps, goldens, perf, determinism) | [AGENTS.md §3](../AGENTS.md#3-golden-rules) |
 | Architecture decisions (ADR-0001 … 0009), crate layers and dependency edges | [AGENTS.md §4](../AGENTS.md#4-architecture-decisions-summary), [docs/adr/](../docs/adr/README.md) |

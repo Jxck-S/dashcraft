@@ -42,10 +42,10 @@ use crate::session::Session;
 use crate::transforms::people::people_array;
 
 /// Annotation (`"true"`) on the synthetic model column of a derived column.
-pub const DERIVED_ANNOTATION: &str = "pbiview.derived";
+pub const DERIVED_ANNOTATION: &str = "dashcraft.derived";
 /// Annotation with the [`DerivedKind`] of a derived column (`people`,
 /// `expression`, `array`).
-pub const DERIVED_KIND_ANNOTATION: &str = "pbiview.derivedKind";
+pub const DERIVED_KIND_ANNOTATION: &str = "dashcraft.derivedKind";
 
 /// `true` if `column` is the synthetic model entry of a session derived
 /// column (annotation [`DERIVED_ANNOTATION`]` = true`). Such columns must not

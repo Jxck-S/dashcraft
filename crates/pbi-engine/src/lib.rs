@@ -1,4 +1,4 @@
-//! Storage engine of pbiview: Arrow columnar store, relationship indexes,
+//! Storage engine of DashCraft: Arrow columnar store, relationship indexes,
 //! filter-context propagation and storage-engine primitives, plus DataFusion
 //! for ad-hoc SQL and the explorer grid.
 //!

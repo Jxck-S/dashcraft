@@ -16,7 +16,7 @@ use pbi_tmdl::{
 use pretty_assertions::assert_eq;
 
 fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE")
+    std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference"))
 }

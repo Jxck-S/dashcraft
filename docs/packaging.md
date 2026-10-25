@@ -1,7 +1,7 @@
 # Packaging and releases
 
 How the DashCraft desktop app and the `dashcraft` CLI are bundled, signed, verified and published.
-Names follow [ADR-0009](adr/0009-naming-dashcraft.md) (DashCraft, formerly pbiview).
+Names follow [ADR-0009](adr/0009-naming-dashcraft.md) and [ADR-0010](adr/0010-dashcraft-everywhere.md).
 The CI side (jobs, permissions, caching) is in [ci.md](ci.md#releaseyml-tags-v); this page
 is the packaging reference.
 
@@ -21,7 +21,7 @@ version without the `v`; `<tag>` is the tag.
 | Linux x64, arm64 | `DashCraft_<ver>_amd64.AppImage`, `…_aarch64.AppImage` | Portable; `chmod +x` and run |
 | Linux x64, arm64 | `DashCraft_<ver>_amd64.deb`, `…_arm64.deb` | Debian/Ubuntu (package `dash-craft`, Tauri's kebab case of the product name; [why](#linux-package-name-dash-craft-decided)); registers MIME types and file associations |
 | Linux x64, arm64 | `DashCraft-<ver>-1.x86_64.rpm`, `DashCraft-<ver>-1.aarch64.rpm` | Fedora, RHEL, openSUSE; stable versions only (rpm versions can't contain `-`) |
-| CLI | `dashcraft-<tag>-<target>.tar.gz` (`.zip` on Windows) | `dashcraft` and its `pbiview` alias, `README.md`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, `THIRD_PARTY_LICENSES.txt` |
+| CLI | `dashcraft-<tag>-<target>.tar.gz` (`.zip` on Windows) | `dashcraft`, `README.md`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, `THIRD_PARTY_LICENSES.txt` |
 | All | `<file>.sha256` | One per binary artifact (`sha256sum -c` / `shasum -a 256 -c`) |
 | All | `SHA256SUMS.txt` | Checksums of every asset |
 | All | `dashcraft-<tag>-sbom.zip` | CycloneDX 1.5 SBOMs (see [below](#license-inventory-and-sbom)) |
@@ -42,14 +42,14 @@ Everything is in [`app/src-tauri/tauri.conf.json`](../app/src-tauri/tauri.conf.j
 | Setting | Value | Why |
 |---|---|---|
 | `productName` | `DashCraft` | App name, window title, `.app`/installer/menu names |
-| `mainBinaryName` | `dashcraft-app` | The GUI executable (`DashCraft.app/Contents/MacOS/dashcraft-app`, `dashcraft-app.exe`, `/usr/bin/dashcraft-app`); also the Cargo `[[bin]]` of the `pbiview-app` crate. Keeps `dashcraft` free for the CLI, so both can be on `PATH`. |
+| `mainBinaryName` | `dashcraft-app` | The GUI executable (`DashCraft.app/Contents/MacOS/dashcraft-app`, `dashcraft-app.exe`, `/usr/bin/dashcraft-app`); also the Cargo `[[bin]]` of the `dashcraft-app` crate. Keeps `dashcraft` free for the CLI, so both can be on `PATH`. |
 | `identifier` | `io.github.jxck-s.dashcraft` | Bundle ID (macOS), also used for the app config and data folders ([ADR-0009](adr/0009-naming-dashcraft.md)). Set before the first public release; changing it later moves File → Recent and `ai.json` to new folders, so it then needs a settings migration. |
-| `version` | *(not set)* | Taken from the `pbiview-app` crate, i.e. `[workspace.package] version` in the root `Cargo.toml`. The release workflow fails if the tag, `Cargo.toml` and `app/package.json` disagree. |
+| `version` | *(not set)* | Taken from the `dashcraft-app` crate, i.e. `[workspace.package] version` in the root `Cargo.toml`. The release workflow fails if the tag, `Cargo.toml` and `app/package.json` disagree. |
 | `bundle.targets` | `app`, `dmg`, `msi`, `nsis`, `appimage`, `deb` | Tauri builds the subset that applies to the host OS |
 | `bundle.icon` | `icons/*` | Generated from `icons/app-icon.svg` (see [Icons](#icons)) |
 | `bundle.resources` | `licenses/…` | `NOTICE` (trademark and non-affiliation notice), `THIRD_PARTY_NOTICES.md`, the Selawik `OFL.txt` (as `Selawik-OFL.txt`) and the Fluent UI System Icons MIT `LICENSE` (as `FluentUI-System-Icons-LICENSE.txt`). Release builds add `THIRD_PARTY_LICENSES.txt`. |
 | `bundle.fileAssociations` | `.pbix`, `.pbit`, `.pbip`, `.bim`, `.vpax` | Role *Viewer*, rank *Alternate* (see [File associations](#file-associations)) |
-| `bundle.windows.wix.upgradeCode` | `070cde76-…-f64f8824fa32` | Pinned (Tauri's default for the former name `pbiview`), so the rename to DashCraft is an MSI upgrade of an installed pbiview and later renames can't break upgrades either. NSIS, macOS and Linux installs of pbiview stay separate apps (remove them by hand). |
+| `bundle.windows.wix.upgradeCode` | `070cde76-…-f64f8824fa32` | Pinned, so a later product rename can't break MSI upgrades |
 | `bundle.windows.nsis.installMode` | `currentUser` | NSIS installs per user without admin rights; use the MSI for machine-wide installs |
 | `bundle.linux.deb`, `bundle.linux.appimage` | `desktopTemplate`, `files` | `.desktop` file (`DashCraft.desktop`) with `Exec=dashcraft-app %F` (the AppImage reuses the deb's), and the shared-mime-info XML at `/usr/share/mime/packages/dashcraft.xml` (both in [`scripts/packaging/linux/`](../scripts/packaging/linux/)) |
 
@@ -118,7 +118,6 @@ own name and MIME type):
 | `.bim` | Tabular model (BIM) | `application/x-dashcraft-bim` (json) |
 | `.vpax` | VertiPaq Analyzer export (VPAX) | `application/x-dashcraft-vpax` (zip) |
 
-(`application/x-pbiview-*` before the rename.)
 
 DashCraft registers as a **viewer**. It doesn't try to become the default app where another
 one (Power BI Desktop, Tabular Editor) owns the type:
@@ -199,8 +198,8 @@ binaries need at least the build host's glibc.
 ### CLI
 
 ```sh
-cargo build --release --locked -p pbiview-cli         # target/release/dashcraft and pbiview (alias)
-cargo build --release --locked -p pbiview-cli --target x86_64-apple-darwin
+cargo build --release --locked -p dashcraft-cli         # target/release/dashcraft
+cargo build --release --locked -p dashcraft-cli --target x86_64-apple-darwin
 ```
 
 ### Release-identical local build
@@ -259,18 +258,8 @@ xdg-mime query filetype report.pbix                    # after installing the de
 `shasum -a 256 -c DashCraft_<ver>_aarch64.dmg.sha256` (macOS).
 
 **Provenance:** when attestations are enabled (public repository, or the repository variable
-`PBIVIEW_ATTEST=true` on GitHub Enterprise Cloud), run
+`DASHCRAFT_ATTEST=true` on GitHub Enterprise Cloud), run
 `gh attestation verify <file> -R <owner>/<repo>`.
-
-### Local result (macOS arm64, v0.1.0 config, before the rename)
-
-| Check | Result |
-|---|---|
-| `pbiview.app` | 94.7 MiB; `pbiview-app` Mach-O arm64 |
-| `pbiview_0.1.0_aarch64.dmg` | 30.3 MiB; `hdiutil verify` VALID; mounts with `pbiview.app` and the `Applications` link |
-| `codesign` | `Signature=adhoc`, `flags=adhoc,runtime`, valid on disk; `spctl` rejected (expected without notarization) |
-| `Info.plist` | `CFBundleExecutable=pbiview-app`, 5 `CFBundleDocumentTypes` (Viewer, Alternate), `LSMinimumSystemVersion=10.13` |
-| CLI `target/release/pbiview` | 28.5 MB arm64; `--version` and `inspect … --json` OK |
 
 The app binary is larger than the CLI because of symbols. Setting
 `CARGO_PROFILE_RELEASE_STRIP=symbols` saves about 17 MB, but release backtraces then lose
@@ -308,7 +297,7 @@ Jobs:
 | `prepare` | ubuntu-latest | Resolves the version: a pushed tag must match `Cargo.toml` and `app/package.json`; a manual run takes `Cargo.toml` or the `version` input. Extracts the release notes (a stable tag needs a CHANGELOG section; pre-releases fall back to `[Unreleased]`). Regenerates the license inventory and `THIRD_PARTY_LICENSES.txt`. Builds the SBOM zip. |
 | `create-release` | ubuntu-latest | On a manual run, creates the tag. Creates or updates the draft (refuses if the tag's release is already published). Uploads notices, licenses and the SBOM zip. |
 | `bundle` ×6 | macos-14 (arm64, x64), windows-latest (x64), windows-11-arm (arm64), ubuntu-22.04 (x64), ubuntu-22.04-arm (arm64) | `tauri build --ci --target … --bundles …` with the release resources config, optional signing, *Verify bundles*, `.sha256` files, upload |
-| `cli` ×6 | same | `cargo build --release -p pbiview-cli` (`dashcraft` and the `pbiview` alias), smoke test (`--version` of both, `inspect` on the committed Acme Outfitters example PBIP), archive + `.sha256`, upload |
+| `cli` ×6 | same | `cargo build --release -p dashcraft-cli` (`dashcraft`), smoke test (`--version`, `inspect` on the committed Acme Outfitters example PBIP), archive + `.sha256`, upload |
 | `finalize` | ubuntu-latest | `SHA256SUMS.txt` of all assets, optional build-provenance attestation |
 
 Pre-release versions: WiX only accepts a numeric pre-release (`1.2.0-1`). For any other
@@ -389,7 +378,7 @@ it needs `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` se
 library only) regenerates two marked blocks in
 [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md):
 
-- **Rust:** `cargo tree -e normal --locked` from `pbiview-cli` and `pbiview-app` for the four
+- **Rust:** `cargo tree -e normal --locked` from `dashcraft-cli` and `dashcraft-app` for the four
   release targets. That is every crate compiled into a shipped binary, including
   proc-macros; build-only and dev-only dependencies are excluded. Each row has crate,
   versions, SPDX expression and repository, and a summary counts crates per license.
@@ -418,7 +407,7 @@ Local builds ship only the notices.
 
 **SBOMs** (`dashcraft-<tag>-sbom.zip`, CycloneDX 1.5 JSON):
 
-- `dashcraft_bin_<target>.cdx.json`, `pbiview_bin_<target>.cdx.json` (the alias) and `dashcraft-app_bin_<target>.cdx.json`: one per binary
+- `dashcraft_bin_<target>.cdx.json`, `dashcraft_bin_<target>.cdx.json` (the alias) and `dashcraft-app_bin_<target>.cdx.json`: one per binary
   and target. Made with [`cargo-cyclonedx`](https://github.com/CycloneDX/cyclonedx-rust-cargo)
   (Apache-2.0, maintained by the CycloneDX project), `--describe binaries --no-build-deps`,
   with timestamps pinned to the commit (`SOURCE_DATE_EPOCH`).

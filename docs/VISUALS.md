@@ -9,7 +9,7 @@ Contents: [pipeline](#pipeline) · [common behaviour](#common-behaviour) · [con
 1. **Query** (`pbi_render::query`): the visual's `queryState` projections, report/page/visual filters, other slicers' selections and another visual's selected data points (per the page's `visualInteractions`) become `EVALUATE SUMMARIZECOLUMNS(…)` (or `ROW(…)`) run by `pbi-dax`. Inputs of [conditional formatting](#conditional-formatting) rules that are not in the visual are added as hidden values. The result is a Power BI-shaped **DataView** (`Single`, `Categorical`, `Table`, `Matrix`) with formatted cells (each with its [effective format string](#dynamic-format-strings)).
 2. **Layout** (`pbi_render::layout`): page scaling (`FitToPage`, `FitToWidth`, `ActualSize`), paint order (z, then tab order), groups, and each visual's container (border, title, padding) → a content box.
 3. **Draw** (`pbi_render::visuals`): `render_visual` dispatches on `visualType` and draws into a scene graph in page units, with theme lookups (`pbi_render::theme`) and text measured with the bundled fonts (`pbi_render::text`).
-4. **Output**: deterministic SVG (`pbi_render::svg`, used by the app) or PNG (`pbi_render::png`, resvg; used by `pbiview render` and the golden tests). Interactive elements carry hit ids (`data-hit` in SVG).
+4. **Output**: deterministic SVG (`pbi_render::svg`, used by the app) or PNG (`pbi_render::png`, resvg; used by `dashcraft render` and the golden tests). Interactive elements carry hit ids (`data-hit` in SVG).
 
 Support levels used below: **Full** — the common formatting objects are honoured and the layout follows the service; **Partial** — the common options render, gaps are listed; **Placeholder** — a light box with the visual type and its bound fields (`Role: field, field`).
 
@@ -59,7 +59,7 @@ Measured with `cargo run --release -p pbi-render --example bench_scroll` on a 25
 
 | State | Drawing |
 |---|---|
-| Query error (unknown field, unsupported DAX function, cancelled, …) | ⚠ icon and "Can't display this visual"; the app tooltip shows the message and the failing measure's DAX. `pbiview render` reports it and exits 2 |
+| Query error (unknown field, unsupported DAX function, cancelled, …) | ⚠ icon and "Can't display this visual"; the app tooltip shows the message and the failing measure's DAX. `dashcraft render` reports it and exits 2 |
 | Filter that cannot be applied (relative date, …) | the visual renders without it; the warning is listed in `render --json` (`warnings[]`) |
 | Data cut at the query limits (30,000 rows; 1,000 categories; 60 series) | charts show a small "i" badge in the top-right corner of the plot; every visual reports `truncated` in `render --json` |
 | BLANK | empty in value cells; `(Blank)` in single-value cards and in category, slicer and matrix header cells |

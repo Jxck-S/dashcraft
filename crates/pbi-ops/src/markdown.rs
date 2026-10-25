@@ -10,12 +10,12 @@ use crate::error::OpErrorCode;
 use crate::registry::Registry;
 
 const HEADER: &str = r#"<!-- Generated from the command registry (crates/pbi-ops). Do not edit by hand:
-     cargo run -q -p pbiview-cli --bin dashcraft -- commands --markdown > docs/COMMANDS.md
+     cargo run -q -p dashcraft-cli --bin dashcraft -- commands --markdown > docs/COMMANDS.md
      (the pbi-ops test `commands_md_is_up_to_date` fails when this file is stale). -->
 
 # Command catalog
 
-Every DashCraft capability is a **command**: a stable dotted id, typed parameters and a typed result, both described by JSON Schema (draft 2020-12). The CLI (`dashcraft run`, `dashcraft serve`, `dashcraft mcp`), the desktop app and AI agents (MCP) all run the same commands through one registry (`pbi-ops`, [ADR-0007](adr/0007-command-registry.md)). `pbiview` is an alias of the `dashcraft` binary.
+Every DashCraft capability is a **command**: a stable dotted id, typed parameters and a typed result, both described by JSON Schema (draft 2020-12). The CLI (`dashcraft run`, `dashcraft serve`, `dashcraft mcp`), the desktop app and AI agents (MCP) all run the same commands through one registry (`pbi-ops`, [ADR-0007](adr/0007-command-registry.md)).
 
 ## Running commands
 

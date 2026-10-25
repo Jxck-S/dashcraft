@@ -143,7 +143,7 @@ jobs:
             echo
             echo "---"
             echo
-            echo "**Downloads:** macOS \`.dmg\` (arm64 and x64), Windows x64 \`.msi\` / \`-setup.exe\` and arm64 \`-setup.exe\`, Linux x64 and arm64 \`.AppImage\` / \`.deb\` / \`.rpm\`, and the \`dashcraft\` CLI (with its \`pbiview\` alias) as \`.tar.gz\` / \`.zip\` per platform. Every file has a \`.sha256\`; \`SHA256SUMS.txt\` lists them all. SBOMs (CycloneDX) are in \`dashcraft-*-sbom.zip\`; licenses in \`THIRD_PARTY_NOTICES.md\` and \`THIRD_PARTY_LICENSES.txt\`; trademark and non-affiliation notice in \`NOTICE\`."
+            echo "**Downloads:** macOS \`.dmg\` (arm64 and x64), Windows x64 \`.msi\` / \`-setup.exe\` and arm64 \`-setup.exe\`, Linux x64 and arm64 \`.AppImage\` / \`.deb\` / \`.rpm\`, and the \`dashcraft\` CLI as \`.tar.gz\` / \`.zip\` per platform. Every file has a \`.sha256\`; \`SHA256SUMS.txt\` lists them all. SBOMs (CycloneDX) are in \`dashcraft-*-sbom.zip\`; licenses in \`THIRD_PARTY_NOTICES.md\` and \`THIRD_PARTY_LICENSES.txt\`; trademark and non-affiliation notice in \`NOTICE\`."
             echo
             if [ "$HAS_APPLE_SIGNING" != true ] || [ "$HAS_APPLE_NOTARIZATION" != true ]; then
               echo "- macOS builds are **not notarized**: on first launch, allow it under System Settings → Privacy & Security → Open Anyway, or run \`xattr -dr com.apple.quarantine /Applications/DashCraft.app\`."
@@ -195,7 +195,7 @@ jobs:
         run: |
           SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
           export SOURCE_DATE_EPOCH
-          # One SBOM per shipped binary (dashcraft, its pbiview alias, dashcraft-app) and release target;
+          # One SBOM per shipped binary (dashcraft, dashcraft-app) and release target;
           # no build/dev deps.
           for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc \
             x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
@@ -425,17 +425,17 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           {
-            echo "APPLE_CERTIFICATE<<__PBIVIEW_EOF__"
+            echo "APPLE_CERTIFICATE<<__DASHCRAFT_EOF__"
             echo "$APPLE_CERTIFICATE"
-            echo "__PBIVIEW_EOF__"
-            echo "APPLE_CERTIFICATE_PASSWORD<<__PBIVIEW_EOF__"
+            echo "__DASHCRAFT_EOF__"
+            echo "APPLE_CERTIFICATE_PASSWORD<<__DASHCRAFT_EOF__"
             echo "$APPLE_CERTIFICATE_PASSWORD"
-            echo "__PBIVIEW_EOF__"
+            echo "__DASHCRAFT_EOF__"
             # Optional: inferred from the certificate when not set.
             if [ -n "$APPLE_SIGNING_IDENTITY" ]; then
-              echo "APPLE_SIGNING_IDENTITY<<__PBIVIEW_EOF__"
+              echo "APPLE_SIGNING_IDENTITY<<__DASHCRAFT_EOF__"
               echo "$APPLE_SIGNING_IDENTITY"
-              echo "__PBIVIEW_EOF__"
+              echo "__DASHCRAFT_EOF__"
             fi
           } >> "$GITHUB_ENV"
 
@@ -639,10 +639,10 @@ jobs:
           name: licenses
           path: dist/licenses
 
-      - name: Build DashCraft CLI (dashcraft + pbiview alias)
+      - name: Build DashCraft CLI (dashcraft)
         env:
           RUSTFLAGS: ${{ matrix.rustflags }}
-        run: cargo build --release --locked -p pbiview-cli --target ${{ matrix.target }}
+        run: cargo build --release --locked -p dashcraft-cli --target ${{ matrix.target }}
 
       - name: Smoke test
         if: matrix.target != 'x86_64-apple-darwin' # cross-compiled; Rosetta may be absent
@@ -652,7 +652,6 @@ jobs:
         run: |
           "target/$TARGET/release/dashcraft" --version
           "target/$TARGET/release/dashcraft" inspect reference/examples/acme-outfitters/AcmeOutfitters.pbip --json > /dev/null
-          "target/$TARGET/release/pbiview" --version | grep -q '^pbiview '
 
       - name: Package
         shell: bash
@@ -664,7 +663,7 @@ jobs:
           ext=""
           if [ "$RUNNER_OS" = "Windows" ]; then ext=.exe; fi
           mkdir -p "dist/$name" dist/cli
-          cp "target/$TARGET/release/dashcraft$ext" "target/$TARGET/release/pbiview$ext" \
+          cp "target/$TARGET/release/dashcraft$ext" \
             README.md NOTICE dist/licenses/* "dist/$name/"
           cd dist
           if [ "$RUNNER_OS" = "Windows" ]; then
@@ -742,8 +741,8 @@ jobs:
         run: gh release upload "$TAG" dist/SHA256SUMS.txt --clobber
 
       # Build provenance (Sigstore). Public repos, or private repos on GitHub Enterprise Cloud
-      # with the repository variable PBIVIEW_ATTEST=true. Verify: gh attestation verify <file> -R <repo>
+      # with the repository variable DASHCRAFT_ATTEST=true. Verify: gh attestation verify <file> -R <repo>
       - uses: actions/attest-build-provenance@v4
-        if: needs.prepare.outputs.publish == 'true' && (!github.event.repository.private || vars.PBIVIEW_ATTEST == 'true')
+        if: needs.prepare.outputs.publish == 'true' && (!github.event.repository.private || vars.DASHCRAFT_ATTEST == 'true')
         with:
           subject-checksums: dist/SHA256SUMS.txt

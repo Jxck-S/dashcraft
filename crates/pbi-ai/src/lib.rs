@@ -18,8 +18,8 @@
 //!   [`Ollama`] (blocking `ureq` + rustls off the async runtime, cancellable) and
 //!   [`MockProvider`].
 //! - **Keys** only in the OS keychain (service `dashcraft`, account
-//!   `ai:<provider-id>`, [`store_api_key`]) or `DASHCRAFT_AI_API_KEY`
-//!   (`PBIVIEW_AI_API_KEY`); never in settings, logs, errors, previews or
+//!   `ai:<provider-id>`, [`store_api_key`]) or `DASHCRAFT_AI_API_KEY`;
+//!   never in settings, logs, errors, previews or
 //!   outputs ([`Redactor`]).
 //! - **Untrusted metadata.** Prompts are versioned templates
 //!   (`prompts/*.md`); model metadata is JSON-escaped inside delimited
@@ -70,8 +70,8 @@ pub use provider::{
     MockReply, Ollama, OpenAiCompatible, Provider, ProviderFactory, ResponseSchema, Role, Usage,
 };
 pub use secrets::{
-    API_KEY_ENV, API_KEY_ENV_ALIAS, KEYRING_SERVICE, KeySource, KeychainStore, MemorySecretStore,
-    Redactor, Secret, SecretStore,
+    API_KEY_ENV, KEYRING_SERVICE, KeySource, KeychainStore, MemorySecretStore, Redactor, Secret,
+    SecretStore,
 };
 pub use service::CallInfo;
 pub use settings::{

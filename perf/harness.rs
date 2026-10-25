@@ -40,7 +40,7 @@ impl Args {
             scenarios: Vec::new(),
             warmup: 2,
             iterations: 10,
-            reference: std::env::var_os("PBIVIEW_REFERENCE")
+            reference: std::env::var_os("DASHCRAFT_REFERENCE")
                 .map(PathBuf::from)
                 .unwrap_or_else(|| Path::new(manifest_dir).join("../../reference")),
             list: false,

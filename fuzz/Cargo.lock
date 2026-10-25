@@ -467,6 +467,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashcraft-fuzz"
+version = "0.0.0"
+dependencies = [
+ "arbitrary",
+ "chrono",
+ "indexmap",
+ "libfuzzer-sys",
+ "pbi-core",
+ "pbi-dax",
+ "pbi-m",
+ "pbi-model",
+ "pbi-pbir",
+ "pbi-session",
+ "pbi-tmdl",
+ "pbi-tmsl",
+ "pbi-vertipaq",
+ "serde",
+ "serde_json",
+ "zip",
+]
+
+[[package]]
 name = "dashmap"
 version = "6.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1895,7 +1917,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-core"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "encoding_rs",
  "indexmap",
@@ -1906,6 +1928,7 @@ dependencies = [
  "pbi-tmdl",
  "pbi-tmsl",
  "pbi-vertipaq",
+ "roxmltree",
  "serde",
  "serde_json",
  "thiserror",
@@ -1916,7 +1939,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-dax"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "arrow",
  "chrono",
@@ -1929,7 +1952,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-engine"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "arrow",
  "datafusion",
@@ -1943,7 +1966,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-m"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "arrow",
  "chrono",
@@ -1958,7 +1981,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-model"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "indexmap",
  "serde",
@@ -1968,7 +1991,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-pbir"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "encoding_rs",
  "indexmap",
@@ -1980,7 +2003,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-session"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "arrow",
  "chrono",
@@ -2004,7 +2027,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-tmdl"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "indexmap",
  "pbi-model",
@@ -2013,7 +2036,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-tmsl"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "encoding_rs",
  "indexmap",
@@ -2025,7 +2048,7 @@ dependencies = [
 
 [[package]]
 name = "pbi-vertipaq"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "arrow",
  "encoding_rs",
@@ -2035,28 +2058,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tracing",
-]
-
-[[package]]
-name = "pbiview-fuzz"
-version = "0.0.0"
-dependencies = [
- "arbitrary",
- "chrono",
- "indexmap",
- "libfuzzer-sys",
- "pbi-core",
- "pbi-dax",
- "pbi-m",
- "pbi-model",
- "pbi-pbir",
- "pbi-session",
- "pbi-tmdl",
- "pbi-tmsl",
- "pbi-vertipaq",
- "serde",
- "serde_json",
- "zip",
 ]
 
 [[package]]

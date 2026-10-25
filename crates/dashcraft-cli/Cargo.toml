@@ -1,6 +1,6 @@
 [package]
-name = "pbiview-cli"
-description = "DashCraft command-line interface (`dashcraft`, alias `pbiview`)"
+name = "dashcraft-cli"
+description = "DashCraft command-line interface (`dashcraft`)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,17 +9,12 @@ publish.workspace = true
 default-run = "dashcraft"
 
 [lib]
-name = "pbiview_cli"
+name = "dashcraft_cli"
 path = "src/lib.rs"
 
 [[bin]]
 name = "dashcraft"
 path = "src/bin/dashcraft.rs"
-
-# Alias under the former product name: the same program (`run_main`).
-[[bin]]
-name = "pbiview"
-path = "src/bin/pbiview.rs"
 
 [lints]
 workspace = true

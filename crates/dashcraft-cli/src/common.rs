@@ -5,31 +5,15 @@ use std::fs::{self, File};
 use std::io::{self, BufWriter, Write};
 use std::path::Path;
 use std::process::ExitCode;
-use std::sync::OnceLock;
 
 use anyhow::{Context as _, anyhow};
 use pbi_core::{CoreError, OpenOptions, OpenedDocument, open_path};
 use pbi_model::{Document, Severity};
 use serde::Serialize;
 
-/// The program's name: `pbiview` when invoked through the alias binary
-/// (the former product name), else `dashcraft`. Used in usage, help,
-/// `--version` and every message on stderr.
-pub fn prog() -> &'static str {
-    static NAME: OnceLock<&'static str> = OnceLock::new();
-    NAME.get_or_init(|| prog_from_arg0(std::env::args_os().next().as_deref()))
-}
-
-fn prog_from_arg0(arg0: Option<&std::ffi::OsStr>) -> &'static str {
-    let stem = arg0
-        .map(Path::new)
-        .and_then(Path::file_stem)
-        .map(|s| s.to_string_lossy().to_ascii_lowercase());
-    if stem.as_deref() == Some("pbiview") {
-        "pbiview"
-    } else {
-        "dashcraft"
-    }
+/// The program's name, used in usage, help, `--version` and every message on stderr.
+pub const fn prog() -> &'static str {
+    "dashcraft"
 }
 
 /// Global flags, available to every subcommand.
@@ -258,16 +242,5 @@ mod tests {
         assert_eq!(first_line("\n  let\n  Source = 1\nin Source", 80), "let …");
         assert_eq!(first_line("one line", 4), "one…");
         assert_eq!(first_line("", 10), "");
-    }
-
-    #[test]
-    fn program_name_follows_the_invoked_binary() {
-        use std::ffi::OsStr;
-        let name = |arg0: &str| prog_from_arg0(Some(OsStr::new(arg0)));
-        assert_eq!(name("/usr/local/bin/pbiview"), "pbiview");
-        assert_eq!(name("PBIVIEW.EXE"), "pbiview");
-        assert_eq!(name("target/debug/dashcraft"), "dashcraft");
-        assert_eq!(name("pbiview-app"), "dashcraft");
-        assert_eq!(prog_from_arg0(None), "dashcraft");
     }
 }

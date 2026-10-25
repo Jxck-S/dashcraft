@@ -204,7 +204,7 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     /// Regenerates `app/src/lib/bindings.ts` from the registered commands and types.
-    /// Run via `npm run bindings` (or `cargo test -p pbiview-app export_bindings`) after
+    /// Run via `npm run bindings` (or `cargo test -p dashcraft-app export_bindings`) after
     /// changing any command signature; commit the result.
     #[test]
     fn export_bindings() {
@@ -326,9 +326,9 @@ mod tests {
         .unwrap()
     }
 
-    /// Fixture root: `$PBIVIEW_REFERENCE`, else `<workspace>/reference`.
+    /// Fixture root: `$DASHCRAFT_REFERENCE`, else `<workspace>/reference`.
     fn reference() -> PathBuf {
-        std::env::var_os("PBIVIEW_REFERENCE").map_or_else(
+        std::env::var_os("DASHCRAFT_REFERENCE").map_or_else(
             || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference"),
             PathBuf::from,
         )

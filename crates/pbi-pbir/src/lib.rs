@@ -1,4 +1,4 @@
-//! PBIR / PBIR-Legacy / PBIX `Layout` report definitions for pbiview.
+//! PBIR / PBIR-Legacy / PBIX `Layout` report definitions for DashCraft.
 //!
 //! # Formats
 //!

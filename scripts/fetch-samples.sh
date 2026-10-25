@@ -7,7 +7,7 @@
 #
 # Every file is pinned to one upstream commit and checked against its SHA-256.
 # Files that are already present with the right hash are left alone, so the
-# script is idempotent. Fixture root: $PBIVIEW_REFERENCE, else <repo>/reference.
+# script is idempotent. Fixture root: $DASHCRAFT_REFERENCE, else <repo>/reference.
 # Needs curl and one of sha256sum, shasum or openssl. Exit status 1 on any error.
 
 set -eu
@@ -61,7 +61,7 @@ else
 fi
 
 ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-REF=${PBIVIEW_REFERENCE:-$ROOT/reference}
+REF=${DASHCRAFT_REFERENCE:-$ROOT/reference}
 SAMPLES="$REF/samples"
 
 PART=""

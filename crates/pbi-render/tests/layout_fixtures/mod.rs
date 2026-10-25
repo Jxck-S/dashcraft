@@ -20,9 +20,9 @@ pub const STORE_DETAIL: &str = "50c645140e8e10eea677";
 /// Stores report, page "Store Tooltip" (ActualSize tooltip page, 320×240).
 pub const STORE_TOOLTIP: &str = "58db5b3f75d059fec1fb";
 
-/// `$PBIVIEW_REFERENCE`, else `<workspace>/reference`.
+/// `$DASHCRAFT_REFERENCE`, else `<workspace>/reference`.
 pub fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE").map_or_else(
+    std::env::var_os("DASHCRAFT_REFERENCE").map_or_else(
         || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference"),
         PathBuf::from,
     )

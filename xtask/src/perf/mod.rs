@@ -39,7 +39,7 @@ options:
   --list                list the scenarios and exit
   --warmup <N>          override the warmup count of every scenario
   --iterations <N>      override the iteration count of every scenario
-  --reference <DIR>     fixture root (default: $PBIVIEW_REFERENCE, else ./reference)
+  --reference <DIR>     fixture root (default: $DASHCRAFT_REFERENCE, else ./reference)
   --update-baseline     record the results as this machine's baseline (regressions do not fail)
   --json                print the JSON report on stdout (the table goes to stderr)
   --no-fail             exit 0 even when a scenario fails its budget or regresses
@@ -130,7 +130,7 @@ pub fn main(args: &[String]) -> Result<bool> {
     let reference = opts
         .reference
         .clone()
-        .or_else(|| std::env::var_os("PBIVIEW_REFERENCE").map(PathBuf::from))
+        .or_else(|| std::env::var_os("DASHCRAFT_REFERENCE").map(PathBuf::from))
         .unwrap_or_else(|| root.join("reference"));
     let target_dir = target_dir()?;
     let exes = build(&budgets, opts.locked)?;
@@ -377,7 +377,7 @@ fn run_once(exe: &Path, id: &str, warmup: usize, iterations: usize, reference: &
         .args(["--iterations", &iterations.to_string()])
         .arg("--reference")
         .arg(reference)
-        .env("PBIVIEW_REFERENCE", reference)
+        .env("DASHCRAFT_REFERENCE", reference)
         .current_dir(util::workspace_root())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())

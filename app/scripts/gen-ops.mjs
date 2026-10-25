@@ -13,8 +13,8 @@ import { fileURLToPath } from 'node:url'
 const write = process.argv.includes('--write')
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const env = { ...process.env }
-if (write) env.PBIVIEW_BLESS = '1'
-else delete env.PBIVIEW_BLESS
+if (write) env.DASHCRAFT_BLESS = '1'
+else delete env.DASHCRAFT_BLESS
 const result = spawnSync('cargo', ['test', '-q', '-p', 'pbi-ai', '--test', 'registry', '--', 'ops_typescript_is_up_to_date', '--exact'], {
   cwd: root,
   env,

@@ -41,18 +41,18 @@ flowchart LR
 6. **Layout, theme and text** (`pbi-render::layout`, `theme`, `text`). Page scaling, paint order, groups and container chrome from `visualContainerObjects`; theme resolution with Power BI's precedence; text shaped and measured with `cosmic-text` over the bundled Selawik faces only.
 7. **Visuals → scene** (`pbi-render::visuals`, `scene`). `render_visual` dispatches on `visualType`; each built-in visual draws its content into a retained scene graph (groups with transforms, clips, opacity and hit ids; rects, paths, lines, laid-out text lines, data-URI images). Unknown types draw a placeholder. Nothing panics.
 8. **Output** (`pbi-render::svg`, `png`). The scene serializes to deterministic SVG (sorted attributes, rounded numbers, sequential clip ids, XML-escaped text, `data-hit` attributes) and rasterizes to PNG through `usvg`/`resvg`/`tiny-skia` with only the bundled fonts and `data:` images, so the same inputs give the same bytes on every OS.
-9. **Front ends.** Every front end is an adapter over the command registry (`pbi-ops`, below). The CLI (`pbiview-cli`, binaries `dashcraft` and its `pbiview` alias) drives the session and renderer on a blocking Tokio runtime for its classic subcommands and runs registry commands for `run`, `serve` and `mcp`. The app (`pbiview-app`, binary `dashcraft-app`, Tauri 2) holds one `pbi_ops::Workspace`; documents, refresh, grid pages, DAX, measures and the interactive canvas (per page `InteractionState` and view state, [ADR-0006](adr/0006-interaction-state.md)) run through one generic `ops_execute` IPC command → `Registry::execute`. Canvas renders return SVG, which the Svelte front end sanitizes with `DOMParser` before inserting it, then maps pointer events on `data-hit` groups back to `canvas.click`, `canvas.scroll` and `canvas.tooltip` commands.
+9. **Front ends.** Every front end is an adapter over the command registry (`pbi-ops`, below). The CLI (`dashcraft-cli`, binary `dashcraft`) drives the session and renderer on a blocking Tokio runtime for its classic subcommands and runs registry commands for `run`, `serve` and `mcp`. The app (`dashcraft-app`, binary `dashcraft-app`, Tauri 2) holds one `pbi_ops::Workspace`; documents, refresh, grid pages, DAX, measures and the interactive canvas (per page `InteractionState` and view state, [ADR-0006](adr/0006-interaction-state.md)) run through one generic `ops_execute` IPC command → `Registry::execute`. Canvas renders return SVG, which the Svelte front end sanitizes with `DOMParser` before inserting it, then maps pointer events on `data-hit` groups back to `canvas.click`, `canvas.scroll` and `canvas.tooltip` commands.
 
 ## Crate graph
 
 ```mermaid
 graph TD
-  cli["pbiview-cli (dashcraft)"] --> ops[pbi-ops]
+  cli["dashcraft-cli (dashcraft)"] --> ops[pbi-ops]
   cli --> ai["pbi-ai (opt-in AI; the only HTTP/TLS and keychain user)"]
   cli --> core[pbi-core]
   cli --> session[pbi-session]
   cli --> render[pbi-render]
-  app["pbiview-app (dashcraft-app)"] --> ops
+  app["dashcraft-app (dashcraft-app)"] --> ops
   app --> ai
   app --> core
   app --> session
@@ -108,8 +108,8 @@ Taken from the crates' `Cargo.toml` files (normal dependencies). Every crate exc
 | `pbi-render` | Theme, layout, text, visual queries, DataView, built-in visuals, scene, SVG, PNG, golden-image comparison | `query_page_data`, `render_report_page`, `render_interactive_page`, `svg::to_svg`, `png`, `golden` |
 | `pbi-ops` | Command registry: every capability as a typed, JSON-Schema-described command (`doc.open`, `measures.values`, `render.page`, `canvas.click`, …) shared by the CLI, the RPC server, the app and agents; workspace of open documents, path policy, batches, JSON-lines RPC; the shared `inspect`/`detect` JSON schemas | `Registry`, `Command`, `Workspace`, `Ctx`, `OpError`, `PathPolicy`, `rpc::serve` |
 | `pbi-ai` | Opt-in AI layer ([ADR-0008](adr/0008-ai-layer.md)): `ai.*` registry commands, provider adapters (OpenAI-compatible, Azure OpenAI, Ollama), settings, per-provider consent, keychain-only keys; the only crate with network and keychain access | `register`, `ai_catalog`, `store_api_key` |
-| `pbiview-cli` | The `dashcraft` binary (and its `pbiview` alias, [ADR-0009](adr/0009-naming-dashcraft.md)) and its stable JSON schemas; `src/lib.rs` holds the program (`run_main`), `src/bin/` the two entry points | `inspect`, `lint`, `refresh`, `measures`, `export`, `render`, `commands`, `run`, `serve`, `mcp`, `ai`, … |
-| `pbiview-app` | Tauri back end (`dashcraft-app`): the `ops_execute` / `ops_cancel` bridge to the registry, app-only views and DTOs, recent files, blob map | `ops.rs`, `commands.rs`, `views.rs` |
+| `dashcraft-cli` | The `dashcraft` binary and its stable JSON schemas; `src/lib.rs` holds the program (`run_main`), `src/bin/dashcraft.rs` the entry point | `inspect`, `lint`, `refresh`, `measures`, `export`, `render`, `commands`, `run`, `serve`, `mcp`, `ai`, … |
+| `dashcraft-app` | Tauri back end (`dashcraft-app`): the `ops_execute` / `ops_cancel` bridge to the registry, app-only views and DTOs, recent files, blob map | `ops.rs`, `commands.rs`, `views.rs` |
 
 ## Command registry
 
@@ -164,7 +164,7 @@ DashCraft is read-only, but the core types are built for an editor ([ADR-0004](a
 | An editing feature | a `Command` in `pbi-model::command` | Must return its exact inverse and emit `ChangeEvent`s; save through the PBIP writers |
 | A lint rule | `pbi-core::lint` | Document it in `RULES.md`; findings carry an origin and an optional suggestion |
 | A capability (CLI `run`/`serve`/`mcp`, app, agents) | a `Command` in `pbi-ops/src/commands/<category>.rs`, registered in `commands::catalog()` | Typed params (`deny_unknown_fields`, camelCase) and output deriving `JsonSchema`, metadata with at least one example, a test through `Registry::execute`; regenerate `docs/COMMANDS.md` (`dashcraft commands --markdown`) and the app's `ops.gen.ts` (`npm run gen:ops`) |
-| A CLI command | `pbiview-cli/src/cmd/<name>.rs`, registered in `cmd::Command` | JSON outputs carry `schemaVersion`; within a version fields are only added |
+| A CLI command | `dashcraft-cli/src/cmd/<name>.rs`, registered in `cmd::Command` | JSON outputs carry `schemaVersion`; within a version fields are only added |
 | An app-only command (UI projections the registry does not model) | `app/src-tauri/src/commands.rs` + `specta_builder()` | Prefer a registry command; regenerate `app/src/lib/bindings.ts` with `npm run bindings` |
 | Custom visuals (future) | a sandboxed host fed by the same `DataView`s | v1 reads `.pbiviz` metadata only and never executes it ([ADR-0005](adr/0005-rust-svg-renderer.md)) |
 | Remote (Fabric) mode (future) | a `pbi-session` data source trait | Device-code auth, credentials only in the OS keychain |

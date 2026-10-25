@@ -1,6 +1,6 @@
 # Reference fixtures
 
-Test fixtures and example files. Tests find this folder at `$PBIVIEW_REFERENCE` if that's set,
+Test fixtures and example files. Tests find this folder at `$DASHCRAFT_REFERENCE` if that's set,
 otherwise at `<workspace>/reference`; every path below is relative to it.
 
 | Path | Committed? | What | Licence |

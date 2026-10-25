@@ -4,7 +4,7 @@
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
-    match pbiview_app_lib::run() {
+    match dashcraft_app_lib::run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             eprintln!("dashcraft-app: failed to start the application: {err}");

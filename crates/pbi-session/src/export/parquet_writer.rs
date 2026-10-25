@@ -12,7 +12,7 @@ use serde_json::{Map, Value as Json};
 
 use super::{EXPORT_METADATA_VERSION, ExportError, ExportSummary, meta};
 
-/// Field metadata keys copied into `pbiview.columns`, with their JSON names.
+/// Field metadata keys copied into `dashcraft.columns`, with their JSON names.
 const COLUMN_KEYS: [(&str, &str); 6] = [
     (meta::DATA_TYPE, "dataType"),
     (meta::KIND, "kind"),
@@ -47,9 +47,9 @@ pub struct ParquetExportOptions {
 /// stay `Decimal128(19, 4)`, date/times are `TIMESTAMP(MICROS)` without a
 /// time zone). The Arrow schema, with the field metadata of
 /// [`annotate_batch`](super::annotate_batch), is embedded as usual; the
-/// file's key-value metadata adds `pbiview.schemaVersion`, the schema's
-/// `pbiview.table`, `pbiview.tableDescription` and `pbiview.culture`, and
-/// `pbiview.columns`: a JSON array of `{ name, dataType?, kind?,
+/// file's key-value metadata adds `dashcraft.schemaVersion`, the schema's
+/// `dashcraft.table`, `dashcraft.tableDescription` and `dashcraft.culture`, and
+/// `dashcraft.columns`: a JSON array of `{ name, dataType?, kind?,
 /// description?, formatString?, sourceColumn? }` in column order.
 ///
 /// # Errors

@@ -1,5 +1,5 @@
-//! Command registry: every pbiview capability as a named, typed,
-//! schema-described command, shared by the CLI (`pbiview run`, `pbiview
+//! Command registry: every DashCraft capability as a named, typed,
+//! schema-described command, shared by the CLI (`dashcraft run`, `dashcraft
 //! serve`), the desktop app and AI agents (MCP). See ADR-0007
 //! (`docs/adr/0007-command-registry.md`) and the generated catalog in
 //! `docs/COMMANDS.md`.
@@ -23,7 +23,7 @@
 //!   mappings.
 //! - [`batch`]: ordered steps with `${name.field}` interpolation; [`rpc`]:
 //!   the JSON-lines RPC server; [`markdown`]: the catalog as Markdown.
-//! - [`mcp`]: the Model Context Protocol server (`pbiview mcp`), a thin
+//! - [`mcp`]: the Model Context Protocol server (`dashcraft mcp`), a thin
 //!   adapter exposing the agent catalog as MCP tools.
 //!
 //! ```no_run

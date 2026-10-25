@@ -5,9 +5,9 @@ use std::path::{Path, PathBuf};
 
 use pbi_pbir::{FileSource, MemoryFileSource};
 
-/// `$PBIVIEW_REFERENCE`, else `<workspace>/reference`.
+/// `$DASHCRAFT_REFERENCE`, else `<workspace>/reference`.
 pub fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE").map_or_else(
+    std::env::var_os("DASHCRAFT_REFERENCE").map_or_else(
         || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference"),
         PathBuf::from,
     )

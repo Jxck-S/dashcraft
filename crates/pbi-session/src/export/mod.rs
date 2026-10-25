@@ -24,8 +24,8 @@
 //! - Parquet ([`ParquetExportOptions`]): Zstd (default), Snappy or no
 //!   compression. The Arrow schema (with the field metadata) is embedded as
 //!   usual, and the file's key-value metadata holds
-//!   `pbiview.schemaVersion`, `pbiview.table`, `pbiview.tableDescription`,
-//!   `pbiview.culture` and `pbiview.columns` (a JSON array of
+//!   `dashcraft.schemaVersion`, `dashcraft.table`, `dashcraft.tableDescription`,
+//!   `dashcraft.culture` and `dashcraft.columns` (a JSON array of
 //!   `{ name, dataType?, kind?, description?, formatString?, sourceColumn?, derived? }`).
 //!
 //! # Model documentation
@@ -69,32 +69,32 @@ pub use self::parquet_writer::{ParquetCompression, ParquetExportOptions, write_p
 /// Metadata keys written by [`annotate_batch`] (Arrow field and schema
 /// metadata) and [`write_parquet`] (Parquet key-value metadata).
 pub mod meta {
-    /// File: version of the pbiview export metadata (`1`).
-    pub const SCHEMA_VERSION: &str = "pbiview.schemaVersion";
+    /// File: version of the DashCraft export metadata (`1`).
+    pub const SCHEMA_VERSION: &str = "dashcraft.schemaVersion";
     /// Schema / file: model table name.
-    pub const TABLE: &str = "pbiview.table";
+    pub const TABLE: &str = "dashcraft.table";
     /// Schema / file: table description (TMDL `///`).
-    pub const TABLE_DESCRIPTION: &str = "pbiview.tableDescription";
+    pub const TABLE_DESCRIPTION: &str = "dashcraft.tableDescription";
     /// Schema / file: model culture used for formatting (`en-US`).
-    pub const CULTURE: &str = "pbiview.culture";
+    pub const CULTURE: &str = "dashcraft.culture";
     /// File: JSON array describing every column.
-    pub const COLUMNS: &str = "pbiview.columns";
+    pub const COLUMNS: &str = "dashcraft.columns";
     /// Field: model data type (`string`, `int64`, `decimal`, `dateTime`, …).
-    pub const DATA_TYPE: &str = "pbiview.dataType";
+    pub const DATA_TYPE: &str = "dashcraft.dataType";
     /// Field: `data`, `calculated` or `calculatedTableColumn`.
-    pub const KIND: &str = "pbiview.kind";
+    pub const KIND: &str = "dashcraft.kind";
     /// Field: column description (TMDL `///`).
-    pub const DESCRIPTION: &str = "pbiview.description";
+    pub const DESCRIPTION: &str = "dashcraft.description";
     /// Field: model format string.
-    pub const FORMAT_STRING: &str = "pbiview.formatString";
+    pub const FORMAT_STRING: &str = "dashcraft.formatString";
     /// Field: source column of a data column.
-    pub const SOURCE_COLUMN: &str = "pbiview.sourceColumn";
+    pub const SOURCE_COLUMN: &str = "dashcraft.sourceColumn";
     /// Field: `true` for a session derived column (not part of the model
     /// files; see [`crate::derived`]).
-    pub const DERIVED: &str = "pbiview.derived";
+    pub const DERIVED: &str = "dashcraft.derived";
 }
 
-/// Version of the export metadata (`pbiview.schemaVersion`).
+/// Version of the export metadata (`dashcraft.schemaVersion`).
 pub const EXPORT_METADATA_VERSION: u32 = 1;
 
 /// Error of an export.

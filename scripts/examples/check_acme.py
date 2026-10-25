@@ -7,7 +7,7 @@ expected.json. Expectations marked "knownEngineGap" are reported but do not fail
 
 Usage: python3 scripts/examples/check_acme.py [--bin PATH] [--out DIR]
 
-Without --bin it runs `cargo run -q -p pbiview-cli --bin dashcraft --`. Scratch output goes
+Without --bin it runs `cargo run -q -p dashcraft-cli --bin dashcraft --`. Scratch output goes
 to target/tmp/acme-check. Python 3 standard library only.
 """
 
@@ -220,7 +220,7 @@ def main() -> int:
     ap.add_argument("--bin", help="dashcraft binary (default: cargo run)")
     ap.add_argument("--out", type=Path, default=ROOT / "target" / "tmp" / "acme-check")
     args = ap.parse_args()
-    cli = [args.bin] if args.bin else ["cargo", "run", "-q", "-p", "pbiview-cli", "--bin", "dashcraft", "--"]
+    cli = [args.bin] if args.bin else ["cargo", "run", "-q", "-p", "dashcraft-cli", "--bin", "dashcraft", "--"]
     c = Checker(cli, args.out)
     c.refresh()
     c.measures()

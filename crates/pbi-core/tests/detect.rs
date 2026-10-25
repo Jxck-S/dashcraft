@@ -1,7 +1,7 @@
 //! Content-based detection over the committed Acme Outfitters example, the
 //! Microsoft sample files and synthetic samples.
 //!
-//! Fixtures are found through `$PBIVIEW_REFERENCE`, falling back to the
+//! Fixtures are found through `$DASHCRAFT_REFERENCE`, falling back to the
 //! repository's `reference/` folder. The fetched (gitignored) samples are
 //! skipped with a `SKIP:` message when missing.
 
@@ -20,7 +20,7 @@ use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
 
 fn reference_root() -> PathBuf {
-    std::env::var_os("PBIVIEW_REFERENCE")
+    std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference"))
 }

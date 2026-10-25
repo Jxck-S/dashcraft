@@ -12,20 +12,12 @@ use crate::error::AppError;
 
 /// Environment variable naming a blob map to use from startup.
 pub const BLOB_MAP_ENV: &str = "DASHCRAFT_BLOB_MAP";
-/// Former name of [`BLOB_MAP_ENV`] (before the rename to DashCraft), honoured when the new one
-/// is not set.
-pub const BLOB_MAP_ENV_ALIAS: &str = "PBIVIEW_BLOB_MAP";
 
-/// The blob map named by the environment: [`BLOB_MAP_ENV`], else [`BLOB_MAP_ENV_ALIAS`] (empty
-/// values are ignored), with the name of the variable that named it.
-fn env_blob_map(var: impl Fn(&str) -> Option<OsString>) -> Option<(&'static str, PathBuf)> {
-    [BLOB_MAP_ENV, BLOB_MAP_ENV_ALIAS]
-        .into_iter()
-        .find_map(|name| {
-            var(name)
-                .filter(|v| !v.is_empty())
-                .map(|v| (name, PathBuf::from(v)))
-        })
+/// The blob map named by [`BLOB_MAP_ENV`]; an empty value is ignored.
+fn env_blob_map(var: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+    var(BLOB_MAP_ENV)
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
 }
 
 /// A [`BlobResolver`] that delegates to a replaceable inner resolver (a [`MapBlobResolver`] or
@@ -77,8 +69,8 @@ impl BlobResolver for SwitchableResolver {
 pub struct BlobMapSetting {
     /// Absolute path of the active `blob-map.json`, if any.
     pub path: Option<PathBuf>,
-    /// The environment variable the active map came from ([`BLOB_MAP_ENV`] or
-    /// [`BLOB_MAP_ENV_ALIAS`]); `None` when it was chosen in the app.
+    /// The environment variable the active map came from ([`BLOB_MAP_ENV`]); `None` when it was
+    /// chosen in the app.
     pub env_var: Option<&'static str>,
     /// Why the map named by the environment could not be used.
     pub error: Option<String>,
@@ -92,17 +84,17 @@ pub struct BlobMap {
 }
 
 impl BlobMap {
-    /// Starts with the map named by `DASHCRAFT_BLOB_MAP` (or the legacy `PBIVIEW_BLOB_MAP`), if
-    /// set and readable (otherwise offline, with the reason kept in [`BlobMapSetting::error`]).
+    /// Starts with the map named by `DASHCRAFT_BLOB_MAP`, if set and readable (otherwise offline,
+    /// with the reason kept in [`BlobMapSetting::error`]).
     pub fn from_env() -> Self {
         let map = Self::default();
-        if let Some((name, path)) = env_blob_map(|n| std::env::var_os(n)) {
+        if let Some(path) = env_blob_map(|n| std::env::var_os(n)) {
             match map.set(Some(&path)) {
                 Ok(_) => {
-                    map.write().env_var = Some(name);
+                    map.write().env_var = Some(BLOB_MAP_ENV);
                 }
                 Err(e) => {
-                    map.write().error = Some(format!("{name}={}: {e}", path.display()));
+                    map.write().error = Some(format!("{BLOB_MAP_ENV}={}: {e}", path.display()));
                 }
             }
         }
@@ -162,22 +154,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_dashcraft_variable_wins_over_the_legacy_one() {
-        let both = |n: &str| match n {
-            "DASHCRAFT_BLOB_MAP" => Some(OsString::from("new.json")),
-            "PBIVIEW_BLOB_MAP" => Some(OsString::from("old.json")),
-            _ => None,
-        };
-        assert_eq!(
-            env_blob_map(both),
-            Some(("DASHCRAFT_BLOB_MAP", PathBuf::from("new.json")))
-        );
-        let legacy = |n: &str| (n == "PBIVIEW_BLOB_MAP").then(|| OsString::from("old.json"));
-        assert_eq!(
-            env_blob_map(legacy),
-            Some(("PBIVIEW_BLOB_MAP", PathBuf::from("old.json")))
-        );
+    fn the_blob_map_variable_is_read_unless_empty() {
+        let set = |n: &str| (n == "DASHCRAFT_BLOB_MAP").then(|| OsString::from("map.json"));
+        assert_eq!(env_blob_map(set), Some(PathBuf::from("map.json")));
         let empty = |_: &str| Some(OsString::new());
         assert_eq!(env_blob_map(empty), None);
+        assert_eq!(env_blob_map(|_| None), None);
     }
 }

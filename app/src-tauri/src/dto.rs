@@ -668,8 +668,7 @@ pub struct ObjectDetailsDto {
 pub struct BlobMapDto {
     /// Absolute path of the active `blob-map.json`; `null` when offline.
     pub path: Option<String>,
-    /// The map was named by an environment variable (`DASHCRAFT_BLOB_MAP`, or the legacy
-    /// `PBIVIEW_BLOB_MAP`).
+    /// The map was named by the environment variable `DASHCRAFT_BLOB_MAP`.
     pub from_environment: bool,
     /// The environment variable that named the map; `null` when it was chosen in the app.
     pub environment_variable: Option<String>,

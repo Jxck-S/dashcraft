@@ -12,17 +12,17 @@ use std::process::{Command, Output};
 use common::{ACME, KPI_CARD, acme_with_stale_query_ref, copy_dir, fixture_root};
 use serde_json::Value;
 
-fn pbiview_in(dir: &Path, args: &[&str]) -> Output {
+fn dashcraft_in(dir: &Path, args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_dashcraft"))
         .args(args)
         .current_dir(dir)
         .env_remove("RUST_LOG")
         .output()
-        .expect("run pbiview")
+        .expect("run dashcraft")
 }
 
-fn pbiview(args: &[&str]) -> Output {
-    pbiview_in(&fixture_root(), args)
+fn dashcraft(args: &[&str]) -> Output {
+    dashcraft_in(&fixture_root(), args)
 }
 
 fn stdout(o: &Output) -> String {
@@ -53,7 +53,7 @@ fn have_example() -> bool {
 
 fn tmp_dir() -> tempfile::TempDir {
     tempfile::Builder::new()
-        .prefix("pbiview-cli-lint-")
+        .prefix("dashcraft-cli-lint-")
         .tempdir_in(env!("CARGO_TARGET_TMPDIR"))
         .unwrap()
 }
@@ -72,12 +72,12 @@ fn lint_text_groups_findings_by_file() {
     if !have_example() {
         return;
     }
-    let o = pbiview(&["lint", ACME]);
+    let o = dashcraft(&["lint", ACME]);
     assert_exit(&o, 0);
     assert_eq!(stdout(&o), format!("{ACME}: no problems found\n"));
 
     let (_dir, root) = stale_copy();
-    let o = pbiview_in(&root, &["lint", "acme"]);
+    let o = dashcraft_in(&root, &["lint", "acme"]);
     assert_exit(&o, 0);
     let out = stdout(&o);
     assert!(out.contains(&format!("{KPI_CARD}\n")), "{out}");
@@ -96,10 +96,10 @@ fn lint_text_groups_findings_by_file() {
 
     // Warnings fail the run only when denied.
     assert_exit(
-        &pbiview_in(&root, &["lint", "acme", "--deny", "warnings"]),
+        &dashcraft_in(&root, &["lint", "acme", "--deny", "warnings"]),
         2,
     );
-    let quiet = pbiview_in(
+    let quiet = dashcraft_in(
         &root,
         &["lint", "acme", "--deny", "warnings", "--disable", "LINT003"],
     );
@@ -112,7 +112,7 @@ fn lint_json_is_stable() {
     if !have_example() {
         return;
     }
-    let o = pbiview(&["lint", "--json", ACME]);
+    let o = dashcraft(&["lint", "--json", ACME]);
     assert_exit(&o, 0);
     let v = json(&o);
     assert_eq!(v["schemaVersion"], 1);
@@ -124,7 +124,7 @@ fn lint_json_is_stable() {
     assert_eq!(v["findings"], Value::Array(Vec::new()));
 
     let (_dir, root) = stale_copy();
-    let o = pbiview_in(&root, &["lint", "--json", "acme"]);
+    let o = dashcraft_in(&root, &["lint", "--json", "acme"]);
     assert_exit(&o, 0);
     let v = json(&o);
     assert_eq!(v["path"], "acme");
@@ -156,7 +156,7 @@ fn lint_broken_project_exits_with_2() {
     assert_ne!(renamed, text);
     fs::write(&tmdl, renamed).unwrap();
 
-    let o = pbiview(&["lint", "--json", root.to_str().unwrap()]);
+    let o = dashcraft(&["lint", "--json", root.to_str().unwrap()]);
     assert_exit(&o, 2);
     let v = json(&o);
     // The donut chart's category (LINT002) and the report filters of the
@@ -176,13 +176,13 @@ fn lint_broken_project_exits_with_2() {
         "did you mean `Stores[Sales Channel]`?"
     );
 
-    let text = stdout(&pbiview(&["lint", root.to_str().unwrap()]));
+    let text = stdout(&dashcraft(&["lint", root.to_str().unwrap()]));
     assert!(text.contains("  error LINT002 "), "{text}");
     assert!(text.contains("  error LINT004 "), "{text}");
 }
 
 #[test]
 fn lint_missing_path_is_fatal() {
-    let o = pbiview(&["lint", "examples/does-not-exist"]);
+    let o = dashcraft(&["lint", "examples/does-not-exist"]);
     assert_exit(&o, 1);
 }

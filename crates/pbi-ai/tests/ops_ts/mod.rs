@@ -1,7 +1,7 @@
 //! JSON Schema (draft 2020-12, as `schemars` writes it) → TypeScript: the typed client of the
 //! desktop app (`app/src/lib/ops.gen.ts`). It lives in `pbi-ai`'s tests because the app runs
 //! `pbi_ai::catalog()` (the core catalog plus the `ai.*` commands) and `pbi-ops` cannot depend on
-//! `pbi-ai`; `pbiview-app` checks that its registry is exactly that catalog.
+//! `pbi-ai`; `dashcraft-app` checks that its registry is exactly that catalog.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;

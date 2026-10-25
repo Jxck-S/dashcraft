@@ -1,4 +1,4 @@
-//! JSON-lines RPC over any byte stream (`pbiview serve --stdio`).
+//! JSON-lines RPC over any byte stream (`dashcraft serve --stdio`).
 //!
 //! One JSON-RPC 2.0 message per line, UTF-8, `\n`-terminated:
 //!

@@ -150,7 +150,7 @@ impl Session {
 
     /// Evaluates every model measure (model order) in `filter`. A measure
     /// that fails is returned with `error` set (and `unsupported` for DAX
-    /// features pbiview does not implement); it never aborts the call.
+    /// features DashCraft does not implement); it never aborts the call.
     ///
     /// # Errors
     /// An invalid `filter` ([`FilterSpec::to_filter_context`]),

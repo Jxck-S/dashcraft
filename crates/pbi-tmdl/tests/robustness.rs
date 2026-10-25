@@ -164,7 +164,7 @@ impl Rng {
 }
 
 fn fixture_files() -> Option<Vec<(String, String)>> {
-    let root = std::env::var_os("PBIVIEW_REFERENCE")
+    let root = std::env::var_os("DASHCRAFT_REFERENCE")
         .map(PathBuf::from)
         .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference"));
     let dir = root.join("examples/acme-outfitters/AcmeOutfitters.SemanticModel/definition");
