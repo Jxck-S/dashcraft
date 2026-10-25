@@ -7,8 +7,9 @@ is the packaging reference.
 
 ## What a release contains
 
-`.github/workflows/release.yml` builds everything on a `v*` tag and attaches it to a
-**draft** GitHub release. `<ver>` is the version without the `v`; `<tag>` is the tag.
+`.github/workflows/release.yml` builds everything on a `v*` tag, or on a manual run
+([below](#release-workflow)), and attaches it to a **draft** GitHub release. `<ver>` is the
+version without the `v`; `<tag>` is the tag.
 
 | Platform | File | Notes |
 |---|---|---|
@@ -16,16 +17,19 @@ is the packaging reference.
 | macOS x64 | `DashCraft_<ver>_x64.dmg` | Cross-compiled on Apple Silicon |
 | Windows x64 | `DashCraft_<ver>_x64_en-US.msi` | WiX; per-machine install (needs admin) |
 | Windows x64 | `DashCraft_<ver>_x64-setup.exe` | NSIS; per-user install, no admin |
-| Linux x64 | `DashCraft_<ver>_amd64.AppImage` | Portable; `chmod +x` and run |
-| Linux x64 | `DashCraft_<ver>_amd64.deb` | Debian/Ubuntu (package `dash-craft`, Tauri's kebab case of the product name; [why](#linux-package-name-dash-craft-decided)); registers MIME types and file associations |
+| Windows arm64 | `DashCraft_<ver>_arm64-setup.exe` | NSIS only (Tauri's WiX MSI targets x86/x64); built on a native Arm64 runner |
+| Linux x64, arm64 | `DashCraft_<ver>_amd64.AppImage`, `…_aarch64.AppImage` | Portable; `chmod +x` and run |
+| Linux x64, arm64 | `DashCraft_<ver>_amd64.deb`, `…_arm64.deb` | Debian/Ubuntu (package `dash-craft`, Tauri's kebab case of the product name; [why](#linux-package-name-dash-craft-decided)); registers MIME types and file associations |
+| Linux x64, arm64 | `…-<ver>-1.x86_64.rpm`, `…-<ver>-1.aarch64.rpm` | Fedora, RHEL, openSUSE; the exact names come from the Tauri bundler |
 | CLI | `dashcraft-<tag>-<target>.tar.gz` (`.zip` on Windows) | `dashcraft` and its `pbiview` alias, `README.md`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, `THIRD_PARTY_LICENSES.txt` |
 | All | `<file>.sha256` | One per binary artifact (`sha256sum -c` / `shasum -a 256 -c`) |
 | All | `SHA256SUMS.txt` | Checksums of every asset |
 | All | `dashcraft-<tag>-sbom.zip` | CycloneDX 1.5 SBOMs (see [below](#license-inventory-and-sbom)) |
 | All | `THIRD_PARTY_NOTICES.md`, `THIRD_PARTY_LICENSES.txt` | License inventory and full license texts |
 
-CLI targets: `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`
-(static CRT) and `x86_64-unknown-linux-gnu` (built on Ubuntu 22.04, glibc ≥ 2.35).
+CLI targets: `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc` and
+`aarch64-pc-windows-msvc` (static CRT), `x86_64-unknown-linux-gnu` and
+`aarch64-unknown-linux-gnu` (built on Ubuntu 22.04, glibc ≥ 2.35).
 
 The release notes are the version's section of [CHANGELOG.md](../CHANGELOG.md), plus a
 download/verification footer and, for unsigned builds, how to get past Gatekeeper or
@@ -274,26 +278,37 @@ function names, so it is not enabled.
 
 ## Release workflow
 
-1. Bump `[workspace.package] version` in `Cargo.toml` and `version` in `app/package.json`.
-   Run `cargo update -w` to refresh `Cargo.lock`, then `npm install --package-lock-only` in
-   `app/`.
+1. `scripts/set-version.sh <ver>` sets the version in `Cargo.toml` (`[workspace.package]`),
+   `Cargo.lock`, `app/package.json`, `app/package-lock.json` and, if it has one,
+   `tauri.conf.json`.
 2. Move the CHANGELOG `[Unreleased]` entries under `## [<ver>] — <date> — <title>`.
 3. Run `scripts/license-inventory.py` and commit (CI warns if you forget).
-4. Commit, tag `v<ver>`, push the tag.
+4. Start the release, either way:
+   - **Manual (Actions → Release → Run workflow)** on the commit's branch. It releases the
+     version in `Cargo.toml` and creates the tag `v<ver>` on that commit itself.
+   - **Tag push:** tag `v<ver>` and push the tag.
 5. Review the draft release (assets, notes), then publish it.
 
-To try packaging without a tag, start the **Release** workflow manually (*Run workflow*).
-It does a dry run: same builds and checks, artifacts on the run page (14 days), no GitHub
-release. The label is `v<ver>-dev.<sha7>`.
+Manual run inputs:
+
+| Input | Default | Effect |
+|---|---|---|
+| `version` | empty | Overrides the version from `Cargo.toml`, e.g. `0.3.0-rc.1` for a release candidate. The build jobs write it into the manifests with `scripts/set-version.sh` on the runner; nothing is committed. The tag is `v<version>` on the selected commit. |
+| `dry_run` | off | Same builds and checks, artifacts on the run page (14 days); no tag and no release. The label is `v<ver>-dev.<sha7>`. |
+
+A version with a pre-release part (`0.3.0-rc.1`, `0.3.0-beta.2`) makes a release marked
+**pre-release**, and its notes fall back to `[Unreleased]` when CHANGELOG has no section for
+it; a stable version needs its CHANGELOG section. A manual run refuses a tag that already
+exists on another commit. Tags created by the workflow don't start a second, tag-push run.
 
 Jobs:
 
 | Job | Runs on | Does |
 |---|---|---|
-| `prepare` | ubuntu-latest | Checks that the tag matches `Cargo.toml` and `app/package.json`. Extracts the release notes (a stable tag needs a CHANGELOG section; pre-releases fall back to `[Unreleased]`). Regenerates the license inventory and `THIRD_PARTY_LICENSES.txt`. Builds the SBOM zip. |
-| `create-release` | ubuntu-latest | Creates or updates the draft (refuses if the tag's release is already published). Uploads notices, licenses and the SBOM zip. |
-| `bundle` ×4 | macos-14 (arm64, x64), windows-latest, ubuntu-22.04 | `tauri build --ci --target … --bundles …` with the release resources config, optional signing, *Verify bundles*, `.sha256` files, upload |
-| `cli` ×4 | same | `cargo build --release -p pbiview-cli` (`dashcraft` and the `pbiview` alias), smoke test (`--version` of both, `inspect` on the committed Acme Outfitters example PBIP), archive + `.sha256`, upload |
+| `prepare` | ubuntu-latest | Resolves the version: a pushed tag must match `Cargo.toml` and `app/package.json`; a manual run takes `Cargo.toml` or the `version` input. Extracts the release notes (a stable tag needs a CHANGELOG section; pre-releases fall back to `[Unreleased]`). Regenerates the license inventory and `THIRD_PARTY_LICENSES.txt`. Builds the SBOM zip. |
+| `create-release` | ubuntu-latest | On a manual run, creates the tag. Creates or updates the draft (refuses if the tag's release is already published). Uploads notices, licenses and the SBOM zip. |
+| `bundle` ×6 | macos-14 (arm64, x64), windows-latest (x64), windows-11-arm (arm64), ubuntu-22.04 (x64), ubuntu-22.04-arm (arm64) | `tauri build --ci --target … --bundles …` with the release resources config, optional signing, *Verify bundles*, `.sha256` files, upload |
+| `cli` ×6 | same | `cargo build --release -p pbiview-cli` (`dashcraft` and the `pbiview` alias), smoke test (`--version` of both, `inspect` on the committed Acme Outfitters example PBIP), archive + `.sha256`, upload |
 | `finalize` | ubuntu-latest | `SHA256SUMS.txt` of all assets, optional build-provenance attestation |
 
 Pre-release versions: WiX only accepts a numeric pre-release (`1.2.0-1`). For any other
@@ -443,6 +458,7 @@ CLI, runs `tauri icon` on it, and removes the mobile icon sets.
   `--appimage-extract-and-run`).
 - The AppImage doesn't register file associations by itself (see [File associations](#file-associations)).
 - The macOS x64 app and CLI are cross-compiled. The release only smoke-tests the native
-  targets.
+  targets; the Windows and Linux arm64 builds run on native Arm64 runners and are tested.
+- Windows arm64 has no MSI, only the NSIS `-setup.exe`.
 - No auto-update; users download new versions from the releases page.
 - Linux artifacts have no GPG signature; use `SHA256SUMS.txt` and attestations.
