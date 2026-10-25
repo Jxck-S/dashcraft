@@ -13,8 +13,10 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   tests, its only callers, so `dead_code` no longer fails `cargo clippy -p pbiview-app` on Linux and
   Windows. `.github/dependabot.yml` ignores arrow/parquet majors (DataFusion 55.2 is on arrow 59;
   the arrow 60 PR could not build) and TypeScript majors (`svelte-check` 4.7 peers on TS ≤ 6).
-- **Why:** `main` CI was red (App jobs on ubuntu-latest and windows-latest), and so was every
-  Dependabot PR.
+  `DirContainer` sorts its skipped entries by path like its entries: they came in `readdir`
+  order, so `dir_symlinks_are_skipped_and_swaps_are_refused` failed at random on ext4.
+- **Why:** `main` CI was red (App jobs on ubuntu-latest and windows-latest; the symlink test at
+  random on Rust ubuntu-latest), and so was every Dependabot PR.
 
 ### MIT License and publication
 
