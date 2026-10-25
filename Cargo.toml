@@ -74,7 +74,7 @@ image = { version = "0.25.10", default-features = false, features = ["png"] }
 clap = { version = "4.6.7", features = ["derive"] }
 # command registry / automation
 schemars = { version = "1.2.3", features = ["preserve_order"] }
-base64 = "0.22"
+base64 = "0.23"
 # opt-in AI layer (pbi-ai): HTTP client (rustls, no OpenSSL) and OS keychain for provider secrets
 ureq = { version = "3.5", default-features = false, features = ["rustls", "gzip", "json"] }
 keyring = "4.2"
