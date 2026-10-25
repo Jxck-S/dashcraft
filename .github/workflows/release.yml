@@ -244,13 +244,16 @@ jobs:
           TAG: ${{ needs.prepare.outputs.tag }}
           SHA: ${{ github.sha }}
         run: |
-          existing=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq .object.sha 2>/dev/null || true)
-          if [ -z "$existing" ]; then
+          # Decide on the exit status: on a 404, `gh api` still prints the error body to stdout.
+          if existing=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq .object.sha 2>/dev/null); then
+            if [ "$existing" != "$SHA" ]; then
+              echo "::error::Tag $TAG already exists at ${existing::7}, not ${SHA::7}. Pick another version, or delete the tag."
+              exit 1
+            fi
+            echo "::notice::Tag $TAG already points at ${SHA::7}."
+          else
             gh api "repos/$GH_REPO/git/refs" -X POST -f ref="refs/tags/$TAG" -f sha="$SHA" > /dev/null
             echo "::notice::Created tag $TAG at ${SHA::7}."
-          elif [ "$existing" != "$SHA" ]; then
-            echo "::error::Tag $TAG already exists at ${existing::7}, not ${SHA::7}. Pick another version, or delete the tag."
-            exit 1
           fi
 
       - uses: actions/download-artifact@v8
