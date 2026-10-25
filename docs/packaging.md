@@ -20,7 +20,7 @@ version without the `v`; `<tag>` is the tag.
 | Windows arm64 | `DashCraft_<ver>_arm64-setup.exe` | NSIS only (Tauri's WiX MSI targets x86/x64); built on a native Arm64 runner |
 | Linux x64, arm64 | `DashCraft_<ver>_amd64.AppImage`, `…_aarch64.AppImage` | Portable; `chmod +x` and run |
 | Linux x64, arm64 | `DashCraft_<ver>_amd64.deb`, `…_arm64.deb` | Debian/Ubuntu (package `dash-craft`, Tauri's kebab case of the product name; [why](#linux-package-name-dash-craft-decided)); registers MIME types and file associations |
-| Linux x64, arm64 | `…-<ver>-1.x86_64.rpm`, `…-<ver>-1.aarch64.rpm` | Fedora, RHEL, openSUSE; the exact names come from the Tauri bundler |
+| Linux x64, arm64 | `DashCraft-<ver>-1.x86_64.rpm`, `DashCraft-<ver>-1.aarch64.rpm` | Fedora, RHEL, openSUSE; stable versions only (rpm versions can't contain `-`) |
 | CLI | `dashcraft-<tag>-<target>.tar.gz` (`.zip` on Windows) | `dashcraft` and its `pbiview` alias, `README.md`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, `THIRD_PARTY_LICENSES.txt` |
 | All | `<file>.sha256` | One per binary artifact (`sha256sum -c` / `shasum -a 256 -c`) |
 | All | `SHA256SUMS.txt` | Checksums of every asset |
@@ -460,5 +460,6 @@ CLI, runs `tauri icon` on it, and removes the mobile icon sets.
 - The macOS x64 app and CLI are cross-compiled. The release only smoke-tests the native
   targets; the Windows and Linux arm64 builds run on native Arm64 runners and are tested.
 - Windows arm64 has no MSI, only the NSIS `-setup.exe`.
+- Pre-release versions (`0.3.0-rc.1`) have no rpm: rpm versions can't contain `-`. Linux pre-releases ship AppImage and deb.
 - No auto-update; users download new versions from the releases page.
 - Linux artifacts have no GPG signature; use `SHA256SUMS.txt` and attestations.

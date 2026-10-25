@@ -45,6 +45,7 @@ jobs:
       publish: ${{ steps.version.outputs.publish }}
       prerelease: ${{ steps.version.outputs.prerelease }}
       msi: ${{ steps.version.outputs.msi }}
+      rpm: ${{ steps.version.outputs.rpm }}
     steps:
       - uses: actions/checkout@v7
 
@@ -102,6 +103,12 @@ jobs:
             msi=false
             echo "::warning::Version $version is not MSI-compatible; the Windows build ships the NSIS installer only."
           fi
+          # rpm versions can't contain '-'; pre-releases ship AppImage and deb only on Linux.
+          rpm=true
+          if [[ "$version" == *-* ]]; then
+            rpm=false
+            echo "::warning::Version $version is not rpm-compatible; the Linux builds ship AppImage and deb only."
+          fi
           {
             echo "version=$version"
             echo "tag=$tag"
@@ -110,6 +117,7 @@ jobs:
             echo "publish=$publish"
             echo "prerelease=$prerelease"
             echo "msi=$msi"
+            echo "rpm=$rpm"
           } >> "$GITHUB_OUTPUT"
 
       - name: Release notes (CHANGELOG.md)
@@ -478,9 +486,11 @@ jobs:
           TARGET: ${{ matrix.target }}
           BUNDLES: ${{ matrix.bundles }}
           MSI: ${{ needs.prepare.outputs.msi }}
+          RPM: ${{ needs.prepare.outputs.rpm }}
         run: |
           bundles=$BUNDLES
           if [ "$RUNNER_OS" = Windows ] && [ "$MSI" != true ]; then bundles=nsis; fi
+          if [ "$RUNNER_OS" = Linux ] && [ "$RPM" != true ]; then bundles=${bundles//,rpm/}; fi
           configs=(--config "$RUNNER_TEMP/tauri.release.json")
           if [ -n "${TAURI_SIGNING_CONFIG:-}" ]; then configs+=(--config "$TAURI_SIGNING_CONFIG"); fi
           npx --no-install tauri build --ci --target "$TARGET" --bundles "$bundles" "${configs[@]}"
@@ -512,7 +522,7 @@ jobs:
               grep -q '^Exec=dashcraft-app %F$' "$RUNNER_TEMP"/deb/usr/share/applications/*.desktop
               grep -q '^MimeType=application/x-dashcraft-pbix;' "$RUNNER_TEMP"/deb/usr/share/applications/*.desktop
               test -f "$RUNNER_TEMP/deb/usr/share/mime/packages/dashcraft.xml"
-              ls -la "$dir"/rpm/*.rpm
+              if [ -d "$dir/rpm" ]; then ls -la "$dir"/rpm/*.rpm; fi
               ;;
             Windows)
               ls -la "$dir"/msi "$dir"/nsis 2>/dev/null || true

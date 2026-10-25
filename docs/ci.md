@@ -124,7 +124,8 @@ inventory and SBOMs) are in [packaging.md](packaging.md). In short:
      rejects (non-numeric, such as `-rc.1`) get NSIS only.
    - Windows arm64 `-setup.exe` (NSIS only), built on the native `windows-11-arm` runner.
    - Linux x64 and arm64 `.AppImage`, `.deb` and `.rpm`, built on `ubuntu-22.04` and
-     `ubuntu-22.04-arm` for an older glibc baseline.
+     `ubuntu-22.04-arm` for an older glibc baseline. rpm versions can't contain `-`, so
+     pre-releases ship AppImage and deb only.
 4. `cli` builds `dashcraft` and its `pbiview` alias (`crates/pbiview-cli`) for the same six
    targets and smoke-tests the native ones. It uploads `dashcraft-<tag>-<target>.tar.gz`
    (`.zip` on Windows, with README, `NOTICE`, notices and license texts) and a `.sha256` file
