@@ -7,6 +7,22 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-10-24
 
+### CI fix: app clippy on Linux and Windows; Dependabot majors
+
+- **What:** `PendingOpen::set` (`app/src-tauri/src/lib.rs`) is compiled only on macOS/iOS and in
+  tests, its only callers, so `dead_code` no longer fails `cargo clippy -p pbiview-app` on Linux and
+  Windows. `.github/dependabot.yml` ignores arrow/parquet majors (DataFusion 55.2 is on arrow 59;
+  the arrow 60 PR could not build) and TypeScript majors (`svelte-check` 4.7 peers on TS ≤ 6).
+  `DirContainer` sorts its skipped entries by path like its entries: they came in `readdir`
+  order, so `dir_symlinks_are_skipped_and_swaps_are_refused` failed at random on ext4.
+  A root `.gitattributes` (`* text=auto eol=lf`; the CRLF fuzz seed and Microsoft's sample
+  licence kept as committed; binary formats marked) gives Windows checkouts LF: the Windows
+  runner checked out CRLF, which failed 13 tests in 8 targets (byte-identical TMDL/TMSL
+  round-trips, the `COMMANDS.md`/`AI.md`/`ops.gen.ts` freshness checks, fixture-text edits).
+- **Why:** `main` CI was red (App jobs on ubuntu-latest and windows-latest; the symlink test at
+  random on Rust ubuntu-latest; Rust windows-latest from CRLF checkouts), and so was every
+  Dependabot PR.
+
 ### MIT License and publication
 
 - **What:** the project is licensed under MIT (`LICENSE`; `license = "MIT"` in the workspace and
@@ -14,6 +30,40 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   repository URL is `https://github.com/Jxck-S/dashcraft`; golden rule 17 now says the repository is
   public and every push is reviewed for internal data.
 - **Why:** the owner chose MIT (the *Craft projects use MIT OR Apache-2.0) and publishes the source.
+
+### README restructure with app screenshots
+
+- **What:** `README.md` rewritten to a short front page (336 → 205 lines): icon, tagline, badges,
+  a hero screenshot, four highlights, a screenshot grid (report interaction, Table, Model and DAX
+  query views), agents, internals, get started, status, a documentation index. Five screenshots
+  of the app on the synthetic Acme Outfitters example in `docs/images/` (PNG, about 600 KB in all).
+  The detail moved: features, the format and visual matrices and DAX/M coverage to the new
+  `docs/FEATURES.md`; build, gates and test-data rules to the new `docs/DEVELOPMENT.md`; the
+  security posture to the new `docs/SECURITY.md`; releases and the v1 acceptance criteria to
+  `docs/ROADMAP.md`. The gaps, milestone, performance, CLI and architecture tables were
+  duplicates of `GAPS.md`, `DESKTOP-PLAN.md`, `perf.md`, `CLI.md` and `ARCHITECTURE.md` and are
+  now links. Links into the old README sections (`GAPS.md`, `VISUALS.md`, `AGENTS.md`) updated.
+- **Why:** the README had grown into a reference manual; the owner asked for a shorter front page
+  organized like the PhotoCraft README, with a screenshot of the app.
+
+### Release: arm64 installers, rpm, manual release with version override
+
+- **What:** `.github/workflows/release.yml`: a manual run (`workflow_dispatch`) now releases
+  the version in `Cargo.toml` or a `version` override (e.g. `0.3.0-rc.1`, marked pre-release),
+  creates the tag `v<version>` on the selected commit and the draft release; `dry_run` keeps
+  the old build-only behaviour. New targets on native Arm64 runners: Windows arm64 (NSIS) on
+  `windows-11-arm`, Linux arm64 (AppImage, deb, rpm) on `ubuntu-22.04-arm`; rpm for Linux x64;
+  CLI archives and SBOMs for both arm64 targets (bundle and CLI matrices 4 → 6).
+  New `scripts/set-version.sh` sets the version in `Cargo.toml`, `Cargo.lock` and the npm
+  manifests (byte-identical when the version is unchanged); the workflow uses it for an override.
+  `docs/packaging.md`, `docs/ci.md` updated.
+- **Why:** the owner asked for installers on the platforms PhotoCraft ships (its shared release
+  workflow builds Windows x64/x86/arm64, Linux x86_64/aarch64 with rpm, Flatpak and more) and for
+  a manual release trigger with a version override for release candidates. Kept: two thin macOS
+  builds instead of a universal one (documented choice). Not added: Windows x86, riscv64,
+  Flatpak, Arch, FreeBSD.
+- **Numbers:** `actionlint` clean. Not yet run on GitHub: the first dry run will confirm the
+  Arm64 runners, the arm64 AppImage and the rpm file names.
 
 ### Desktop milestone plan and README refresh
 

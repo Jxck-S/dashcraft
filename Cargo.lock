@@ -4478,7 +4478,7 @@ name = "pbi-ops"
 version = "0.2.0"
 dependencies = [
  "arrow",
- "base64 0.22.1",
+ "base64 0.23.1",
  "chrono",
  "indexmap 2.14.2",
  "pbi-core",
@@ -4601,7 +4601,7 @@ dependencies = [
  "roxmltree 0.21.1",
  "rusqlite",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.1",
  "thiserror 2.0.21",
  "tracing",
 ]

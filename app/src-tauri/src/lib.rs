@@ -72,6 +72,8 @@ impl StartupPath {
 pub struct PendingOpen(std::sync::Mutex<Option<PathBuf>>);
 
 impl PendingOpen {
+    // Only macOS/iOS deliver document opens as run events (`handle_run_event`).
+    #[cfg(any(target_os = "macos", target_os = "ios", test))]
     fn set(&self, path: PathBuf) {
         match self.0.lock() {
             Ok(mut slot) => *slot = Some(path),

@@ -97,19 +97,22 @@ edge is intended, change `xtask/src/layers.rs` and the crate graph in
 - **Graph:** limited to the four shipped targets (macOS arm64/x64, Windows x64,
   Linux x64), with all features enabled.
 
-## `release.yml`: tags `v*`
+## `release.yml`: tags `v*` or a manual run
 
 Packaging details (bundle config, artifact names, verification, signing setup, license
 inventory and SBOMs) are in [packaging.md](packaging.md). In short:
 
-1. `prepare` checks that the tag equals `v` + the `[workspace.package] version` in
-   `Cargo.toml` (and `app/package.json`). It then:
+1. `prepare` resolves the version. A pushed tag must equal `v` + the
+   `[workspace.package] version` in `Cargo.toml` (and `app/package.json`). A manual run
+   (**Run workflow**) releases that version, or the `version` input (e.g. `0.3.0-rc.1`), which
+   the build jobs apply with `scripts/set-version.sh`. It then:
    - takes the release notes from the version's `CHANGELOG.md` section. A stable tag fails
      without one; pre-releases fall back to `[Unreleased]`.
    - regenerates the license inventory and `THIRD_PARTY_LICENSES.txt`
      (`scripts/license-inventory.py`);
    - builds the CycloneDX SBOM zip with `cargo-cyclonedx` and `npm sbom`.
-2. `create-release` creates a **draft** GitHub release for the tag, or reuses the existing
+2. `create-release` creates the tag `v<version>` on the selected commit for a manual run
+   (refused when the tag exists on another commit), then a **draft** GitHub release for the tag, or reuses the existing
    draft when the workflow is re-run, and uploads the notices and the SBOM zip. A tag
    containing `-` (such as `v0.2.0-rc.1`) is marked as a prerelease.
 3. `bundle` builds the Tauri app with `npx tauri build --ci --target … --bundles …`,
@@ -119,8 +122,10 @@ inventory and SBOMs) are in [packaging.md](packaging.md). In short:
      are two thin builds, not a universal binary.
    - Windows x64 `.msi` (WiX) and `-setup.exe` (NSIS). Pre-release versions that WiX
      rejects (non-numeric, such as `-rc.1`) get NSIS only.
-   - Linux x64 `.AppImage` and `.deb`, built on `ubuntu-22.04` for an older glibc baseline.
-4. `cli` builds `dashcraft` and its `pbiview` alias (`crates/pbiview-cli`) for the same four
+   - Windows arm64 `-setup.exe` (NSIS only), built on the native `windows-11-arm` runner.
+   - Linux x64 and arm64 `.AppImage`, `.deb` and `.rpm`, built on `ubuntu-22.04` and
+     `ubuntu-22.04-arm` for an older glibc baseline.
+4. `cli` builds `dashcraft` and its `pbiview` alias (`crates/pbiview-cli`) for the same six
    targets and smoke-tests the native ones. It uploads `dashcraft-<tag>-<target>.tar.gz`
    (`.zip` on Windows, with README, `NOTICE`, notices and license texts) and a `.sha256` file
    for each. The Windows CLI is
@@ -129,8 +134,9 @@ inventory and SBOMs) are in [packaging.md](packaging.md). In short:
    the repository variable `PBIVIEW_ATTEST=true` on GitHub Enterprise Cloud, it also
    creates a build-provenance attestation.
 
-Every job also stores its outputs as workflow artifacts (14 days). Running the workflow
-manually (**Run workflow**) is a dry run: the same builds, no GitHub release.
+Every job also stores its outputs as workflow artifacts (14 days). A manual run with
+`dry_run` checked does the same builds without a tag or a GitHub release. Inputs and
+release candidates: [packaging.md](packaging.md#release-workflow).
 
 Review the draft, then publish it by hand.
 

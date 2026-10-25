@@ -1,0 +1,23 @@
+# LF in every checkout, on every OS: fixtures round-trip byte for byte, generated files
+# (docs/COMMANDS.md, app/src/lib/ops.gen.ts, …) are compared with their source, and tests search
+# fixture text for "\n"-terminated lines.
+* text=auto eol=lf
+
+# CRLF on purpose: a fuzz seed for CRLF input, and Microsoft's licence file kept as published.
+fuzz/seeds/tmsl/alphabetical_crlf.bim -text
+reference/samples/microsoft/LICENSE -text
+
+# Binary formats (git detects most of these; listed so no heuristic touches them).
+*.pbix binary
+*.pbit binary
+*.abf binary
+*.vpax binary
+*.xlsx binary
+*.xlsm binary
+*.zip binary
+*.png binary
+*.ico binary
+*.icns binary
+*.ttf binary
+*.otf binary
+*.bin binary

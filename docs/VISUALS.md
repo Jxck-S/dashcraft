@@ -1,6 +1,6 @@
 # Visual support
 
-How `pbi-render` draws each Power BI visual type, which formatting objects it honours, which Power BI service behaviours it reproduces, how it differs from the service, and what the app can do with it interactively. The summary matrix is in the [README](../README.md#supported-visuals); the implementation notes live in the module docs of `crates/pbi-render/src/visuals/`.
+How `pbi-render` draws each Power BI visual type, which formatting objects it honours, which Power BI service behaviours it reproduces, how it differs from the service, and what the app can do with it interactively. The summary matrix is in [FEATURES.md](FEATURES.md#supported-visuals); the implementation notes live in the module docs of `crates/pbi-render/src/visuals/`.
 
 Contents: [pipeline](#pipeline) · [common behaviour](#common-behaviour) · [conditional formatting](#conditional-formatting) · [per visual](#per-visual) · [interaction](#interaction-summary) · [render verification](#render-verification) · [known gaps](#known-gaps)
 
