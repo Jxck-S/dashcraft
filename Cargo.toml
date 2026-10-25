@@ -9,9 +9,9 @@ default-members = ["crates/*", "xtask"]
 version = "0.2.0"
 edition = "2024"
 rust-version = "1.94"
-license = "LicenseRef-Proprietary"
+license = "MIT"
 publish = false
-repository = "https://github.com/your-org/dashcraft"
+repository = "https://github.com/Jxck-S/dashcraft"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

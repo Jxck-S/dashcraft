@@ -83,7 +83,7 @@ edge is intended, change `xtask/src/layers.rs` and the crate graph in
   - Any license not on the list fails the check, including GPL, AGPL and LGPL.
   - A crate with alternative licenses (for example `Apache-2.0 OR GPL-2.0-only`)
     passes if one of the alternatives is allowed.
-  - Our own crates (`publish = false`, `LicenseRef-Proprietary`) are skipped via
+  - Our own crates (`publish = false`, MIT) are skipped via
     `[licenses.private] ignore = true`.
   - Add any exception to `[licenses].exceptions` with a reason.
 - **Bans:**

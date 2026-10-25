@@ -3,7 +3,7 @@ name = "pbiview-fuzz"
 description = "cargo-fuzz targets for the pbiview parsers and decoders (untrusted input)"
 version = "0.0.0"
 edition = "2024"
-license = "LicenseRef-Proprietary"
+license = "MIT"
 publish = false
 
 [package.metadata]

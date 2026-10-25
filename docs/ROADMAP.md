@@ -150,5 +150,4 @@ synthetic Acme Outfitters example, computed independently of DashCraft's engines
 
 - Legal review of the UNVERIFIED rows in [ADR-0003](adr/0003-vertipaq-xpress9-cleanroom.md) before a release ships PBIX data decoding.
 - Code-signing material (Apple Developer ID, Windows code-signing certificate) for `m5-packaging`.
-- Project license (`LicenseRef-Proprietary` in `Cargo.toml`) and the real repository URL (currently a placeholder).
 - A trademark search for the name DashCraft before the first public release ([ADR-0009](adr/0009-naming-dashcraft.md): other products already use the name; the decision is reversible).

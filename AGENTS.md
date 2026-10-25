@@ -132,10 +132,10 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
     layers`. No blanket `#[allow]`, no skipped hooks, no deleted tests to get green.
 16. **Commit trailer** on every commit (agents commit only when asked; the orchestrator commits waves):
     `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
-17. **Public repository rule.** This repository is private. The public `dashcraft` GitHub repository
-    must never receive internal data (rule 2): no internal IDs, URLs, tenant, workspace or storage
-    names, report data or commit history containing them. Publishing code there needs a review
-    pass first.
+17. **Public repository rule.** This repository is public (`github.com/Jxck-S/dashcraft`, MIT
+    License). Everything committed is published: it must never contain internal data (rule 2): no
+    internal IDs, URLs, tenant, workspace or storage names, report data, or commit messages naming
+    them. Review the staged diff for that before every push.
 
 ## 4. Architecture decisions (summary)
 

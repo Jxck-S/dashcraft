@@ -7,6 +7,14 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-10-24
 
+### MIT License and publication
+
+- **What:** the project is licensed under MIT (`LICENSE`; `license = "MIT"` in the workspace and
+  fuzz manifests; NOTICE, README, the About page and the installed `licenses/LICENSE`); the
+  repository URL is `https://github.com/Jxck-S/dashcraft`; golden rule 17 now says the repository is
+  public and every push is reviewed for internal data.
+- **Why:** the owner chose MIT (the *Craft projects use MIT OR Apache-2.0) and publishes the source.
+
 ### Desktop milestone plan and README refresh
 
 - **What:** new [DESKTOP-PLAN.md](DESKTOP-PLAN.md): 26 milestones (M6 to M31; M27 to M30

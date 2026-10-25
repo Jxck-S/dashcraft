@@ -43,8 +43,9 @@ notes; if the two disagree, `AGENTS.md` wins (and fix the disagreement).
   `unwrap`/`expect`/indexing on untrusted input; an upward or new cross-layer dependency; a capability added outside `pbi-ops`; a lowered SSIM
   threshold or weakened expected-value assert; perf budgets loosened; missing tests, CHANGELOG
   `[Unreleased]` line, `docs/GAPS.md` row or `docs/DEVLOG.md` entry.
-- **Public repository rule** (golden rule 17): the public repository is
-  `github.com/Jxck-S/dashcraft`. Nothing from this repository goes there without a review pass.
+- **Public repository rule** (golden rule 17): this repository is the public
+  `github.com/Jxck-S/dashcraft` (MIT License); everything committed is published, so review the
+  staged diff for internal data before every push.
 - **Commit trailer** for every commit Copilot authors:
 
 ```

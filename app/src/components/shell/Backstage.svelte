@@ -223,7 +223,7 @@
       <h1>About DashCraft</h1>
       <p><strong>DashCraft {version}</strong> — opens Power BI files offline. Read-only; no telemetry, no network.</p>
       <h2>Notice</h2>
-      <p class="muted small">DashCraft is an independent project. It is not affiliated with, endorsed or sponsored by Microsoft. “Power BI” and “Microsoft” are trademarks of Microsoft Corporation, used only to describe which files DashCraft opens. DashCraft is not affiliated with storytold/ArtCraft or with other products named “DashCraft”. The full notice is the <code>NOTICE</code> file installed with the app (<code>licenses/NOTICE</code>).</p>
+      <p class="muted small">DashCraft is an independent project. It is not affiliated with, endorsed or sponsored by Microsoft. “Power BI” and “Microsoft” are trademarks of Microsoft Corporation, used only to describe which files DashCraft opens. DashCraft is not affiliated with storytold/ArtCraft or with other products named “DashCraft”. The full notice is the <code>NOTICE</code> file installed with the app (<code>licenses/NOTICE</code>). DashCraft is open source under the MIT License (<code>licenses/LICENSE</code>).</p>
       <h2>Third-party assets</h2>
       <ul class="notices">
         <li><strong>Fluent UI System Icons</strong> — MIT License, © Microsoft Corporation (<code>src/assets/icons/LICENSE</code>).</li>

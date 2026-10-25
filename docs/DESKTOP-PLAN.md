@@ -260,7 +260,7 @@ graph TD
 | M28 | AI-assisted editing (optional) | DAX and M writing, descriptions, page suggestions, narratives and provider-assisted Q&A on `pbi-ai`, with consent and review | L | M12, M14, M20, M23; ADR-0026 | Owner-supplied provider accounts (real-provider criterion) |
 | M29 | Custom visuals sandbox (optional) | Run `.pbiviz` visuals in an OS-sandboxed out-of-process host when the user allows it | XL | M21; ADR-0023 | Owner decision on ADR-0023 |
 | M30 | Online integration (optional) | Network connectors, remote models, publish and download, opt-in | XL | M16, M26; ADR-0024, 0025 | ADR decisions; a test tenant with synthetic content |
-| M31 | Verification and 1.0 | Ground truth, goldens, differential suites, perf at scale, fuzzing, independent accessibility audit, signing, update installs, 1.0 | L | M8, M15, M17, M22, M23, M25, M26 | Windows with Desktop (GT-1 to GT-6), signing certificates, legal review, trademark search, licence decision |
+| M31 | Verification and 1.0 | Ground truth, goldens, differential suites, perf at scale, fuzzing, independent accessibility audit, signing, update installs, 1.0 | L | M8, M15, M17, M22, M23, M25, M26 | Windows with Desktop (GT-1 to GT-6), signing certificates, legal review, trademark search |
 
 ## New ADRs required
 
@@ -2215,8 +2215,8 @@ results are checked against Desktop and whose accessibility has been independent
 - [ ] **M31.9 Security.** `SECURITY.md`, an updated threat model, staged-file and secret scanning in
   CI, handle-based path confinement replacing check-then-use.
 - [ ] **M31.10 Legal and naming.** Legal review of the ADR-0003 UNVERIFIED rows for PBIX data
-  decoding, a trademark search for the name, the project licence and the real repository URL
-  decided.
+  decoding and a trademark search for the name (the project licence, MIT, and the repository,
+  `github.com/Jxck-S/dashcraft`, are decided).
 - [ ] **M31.11 Signing and distribution.** Apple Developer ID signing and notarization, Windows
   code signing, Windows and Linux ARM64 builds, installing signed updates through the M24.11 plugin,
   upgrade tests.
@@ -2245,7 +2245,7 @@ results are checked against Desktop and whose accessibility has been independent
 
 **Depends on.** M8, M15, M17, M22, M23, M25, M26 (and through them every non-optional milestone).
 **Blocked by.** A Windows machine with Power BI Desktop (GT-1 to GT-6), signing certificates and
-secrets, the legal review, the trademark search and the licence decision. **Size.** L.
+secrets, the legal review and the trademark search. **Size.** L.
 
 **Risks and unknowns.** Desktop releases monthly, so recordings age; certificate costs and
 timelines; legal outcomes may remove features from the release.

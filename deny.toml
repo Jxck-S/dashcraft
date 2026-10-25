@@ -51,8 +51,8 @@ allow = [
     "BSL-1.0",
     "CC0-1.0",
     "CDLA-Permissive-2.0",
-    # Weak, file-level copyleft: using MPL-2.0 crates unmodified is fine for a
-    # proprietary app, but changes to MPL-covered *files* must be published.
+    # Weak, file-level copyleft: using MPL-2.0 crates unmodified is fine for an
+    # MIT app, but changes to MPL-covered *files* must be published under the MPL.
     # Do not vendor/patch MPL-2.0 sources without legal review.
     "MPL-2.0",
     # Fonts only (e.g. crates that embed OFL font files). OFL forbids selling
@@ -68,7 +68,7 @@ exceptions = [
     # { allow = ["LicenseRef-Foo"], crate = "foo", reason = "..." },
 ]
 
-# Workspace crates are `publish = false` with license `LicenseRef-Proprietary`;
+# Workspace crates are `publish = false` (license MIT, see LICENSE);
 # don't evaluate our own crates against the third-party allow list.
 [licenses.private]
 ignore = true

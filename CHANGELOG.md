@@ -45,6 +45,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - Matrix row and column levels follow each column's sort-by column.
 
 ### Documentation
+- DashCraft is open source under the **MIT License** (`LICENSE`, `Cargo.toml`, NOTICE, installed with the app as `licenses/LICENSE`); the repository is `github.com/Jxck-S/dashcraft`.
 - [docs/DESKTOP-PLAN.md](docs/DESKTOP-PLAN.md): the milestone plan from the current viewer to a full Power BI Desktop equivalent (M6 to M31, M27 to M30 optional) with steps, registry commands, acceptance criteria, tests, dependencies, blockers, sizes, a dependency graph and 18 proposed ADRs (ADR-0010 to ADR-0027); [docs/ROADMAP.md](docs/ROADMAP.md) "Next" maps each item to a plan step. README rewritten for the current state (no emoji); command, M library, DAX and performance numbers synced across the docs.
 - Test fixtures and doc examples use the synthetic **Acme Outfitters** example (`reference/examples/acme-outfitters/`: PBIP, CSV data, blob map, expected values) and MIT-licensed Microsoft sample reports (`reference/samples/microsoft/`; larger ones through `scripts/fetch-samples.sh`); AGENTS.md gains the rule that real or internal reports and data are never committed or described.
 - [docs/VISUALS.md](docs/VISUALS.md#render-verification), README, AGENTS.md and `reference/README.md` describe render verification (render snapshots, expected values, Microsoft samples, optional local goldens); [docs/GAPS.md](docs/GAPS.md) re-scored without golden images (visuals 2.4 → 2.1, rendering fidelity 3.4 → 3.2).
