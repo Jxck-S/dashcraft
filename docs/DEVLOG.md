@@ -18,6 +18,11 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Why:** a PBIX opened empty until Refresh, unlike Desktop, which shows the data saved in it.
 - **Numbers:** `dashcraft-app` tests 29 → 30; Revenue Opportunities.pbix loads 8 tables on open.
   Open: Desktop's "Enter parameters" prompt for templates (no parameter-editing command yet).
+- **CI:** `cargo deny check advisories` failed on main for RUSTSEC-2026-0391, -0398 and -0403
+  (zstd 0.13.3 / zstd-safe 7.3.0 via arrow-ipc and parquet 59.3; fixes only in zstd 0.14.3 /
+  zstd-safe 8.2, out of reach under DataFusion 55.2). None is reachable (bulk API only, no
+  `seekable` or `legacy` feature): ignored in `deny.toml` with reasons, to drop when Arrow
+  accepts zstd 0.14.
 
 ## 2026-10-25
 

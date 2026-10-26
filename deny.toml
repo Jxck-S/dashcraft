@@ -30,6 +30,12 @@ yanked = "deny"
 unmaintained = "workspace"
 ignore = [
     # Add entries as { id = "RUSTSEC-YYYY-NNNN", reason = "why it does not apply" }
+    # zstd 0.13.3 / zstd-safe 7.3.0 come from arrow-ipc and parquet 59.3 (`zstd ^0.13`), which
+    # DataFusion 55.2 holds us on; the fixes are in the semver-incompatible zstd 0.14.3 and
+    # zstd-safe 8.2. Drop these entries once arrow/parquet accept zstd 0.14.
+    { id = "RUSTSEC-2026-0391", reason = "only zstd::stream::raw::{Encoder,Decoder}::with_context are affected; arrow-ipc and parquet use only zstd::bulk (stream code is in parquet's unbuilt CLI binaries), and DashCraft does not use zstd directly" },
+    { id = "RUSTSEC-2026-0398", reason = "zstd_safe::seekable needs the `seekable` feature, which is not enabled (zstd-safe builds with `std` only)" },
+    { id = "RUSTSEC-2026-0403", reason = "only DCtx::decompress_stream on legacy frames is affected; arrow-ipc and parquet decompress through zstd::bulk, which the advisory lists as unaffected, and the `legacy` feature is not enabled" },
 ]
 
 [licenses]
