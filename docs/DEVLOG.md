@@ -5,6 +5,25 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-10-26
+
+### App: load data on open as Power BI Desktop does
+
+- **What:** `dashcraft-app` `DocumentSummary.onOpen` (`none` / `embedded` / `cache` / `query`,
+  computed in `document_views`); `App.svelte` starts `data.refresh` from it: PBIX/ABF/Power Pivot
+  embedded data (source `cache`, quiet, no cache banner), PBIP `.pbi/cache.abf` (unchanged), PBIT
+  refresh from the source with a banner about the saved parameter values. PBIP without a cache,
+  `.bim`, TMDL folders and remote models stay empty until Refresh. Test
+  `on_open_loads_what_desktop_loads` (PBIX, PBIT, semantic model with and without a cache).
+- **Why:** a PBIX opened empty until Refresh, unlike Desktop, which shows the data saved in it.
+- **Numbers:** `dashcraft-app` tests 29 → 30; Revenue Opportunities.pbix loads 8 tables on open.
+  Open: Desktop's "Enter parameters" prompt for templates (no parameter-editing command yet).
+- **CI:** `cargo deny check advisories` failed on main for RUSTSEC-2026-0391, -0398 and -0403
+  (zstd 0.13.3 / zstd-safe 7.3.0 via arrow-ipc and parquet 59.3; fixes only in zstd 0.14.3 /
+  zstd-safe 8.2, out of reach under DataFusion 55.2). None is reachable (bulk API only, no
+  `seekable` or `legacy` feature): ignored in `deny.toml` with reasons, to drop when Arrow
+  accepts zstd 0.14.
+
 ## 2026-10-25
 
 ### DashCraft everywhere: `pbiview` removed from code and current docs

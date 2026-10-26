@@ -86,16 +86,22 @@ Home → **Transform data** opens a read-only Power Query editor with the M part
 
 ## Loading data
 
-Opening a file loads its model, not its data (except for the cache, below). Data comes from:
+Opening a file loads what Power BI Desktop shows when it opens it: a PBIX's saved data, a PBIP's
+local data cache, and a template's refresh. A PBIP without a cache opens without data, as in
+Desktop. Data comes from:
 
 | Source | Used for | How |
 |---|---|---|
-| Embedded data | PBIX, `.abf`, Excel Power Pivot | **Refresh** decodes it; no M runs |
+| Embedded data | PBIX, `.abf`, Excel Power Pivot | Loaded automatically on open (decoded, no M runs); **Refresh** reloads it |
 | Local data cache | PBIP with `<Model>.SemanticModel/.pbi/cache.abf` (saved by Power BI Desktop) | Loaded automatically on open; a banner says *Loaded cached data (as of …)* |
-| M queries | PBIP without a cache, PBIT, `model.bim`, TMDL folders | **Refresh** runs the partitions in DashCraft's own M engine |
+| M queries | PBIT (refreshed automatically on open), PBIP without a cache, `model.bim`, TMDL folders | **Refresh** runs the partitions in DashCraft's own M engine |
 | A CSV you pick | any table whose refresh failed | **Load CSV manually…** |
 
 **Refresh** (Home → Refresh, Table tools → Refresh table, or the Data pane menu) shows a panel with per-table progress and **Cancel**; cancelling keeps the previous data. Then it lists rows, source and duration per table, and for failures the message, a hint and **Load CSV manually…** when a CSV can stand in. Calculated columns and tables are computed after the tables they depend on; when a table fails, what depends on it is skipped with the reason.
+
+**Templates.** Power BI Desktop asks for a template's parameter values before its first refresh.
+DashCraft refreshes with the values saved in the template and says so in a banner, with **View
+parameters**; it cannot edit parameters yet.
 
 **Cached data.** The cache is Power BI Desktop's last refresh, so it can be older than the source. **Refresh from source** in the banner runs the M queries instead. Calculated objects missing from the cache are computed; a table missing from it fails with the CSV fallback.
 

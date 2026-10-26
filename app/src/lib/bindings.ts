@@ -314,11 +314,10 @@ export type DocumentSummary = {
 	modelName: string | null,
 	counts: DocumentCounts,
 	diagnostics: DiagnosticCounts,
-	/**
-	 *  The PBIP local data cache (`<Model>.SemanticModel/.pbi/cache.abf`), if there is one:
-	 *  the UI loads it on open (`data.refresh` with source `cache`).
-	 */
+	/**  The PBIP local data cache (`<Model>.SemanticModel/.pbi/cache.abf`), if there is one. */
 	cache: CacheInfoDto | null,
+	/**  What the UI loads right after opening, as Power BI Desktop does. */
+	onOpen: OpenLoad,
 };
 
 /**  Everything the panes need about an open document (`document_views`). */
@@ -527,6 +526,23 @@ export type OpenFileRequested = {
 	/**  Absolute path of the file to open. */
 	path: string,
 };
+
+/**  What the UI loads when it opens a document, as Power BI Desktop does. */
+export type OpenLoad = 
+/**
+ *  Nothing: no local model, or no saved data (a PBIP without `.pbi/cache.abf`); Home →
+ *  Refresh loads it.
+ */
+"none" | 
+/**  The data saved in the file (PBIX, ABF, Power Pivot): `data.refresh` with source `cache`. */
+"embedded" | 
+/**  The PBIP local data cache (`cache`): `data.refresh` with source `cache`. */
+"cache" | 
+/**
+ *  A template (PBIT) carries no data: `data.refresh` with source `query`, using the
+ *  parameter values saved in the template.
+ */
+"query";
 
 /**  A command of the registry catalog (`ops_catalog`). */
 export type OpsCommandDto = {

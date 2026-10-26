@@ -155,8 +155,9 @@ export function loadViews(docId: string): Promise<Outcome<DocumentViewsDto>> {
 }
 
 /**
- * Opens a file or folder in the workspace (`doc.open`; no data loaded until `data.refresh`) and
- * returns everything the panes need. The caller makes it current and closes the previous one.
+ * Opens a file or folder in the workspace (`doc.open`; no data loaded until `data.refresh`, which
+ * the caller starts as `summary.onOpen` says) and returns everything the panes need. The caller
+ * makes it current and closes the previous one.
  */
 export async function openDocument(path: string): Promise<Outcome<LoadedDocument>> {
   const opened = await ops.docOpen({ path, autoRefresh: false, source: 'query' })

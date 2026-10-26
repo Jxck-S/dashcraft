@@ -103,9 +103,26 @@ pub struct DocumentSummary {
     pub model_name: Option<String>,
     pub counts: DocumentCounts,
     pub diagnostics: DiagnosticCounts,
-    /// The PBIP local data cache (`<Model>.SemanticModel/.pbi/cache.abf`), if there is one:
-    /// the UI loads it on open (`data.refresh` with source `cache`).
+    /// The PBIP local data cache (`<Model>.SemanticModel/.pbi/cache.abf`), if there is one.
     pub cache: Option<CacheInfoDto>,
+    /// What the UI loads right after opening, as Power BI Desktop does.
+    pub on_open: OpenLoad,
+}
+
+/// What the UI loads when it opens a document, as Power BI Desktop does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum OpenLoad {
+    /// Nothing: no local model, or no saved data (a PBIP without `.pbi/cache.abf`); Home →
+    /// Refresh loads it.
+    None,
+    /// The data saved in the file (PBIX, ABF, Power Pivot): `data.refresh` with source `cache`.
+    Embedded,
+    /// The PBIP local data cache (`cache`): `data.refresh` with source `cache`.
+    Cache,
+    /// A template (PBIT) carries no data: `data.refresh` with source `query`, using the
+    /// parameter values saved in the template.
+    Query,
 }
 
 /// The local data cache of a PBIP: Power BI Desktop's last refreshed data.

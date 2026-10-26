@@ -12,15 +12,16 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use pbi_model::ObjectId;
+use pbi_model::{ObjectId, SourceFormat};
 use pbi_ops::DocEntry;
-use pbi_session::CacheInfo;
+use pbi_session::{CacheInfo, Session};
 use tauri::State;
 
 use crate::blob::BlobMapSetting;
 use crate::dto::{
-    BlobMapDto, CacheInfoDto, DocumentViewsDto, EntryKind, ModelDiagramDto, ObjectDetailsDto,
-    ObjectIdDto, RecentFileDto, TmdlViewDto, VisualFormatDto,
+    BlobMapDto, CacheInfoDto, DocumentSummary, DocumentViewsDto, EntryKind, ModelAvailability,
+    ModelDiagramDto, ObjectDetailsDto, ObjectIdDto, OpenLoad, RecentFileDto, TmdlViewDto,
+    VisualFormatDto,
 };
 use crate::error::AppError;
 use crate::mapping::{self, PathInfo};
@@ -82,6 +83,23 @@ fn cache_info(info: CacheInfo) -> CacheInfoDto {
     }
 }
 
+/// What to load on open, as Power BI Desktop does: a PBIX shows the data saved in it, a PBIP
+/// its local data cache and a PBIT refreshes; a PBIP without a cache stays empty.
+fn open_load(session: &Session, summary: &DocumentSummary) -> OpenLoad {
+    let format = &session.opened().document.source.format;
+    if summary.model_status.availability != ModelAvailability::Local || summary.counts.tables == 0 {
+        OpenLoad::None
+    } else if session.is_pbix() {
+        OpenLoad::Embedded
+    } else if summary.cache.is_some() {
+        OpenLoad::Cache
+    } else if *format == SourceFormat::Pbit {
+        OpenLoad::Query
+    } else {
+        OpenLoad::None
+    }
+}
+
 /// Everything the panes need about the open document `doc_id` (opened with `doc.open`): its
 /// summary, the semantic model tree (tables with columns, measures, partitions, hierarchies;
 /// relationships; named expressions), the reports (pages → visuals with positions and fields,
@@ -99,6 +117,7 @@ pub async fn document_views(
         let opened = session.opened();
         let mut summary = mapping::summary(opened, entry.id(), &info);
         summary.cache = session.cache_info().map(cache_info);
+        summary.on_open = open_load(session, &summary);
         Ok(DocumentViewsDto {
             summary,
             tree: mapping::model_tree(opened),

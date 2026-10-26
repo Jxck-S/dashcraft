@@ -138,6 +138,7 @@ pub(crate) fn summary(opened: &OpenedDocument, doc_id: &str, info: &PathInfo) ->
         counts: counts(opened),
         diagnostics: diagnostic_counts(&doc.diagnostics),
         cache: None,
+        on_open: OpenLoad::None,
     }
 }
 

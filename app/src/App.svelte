@@ -95,6 +95,8 @@
   let csvTarget = $state<{ table: string; reason: string | null } | null>(null)
   // The data shown comes from the PBIP local data cache (`.pbi/cache.abf`), loaded on open.
   let cacheNote = $state<{ asOf: string | null } | null>(null)
+  // A template (PBIT) with parameters was refreshed on open with the values saved in it.
+  let templateNote = $state(false)
 
   // Report view.
   let reportId = $state<number | null>(null)
@@ -466,6 +468,7 @@
     refreshPanelOpen = false
     csvTarget = null
     cacheNote = null
+    templateNote = false
     backstage = null
     statuses = []
     security = null
@@ -483,9 +486,11 @@
       toast('warning', `${plural(summary.diagnostics.errors, 'error')} while reading ${summary.fileName}. See the diagnostics panel.`)
     }
     if (c.reports === 0 && activeView === 'report') activeView = 'model'
-    // A PBIP with a local data cache: show Power BI Desktop's last refresh right away (no M).
-    if (summary.cache && backend.hasBackend && summary.modelStatus.availability === 'local') {
-      void startRefresh(null, 'cache')
+    // Load what Power BI Desktop shows on open: a PBIX's saved data and a PBIP's local data cache
+    // (no M), or a template's refresh (a PBIT saves no data). A PBIP without a cache stays empty.
+    if (backend.hasBackend && summary.onOpen !== 'none') {
+      templateNote = summary.onOpen === 'query' && views.tree.expressions.some((e) => e.isParameter)
+      void startRefresh(null, summary.onOpen === 'query' ? 'query' : 'cache')
     }
   }
 
@@ -525,6 +530,7 @@
     refreshPanelOpen = false
     csvTarget = null
     cacheNote = null
+    templateNote = false
     status = { message: 'Ready', isError: false }
   }
 
@@ -613,12 +619,14 @@
     if (!doc || refreshing) return
     const docId = doc.summary.docId
     const fromCache = source === 'cache'
+    // `cache` without a PBIP cache is the data saved in a PBIX: Desktop shows it without a note.
+    const pbipCache = fromCache && doc.summary.cache !== null
     const asOf = formatTimestamp(doc.summary.cache?.modified)
     run = newRun(docId, tables)
-    // Loading the cache on open is quick and quiet: the panel opens only if something fails.
+    // Loading saved data is quick and quiet: the panel opens only if something fails.
     refreshPanelOpen = !fromCache
     status = {
-      message: fromCache ? 'Loading cached data…' : tables ? `Refreshing ${tables.join(', ')}…` : 'Refreshing all tables…',
+      message: pbipCache ? 'Loading cached data…' : fromCache ? 'Loading data…' : tables ? `Refreshing ${tables.join(', ')}…` : 'Refreshing all tables…',
       isError: false,
     }
     const result = await backend.refresh(tables, source, (event) => {
@@ -630,18 +638,20 @@
       run = applyReport(run, report)
       const failed = report.tables.filter((t) => t.status.state !== 'ok' || t.columns.some((c) => c.status.state !== 'ok')).length
       const seconds = (report.durationMs / 1000).toFixed(1)
-      if (fromCache) cacheNote = { asOf }
+      if (pbipCache) cacheNote = { asOf }
       else if (report.ok && tables === null) cacheNote = null
-      const done = fromCache
+      const done = pbipCache
         ? `Loaded cached data${asOf ? ` (as of ${asOf})` : ''}: ${plural(report.tables.length, 'table')} in ${seconds} s`
-        : `Refreshed ${plural(report.tables.length, 'table')} in ${seconds} s`
+        : fromCache
+          ? `Loaded ${plural(report.tables.length, 'table')} in ${seconds} s`
+          : `Refreshed ${plural(report.tables.length, 'table')} in ${seconds} s`
       if (report.ok) {
         status = { message: done, isError: false }
         refreshPanelOpen = false
         toast('info', status.message)
       } else {
         status = {
-          message: `${fromCache ? 'Cached data loaded' : 'Refresh finished'} in ${seconds} s: ${plural(failed, 'table')} with errors`,
+          message: `${pbipCache ? 'Cached data loaded' : fromCache ? 'Data loaded' : 'Refresh finished'} in ${seconds} s: ${plural(failed, 'table')} with errors`,
           isError: true,
         }
         refreshPanelOpen = true
@@ -1180,6 +1190,22 @@
         Refresh from source
       </button>
       <button class="bar-close" onclick={() => (cacheNote = null)} title="Hide this note" aria-label="Hide this note">
+        <Icon name="close" size={12} />
+      </button>
+    </div>
+  {/if}
+
+  {#if templateNote && doc}
+    <div class="bar" role="note">
+      <Icon name="info" />
+      <span>
+        <strong>Loaded with the template's saved parameter values.</strong>
+        Power BI Desktop asks for them when it opens a template; DashCraft does not edit parameters yet.
+      </span>
+      <button class="bar-action" onclick={() => (powerQuery = { initial: doc?.tree.expressions.find((e) => e.isParameter)?.id ?? null })} title="Show the parameters and their values">
+        View parameters
+      </button>
+      <button class="bar-close" onclick={() => (templateNote = false)} title="Hide this note" aria-label="Hide this note">
         <Icon name="close" size={12} />
       </button>
     </div>
