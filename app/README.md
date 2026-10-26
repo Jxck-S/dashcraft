@@ -152,6 +152,10 @@ results and DTOs. Locations below refer to the Desktop shell above.
   page / report filters with DAX-like summaries and hidden / locked icons). Field labels are the
   projection display names; the model reference (`'Order Lines'[Quantity]`, `Sum(T[C])`) is in the
   tooltip.
+- **Data on open** (`DocumentSummary.onOpen`, as Power BI Desktop does): a PBIX, ABF or Power
+  Pivot file loads its saved data right after opening (`data.refresh` with source `cache`, quietly,
+  no banner); a PBIT refreshes from the source (`query`), with a banner about the template's saved
+  parameter values when it has parameters; a PBIP without a cache stays empty until Refresh.
 - **Local data cache**: when the opened PBIP has `<Model>.SemanticModel/.pbi/cache.abf` (Power BI
   Desktop's last refreshed data; `DocumentSummary.cache`), it is loaded right after opening
   (`data.refresh` with source `cache`: no M, no network, no blob map) and a banner says *Loaded cached

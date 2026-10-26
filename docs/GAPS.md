@@ -284,7 +284,7 @@ Source: [app/README.md](../app/README.md), [desktop-ui-reference.md](../app/docs
 | Modeling: new measure/column/table, rename, properties | ❌ | 0 | commands exist in `pbi-model`; DAX and M text not rewritten on rename | Wire editors to commands; DAX/M-aware rename |
 | DAX query view | 🟡 | 3 | editor, run/cancel, results ≤ 1000 rows | IntelliSense, formatter, find/replace |
 | TMDL view | 🟡 | 2 | read-only | Apply |
-| Power Query editor (Transform data) | 🟡 | 1 | read-only queries, parameters, blob map, Load CSV | Applied-steps UI, data preview |
+| Power Query editor (Transform data) | 🟡 | 1 | read-only queries, parameters, blob map, Load CSV; a PBIT refreshes on open with its saved parameter values (Desktop's "Enter parameters" prompt is missing) | Applied-steps UI, data preview, parameter editing |
 | Save / Save as (PBIP) | ❌ | 0 | `save_as_pbip` exists; no UI | Save through the command layer |
 | Undo / redo | ❌ | 0 | `History` exists; buttons disabled | Wire with the first editing command |
 | Several documents, several models per project | ❌ | 1 | one document; first model only | — |

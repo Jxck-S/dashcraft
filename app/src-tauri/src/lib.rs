@@ -600,6 +600,10 @@ mod tests {
         assert_eq!(summary["counts"]["relationships"], 8);
         assert_eq!(summary["counts"]["reports"], 3);
         assert_eq!(summary["cache"], Value::Null);
+        assert_eq!(
+            summary["onOpen"], "none",
+            "no local data cache: empty until Refresh"
+        );
         assert_eq!(summary["diagnostics"]["errors"], 0);
         let listed = run(&webview, "doc.list", json!({}));
         assert_eq!(listed["documents"][0]["docId"], "d1");
@@ -848,6 +852,7 @@ mod tests {
         let summary = &views["summary"];
         assert_eq!(summary["entryKind"], "directory");
         assert_eq!(summary["modelStatus"]["availability"], "remote");
+        assert_eq!(summary["onOpen"], "none");
         assert_eq!(summary["counts"]["tables"], 0);
         assert_eq!(views["tree"]["status"]["availability"], "remote");
         assert!(array(&views["tree"], "tables").is_empty());
@@ -858,6 +863,38 @@ mod tests {
         assert_eq!(err["kind"], "unsupported");
         let err = ops(&webview, "measures.values", json!({ "docId": "d1" })).unwrap_err();
         assert_eq!(err["code"], "noDocument", "no local model");
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+
+    /// What the UI loads on open follows Power BI Desktop: a PBIX its saved data, a PBIP its
+    /// local data cache, a PBIT a refresh from the source.
+    #[test]
+    fn on_open_loads_what_desktop_loads() {
+        let (_app, webview) = mock_app(StartupPath::default());
+        if let Some(pbix) = fixture("samples/microsoft/Revenue Opportunities.pbix") {
+            let summary = &open(&webview, &pbix)["summary"];
+            assert_eq!(summary["format"], "pbix");
+            assert_eq!(summary["cache"], Value::Null);
+            assert_eq!(summary["onOpen"], "embedded");
+        }
+        if let Some(pbit) = fixture("samples/microsoft/COVID-19 US Tracking Sample.pbit") {
+            let summary = &open(&webview, &pbit)["summary"];
+            assert_eq!(summary["format"], "pbit");
+            assert_eq!(summary["onOpen"], "query");
+        }
+        let Some(model) = fixture(&format!("{ACME}/AcmeOutfitters.SemanticModel")) else {
+            return;
+        };
+        let folder = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/dashcraft-app-tests/cache/AcmeOutfitters.SemanticModel");
+        let _ = std::fs::remove_dir_all(&folder);
+        copy_dir(&model, &folder);
+        assert_eq!(open(&webview, &folder)["summary"]["onOpen"], "none");
+        std::fs::create_dir_all(folder.join(".pbi")).unwrap();
+        std::fs::write(folder.join(".pbi/cache.abf"), b"").unwrap();
+        let summary = &open(&webview, &folder)["summary"];
+        assert_eq!(summary["cache"]["entry"], ".pbi/cache.abf");
+        assert_eq!(summary["onOpen"], "cache");
         let _ = std::fs::remove_dir_all(&folder);
     }
 
