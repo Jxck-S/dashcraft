@@ -1021,6 +1021,11 @@ fn library_approx_cases() -> Vec<(&'static str, f64)> {
         ("T.INV.2T(0.05, 10)", 2.228_138_851_986_274),
         ("CONFIDENCE.NORM(0.05, 2.5, 50)", 0.692_951_912_174_839_1),
         ("CONFIDENCE.T(0.05, 1, 50)", 0.284_196_855_495_729_9),
+        // Financial functions.
+        ("PMT(0.05, 10, 1000)", -129.504_574_965_456_6),
+        ("PV(0.05, 10, -129.5045749654566)", 1000.0),
+        ("FV(0.05, 10, -100)", 1257.789_253_554_883),
+        ("NPER(0.05, -129.5045749654566, 1000)", 10.0),
         // Inside iterators and CALCULATE.
         (
             "SUMX(GENERATESERIES(1, 3), NORM.S.DIST([Value], TRUE))",

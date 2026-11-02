@@ -165,6 +165,19 @@ always finite.
 | `CONFIDENCE.NORM` | supported | |
 | `CONFIDENCE.T` | supported | |
 
+## Financial
+
+Standard annuity and investment calculations following Excel and Power BI
+semantics. Cash flows paid out are represented by negative numbers, and cash
+flows received are represented by positive numbers.
+
+| Function | Status | Notes |
+|---|---|---|
+| `PMT` | supported | Periodic loan payment: `PMT(rate, nper, pv[, fv][, type])`. |
+| `PV` | supported | Present value of an annuity: `PV(rate, nper, pmt[, fv][, type])`. |
+| `FV` | supported | Future value of an annuity: `FV(rate, nper, pmt[, pv][, type])`. |
+| `NPER` | supported | Number of payment periods: `NPER(rate, pmt, pv[, fv][, type])`. |
+
 ## Text
 
 | Function | Status | Notes |
@@ -402,8 +415,8 @@ values of the `ORDERBY`/`PARTITIONBY` columns (one table) are used.
 Commonly seen functions that still return `UnsupportedFunction`:
 `NONVISUAL`, `SUBSTITUTEWITHINDEX`, `SAMPLE`, `ALLCROSSFILTERED`,
 `ROLLUP`/`ROLLUPISSUBTOTAL` (in `SUMMARIZE`), `LINEST`/`LINESTX`,
-`TOCSV`/`TOJSON`, `COLUMNSTATISTICS`, the financial functions (`PMT`,
-`XIRR`, `XNPV`, …), `EXPAND`/`COLLAPSE`/visual-calculation-only functions
+`TOCSV`/`TOJSON`, `COLUMNSTATISTICS`, other financial functions (`XIRR`,
+`XNPV`, …), `EXPAND`/`COLLAPSE`/visual-calculation-only functions
 (`RUNNINGSUM`, `MOVINGAVERAGE`, `PREVIOUS`, `NEXT`, `FIRST`, `LAST`),
 `INFO.*` DMV functions.
 

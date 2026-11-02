@@ -4,6 +4,7 @@
 
 mod aggregate;
 mod distributions;
+mod financial;
 mod info;
 mod math;
 mod model;
@@ -69,6 +70,7 @@ fn registry() -> &'static HashMap<&'static str, Builtin> {
             .chain(model::BUILTINS)
             .chain(math::BUILTINS)
             .chain(distributions::BUILTINS)
+            .chain(financial::BUILTINS)
             .chain(other::BUILTINS)
             .map(|b| (b.name, *b))
             .collect()

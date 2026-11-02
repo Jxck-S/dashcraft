@@ -14,7 +14,7 @@
   <a href="https://github.com/Jxck-S/dashcraft/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Jxck-S/dashcraft/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <img alt="Rust" src="https://img.shields.io/badge/Rust-b7410e?style=flat-square&logo=rust">
   <img alt="macOS · Windows · Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-2f7bf5?style=flat-square">
-  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-3a3a3a?style=flat-square">
+  <img alt="License: MIT OR Apache-2.0" src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-3a3a3a?style=flat-square">
   <img alt="Status: read-only viewer" src="https://img.shields.io/badge/status-read--only%20viewer-d69e2e?style=flat-square">
 </p>
 

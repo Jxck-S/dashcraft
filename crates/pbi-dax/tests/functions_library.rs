@@ -469,6 +469,48 @@ fn rand_is_deterministic_per_evaluation() {
     assert!(rows.windows(2).all(|w| w[0] != w[1]), "{rows:?}");
 }
 
+#[test]
+fn financial_functions() {
+    let f = fx();
+
+    // Standard mortgage loan: $100k principal, 8% annual (0.08 / 12 monthly), 30 years (360 mo).
+    let pmt = f.number("PMT(0.08 / 12, 360, 100000)");
+    assert!((pmt - (-733.764_573_879_378)).abs() < 1e-9);
+
+    let pv = f.number("PV(0.08 / 12, 360, -733.764573879378)");
+    assert!((pv - 100000.0).abs() < 1e-9);
+
+    let nper = f.number("NPER(0.08 / 12, -733.764573879378, 100000)");
+    assert!((nper - 360.0).abs() < 1e-9);
+
+    // Savings future value: 10 years (120 mo) saving $100/mo starting with $5000 at 6% annual.
+    let fv = f.number("FV(0.06 / 12, 120, -100, -5000)");
+    assert!((fv - 25484.918_350_807_253).abs() < 1e-9);
+
+    // Annuity due (type = 1): payments due at beginning of period.
+    let pmt_due = f.number("PMT(0.08 / 12, 360, 100000, 0, 1)");
+    assert!((pmt_due - (-728.905_205_840_441_8)).abs() < 1e-9);
+
+    let pv_due = f.number("PV(0.08 / 12, 360, -728.9052058404418, 0, 1)");
+    assert!((pv_due - 100000.0).abs() < 1e-9);
+
+    let nper_due = f.number("NPER(0.08 / 12, -728.9052058404418, 100000, 0, 1)");
+    assert!((nper_due - 360.0).abs() < 1e-9);
+
+    // Zero interest rate limit.
+    assert_eq!(f.number("PMT(0, 10, 1000)"), -100.0);
+    assert_eq!(f.number("PV(0, 10, -100)"), 1000.0);
+    assert_eq!(f.number("FV(0, 10, -100, 1000)"), 0.0);
+    assert_eq!(f.number("NPER(0, -100, 1000)"), 10.0);
+
+    // Invalid arguments.
+    assert!(f.eval("PMT(0, 0, 100)").is_err());
+    assert!(f.eval("PMT(-1, 5, 100)").is_err());
+    assert!(f.eval("PMT(0.05, 10, 100, 0, 2)").is_err());
+    assert!(f.eval("NPER(0.10, -50, 1000)").is_err());
+    assert!(f.eval("NPER(0, 0, 1000)").is_err());
+}
+
 /// Every function added by the library wave (and the date functions whose
 /// semantics changed).
 const NEW_FUNCTIONS: &[&str] = &[
@@ -551,6 +593,10 @@ const NEW_FUNCTIONS: &[&str] = &[
     "USERCULTURE",
     "ISAFTER",
     "ISONORAFTER",
+    "PMT",
+    "PV",
+    "FV",
+    "NPER",
 ];
 
 /// Argument shapes for the sweep: BLANK, zero, signs, fractions, extremes,
