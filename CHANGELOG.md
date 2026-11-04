@@ -42,6 +42,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - `.gitignore` refuses `*.pbix`, `*.pbit` and `*.abf` files except the committed Microsoft samples and fuzz seeds.
 
 ### Fixed
+- Dependencies: resvg and usvg 0.49.0 pick up upstream clipping and text-layout fixes; bundled-font and offline image-loading policies are unchanged.
 - Dependencies: roxmltree 0.21.2 avoids stack overflow on deeply nested XML; ZIP 9.2.2 and the Tauri dialog plugin 2.8.4 pick up upstream maintenance fixes.
 - Dependencies: Arrow and Parquet 59.3.2 maintenance fixes for IPC validity buffers, array offsets and Parquet decoding; DataFusion remains on 55.2.
 - CI: replace the yanked transitive `async-executor` 1.14.0 with 1.14.1; the session unsupported-DAX regression uses a deliberately unknown function now that `PMT` is supported.
