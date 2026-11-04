@@ -65,8 +65,8 @@ datafusion = { version = "55.2", default-features = false, features = ["sql", "n
 tokio = { version = "1.54", features = ["rt-multi-thread", "macros", "sync", "time"] }
 tokio-util = "0.7.20"
 # rendering
-resvg = { version = "0.48.1", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
-usvg = { version = "0.48.1", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
+resvg = { version = "0.49.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
+usvg = { version = "0.49.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
 tiny-skia = "0.12"
 cosmic-text = "0.19"
 image = { version = "0.25.10", default-features = false, features = ["png"] }

@@ -7,6 +7,16 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-04
 
+### Dependabot PR #14: paired SVG renderer update
+
+- **What:** Updated resvg and usvg together from 0.48.1 to 0.49.0 and regenerated
+  `THIRD_PARTY_NOTICES.md`, retaining merged PRs #13, #15 and #17.
+- **Why:** Upstream clipping and text-layout fixes; the existing bundled-font, offline image
+  resolver, deterministic PNG and snapshot checks stay unchanged.
+- **Numbers:** Two renderer versions updated. The original PR passed all 10 CI jobs; the
+  refreshed combined head is checked before merging. Optional image-level review is deferred;
+  CI has no optional Power BI golden images, so it cannot establish golden SSIM.
+
 ### Dependabot PR #15: XML, ZIP and dialog maintenance updates
 
 - **What:** `Cargo.lock` updates roxmltree 0.21.1 to 0.21.2, zip 9.0.5 to 9.2.2 and
