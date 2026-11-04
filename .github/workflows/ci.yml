@@ -198,9 +198,18 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: actionlint
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          mkdir -p target/tmp/actionlint
+          curl --fail --location --retry 3 \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            -o target/tmp/actionlint.tar.gz
+          echo "$ACTIONLINT_SHA256  target/tmp/actionlint.tar.gz" | sha256sum --check
+          tar -xzf target/tmp/actionlint.tar.gz -C target/tmp/actionlint actionlint
+          echo "$PWD/target/tmp/actionlint" >> "$GITHUB_PATH"
       - name: Validate CI workflow and change selection
         run: |
           actionlint .github/workflows/ci.yml
