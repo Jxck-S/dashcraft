@@ -3,7 +3,7 @@ name = "dashcraft-fuzz"
 description = "cargo-fuzz targets for the DashCraft parsers and decoders (untrusted input)"
 version = "0.0.0"
 edition = "2024"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 publish = false
 
 [package.metadata]

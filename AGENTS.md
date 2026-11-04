@@ -17,7 +17,7 @@ reimplementation of Power BI Desktop ([ADR-0004](docs/adr/0004-desktop-ready-arc
   then (`[Unreleased]`): the command registry, `run`/`serve`/`mcp`, the opt-in AI layer (also in
   the app), the app on the registry, perf budgets, the DashCraft name, scatter/funnel/gauge/
   treemap/waterfall visuals, conditional formatting, calculation groups, many-to-many
-  relationships, RLS "View as" and 294 DAX functions. Details:
+  relationships, RLS "View as" and 298 DAX functions. Details:
   [docs/ROADMAP.md](docs/ROADMAP.md), [CHANGELOG.md](CHANGELOG.md), [docs/GAPS.md](docs/GAPS.md).
 - Product name: **DashCraft** (§10, [ADR-0009](docs/adr/0009-naming-dashcraft.md),
   [ADR-0010](docs/adr/0010-dashcraft-everywhere.md)). The CLI binary is `dashcraft`, the app
@@ -133,8 +133,8 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
     layers`. No blanket `#[allow]`, no skipped hooks, no deleted tests to get green.
 16. **Commit trailer** on every commit (agents commit only when asked; the orchestrator commits waves):
     `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
-17. **Public repository rule.** This repository is public (`github.com/Jxck-S/dashcraft`, MIT
-    License). Everything committed is published: it must never contain internal data (rule 2): no
+17. **Public repository rule.** This repository is public (`github.com/Jxck-S/dashcraft`, MIT OR
+    Apache-2.0). Everything committed is published: it must never contain internal data (rule 2): no
     internal IDs, URLs, tenant, workspace or storage names, report data, or commit messages naming
     them. Review the staged diff for that before every push.
 

@@ -9,7 +9,7 @@ default-members = ["crates/*", "xtask"]
 version = "0.2.0"
 edition = "2024"
 rust-version = "1.94"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 publish = false
 repository = "https://github.com/Jxck-S/dashcraft"
 
