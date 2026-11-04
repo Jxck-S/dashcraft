@@ -7,8 +7,19 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-04
 
+### PR #17 CI: unsupported-function fixture and yanked dependency
+
+- **What:** The session robustness fixture uses `UNSUPPORTED_TEST_FUNCTION()` instead of
+  the now-supported `PMT`, preserving the typed-error and skipped-dependant assertions.
+  `Cargo.lock` updates only `async-executor` 1.14.0 → 1.14.1; regenerated `THIRD_PARTY_NOTICES.md`.
+- **Why:** The first approved full CI run exposed the stale fixture and a dependency yanked
+  on November 2. Neither check is weakened or suppressed.
+- **Numbers:** The session test fails before the fixture update; all four `cargo deny` checks
+  pass with the patched lockfile. No other dependency version changes.
+
 ### PR #17 second review: DAX compatibility and financial numerical stability
 
+- **Commit:** `87cc931`.
 - **What:** `pbi-dax` rounds payment types before validating 0/1 and rejects non-finite or
   below-one `nper` in `PMT`/`PV`/`FV`, matching the documented DAX bounds. `PMT`/`PV`
   discount positive-rate cash flows rather than overflowing an intermediate growth factor.
