@@ -47,7 +47,7 @@ Everything is in [`app/src-tauri/tauri.conf.json`](../app/src-tauri/tauri.conf.j
 | `version` | *(not set)* | Taken from the `dashcraft-app` crate, i.e. `[workspace.package] version` in the root `Cargo.toml`. The release workflow fails if the tag, `Cargo.toml` and `app/package.json` disagree. |
 | `bundle.targets` | `app`, `dmg`, `msi`, `nsis`, `appimage`, `deb` | Tauri builds the subset that applies to the host OS |
 | `bundle.icon` | `icons/*` | Generated from `icons/app-icon.svg` (see [Icons](#icons)) |
-| `bundle.resources` | `licenses/…` | `NOTICE` (trademark and non-affiliation notice), `THIRD_PARTY_NOTICES.md`, the Selawik `OFL.txt` (as `Selawik-OFL.txt`) and the Fluent UI System Icons MIT `LICENSE` (as `FluentUI-System-Icons-LICENSE.txt`). Release builds add `THIRD_PARTY_LICENSES.txt`. |
+| `bundle.resources` | `licenses/…` | `LICENSE-MIT` and `LICENSE-APACHE` (DashCraft's own licenses), `NOTICE` (trademark and non-affiliation notice), `THIRD_PARTY_NOTICES.md`, the Selawik `OFL.txt` (as `Selawik-OFL.txt`) and the Fluent UI System Icons MIT `LICENSE` (as `FluentUI-System-Icons-LICENSE.txt`). Release builds add `THIRD_PARTY_LICENSES.txt`. |
 | `bundle.fileAssociations` | `.pbix`, `.pbit`, `.pbip`, `.bim`, `.vpax` | Role *Viewer*, rank *Alternate* (see [File associations](#file-associations)) |
 | `bundle.windows.wix.upgradeCode` | `070cde76-…-f64f8824fa32` | Pinned, so a later product rename can't break MSI upgrades |
 | `bundle.windows.nsis.installMode` | `currentUser` | NSIS installs per user without admin rights; use the MSI for machine-wide installs |
