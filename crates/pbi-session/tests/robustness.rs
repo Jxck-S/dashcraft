@@ -72,7 +72,7 @@ const SALES: &str = r##"{
     {"name": "Product", "dataType": "string", "sourceColumn": "product"},
     {"name": "Amount", "dataType": "decimal", "sourceColumn": "amount"},
     {"type": "calculated", "name": "Double", "dataType": "decimal", "expression": "Sales[Amount] * 2"},
-    {"type": "calculated", "name": "Bad", "dataType": "dateTime", "expression": "PMT(0.05, 12, 1000)"},
+    {"type": "calculated", "name": "Bad", "dataType": "dateTime", "expression": "UNSUPPORTED_TEST_FUNCTION()"},
     {"type": "calculated", "name": "After Bad", "dataType": "string", "expression": "FORMAT(Sales[Bad], \"yyyy\")"}
   ],
   "partitions": [{"name": "Sales", "mode": "import", "source": {"type": "m",
@@ -350,7 +350,7 @@ async fn unsupported_m_and_dax_are_reported_not_fatal() {
             csv_fallback,
             ..
         } => {
-            assert!(message.contains("PMT"), "{message}");
+            assert!(message.contains("UNSUPPORTED_TEST_FUNCTION"), "{message}");
             assert!(*unsupported);
             assert!(!*csv_fallback);
         }
