@@ -101,13 +101,14 @@ Source: `crates/pbi-m`; deviations in the `pbi_m::eval` module docs.
 Source: `crates/pbi-dax`, [FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md) (kept in sync by
 `functions_md_lists_every_supported_function` and `every_supported_function_is_tested`).
 
-**Functions: 294 registered** (`supported_functions()`; 271 supported, 23 partial; 218 → 294):
+**Functions: 298 registered** (`supported_functions()`; 275 supported, 23 partial; 218 → 298):
 
 | Family | Registered | Partial |
 |---|---|---|
 | Logical and information | 32 | 0 |
 | Math and statistics | 71 | 0 |
 | Statistical distributions | 19 | 0 |
+| Financial | 4 | 0 |
 | Text | 22 | 1 |
 | Date and time | 24 | 2 |
 | Time intelligence | 37 | 5 |

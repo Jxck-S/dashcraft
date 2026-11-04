@@ -485,7 +485,7 @@ fn financial_functions() {
 
     // Savings future value: 10 years (120 mo) saving $100/mo starting with $5000 at 6% annual.
     let fv = f.number("FV(0.06 / 12, 120, -100, -5000)");
-    assert!((fv - 25484.918_350_807_253).abs() < 1e-9);
+    assert!((fv - 25_484.918_350_807_253).abs() < 1e-9);
 
     // Annuity due (type = 1): payments due at beginning of period.
     let pmt_due = f.number("PMT(0.08 / 12, 360, 100000, 0, 1)");
@@ -502,6 +502,21 @@ fn financial_functions() {
     assert_eq!(f.number("PV(0, 10, -100)"), 1000.0);
     assert_eq!(f.number("FV(0, 10, -100, 1000)"), 0.0);
     assert_eq!(f.number("NPER(0, -100, 1000)"), 10.0);
+
+    // Tiny non-zero rates (1 + rate rounds to 1) approach the zero-rate limits.
+    for rate in ["1e-20", "-1e-20", "1e-12"] {
+        for (src, want) in [
+            (format!("PMT({rate}, 10, 1000)"), -100.0),
+            (format!("PMT({rate}, 10, 1000, 0, 1)"), -100.0),
+            (format!("PV({rate}, 10, -100)"), 1000.0),
+            (format!("FV({rate}, 10, -100)"), 1000.0),
+            (format!("NPER({rate}, -100, 1000)"), 10.0),
+            (format!("NPER({rate}, -100, 1000, 0, 1)"), 10.0),
+        ] {
+            let got = f.number(&src);
+            assert!((got - want).abs() < 1e-6, "{src}: {got}");
+        }
+    }
 
     // Invalid arguments.
     assert!(f.eval("PMT(0, 0, 100)").is_err());

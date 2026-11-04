@@ -44,7 +44,7 @@ notes; if the two disagree, `AGENTS.md` wins (and fix the disagreement).
   threshold or weakened expected-value assert; perf budgets loosened; missing tests, CHANGELOG
   `[Unreleased]` line, `docs/GAPS.md` row or `docs/DEVLOG.md` entry.
 - **Public repository rule** (golden rule 17): this repository is the public
-  `github.com/Jxck-S/dashcraft` (MIT License); everything committed is published, so review the
+  `github.com/Jxck-S/dashcraft` (MIT OR Apache-2.0); everything committed is published, so review the
   staged diff for internal data before every push.
 - **Commit trailer** for every commit Copilot authors:
 

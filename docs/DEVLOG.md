@@ -5,6 +5,22 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-04
+
+### DAX financial functions; MIT OR Apache-2.0 (PR #17)
+
+- **What:** `pbi-dax` `eval/functions/financial.rs`: `PMT`, `PV`, `FV`, `NPER` (`type` 0/1, `rate = 0`
+  limits, `rate <= -1` and `type` validation). `(1 + rate)^nper` and the annuity factor go through
+  `ln_1p`/`exp_m1`, and `NPER` through `ln_1p` of the ratio's offset from 1, so tiny non-zero rates
+  (`1.0 + rate == 1.0`) match the zero-rate limits instead of failing or returning 0. Licence: `MIT OR
+  Apache-2.0` (`LICENSE` → `LICENSE-MIT`, new `LICENSE-APACHE`, workspace and fuzz manifests, NOTICE,
+  README, About page); the app bundles both files under `licenses/` (`tauri.conf.json` still pointed
+  at the removed `LICENSE`, which broke the `dashcraft-app` build script).
+- **Why:** GAPS "Function library breadth" (financial functions missing).
+- **Numbers:** 294 → 298 DAX functions (275 supported, 23 partial); `financial_functions` covers
+  mortgage, savings, annuity due, zero and tiny (±1e-20, 1e-12) rates and invalid arguments; the
+  never-panic sweep includes the four functions. Open: `XIRR`, `XNPV` and the other financial functions.
+
 ## 2026-10-26
 
 ### App: load data on open as Power BI Desktop does

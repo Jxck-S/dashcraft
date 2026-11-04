@@ -42,6 +42,15 @@ fn payment_type(i: &Interp<'_>, env: &Env, f: &str, args: &[Expr], n: usize) -> 
     }
 }
 
+/// `(1 + rate)^nper` and `((1 + rate)^nper - 1) / rate` for a non-zero
+/// `rate > -1`. Computed through `ln_1p`/`exp_m1` so that tiny rates (where
+/// `1.0 + rate == 1.0`) still approach the zero-rate limits.
+fn growth(rate: f64, nper: f64) -> (f64, f64) {
+    let l = nper * rate.ln_1p();
+    let annuity = if l == 0.0 { nper } else { l.exp_m1() / rate };
+    (l.exp(), annuity)
+}
+
 /// `PMT(rate, nper, pv[, fv][, type])`: calculates payment for a loan
 /// based on constant payments and a constant interest rate.
 fn pmt(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
@@ -63,12 +72,12 @@ fn pmt(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
         return real("PMT", -(pv + fv) / nper);
     }
 
-    let factor = (1.0 + rate).powf(nper);
-    let denom = (1.0 + rate * typ) * (factor - 1.0);
+    let (factor, annuity) = growth(rate, nper);
+    let denom = (1.0 + rate * typ) * annuity;
     if denom == 0.0 {
         return Err(invalid("PMT", "division by zero in annuity calculation"));
     }
-    real("PMT", -(fv + pv * factor) * rate / denom)
+    real("PMT", -(fv + pv * factor) / denom)
 }
 
 /// `PV(rate, nper, pmt[, fv][, type])`: calculates present value of an annuity.
@@ -88,11 +97,11 @@ fn pv(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
         return real("PV", -(fv_val + pmt_val * nper));
     }
 
-    let factor = (1.0 + rate).powf(nper);
+    let (factor, annuity) = growth(rate, nper);
     if factor == 0.0 {
         return Err(too_large("PV"));
     }
-    let term = pmt_val * (1.0 + rate * typ) * (factor - 1.0) / rate;
+    let term = pmt_val * (1.0 + rate * typ) * annuity;
     real("PV", -(fv_val + term) / factor)
 }
 
@@ -113,8 +122,8 @@ fn fv(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
         return real("FV", -(pv_val + pmt_val * nper));
     }
 
-    let factor = (1.0 + rate).powf(nper);
-    let term = pmt_val * (1.0 + rate * typ) * (factor - 1.0) / rate;
+    let (factor, annuity) = growth(rate, nper);
+    let term = pmt_val * (1.0 + rate * typ) * annuity;
     real("FV", -(pv_val * factor + term))
 }
 
@@ -142,18 +151,17 @@ fn nper(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     }
 
     let p_star = pmt_val * (1.0 + rate * typ);
-    let num = p_star - rate * fv_val;
     let den = p_star + rate * pv_val;
 
     if den == 0.0 {
         return Err(invalid("NPER", "cannot divide by zero"));
     }
 
-    let ratio = num / den;
-    if ratio <= 0.0 || !ratio.is_finite() {
+    // (p_star - rate * fv) / den = 1 + x; ln_1p(x) keeps tiny rates accurate.
+    let x = -rate * (pv_val + fv_val) / den;
+    if x <= -1.0 || !x.is_finite() {
         return Err(invalid("NPER", "cash flows cannot satisfy target"));
     }
 
-    let n = ratio.ln() / rate.ln_1p();
-    real("NPER", n)
+    real("NPER", x.ln_1p() / rate.ln_1p())
 }

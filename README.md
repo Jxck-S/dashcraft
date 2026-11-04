@@ -86,7 +86,7 @@ Every screenshot is the real app on the synthetic Acme Outfitters example in thi
     <td width="50%" valign="top">
       <img src="docs/images/dashcraft-dax.png" alt="DAX query view: a SUMMARIZECOLUMNS query of total sales, order count and margin by region, and its five-row result" width="100%">
       <br>
-      <b>Query with DAX.</b> 294 DAX functions with filter and row context, calculation groups and many-to-many relationships; run <code>EVALUATE</code> queries in the DAX query view.
+      <b>Query with DAX.</b> 298 DAX functions with filter and row context, calculation groups and many-to-many relationships; run <code>EVALUATE</code> queries in the DAX query view.
     </td>
   </tr>
 </table>
@@ -193,7 +193,8 @@ Installers for macOS, Windows and Linux are built by the release workflow
 
 ## License and notices
 
-DashCraft is open source under the [MIT License](LICENSE). Bundled assets: the Selawik and Carlito
+DashCraft is open source under either the [MIT License](LICENSE-MIT) or the
+[Apache License, Version 2.0](LICENSE-APACHE), at your option. Bundled assets: the Selawik and Carlito
 fonts (SIL OFL 1.1, unmodified) and Fluent UI System Icons (MIT); no Power BI icons, images or CSS.
 The XPress9, ABF and VertiPaq decoders are clean-room implementations; shipping PBIX data decoding
 in a release needs the legal review recorded in [ADR-0003](docs/adr/0003-vertipaq-xpress9-cleanroom.md).
