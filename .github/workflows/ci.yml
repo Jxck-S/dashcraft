@@ -41,8 +41,12 @@ env:
 jobs:
   rust:
     name: Rust (${{ matrix.os }})
+    needs: detect
+    if: needs.detect.outputs.rust == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    env:
+      SCCACHE_GHA_ENABLED: "true"
     strategy:
       fail-fast: false
       matrix:
@@ -59,15 +63,35 @@ jobs:
           rustup toolchain install || rustup show
           rustc --version && cargo --version
 
+      - name: Faster Windows test linking
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $linker = Join-Path (rustc --print sysroot) 'lib/rustlib/x86_64-pc-windows-msvc/bin/rust-lld.exe'
+          if (!(Test-Path -LiteralPath $linker)) { throw "Bundled Rust LLD linker is missing: $linker" }
+          "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CARGO_PROFILE_DEV_DEBUG=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CARGO_PROFILE_TEST_DEBUG=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - uses: mozilla-actions/sccache-action@v0.0.11
+        id: sccache
+        with:
+          version: "v0.16.0"
+          disable_annotations: true
+
       - uses: Swatinem/rust-cache@v2
         with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.151
 
       - name: cargo fmt
         if: runner.os == 'Linux'
         run: cargo fmt --all --check
 
-      # Plain `cargo clippy` / `cargo test` (no --workspace) act on the
+      # Cargo commands without --workspace act on the
       # workspace's default-members (crates/*), which excludes the Tauri app
       # (needs webview system libraries; covered by the `app` job). This guard
       # fails if any *other* member is missing from default-members, so nothing
@@ -96,14 +120,36 @@ jobs:
       - name: cargo clippy
         run: cargo clippy --all-targets --locked -- -D warnings
 
-      - name: cargo test
-        run: cargo test --locked --no-fail-fast
+      - name: cargo nextest
+        id: tests
+        env:
+          RUSTC_WORKSPACE_WRAPPER: sccache
+        run: cargo nextest run --locked --no-fail-fast
+
+      - name: cargo test (doctests)
+        if: ${{ !cancelled() && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure') }}
+        env:
+          RUSTC_WORKSPACE_WRAPPER: sccache
+        run: cargo test --doc --locked --no-fail-fast
+
+      - name: Compiler cache statistics
+        if: ${{ !cancelled() && steps.sccache.outcome == 'success' }}
+        shell: bash
+        run: |
+          {
+            echo '### Compiler cache (${{ runner.os }})'
+            echo '```text'
+            sccache --show-stats
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # Performance budgets (perf/budgets.toml, docs/perf.md). Informational: shared runners are
   # slower and noisier than the baseline machine and have no gitignored data, so results are
   # reported (job summary + artifact) but never fail the workflow.
   perf:
     name: Performance budgets (informational)
+    needs: detect
+    if: needs.detect.outputs.rust == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     continue-on-error: true
@@ -143,15 +189,26 @@ jobs:
           if-no-files-found: warn
 
   detect:
-    name: Detect optional components
+    name: Detect changed components
     runs-on: ubuntu-latest
     outputs:
       app: ${{ steps.detect.outputs.app }}
+      rust: ${{ steps.detect.outputs.rust }}
     steps:
       - uses: actions/checkout@v7
-      # hashFiles() is not available in job-level `if:`, so evaluate it here.
+        with:
+          fetch-depth: 0
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: actionlint
+      - name: Validate CI workflow and change selection
+        run: |
+          actionlint .github/workflows/ci.yml
+          python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
       - id: detect
-        run: echo "app=${{ hashFiles('app/package.json') != '' }}" >> "$GITHUB_OUTPUT"
+        env:
+          BASE_SHA: ${{ github.event_name != 'workflow_dispatch' && (github.event.pull_request.base.sha || github.event.before) || '' }}
+        run: python3 -B .github/scripts/ci_scope.py
 
   app:
     name: App (${{ matrix.os }})

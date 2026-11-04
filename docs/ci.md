@@ -17,24 +17,63 @@ CI is skipped when a change touches only Markdown, `docs/` (including `docs/imag
 and `reference/`, and `THIRD_PARTY_NOTICES.md`. A test that starts reading another file needs
 that file added to the `paths` list. **Run workflow** runs CI on demand.
 
+Known frontend-only changes skip the Rust and performance jobs, not the three-platform app
+checks or dependency policies. `.github/scripts/ci_scope.py` classifies the changed paths;
+its tests and `actionlint` run in `detect` before the build jobs start. It ignores the same
+non-runtime documentation/configuration as the workflow trigger, but keeps generated
+TypeScript contracts (`*.gen.ts`, `bindings.ts`) on full Rust CI because Rust tests verify
+them. Rust sources/manifests/lockfiles, fixtures, CI configuration and every unknown path run full
+validation. Git diffs disable rename detection so a removed Rust path cannot be hidden by
+a frontend destination. Manual runs and ranges without a previous revision run everything;
+an invalid or unavailable Git revision fails detection rather than silently skipping checks.
+
 | Job | Runs on | What it does |
 |---|---|---|
-| `rust` | macos-14 (arm64), windows-latest, ubuntu-latest | `cargo fmt --all --check` (Linux only), default-members guard (Linux only), `cargo xtask layers` (Linux only, [below](#architecture-layers-cargo-xtask-layers)), `cargo clippy --all-targets --locked -- -D warnings`, `cargo test --locked --no-fail-fast` |
-| `perf` | ubuntu-latest | `cargo xtask perf --quick --no-fail --locked`: release build of the `perf_*` examples, scenarios vs `perf/budgets.toml`. **Informational** (`continue-on-error`): the table goes to the job summary and `target/perf/` is uploaded as the `perf-report` artifact (14 days). See [perf.md](perf.md) |
+| `detect` | ubuntu-latest | Lints `ci.yml`, tests change selection, and selects full Rust validation or frontend-only validation |
+| `rust` | macos-14 (arm64), windows-latest, ubuntu-latest; except known frontend-only changes | `cargo fmt --all --check` (Linux only), default-members guard (Linux only), `cargo xtask layers` (Linux only, [below](#architecture-layers-cargo-xtask-layers)), `cargo clippy --all-targets --locked -- -D warnings`, `cargo nextest run --locked --no-fail-fast`, `cargo test --doc --locked --no-fail-fast` |
+| `perf` | ubuntu-latest; same change selection as `rust` | `cargo xtask perf --quick --no-fail --locked`: release build of the `perf_*` examples, scenarios vs `perf/budgets.toml`. **Informational** (`continue-on-error`): the table goes to the job summary and `target/perf/` is uploaded as the `perf-report` artifact (14 days). See [perf.md](perf.md) |
 | `app` | same 3 OSes, only when `app/package.json` exists | Installs webview libraries on Linux, runs `npm ci`, `npm run check`, and `npm run build` in `app/`, then `cargo clippy -p dashcraft-app --all-targets --locked -- -D warnings`. On Linux it also runs `scripts/license-inventory.py --check` and emits a **warning** (not a failure) when the license inventory in `THIRD_PARTY_NOTICES.md` is stale ([packaging.md](packaging.md#license-inventory-and-sbom)) |
 | `deny` | ubuntu-latest | `cargo deny check advisories` (non-blocking) and `cargo deny check bans licenses sources` (blocking), using `deny.toml` |
 
-### Why `cargo clippy`/`cargo test` without `--workspace`
+### Build reuse and test execution
+
+The Rust jobs use sccache's content-addressed compiler cache for workspace library compilations
+via `RUSTC_WORKSPACE_WRAPPER` on test steps only. `Swatinem/rust-cache` keeps dependency
+artifacts, including Clippy's metadata; sccache does not store a second copy of those dependencies.
+Rust dependency caches are saved on `main` and same-repository PRs, so repeated pushes can
+reuse changed dependencies. Fork PRs can restore base-branch dependency caches but do not save
+these archives. App and release-profile performance jobs retain their separate main-only
+dependency caches. Compiler cache statistics are written to each Rust job's summary. Caches
+remain scoped by GitHub's branch/PR isolation; no `pull_request_target`, new secrets or broader
+permissions are needed.
+
+Windows Rust checks use the LLD linker bundled with the pinned Rust toolchain and disable
+development/test debug symbols. Compiler diagnostics and assertion locations remain available,
+but Windows runtime backtraces have less source-location detail. macOS/Linux retain line-table
+debug information; release builds and performance budgets are unchanged.
+
+Nextest runs test binaries concurrently instead of waiting for each integration-test binary
+in sequence. It keeps default-member selection and normal ignored-test handling, with no
+retries or relaxed assertions. Doctests still run separately, including after a nextest test
+failure; local `cargo test` remains supported.
+
+Before these changes, PR #16's Windows job spent 24m16s compiling/linking tests and about four
+minutes executing them. The identical tree took about 11 minutes for the whole workflow after
+merging with warmer caches, versus about 34 minutes on the PR. Compare cold and warm runs of
+this configuration before attributing a speedup to it; a new cache/toolchain can still require
+a full compilation.
+
+### Why Cargo uses default members
 
 The workspace has `members = ["crates/*", "xtask", "app/src-tauri"]` and
-`default-members = ["crates/*", "xtask"]`. Running cargo without `--workspace` uses the
+`default-members = ["crates/*", "xtask"]`. Running Cargo without `--workspace` uses the
 default members. That covers every library, the CLI and the `xtask` tooling, but not the
 Tauri app, which needs WebKitGTK and other system libraries on Linux.
 
 We use this instead of `--workspace --exclude dashcraft-app` for three reasons:
 
-- Plain `cargo test` gives the same result locally and in CI. `Cargo.toml` is the
-  only place that defines what counts as "core".
+- Plain `cargo test` locally and nextest plus doctests in CI cover the same default members.
+  `Cargo.toml` is the only place that defines what counts as "core".
 - CI does not hard-code the app's package name.
 - The `app` job lints the app separately, with its dependencies installed.
 
