@@ -7,6 +7,16 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-04
 
+### Dependabot PR #13: Arrow and Parquet maintenance update
+
+- **What:** `Cargo.lock` updates the Arrow/Parquet family from 59.3.1 to 59.3.2; regenerated
+  `THIRD_PARTY_NOTICES.md`. Integrated current `main`, retaining the financial-function fixes,
+  dual licensing and non-yanked executor dependency.
+- **Why:** Upstream maintenance fixes cover IPC validity buffers, array offsets, buffer handling
+  and Parquet decoding without crossing the Arrow major supported by DataFusion.
+- **Numbers:** 15 crate versions updated; DataFusion stays at 55.2.0. The original PR passed all
+  10 CI jobs; the refreshed head is checked again before merging.
+
 ### PR #17 CI: unsupported-function fixture and yanked dependency
 
 - **What:** The session robustness fixture uses `UNSUPPORTED_TEST_FUNCTION()` instead of
