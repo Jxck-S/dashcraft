@@ -7,6 +7,16 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-04
 
+### Dependabot PR #16: SQLite serialization compatibility
+
+- **What:** The two synthetic SQLite fixture builders in `pbi-vertipaq` use mutable
+  connections for rusqlite 0.41.1's `serialize` API. Regenerated `THIRD_PARTY_NOTICES.md`
+  for rusqlite 0.41.1 and libsqlite3-sys 0.39.1, retaining the other dependency updates.
+- **Why:** All three Rust CI jobs failed with E0596 at these helpers after the dependency
+  update. Production readers and existing metadata/VertiPaq assertions are unchanged.
+- **Numbers:** Two binding changes fix the two compiler errors; existing tests exercise both
+  fixture builders. Full cross-platform CI validates the combined head before any merge.
+
 ### Dependabot PR #14: paired SVG renderer update
 
 - **What:** Updated resvg and usvg together from 0.48.1 to 0.49.0 and regenerated

@@ -954,7 +954,7 @@ fn synthetic_builder(tables: &[(&str, Vec<u64>, Vec<ColSpec>)]) -> AbfBuilder {
             }
         }
     }
-    let conn = Connection::open_in_memory().unwrap();
+    let mut conn = Connection::open_in_memory().unwrap();
     conn.execute_batch(&sql).unwrap();
     let db = conn.serialize("main").unwrap().to_vec();
     let mut builder = AbfBuilder::new().file("metadata.sqlitedb", db);
