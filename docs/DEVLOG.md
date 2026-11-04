@@ -7,6 +7,17 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-04
 
+### Dependabot PR #15: XML, ZIP and dialog maintenance updates
+
+- **What:** `Cargo.lock` updates roxmltree 0.21.1 to 0.21.2, zip 9.0.5 to 9.2.2 and
+  tauri-plugin-dialog 2.8.3 to 2.8.4, including their transitive changes; regenerated
+  `THIRD_PARTY_NOTICES.md`. Based on the refreshed PR #13 head so both CI runs can run
+  concurrently while checking the combined dependency graph.
+- **Why:** The XML patch avoids stack overflow on deeply nested elements; the ZIP and dialog
+  updates include upstream maintenance fixes. Existing container limits and tests stay unchanged.
+- **Numbers:** Three direct updates; Arrow/Parquet 59.3.2 and DataFusion 55.2.0 are retained.
+  The original PR passed all 10 CI jobs; the combined head is checked again before merging.
+
 ### Dependabot PR #13: Arrow and Parquet maintenance update
 
 - **What:** `Cargo.lock` updates the Arrow/Parquet family from 59.3.1 to 59.3.2; regenerated
