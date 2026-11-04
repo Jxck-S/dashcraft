@@ -5,6 +5,55 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-04
+
+### Dependabot PR #13: Arrow and Parquet maintenance update
+
+- **What:** `Cargo.lock` updates the Arrow/Parquet family from 59.3.1 to 59.3.2; regenerated
+  `THIRD_PARTY_NOTICES.md`. Integrated current `main`, retaining the financial-function fixes,
+  dual licensing and non-yanked executor dependency.
+- **Why:** Upstream maintenance fixes cover IPC validity buffers, array offsets, buffer handling
+  and Parquet decoding without crossing the Arrow major supported by DataFusion.
+- **Numbers:** 15 crate versions updated; DataFusion stays at 55.2.0. The original PR passed all
+  10 CI jobs; the refreshed head is checked again before merging.
+
+### PR #17 CI: unsupported-function fixture and yanked dependency
+
+- **What:** The session robustness fixture uses `UNSUPPORTED_TEST_FUNCTION()` instead of
+  the now-supported `PMT`, preserving the typed-error and skipped-dependant assertions.
+  `Cargo.lock` updates only `async-executor` 1.14.0 → 1.14.1; regenerated `THIRD_PARTY_NOTICES.md`.
+- **Why:** The first approved full CI run exposed the stale fixture and a dependency yanked
+  on November 2. Neither check is weakened or suppressed.
+- **Numbers:** The session test fails before the fixture update; all four `cargo deny` checks
+  pass with the patched lockfile. No other dependency version changes.
+
+### PR #17 second review: DAX compatibility and financial numerical stability
+
+- **Commit:** `87cc931`.
+- **What:** `pbi-dax` rounds payment types before validating 0/1 and rejects non-finite or
+  below-one `nper` in `PMT`/`PV`/`FV`, matching the documented DAX bounds. `PMT`/`PV`
+  discount positive-rate cash flows rather than overflowing an intermediate growth factor.
+  `NPER` uses separate logarithms away from a ratio of 1, preserving valid small positive
+  ratios that the earlier `ln_1p`-only fix rounded to zero.
+- **Why:** Second review reproduced four failures, including an `NPER` regression from
+  `6fd1f3b`; the DAX reference specifies rounding and period bounds that differ from Excel.
+- **Numbers:** Four new regression tests fail before the fixes and pass afterward; they cover
+  rounding boundaries, invalid periods, small growth ratios, long horizons and nonzero future values.
+
+### DAX financial functions; MIT OR Apache-2.0 (PR #17)
+
+- **What:** `pbi-dax` `eval/functions/financial.rs`: `PMT`, `PV`, `FV`, `NPER` (`type` 0/1, `rate = 0`
+  limits, `rate <= -1` and `type` validation). `(1 + rate)^nper` and the annuity factor go through
+  `ln_1p`/`exp_m1`, and `NPER` through `ln_1p` of the ratio's offset from 1, so tiny non-zero rates
+  (`1.0 + rate == 1.0`) match the zero-rate limits instead of failing or returning 0. Licence: `MIT OR
+  Apache-2.0` (`LICENSE` → `LICENSE-MIT`, new `LICENSE-APACHE`, workspace and fuzz manifests, NOTICE,
+  README, About page); the app bundles both files under `licenses/` (`tauri.conf.json` still pointed
+  at the removed `LICENSE`, which broke the `dashcraft-app` build script).
+- **Why:** GAPS "Function library breadth" (financial functions missing).
+- **Numbers:** 294 → 298 DAX functions (275 supported, 23 partial); `financial_functions` covers
+  mortgage, savings, annuity due, zero and tiny (±1e-20, 1e-12) rates and invalid arguments; the
+  never-panic sweep includes the four functions. Open: `XIRR`, `XNPV` and the other financial functions.
+
 ## 2026-10-26
 
 ### App: load data on open as Power BI Desktop does

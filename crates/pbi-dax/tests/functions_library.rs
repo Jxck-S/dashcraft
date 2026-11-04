@@ -469,6 +469,128 @@ fn rand_is_deterministic_per_evaluation() {
     assert!(rows.windows(2).all(|w| w[0] != w[1]), "{rows:?}");
 }
 
+#[test]
+fn financial_functions() {
+    let f = fx();
+
+    // Standard mortgage loan: $100k principal, 8% annual (0.08 / 12 monthly), 30 years (360 mo).
+    let pmt = f.number("PMT(0.08 / 12, 360, 100000)");
+    assert!((pmt - (-733.764_573_879_378)).abs() < 1e-9);
+
+    let pv = f.number("PV(0.08 / 12, 360, -733.764573879378)");
+    assert!((pv - 100000.0).abs() < 1e-9);
+
+    let nper = f.number("NPER(0.08 / 12, -733.764573879378, 100000)");
+    assert!((nper - 360.0).abs() < 1e-9);
+
+    // Savings future value: 10 years (120 mo) saving $100/mo starting with $5000 at 6% annual.
+    let fv = f.number("FV(0.06 / 12, 120, -100, -5000)");
+    assert!((fv - 25_484.918_350_807_253).abs() < 1e-9);
+
+    // Annuity due (type = 1): payments due at beginning of period.
+    let pmt_due = f.number("PMT(0.08 / 12, 360, 100000, 0, 1)");
+    assert!((pmt_due - (-728.905_205_840_441_8)).abs() < 1e-9);
+
+    let pv_due = f.number("PV(0.08 / 12, 360, -728.9052058404418, 0, 1)");
+    assert!((pv_due - 100000.0).abs() < 1e-9);
+
+    let nper_due = f.number("NPER(0.08 / 12, -728.9052058404418, 100000, 0, 1)");
+    assert!((nper_due - 360.0).abs() < 1e-9);
+
+    // Zero interest rate limit.
+    assert_eq!(f.number("PMT(0, 10, 1000)"), -100.0);
+    assert_eq!(f.number("PV(0, 10, -100)"), 1000.0);
+    assert_eq!(f.number("FV(0, 10, -100, 1000)"), 0.0);
+    assert_eq!(f.number("NPER(0, -100, 1000)"), 10.0);
+
+    // Tiny non-zero rates (1 + rate rounds to 1) approach the zero-rate limits.
+    for rate in ["1e-20", "-1e-20", "1e-12"] {
+        for (src, want) in [
+            (format!("PMT({rate}, 10, 1000)"), -100.0),
+            (format!("PMT({rate}, 10, 1000, 0, 1)"), -100.0),
+            (format!("PV({rate}, 10, -100)"), 1000.0),
+            (format!("FV({rate}, 10, -100)"), 1000.0),
+            (format!("NPER({rate}, -100, 1000)"), 10.0),
+            (format!("NPER({rate}, -100, 1000, 0, 1)"), 10.0),
+        ] {
+            let got = f.number(&src);
+            assert!((got - want).abs() < 1e-6, "{src}: {got}");
+        }
+    }
+
+    // Invalid arguments.
+    assert!(f.eval("PMT(0, 0, 100)").is_err());
+    assert!(f.eval("PMT(-1, 5, 100)").is_err());
+    assert!(f.eval("PMT(0.05, 10, 100, 0, 2)").is_err());
+    assert!(f.eval("NPER(0.10, -50, 1000)").is_err());
+    assert!(f.eval("NPER(0, 0, 1000)").is_err());
+}
+
+#[test]
+fn financial_payment_type_rounds_to_nearest_integer() {
+    let f = fx();
+    for call in [
+        "PMT(0.05, 10, 1000",
+        "PV(0.05, 10, -100",
+        "FV(0.05, 10, -100",
+        "NPER(0.05, -100, 1000",
+    ] {
+        for (typ, rounded) in [("-0.49", 0), ("0.49", 0), ("0.5", 1), ("1.49", 1)] {
+            let src = format!("{call}, 0, {typ})");
+            let want = f.number(&format!("{call}, 0, {rounded})"));
+            assert_eq!(f.number(&src), want, "{src}");
+        }
+        for typ in ["-0.5", "1.5"] {
+            let src = format!("{call}, 0, {typ})");
+            assert!(
+                matches!(f.eval(&src), Err(DaxError::Argument { .. })),
+                "{src}"
+            );
+        }
+    }
+}
+
+#[test]
+fn financial_period_count_must_be_at_least_one() {
+    let f = fx();
+    for name in ["PMT", "PV", "FV"] {
+        for rate in ["0", "0.05"] {
+            for nper in ["-1", "0", "0.5", "BLANK()", "1 / 0"] {
+                let src = format!("{name}({rate}, {nper}, 100)");
+                assert!(
+                    matches!(f.eval(&src), Err(DaxError::Argument { .. })),
+                    "{src}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn financial_nper_keeps_small_positive_growth_ratios() {
+    let f = fx();
+    let want = (1e-17_f64).ln() / (-0.5_f64).ln_1p();
+    let got = f.number("NPER(-0.5, 0, -1000, 1e-14)");
+    assert!((got - want).abs() < 1e-12, "{got} != {want}");
+}
+
+#[test]
+fn financial_discounting_avoids_intermediate_growth_overflow() {
+    let f = fx();
+    for (src, want) in [
+        ("PMT(0.1, 10000, 1000)", -100.0),
+        ("PMT(0.1, 10000, 1000, 0, 1)", -100.0 / 1.1),
+        ("PV(0.1, 10000, -100)", 1000.0),
+        ("PV(0.1, 10000, -100, 0, 1)", 1100.0),
+        ("PMT(0.1, 1, 100, 10)", -120.0),
+        ("PMT(0.1, 1, 100, 10, 1)", -120.0 / 1.1),
+        ("PV(0.1, 1, -120, 10)", 100.0),
+    ] {
+        let got = f.number(src);
+        assert!((got - want).abs() < 1e-12, "{src}: {got} != {want}");
+    }
+}
+
 /// Every function added by the library wave (and the date functions whose
 /// semantics changed).
 const NEW_FUNCTIONS: &[&str] = &[
@@ -551,6 +673,10 @@ const NEW_FUNCTIONS: &[&str] = &[
     "USERCULTURE",
     "ISAFTER",
     "ISONORAFTER",
+    "PMT",
+    "PV",
+    "FV",
+    "NPER",
 ];
 
 /// Argument shapes for the sweep: BLANK, zero, signs, fractions, extremes,

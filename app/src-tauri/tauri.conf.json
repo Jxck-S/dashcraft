@@ -77,7 +77,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../LICENSE": "licenses/LICENSE",
+      "../../LICENSE-MIT": "licenses/LICENSE-MIT",
+      "../../LICENSE-APACHE": "licenses/LICENSE-APACHE",
       "../../NOTICE": "licenses/NOTICE",
       "../../THIRD_PARTY_NOTICES.md": "licenses/THIRD_PARTY_NOTICES.md",
       "../src/assets/fonts/OFL.txt": "licenses/Selawik-OFL.txt",

@@ -101,13 +101,14 @@ Source: `crates/pbi-m`; deviations in the `pbi_m::eval` module docs.
 Source: `crates/pbi-dax`, [FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md) (kept in sync by
 `functions_md_lists_every_supported_function` and `every_supported_function_is_tested`).
 
-**Functions: 294 registered** (`supported_functions()`; 271 supported, 23 partial; 218 → 294):
+**Functions: 298 registered** (`supported_functions()`; 275 supported, 23 partial; 218 → 298):
 
 | Family | Registered | Partial |
 |---|---|---|
 | Logical and information | 32 | 0 |
 | Math and statistics | 71 | 0 |
 | Statistical distributions | 19 | 0 |
+| Financial | 4 | 0 |
 | Text | 22 | 1 |
 | Date and time | 24 | 2 |
 | Time intelligence | 37 | 5 |
@@ -121,7 +122,7 @@ Source: `crates/pbi-dax`, [FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md) (kept i
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
 | Lexer, parser, printer, `DEFINE`/`EVALUATE` | ✅ | 5 | `crates/pbi-dax/tests/{syntax,roundtrip}.rs`; fuzz `dax_parse` | — |
-| Function library breadth | 🟡 | 4 | 294 functions (table above); added logarithms, trigonometry, distributions (~1e-13 relative error against SciPy references), `GEOMEAN`, `MAXA`/`MINA`/`AVERAGEA`, `YEARFRAC`, `NETWORKDAYS` and more, with a 31,600-call random-argument sweep (`crates/pbi-dax/tests/functions_library.rs`) | Missing: financial functions (`PMT`, `XIRR`, …), `LINEST`, visual-calculation functions, `INFO.*` (FUNCTIONS.md "Not supported yet") |
+| Function library breadth | 🟡 | 4 | 298 functions (table above); added logarithms, trigonometry, distributions (~1e-13 relative error against SciPy references), financial functions (`PMT`, `PV`, `FV`, `NPER`; DAX payment-type rounding and period bounds, stable tiny rates, long-horizon discounting and small growth ratios), `GEOMEAN`, `MAXA`/`MINA`/`AVERAGEA`, `YEARFRAC`, `NETWORKDAYS` and more, with a 33,200-call random-argument sweep (`crates/pbi-dax/tests/functions_library.rs`) | Missing: remaining financial functions (`XIRR`, `XNPV`, …), `LINEST`, visual-calculation functions, `INFO.*` (FUNCTIONS.md "Not supported yet") |
 | Filter and row context, context transition, expanded tables, BLANK | ✅ | 4 | `crates/pbi-dax/tests/eval.rs`; the example's acceptance values | Context transition on duplicate rows of keyless tables |
 | `CALCULATE` modifiers, `ALLSELECTED`, `USERELATIONSHIP`/`CROSSFILTER` | 🟡 | 3 | FUNCTIONS.md "Known semantic gaps" | Shadow contexts inside iterations; overrides for `RELATED` and `SUMMARIZE` |
 | `SUMMARIZECOLUMNS` auto-exist, rollups | 🟡 | 3 | approximated (cross product + empty-row removal) | Exact auto-exist |

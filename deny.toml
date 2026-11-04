@@ -74,7 +74,7 @@ exceptions = [
     # { allow = ["LicenseRef-Foo"], crate = "foo", reason = "..." },
 ]
 
-# Workspace crates are `publish = false` (license MIT, see LICENSE);
+# Workspace crates are `publish = false` (MIT OR Apache-2.0, see LICENSE-MIT and LICENSE-APACHE);
 # don't evaluate our own crates against the third-party allow list.
 [licenses.private]
 ignore = true
