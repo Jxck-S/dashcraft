@@ -526,6 +526,71 @@ fn financial_functions() {
     assert!(f.eval("NPER(0, 0, 1000)").is_err());
 }
 
+#[test]
+fn financial_payment_type_rounds_to_nearest_integer() {
+    let f = fx();
+    for call in [
+        "PMT(0.05, 10, 1000",
+        "PV(0.05, 10, -100",
+        "FV(0.05, 10, -100",
+        "NPER(0.05, -100, 1000",
+    ] {
+        for (typ, rounded) in [("-0.49", 0), ("0.49", 0), ("0.5", 1), ("1.49", 1)] {
+            let src = format!("{call}, 0, {typ})");
+            let want = f.number(&format!("{call}, 0, {rounded})"));
+            assert_eq!(f.number(&src), want, "{src}");
+        }
+        for typ in ["-0.5", "1.5"] {
+            let src = format!("{call}, 0, {typ})");
+            assert!(
+                matches!(f.eval(&src), Err(DaxError::Argument { .. })),
+                "{src}"
+            );
+        }
+    }
+}
+
+#[test]
+fn financial_period_count_must_be_at_least_one() {
+    let f = fx();
+    for name in ["PMT", "PV", "FV"] {
+        for rate in ["0", "0.05"] {
+            for nper in ["-1", "0", "0.5", "BLANK()", "1 / 0"] {
+                let src = format!("{name}({rate}, {nper}, 100)");
+                assert!(
+                    matches!(f.eval(&src), Err(DaxError::Argument { .. })),
+                    "{src}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn financial_nper_keeps_small_positive_growth_ratios() {
+    let f = fx();
+    let want = (1e-17_f64).ln() / (-0.5_f64).ln_1p();
+    let got = f.number("NPER(-0.5, 0, -1000, 1e-14)");
+    assert!((got - want).abs() < 1e-12, "{got} != {want}");
+}
+
+#[test]
+fn financial_discounting_avoids_intermediate_growth_overflow() {
+    let f = fx();
+    for (src, want) in [
+        ("PMT(0.1, 10000, 1000)", -100.0),
+        ("PMT(0.1, 10000, 1000, 0, 1)", -100.0 / 1.1),
+        ("PV(0.1, 10000, -100)", 1000.0),
+        ("PV(0.1, 10000, -100, 0, 1)", 1100.0),
+        ("PMT(0.1, 1, 100, 10)", -120.0),
+        ("PMT(0.1, 1, 100, 10, 1)", -120.0 / 1.1),
+        ("PV(0.1, 1, -120, 10)", 100.0),
+    ] {
+        let got = f.number(src);
+        assert!((got - want).abs() < 1e-12, "{src}: {got} != {want}");
+    }
+}
+
 /// Every function added by the library wave (and the date functions whose
 /// semantics changed).
 const NEW_FUNCTIONS: &[&str] = &[

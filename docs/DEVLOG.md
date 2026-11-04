@@ -7,6 +7,18 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-04
 
+### PR #17 second review: DAX compatibility and financial numerical stability
+
+- **What:** `pbi-dax` rounds payment types before validating 0/1 and rejects non-finite or
+  below-one `nper` in `PMT`/`PV`/`FV`, matching the documented DAX bounds. `PMT`/`PV`
+  discount positive-rate cash flows rather than overflowing an intermediate growth factor.
+  `NPER` uses separate logarithms away from a ratio of 1, preserving valid small positive
+  ratios that the earlier `ln_1p`-only fix rounded to zero.
+- **Why:** Second review reproduced four failures, including an `NPER` regression from
+  `6fd1f3b`; the DAX reference specifies rounding and period bounds that differ from Excel.
+- **Numbers:** Four new regression tests fail before the fixes and pass afterward; they cover
+  rounding boundaries, invalid periods, small growth ratios, long horizons and nonzero future values.
+
 ### DAX financial functions; MIT OR Apache-2.0 (PR #17)
 
 - **What:** `pbi-dax` `eval/functions/financial.rs`: `PMT`, `PV`, `FV`, `NPER` (`type` 0/1, `rate = 0`

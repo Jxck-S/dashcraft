@@ -167,9 +167,18 @@ always finite.
 
 ## Financial
 
-Standard annuity and investment calculations following Excel and Power BI
-semantics. Cash flows paid out are represented by negative numbers, and cash
+Standard annuity and investment calculations following Power BI semantics.
+Cash flows paid out are represented by negative numbers, and cash
 flows received are represented by positive numbers.
+
+`type` is rounded to the nearest integer, then must be 0 or 1. `PMT`, `PV`
+and `FV` require a finite `nper >= 1` (BLANK is an error), as documented for
+[PMT](https://learn.microsoft.com/en-us/dax/pmt-function-dax),
+[PV](https://learn.microsoft.com/en-us/dax/pv-function-dax) and
+[FV](https://learn.microsoft.com/en-us/dax/fv-function-dax).
+Rates must be greater than -1. Tiny rates use stable logarithms and
+exponentials; `PMT` and `PV` discount positive-rate cash flows to avoid
+intermediate growth overflow, and `NPER` preserves small positive growth ratios.
 
 | Function | Status | Notes |
 |---|---|---|

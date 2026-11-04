@@ -25,11 +25,11 @@ pub(super) const BUILTINS: &[Builtin] = &[
     scalar_fn("NPER", nper),
 ];
 
-/// Validates and extracts the `type` argument:
+/// Rounds, validates and extracts the `type` argument:
 /// - 0 or omitted: payments due at the end of the period.
 /// - 1: payments due at the beginning of the period.
 fn payment_type(i: &Interp<'_>, env: &Env, f: &str, args: &[Expr], n: usize) -> Result<f64> {
-    let t = num_or(i, env, args, n, 0.0)?;
+    let t = num_or(i, env, args, n, 0.0)?.round();
     if t == 0.0 {
         Ok(0.0)
     } else if t == 1.0 {
@@ -61,8 +61,8 @@ fn pmt(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     let fv = num_or(i, env, args, 3, 0.0)?;
     let typ = payment_type(i, env, "PMT", args, 4)?;
 
-    if nper == 0.0 {
-        return Err(invalid("PMT", "nper cannot be zero"));
+    if !nper.is_finite() || nper < 1.0 {
+        return Err(invalid("PMT", "nper must be finite and at least 1"));
     }
     if rate <= -1.0 {
         return Err(invalid("PMT", "rate must be greater than -1"));
@@ -72,12 +72,19 @@ fn pmt(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
         return real("PMT", -(pv + fv) / nper);
     }
 
-    let (factor, annuity) = growth(rate, nper);
+    // Discount positive-rate cash flows to avoid overflowing the growth factor.
+    let (numerator, annuity) = if rate > 0.0 {
+        let (discount, annuity) = growth(rate, -nper);
+        (pv + fv * discount, -annuity)
+    } else {
+        let (factor, annuity) = growth(rate, nper);
+        (fv + pv * factor, annuity)
+    };
     let denom = (1.0 + rate * typ) * annuity;
     if denom == 0.0 {
         return Err(invalid("PMT", "division by zero in annuity calculation"));
     }
-    real("PMT", -(fv + pv * factor) / denom)
+    real("PMT", -numerator / denom)
 }
 
 /// `PV(rate, nper, pmt[, fv][, type])`: calculates present value of an annuity.
@@ -89,12 +96,21 @@ fn pv(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     let fv_val = num_or(i, env, args, 3, 0.0)?;
     let typ = payment_type(i, env, "PV", args, 4)?;
 
+    if !nper.is_finite() || nper < 1.0 {
+        return Err(invalid("PV", "nper must be finite and at least 1"));
+    }
     if rate <= -1.0 {
         return Err(invalid("PV", "rate must be greater than -1"));
     }
 
     if rate == 0.0 {
         return real("PV", -(fv_val + pmt_val * nper));
+    }
+
+    if rate > 0.0 {
+        let (discount, annuity) = growth(rate, -nper);
+        let term = pmt_val * (1.0 + rate * typ) * -annuity;
+        return real("PV", -(fv_val * discount + term));
     }
 
     let (factor, annuity) = growth(rate, nper);
@@ -114,6 +130,9 @@ fn fv(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     let pv_val = num_or(i, env, args, 3, 0.0)?;
     let typ = payment_type(i, env, "FV", args, 4)?;
 
+    if !nper.is_finite() || nper < 1.0 {
+        return Err(invalid("FV", "nper must be finite and at least 1"));
+    }
     if rate <= -1.0 {
         return Err(invalid("FV", "rate must be greater than -1"));
     }
@@ -157,11 +176,20 @@ fn nper(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
         return Err(invalid("NPER", "cannot divide by zero"));
     }
 
-    // (p_star - rate * fv) / den = 1 + x; ln_1p(x) keeps tiny rates accurate.
-    let x = -rate * (pv_val + fv_val) / den;
-    if x <= -1.0 || !x.is_finite() {
+    let numerator = p_star - rate * fv_val;
+    if !numerator.is_finite() || !den.is_finite() {
+        return Err(too_large("NPER"));
+    }
+    if numerator == 0.0 || numerator.is_sign_positive() != den.is_sign_positive() {
         return Err(invalid("NPER", "cash flows cannot satisfy target"));
     }
 
-    real("NPER", x.ln_1p() / rate.ln_1p())
+    // ln_1p keeps ratios near 1 accurate; separate logs avoid cancellation near 0.
+    let x = -rate * (pv_val + fv_val) / den;
+    let log_ratio = if x.abs() < 0.5 {
+        x.ln_1p()
+    } else {
+        numerator.abs().ln() - den.abs().ln()
+    };
+    real("NPER", log_ratio / rate.ln_1p())
 }

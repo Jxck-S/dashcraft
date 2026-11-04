@@ -5,7 +5,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 ## [Unreleased]
 
 ### Added
-- DAX financial functions `PMT`, `PV`, `FV` and `NPER` (ordinary annuities and annuities due, zero and tiny-rate limits): 294 → 298 functions ([FUNCTIONS.md](crates/pbi-dax/FUNCTIONS.md#financial)).
+- DAX financial functions `PMT`, `PV`, `FV` and `NPER` (ordinary annuities and annuities due, rounded payment types, DAX period validation, zero and tiny-rate limits, stable discounting and small growth ratios): 294 → 298 functions ([FUNCTIONS.md](crates/pbi-dax/FUNCTIONS.md#financial)).
 - App: opening a file loads what Power BI Desktop shows on open: a PBIX (or ABF, Power Pivot) its saved data, a PBIP its `.pbi/cache.abf`, a PBIT a refresh with the template's saved parameter values (`DocumentSummary.onOpen`); before, a PBIX stayed empty until Refresh.
 - **Command registry (`pbi-ops`, [ADR-0007](docs/adr/0007-command-registry.md))**: 47 typed commands (`doc.*`, `security.*`, `model.*`, `report.*`, `data.*`, `dax.*`, `measures.values`, `render.*`, `canvas.*`, `export.*`, `convert.*`, `text.parsePeople`) with JSON Schemas for params and output, a `Workspace` of open documents, cancellation, progress events, caller kinds and a `PathPolicy` sandbox (read/write roots, `..` and symlink escapes refused). Catalog: [docs/COMMANDS.md](docs/COMMANDS.md).
 - CLI: `pbiview commands` (catalog as text, JSON, schemas or Markdown), `pbiview run <id>` (single command or `--batch` file with `${step.field}` references), `pbiview serve --stdio` (JSON-RPC 2.0 lines, `$/cancel`, progress notifications, `--read-root`/`--write-root`/`--agent`).
