@@ -134,7 +134,7 @@ INSERT INTO StorageFile VALUES
 "##;
 
 fn sqlite_image(sql: &str) -> Vec<u8> {
-    let conn = Connection::open_in_memory().unwrap();
+    let mut conn = Connection::open_in_memory().unwrap();
     conn.execute_batch(sql).unwrap();
     conn.serialize("main").unwrap().to_vec()
 }
