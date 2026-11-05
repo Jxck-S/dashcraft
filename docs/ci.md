@@ -59,9 +59,29 @@ failure; local `cargo test` remains supported.
 
 Before these changes, PR #16's Windows job spent 24m16s compiling/linking tests and about four
 minutes executing them. The identical tree took about 11 minutes for the whole workflow after
-merging with warmer caches, versus about 34 minutes on the PR. Compare cold and warm runs of
-this configuration before attributing a speedup to it; a new cache/toolchain can still require
-a full compilation.
+merging with warmer caches, versus about 34 minutes on the PR.
+
+Two attempts of [CI run 41927081220](https://github.com/Jxck-S/dashcraft/actions/runs/41927081220)
+tested the same PR #18 revision (`d71dcc1`); every one of the ten jobs passed both times:
+
+| Check | First run (mixed caches) | Same-revision rerun |
+|---|---|---|
+| Complete workflow | 37m28s | 7m02s |
+| Windows Rust | 37m14s | 6m46s |
+| macOS Rust | 5m17s | 4m47s |
+| Ubuntu Rust | 3m39s | 3m51s |
+| Ubuntu app | 11m18s | 1m23s |
+
+The new Windows configuration initially needed a full dependency build. On the rerun, its
+test compilation fell from 25m46s to 1m45s, with all 1,228 unit/integration tests and twelve
+doctests passing; the two ignored doctests match the previous `cargo test` run. This demonstrates
+warm-cache reuse, not a controlled comparison against the old configuration's different
+ref/cache scope. Cold builds can still take tens of minutes.
+
+APT is not cached: Linux package setup varied from 10m12s to 23s because package downloads
+were slow on the first runner. The Ubuntu app improvement is network variability, not a
+compiler-cache benefit. Download-archive caching remains a follow-up; do not cache installed
+system directories.
 
 ### Why Cargo uses default members
 
