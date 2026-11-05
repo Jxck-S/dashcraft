@@ -36,9 +36,12 @@ fn slicers_show_their_values_and_saved_selections() {
     let report = &session.document().reports[overview];
     let rendered = render(session, overview, page(report, "Executive Summary"));
     let year = visual_id(expected, "Overview", "Executive Summary", "year");
+    // Unshipped orders (BLANK ship dates on the inactive Orders[Ship Date]
+    // relationship) give 'Date' its blank row, so Desktop lists "(Blank)":
+    // reference/groundtruth/recordings/acme-measures.json `sessions/by-year`.
     assert_eq!(
         visual_texts(&rendered.scene, &year),
-        ["Year", "2024", "2025"]
+        ["Year", "(Blank)", "2024", "2025"]
     );
     // A dropdown without a selection shows "All".
     assert_eq!(

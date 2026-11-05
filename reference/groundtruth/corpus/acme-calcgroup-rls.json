@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "suite": "acme-calcgroup-rls",
+  "title": "Acme Outfitters calculation-group items by month and year, and the two roles (static Region West; dynamic Store Manager for one user)",
+  "fixture": "acme",
+  "requiresTables": [
+    "Orders",
+    "Customers",
+    "Products",
+    "Stores",
+    "Targets",
+    "Returns",
+    "Web Sessions",
+    "Date",
+    "Time Calc",
+    "Products Never Sold",
+    "Last Refreshed"
+  ],
+  "cases": [
+    {
+      "id": "calc-group/total-sales/month",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Time Calc'[Time Calculation], \"v\", [Total Sales]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year Month] IN {\"2025-06\"}\n)"
+    },
+    {
+      "id": "calc-group/total-sales/by-year",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Date'[Year], 'Time Calc'[Time Calculation], \"v\", [Total Sales]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "calc-group/order-count/month",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Time Calc'[Time Calculation], \"v\", [Order Count]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year Month] IN {\"2025-06\"}\n)"
+    },
+    {
+      "id": "calc-group/order-count/by-year",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Date'[Year], 'Time Calc'[Time Calculation], \"v\", [Order Count]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "calc-group/margin/month",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Time Calc'[Time Calculation], \"v\", [Margin %]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year Month] IN {\"2025-06\"}\n)"
+    },
+    {
+      "id": "calc-group/margin/by-year",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Date'[Year], 'Time Calc'[Time Calculation], \"v\", [Margin %]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "calc-group/units-sold/month",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Time Calc'[Time Calculation], \"v\", [Units Sold]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year Month] IN {\"2025-06\"}\n)"
+    },
+    {
+      "id": "calc-group/units-sold/by-year",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Date'[Year], 'Time Calc'[Time Calculation], \"v\", [Units Sold]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "calc-group/total-sales/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], 'Time Calc'[Time Calculation], \"v\", [Total Sales])"
+    },
+    {
+      "id": "calc-group/items",
+      "query": "EVALUATE 'Time Calc'"
+    },
+    {
+      "id": "rls/region-west/visible-rows",
+      "query": "EVALUATE ROW(\"Orders\", COUNTROWS('Orders'), \"Customers\", COUNTROWS('Customers'), \"Products\", COUNTROWS('Products'), \"Stores\", COUNTROWS('Stores'), \"Targets\", COUNTROWS('Targets'), \"Returns\", COUNTROWS('Returns'), \"Web Sessions\", COUNTROWS('Web Sessions'), \"Date\", COUNTROWS('Date'), \"Time Calc\", COUNTROWS('Time Calc'), \"Products Never Sold\", COUNTROWS('Products Never Sold'), \"Last Refreshed\", COUNTROWS('Last Refreshed'))",
+      "viewAs": {
+        "roles": [
+          "Region West"
+        ]
+      }
+    },
+    {
+      "id": "rls/region-west/measures",
+      "query": "EVALUATE ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Target\", [Target], \"Returns Count\", [Returns Count], \"Sessions\", [Sessions], \"Customer Count\", [Customer Count])",
+      "viewAs": {
+        "roles": [
+          "Region West"
+        ]
+      }
+    },
+    {
+      "id": "rls/region-west/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"Total Sales\", [Total Sales], \"Target\", [Target])",
+      "viewAs": {
+        "roles": [
+          "Region West"
+        ]
+      }
+    },
+    {
+      "id": "rls/region-west/stores",
+      "query": "EVALUATE 'Stores'",
+      "viewAs": {
+        "roles": [
+          "Region West"
+        ]
+      }
+    },
+    {
+      "id": "rls/store-manager/riley-chen/visible-rows",
+      "query": "EVALUATE ROW(\"Orders\", COUNTROWS('Orders'), \"Customers\", COUNTROWS('Customers'), \"Products\", COUNTROWS('Products'), \"Stores\", COUNTROWS('Stores'), \"Targets\", COUNTROWS('Targets'), \"Returns\", COUNTROWS('Returns'), \"Web Sessions\", COUNTROWS('Web Sessions'), \"Date\", COUNTROWS('Date'), \"Time Calc\", COUNTROWS('Time Calc'), \"Products Never Sold\", COUNTROWS('Products Never Sold'), \"Last Refreshed\", COUNTROWS('Last Refreshed'))",
+      "viewAs": {
+        "roles": [
+          "Store Manager"
+        ],
+        "userName": "riley.chen@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "GT Store Manager riley.chen"
+      ]
+    },
+    {
+      "id": "rls/store-manager/riley-chen/measures",
+      "query": "EVALUATE ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Target\", [Target], \"Returns Count\", [Returns Count], \"Sessions\", [Sessions], \"Customer Count\", [Customer Count])",
+      "viewAs": {
+        "roles": [
+          "Store Manager"
+        ],
+        "userName": "riley.chen@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "GT Store Manager riley.chen"
+      ]
+    },
+    {
+      "id": "rls/store-manager/riley-chen/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"Total Sales\", [Total Sales], \"Target\", [Target])",
+      "viewAs": {
+        "roles": [
+          "Store Manager"
+        ],
+        "userName": "riley.chen@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "GT Store Manager riley.chen"
+      ]
+    },
+    {
+      "id": "rls/store-manager/riley-chen/stores",
+      "query": "EVALUATE 'Stores'",
+      "viewAs": {
+        "roles": [
+          "Store Manager"
+        ],
+        "userName": "riley.chen@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "GT Store Manager riley.chen"
+      ]
+    },
+    {
+      "id": "rls/store-manager/nobody/visible-rows",
+      "query": "EVALUATE ROW(\"Orders\", COUNTROWS('Orders'), \"Customers\", COUNTROWS('Customers'), \"Products\", COUNTROWS('Products'), \"Stores\", COUNTROWS('Stores'), \"Targets\", COUNTROWS('Targets'), \"Returns\", COUNTROWS('Returns'), \"Web Sessions\", COUNTROWS('Web Sessions'), \"Date\", COUNTROWS('Date'), \"Time Calc\", COUNTROWS('Time Calc'), \"Products Never Sold\", COUNTROWS('Products Never Sold'), \"Last Refreshed\", COUNTROWS('Last Refreshed'))",
+      "viewAs": {
+        "roles": [
+          "Store Manager"
+        ],
+        "userName": "nobody@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "GT Store Manager nobody"
+      ]
+    },
+    {
+      "id": "rls/store-manager/nobody/measures",
+      "query": "EVALUATE ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Target\", [Target], \"Returns Count\", [Returns Count], \"Sessions\", [Sessions], \"Customer Count\", [Customer Count])",
+      "viewAs": {
+        "roles": [
+          "Store Manager"
+        ],
+        "userName": "nobody@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "GT Store Manager nobody"
+      ]
+    },
+    {
+      "id": "rls/store-manager/nobody/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"Total Sales\", [Total Sales], \"Target\", [Target])",
+      "viewAs": {
+        "roles": [
+          "Store Manager"
+        ],
+        "userName": "nobody@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "GT Store Manager nobody"
+      ]
+    },
+    {
+      "id": "rls/store-manager/nobody/stores",
+      "query": "EVALUATE 'Stores'",
+      "viewAs": {
+        "roles": [
+          "Store Manager"
+        ],
+        "userName": "nobody@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "GT Store Manager nobody"
+      ]
+    },
+    {
+      "id": "rls/region-west-store-manager/riley-chen/visible-rows",
+      "query": "EVALUATE ROW(\"Orders\", COUNTROWS('Orders'), \"Customers\", COUNTROWS('Customers'), \"Products\", COUNTROWS('Products'), \"Stores\", COUNTROWS('Stores'), \"Targets\", COUNTROWS('Targets'), \"Returns\", COUNTROWS('Returns'), \"Web Sessions\", COUNTROWS('Web Sessions'), \"Date\", COUNTROWS('Date'), \"Time Calc\", COUNTROWS('Time Calc'), \"Products Never Sold\", COUNTROWS('Products Never Sold'), \"Last Refreshed\", COUNTROWS('Last Refreshed'))",
+      "viewAs": {
+        "roles": [
+          "Region West",
+          "Store Manager"
+        ],
+        "userName": "riley.chen@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "Region West",
+        "GT Store Manager riley.chen"
+      ]
+    },
+    {
+      "id": "rls/region-west-store-manager/riley-chen/measures",
+      "query": "EVALUATE ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Target\", [Target], \"Returns Count\", [Returns Count], \"Sessions\", [Sessions], \"Customer Count\", [Customer Count])",
+      "viewAs": {
+        "roles": [
+          "Region West",
+          "Store Manager"
+        ],
+        "userName": "riley.chen@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "Region West",
+        "GT Store Manager riley.chen"
+      ]
+    },
+    {
+      "id": "rls/region-west-store-manager/riley-chen/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"Total Sales\", [Total Sales], \"Target\", [Target])",
+      "viewAs": {
+        "roles": [
+          "Region West",
+          "Store Manager"
+        ],
+        "userName": "riley.chen@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "Region West",
+        "GT Store Manager riley.chen"
+      ]
+    },
+    {
+      "id": "rls/region-west-store-manager/riley-chen/stores",
+      "query": "EVALUATE 'Stores'",
+      "viewAs": {
+        "roles": [
+          "Region West",
+          "Store Manager"
+        ],
+        "userName": "riley.chen@acmeoutfitters.example"
+      },
+      "desktopRoles": [
+        "Region West",
+        "GT Store Manager riley.chen"
+      ]
+    }
+  ]
+}

@@ -136,8 +136,8 @@ fn fixture_ast_shapes() {
     assert_eq!(
         s(&read("table_products_never_sold")),
         "(var [SoldProducts (SELECTCOLUMNS (SUMMARIZE table:Orders col:Orders[Product ID]) \
-         \"Product ID\" col:Orders[Product ID])] [Catalog (SELECTCOLUMNS (ALL table:Products) \
-         \"Product ID\" col:Products[Product ID])] [NeverSold (EXCEPT $Catalog $SoldProducts)] \
+         \"Product ID\" col:Orders[Product ID])] [AllProducts (SELECTCOLUMNS (ALL table:Products) \
+         \"Product ID\" col:Products[Product ID])] [NeverSold (EXCEPT $AllProducts $SoldProducts)] \
          (SELECTCOLUMNS (FILTER (ALL table:Products) (&& (IN col:Products[Product ID] $NeverSold) \
          (ISEMPTY (RELATEDTABLE table:Orders)))) \"Product ID\" col:Products[Product ID] \
          \"Product\" col:Products[Product Name] \"Category\" col:Products[Category] \

@@ -22,8 +22,8 @@ Any other function name fails with `DaxError::UnsupportedFunction` (shown as
 | `IF` | supported | |
 | `SWITCH` | supported | `SWITCH(TRUE(), cond, result, …)` works (DAX `=` matching). |
 | `COALESCE` | supported | |
-| `AND` | supported | |
-| `OR` | supported | |
+| `AND` | supported | FALSE (not BLANK) when both are BLANK (Desktop ground truth). |
+| `OR` | supported | FALSE (not BLANK) when both are BLANK (Desktop ground truth). |
 | `NOT` | supported | |
 | `TRUE` | supported | |
 | `FALSE` | supported | |
@@ -109,19 +109,19 @@ Any other function name fails with `DaxError::UnsupportedFunction` (shown as
 | `RANDBETWEEN` | supported | As `RAND`. |
 | `PRODUCT` | supported | |
 | `PRODUCTX` | supported | |
-| `MEDIAN` | supported | Dates in, date out. |
+| `MEDIAN` | supported | Error over dates, as in Desktop. |
 | `MEDIANX` | supported | |
 | `PERCENTILE.INC` | supported | |
 | `PERCENTILE.EXC` | supported | |
-| `PERCENTILEX.INC` | supported | |
-| `PERCENTILEX.EXC` | supported | |
-| `STDEV.S` | supported | BLANK for fewer than two values. |
+| `PERCENTILEX.INC` | supported | A BLANK result counts as 0. |
+| `PERCENTILEX.EXC` | supported | A BLANK result counts as 0 (Desktop ground truth). |
+| `STDEV.S` | supported | BLANK without values, NaN for one value. |
 | `STDEV.P` | supported | |
-| `STDEVX.S` | supported | |
+| `STDEVX.S` | supported | BLANK without values, NaN for one value. |
 | `STDEVX.P` | supported | |
-| `VAR.S` | supported | BLANK for fewer than two values. |
+| `VAR.S` | supported | BLANK without values, NaN for one value. |
 | `VAR.P` | supported | |
-| `VARX.S` | supported | |
+| `VARX.S` | supported | BLANK without values, NaN for one value (Desktop ground truth). |
 | `VARX.P` | supported | |
 | `RANKX` | supported | `ASC`/`DESC` (or 1/0), `SKIP`/`DENSE`, optional value; BLANK compares as 0. |
 | `RANK.EQ` | supported | Over the column's visible rows; BLANK when the value is not in the column. |
@@ -202,7 +202,7 @@ intermediate growth overflow, and `NPER` preserves small positive growth ratios.
 | `COMBINEVALUES` | supported | |
 | `SUBSTITUTE` | supported | |
 | `REPLACE` | supported | |
-| `REPT` | supported | Result capped at 1 Mi characters. |
+| `REPT` | supported | Result capped at 1 Mi characters; `""` for 0 times. |
 | `SEARCH` | supported | Case-insensitive, `?`/`*`/`~` wildcards. |
 | `FIND` | supported | Case-sensitive. |
 | `CONTAINSSTRING` | supported | |
@@ -236,10 +236,10 @@ intermediate growth overflow, and `NPER` preserves small positive growth ratios.
 | `WEEKDAY` | supported | Return types 1, 2, 3. |
 | `WEEKNUM` | supported | Return types 1, 2, 11–17, 21 (ISO). |
 | `EOMONTH` | supported | `months` rounded. |
-| `EDATE` | supported | `months` truncated. |
+| `EDATE` | supported | `months` rounded, as in Desktop. |
 | `DATEDIFF` | supported | Counts interval boundaries; negative when the end is earlier. |
 | `YEARFRAC` | supported | Bases 0 (US 30/360 with Excel's end-of-February rules), 1 (actual/actual), 2, 3, 4 (European 30/360); whole days, either order. |
-| `NETWORKDAYS` | supported | Weekend codes 1–7, 11–17 (or a 7-character `0`/`1` mask from Monday); holidays as a one-column table; negative when the end is earlier. |
+| `NETWORKDAYS` | supported | Weekend codes 1–7, 11–17 (text is converted to a number, so `"0000011"` is code 11, as in Desktop); holidays as a one-column table; negative when the end is earlier. |
 | `CALENDAR` | supported | Capped at 1,000,000 days. |
 | `CALENDARAUTO` | supported | Scans the date/time columns of loaded tables, skipping calculated columns and tables. |
 
@@ -300,13 +300,13 @@ table, as in Power BI. Periods are whole days; fiscal years via
 |---|---|---|
 | `SUM` | supported | |
 | `AVERAGE` | supported | |
-| `MIN` | supported | One- and two-argument forms. |
-| `MAX` | supported | One- and two-argument forms. |
+| `MIN` | supported | One- and two-argument forms; a BLANK argument compares as 0 and is returned as BLANK. |
+| `MAX` | supported | One- and two-argument forms; a BLANK argument compares as 0 and is returned as BLANK. |
 | `COUNT` | supported | |
 | `COUNTA` | supported | |
-| `COUNTBLANK` | supported | |
+| `COUNTBLANK` | supported | Does not count the relationship blank row (Desktop ground truth). |
 | `COUNTROWS` | supported | No-argument form counts the home table. |
-| `DISTINCTCOUNT` | supported | |
+| `DISTINCTCOUNT` | supported | Counts a stored BLANK, not the relationship blank row (Desktop ground truth). |
 | `DISTINCTCOUNTNOBLANK` | supported | |
 | `SUMX` | supported | |
 | `AVERAGEX` | supported | |
@@ -388,7 +388,7 @@ values of the `ORDERBY`/`PARTITIONBY` columns (one table) are used.
 | Function | Status | Notes |
 |---|---|---|
 | `INDEX` | partial | `blanks` argument ignored (BLANK sorts first). |
-| `OFFSET` | partial | As `INDEX`. |
+| `OFFSET` | partial | As `INDEX`; without a current row, apply semantics over the whole relation. |
 | `WINDOW` | partial | `ABS`/`REL` bounds; as `INDEX`. |
 | `RANK` | partial | `SKIP`/`DENSE`; as `INDEX`. |
 | `ROWNUMBER` | partial | As `INDEX`. |

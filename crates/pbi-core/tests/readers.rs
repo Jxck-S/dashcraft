@@ -1072,6 +1072,26 @@ fn pbit_export_round_trip() {
     let schema = zip.read("DataModelSchema").unwrap();
     assert_eq!(&schema[..2], b"{\0", "UTF-16LE without BOM");
     assert_eq!(zip.read_text("Version").unwrap().text, "1.32");
+    // Power BI Desktop rejects a `QueriesSettings` without its version string
+    // and TMSL hierarchy levels without an ordinal (found by the ground-truth
+    // writer check, reference/groundtruth/README.md).
+    let settings = zip.read_text("Settings").unwrap().text;
+    assert!(!settings.contains("QueriesSettings"), "{settings}");
+    let schema: Value =
+        serde_json::from_str(&zip.read_text("DataModelSchema").unwrap().text).unwrap();
+    let products = schema["model"]["tables"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["name"] == "Products")
+        .unwrap();
+    let ordinals: Vec<_> = products["hierarchies"][0]["levels"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| l["ordinal"].as_i64())
+        .collect();
+    assert_eq!(ordinals, [Some(0), Some(1), Some(2)]);
 
     let again = open(&pbit);
     let doc = &again.document;
@@ -1079,9 +1099,18 @@ fn pbit_export_round_trip() {
     assert_eq!(doc.model_status, ModelStatus::Local);
     assert!(matches!(again.model_source, Some(ModelSource::Tmsl { .. })));
     assert!(errors(doc).is_empty(), "{:?}", errors(doc));
+    let mut expected = opened.document.model.clone().unwrap();
+    for t in &mut expected.tables {
+        for h in &mut t.hierarchies {
+            for (i, level) in h.levels.iter_mut().enumerate() {
+                level.ordinal.get_or_insert(i as i64);
+            }
+        }
+    }
+    let expected = Some(expected);
     assert_eq!(
         normalized_across_formats(&doc.model),
-        normalized_across_formats(&opened.document.model)
+        normalized_across_formats(&expected)
     );
     assert_eq!(doc.reports.len(), 1);
     let (a, b) = (&doc.reports[0], &opened.document.reports[0]);
@@ -1098,10 +1127,7 @@ fn pbit_export_round_trip() {
     save_as_pbip(&again, &out, &SaveOptions::default()).unwrap();
     let project = open(&out);
     assert_eq!(project.document.model_status, ModelStatus::Local);
-    assert_eq!(
-        normalized(&project.document.model),
-        normalized(&opened.document.model)
-    );
+    assert_eq!(normalized(&project.document.model), normalized(&expected));
     assert_eq!(
         project.document.reports[0].dataset_reference,
         DatasetReference::ByPath {

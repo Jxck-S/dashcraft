@@ -3,7 +3,7 @@ source: crates/pbi-render/tests/render_snapshots.rs
 expression: text
 ---
 Acme Outfitters - Overview / Time Intelligence (FitToPage, 1280×720, 12 visuals)
-page svg: 49458 bytes, fnv1a 23068afb89b572a6
+page svg: 49916 bytes, fnv1a 89015e1b82dac772
 
 73a4b46ae84c53908089 shape 1280×64 at (0, 0): svg 0418e473b7439a2b, 0 data points
 
@@ -113,12 +113,13 @@ cfa6b3b57d4eab8e6066 lineChart 616×220 at (24, 484): svg b38049ac9f90133b, 36 d
   | 2025-12
   | Year Month
 
-7db2a139761251b9162a areaChart 600×220 at (656, 484): svg 29549e0df9120edb, 24 data points
+7db2a139761251b9162a areaChart 600×220 at (656, 484): svg e171cea667c11ba7, 25 data points
   | Shipped sales by ship month
   | $0K
   | $20K
   | $40K
   | Shipped Sales
+  | (Blank)
   | 2024-01
   | 2024-02
   | 2024-03

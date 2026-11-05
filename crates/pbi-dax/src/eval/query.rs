@@ -112,7 +112,11 @@ fn base_env(interp: &Interp<'_>, opts: &EvalOptions) -> Env {
 }
 
 fn evaluate_one(interp: &Interp<'_>, env: &Env, ev: &Evaluate) -> Result<VirtualTable> {
-    let table = interp.table(env, &ev.expr)?;
+    let table = Arc::new(
+        (*interp.table(env, &ev.expr)?)
+            .clone()
+            .with_unified_text_case(),
+    );
     if ev.order_by.is_empty() {
         return Ok((*table).clone());
     }

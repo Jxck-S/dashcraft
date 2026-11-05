@@ -48,9 +48,9 @@ table 'Products Never Sold'
 		source =
 				VAR SoldProducts =
 				    SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), "Product ID", Orders[Product ID])
-				VAR Catalog =
+				VAR AllProducts =
 				    SELECTCOLUMNS(ALL(Products), "Product ID", Products[Product ID])
-				VAR NeverSold = EXCEPT(Catalog, SoldProducts)
+				VAR NeverSold = EXCEPT(AllProducts, SoldProducts)
 				RETURN
 				    SELECTCOLUMNS(
 				        FILTER(

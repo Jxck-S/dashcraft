@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "suite": "dax-lab-tables",
+  "title": "Every dax-lab table after refresh",
+  "fixture": "dax-lab",
+  "requiresTables": [
+    "Product",
+    "Sales",
+    "Date",
+    "Orders",
+    "Emp"
+  ],
+  "cases": [
+    {
+      "id": "product",
+      "query": "EVALUATE 'Product'"
+    },
+    {
+      "id": "sales",
+      "query": "EVALUATE 'Sales'"
+    },
+    {
+      "id": "date",
+      "query": "EVALUATE 'Date'"
+    },
+    {
+      "id": "orders",
+      "query": "EVALUATE 'Orders'"
+    },
+    {
+      "id": "emp",
+      "query": "EVALUATE 'Emp'"
+    }
+  ]
+}

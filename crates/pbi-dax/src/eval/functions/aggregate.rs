@@ -57,8 +57,12 @@ fn column_agg(i: &Interp<'_>, env: &Env, args: &[Expr], f: &str, agg: Agg) -> R 
     arity(f, args, 1, 1)?;
     let (t, c) = i.column_arg(env, arg(f, args, 0)?, f)?;
     let vis = i.snapshot.visible(&env.filter, &t)?;
+    // Desktop leaves the relationship blank row out of DISTINCTCOUNT and
+    // COUNTBLANK (ground truth: 3 colours plus the blank row count 3; the
+    // Regional Sales Campaigns blank row is not a COUNTBLANK), unlike VALUES/ALL.
+    let blank_row = vis.blank_row && !matches!(agg, Agg::DistinctCount | Agg::CountBlank);
     ok(i.snapshot
-        .aggregate_with_blank_row(&t, &c, &vis.rows, vis.blank_row, agg)?)
+        .aggregate_with_blank_row(&t, &c, &vis.rows, blank_row, agg)?)
 }
 
 fn sum(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
@@ -110,16 +114,15 @@ fn zero_like(other: &Value) -> Value {
 fn two_arg(i: &Interp<'_>, env: &Env, args: &[Expr], f: &str, want: Ordering) -> R {
     let a = i.scalar(env, arg(f, args, 0)?)?;
     let b = i.scalar(env, arg(f, args, 1)?)?;
-    let (a, b) = match (a.is_blank(), b.is_blank()) {
+    // BLANK compares as the zero of the other type but is returned as BLANK:
+    // Desktop gives `MAX(-1, BLANK())` = BLANK and `MIN(BLANK(), -1)` = -1.
+    let (ca, cb) = match (a.is_blank(), b.is_blank()) {
         (true, true) => return ok(Value::Blank),
-        (true, false) => (zero_like(&b), b),
-        (false, true) => {
-            let z = zero_like(&a);
-            (a, z)
-        }
-        (false, false) => (a, b),
+        (true, false) => (zero_like(&b), b.clone()),
+        (false, true) => (a.clone(), zero_like(&a)),
+        (false, false) => (a.clone(), b.clone()),
     };
-    ok(if b.dax_cmp(&a)? == want { b } else { a })
+    ok(if cb.dax_cmp(&ca)? == want { b } else { a })
 }
 
 fn min(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {

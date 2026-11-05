@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 use pbi_core::lint::{Finding, LintOptions, LintReport, lint, lint_document, rules};
 use pbi_core::{OpenOptions, OpenedDocument, open_path};
 use pbi_model::{
-    Column, ColumnRef, DataType, Document, FieldExpr, Model, ModelStatus, Page, Position,
-    Projection, Relationship, Report, Severity, Table, Visual,
+    Column, ColumnRef, DataType, Document, FieldExpr, Measure, Model, ModelStatus, Page, Position,
+    Projection, PropValue, Relationship, Report, Severity, Table, Visual,
 };
 
 const OVERVIEW: &str = "Acme Outfitters - Overview.Report";
@@ -802,9 +802,9 @@ fn bad_dax_references_and_syntax_errors() {
         Some("did you mean `[Total Sales]`?")
     );
 
-    // Line 95 in the example, + 2 for the multi-line measure above it.
+    // Line 94 in the example, + 2 for the multi-line measure above it.
     let f = find("unknown column `Orders[Order Dat]`");
-    assert_eq!(origin_of(f).2, Some(97));
+    assert_eq!(origin_of(f).2, Some(96));
     assert_eq!(
         f.suggestion.as_deref(),
         Some("did you mean `Orders[Order Date]`?")
@@ -813,7 +813,7 @@ fn bad_dax_references_and_syntax_errors() {
     // `ORDER` is a DAX keyword, so the table name is quoted.
     let f = find("unknown table `'Order'`");
     assert!(f.message.contains("line 1, column 13"), "{}", f.message);
-    assert_eq!(origin_of(f).2, Some(67));
+    assert_eq!(origin_of(f).2, Some(66));
     assert_eq!(
         f.suggestion.as_deref(),
         Some("did you mean table `Orders`?")
@@ -840,7 +840,7 @@ fn bad_dax_references_and_syntax_errors() {
             .message
             .contains("DAX syntax error at line 1, column")
     );
-    assert_eq!(origin_of(syntax[0]), (orders, None, Some(39)));
+    assert_eq!(origin_of(syntax[0]), (orders, None, Some(38)));
 }
 
 #[test]
@@ -914,7 +914,7 @@ fn broken_model_structure() {
         case.suggestion.as_deref(),
         Some("use `StorageContainerUrl`")
     );
-    assert_eq!(origin_of(case), (orders.clone(), None, Some(260)));
+    assert_eq!(origin_of(case), (orders.clone(), None, Some(259)));
     let step = m
         .iter()
         .find(|f| f.message.contains("`Source CVS`"))
@@ -1005,6 +1005,37 @@ fn tiny_document() -> Document {
     };
     doc.assign_ids();
     doc
+}
+
+#[test]
+fn measure_with_static_and_dynamic_format_string_is_an_error() {
+    let mut doc = tiny_document();
+    let model = doc.model.as_mut().unwrap();
+    let mut both = Measure::new("Both", "1");
+    both.format_string = Some("0.00".into());
+    both.extra.insert(
+        "formatStringDefinition".into(),
+        PropValue::Expression("\"0.0\"".into()),
+    );
+    let mut dynamic = Measure::new("Dynamic", "1");
+    dynamic.extra.insert(
+        "formatStringDefinition".into(),
+        PropValue::Expression("\"0.0\"".into()),
+    );
+    let mut fixed = Measure::new("Static", "1");
+    fixed.format_string = Some("0.00".into());
+    model.tables[0].measures = vec![both, dynamic, fixed];
+    doc.assign_ids();
+
+    let report = lint_document(&doc, &LintOptions::default());
+    let found = of(&report, rules::MEASURE_FORMAT);
+    assert_eq!(found.len(), 1, "{}", show(&report));
+    assert_eq!(found[0].severity, Severity::Error);
+    assert!(
+        found[0].message.contains("Stores[Both]"),
+        "{}",
+        found[0].message
+    );
 }
 
 #[test]

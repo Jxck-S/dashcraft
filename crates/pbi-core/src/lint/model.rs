@@ -1,6 +1,7 @@
 //! Semantic-model checks: DAX (LINT007/LINT008), relationships
 //! (LINT009/LINT010), query groups (LINT011), M references (LINT013) and
-//! column references inside the model (LINT017).
+//! column references inside the model (LINT017) and measure format strings
+//! (LINT018).
 
 use pbi_model::{
     ColumnRef, DataType, ExpressionKind, Model, ObjectId, Origin, PartitionSource, Relationship,
@@ -77,6 +78,28 @@ fn check_table(sink: &mut Sink<'_>, model: &Model, globals: &Globals<'_>, t: &Ta
             object: measure.id,
         };
         dax::check(sink, model, &site);
+        if measure
+            .format_string
+            .as_deref()
+            .is_some_and(|f| !f.is_empty())
+            && measure.format_string_definition().is_some()
+        {
+            sink.push(
+                Finding::new(
+                    rules::MEASURE_FORMAT,
+                    Severity::Error,
+                    format!(
+                        "{} has both `formatString` and `formatStringDefinition`; Power BI Desktop refuses to load the model",
+                        site.what
+                    ),
+                )
+                .at(measure.origin.clone())
+                .on(measure.id)
+                .suggest(Some(
+                    "remove `formatString`; the dynamic format string replaces it".into(),
+                )),
+            );
+        }
     }
     for c in &t.columns {
         if let Some(expr) = c.expression() {

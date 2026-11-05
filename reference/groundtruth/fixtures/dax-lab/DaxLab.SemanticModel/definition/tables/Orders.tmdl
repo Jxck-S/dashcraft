@@ -1,0 +1,56 @@
+/// functions.rs dates_fx(): eight orders; OrderDate is the active date relationship, ShipDate the inactive one.
+table Orders
+	lineageTag: 97f8cab2-dfa4-5f8d-8b63-10744f4d51af
+
+	measure Amt = SUM(Orders[Amount])
+		lineageTag: 41e713b2-3ee9-5052-955a-33b9aa404633
+
+	column OrderId
+		dataType: int64
+		lineageTag: 9e8f6c90-10f9-52da-8c0f-d62155ec0c6d
+		summarizeBy: sum
+		sourceColumn: OrderId
+
+		annotation SummarizationSetBy = Automatic
+
+	column OrderDate
+		dataType: dateTime
+		lineageTag: 80326fb6-9da3-54df-8c01-29993dbd1fec
+		summarizeBy: none
+		sourceColumn: OrderDate
+
+		annotation SummarizationSetBy = Automatic
+
+	column ShipDate
+		dataType: dateTime
+		lineageTag: f4f550a1-0e31-5a7b-bfc8-de096fc55cb3
+		summarizeBy: none
+		sourceColumn: ShipDate
+
+		annotation SummarizationSetBy = Automatic
+
+	column Amount
+		dataType: int64
+		lineageTag: 5228215d-50c6-539f-ac20-b66413c44def
+		summarizeBy: sum
+		sourceColumn: Amount
+
+		annotation SummarizationSetBy = Automatic
+
+	column Region
+		dataType: string
+		lineageTag: ebe8fadc-05d8-5a25-9894-22f68d49610e
+		summarizeBy: none
+		sourceColumn: Region
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Orders = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [OrderId = Int64.Type, OrderDate = datetime, ShipDate = datetime, Amount = Int64.Type, Region = text], {{1, #datetime(2023, 1, 10, 0, 0, 0), #datetime(2023, 1, 15, 0, 0, 0), 10, "East"}, {2, #datetime(2023, 2, 20, 0, 0, 0), #datetime(2023, 3, 2, 0, 0, 0), 20, "West"}, {3, #datetime(2023, 12, 31, 0, 0, 0), #datetime(2024, 1, 2, 0, 0, 0), 30, "East"}, {4, #datetime(2024, 1, 15, 0, 0, 0), #datetime(2024, 2, 1, 0, 0, 0), 40, "West"}, {5, #datetime(2024, 2, 10, 0, 0, 0), #datetime(2024, 2, 12, 0, 0, 0), 50, "East"}, {6, #datetime(2024, 2, 29, 0, 0, 0), #datetime(2024, 3, 1, 0, 0, 0), 60, "West"}, {7, #datetime(2024, 3, 31, 0, 0, 0), #datetime(2024, 4, 2, 0, 0, 0), 70, "East"}, {8, #datetime(2024, 6, 30, 0, 0, 0), #datetime(2024, 7, 1, 0, 0, 0), 80, "West"}})
+				in
+				    Source
+
+	annotation PBI_ResultType = Table

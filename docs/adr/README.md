@@ -12,5 +12,6 @@
 | [0008](0008-ai-layer.md) | Opt-in AI layer (pbi-ai) as a registry plugin: capability contract, providers, consent, keychain-only keys | Accepted |
 | [0009](0009-naming-dashcraft.md) | Public product name DashCraft (formerly pbiview): `dashcraft` binary with a `pbiview` alias, `DASHCRAFT_*` variables, app identifier `io.github.jxck-s.dashcraft`, `NOTICE` | Accepted (name chosen "for now"; reversible); §2, §4, §5 superseded by ADR-0010 |
 | [0010](0010-dashcraft-everywhere.md) | DashCraft everywhere: no `pbiview` aliases or internal names (`dashcraft-cli`, `dashcraft-app`, `DASHCRAFT_*`, `dashcraft.*` keys) | Accepted |
+| [0011](0011-desktop-ground-truth.md) | Ground-truth recordings from Power BI Desktop: black-box DAX queries over ADOMD.NET, committed corpora and recordings, a value-by-value comparison test and a deviation ledger that only shrinks | Accepted |
 
 New ADRs use the next number and the sections Status, Context, Decision, Alternatives considered, Consequences. To change a decision, write a new ADR and mark the old one "Superseded by ADR-NNNN". Don't rewrite history.

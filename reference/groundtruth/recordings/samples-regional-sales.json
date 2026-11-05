@@ -1,0 +1,1443 @@
+{
+  "schemaVersion": 1,
+  "suite": "samples-regional-sales",
+  "desktop": { "version": "2.159.1231.0", "engine": "17.0.93.23", "culture": "en-US" },
+  "recordedOn": "2026-11-05",
+  "cases": [
+    {
+      "id": "tables",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.TABLES(), \"Name\", [Name], \"DataCategory\", [DataCategory], \"Description\", [Description], \"IsHidden\", [IsHidden], \"CalculationGroupPrecedence\", [CalculationGroupPrecedence])",
+      "columns": ["[Name]", "[DataCategory]", "[Description]", "[IsHidden]", "[CalculationGroupPrecedence]"],
+      "rows": [
+        ["Accounts", "Regular", "Customer companies you sell to, including location and account identifiers.", false, null],
+        ["Industries", "Regular", "Industry classifications used to segment customer accounts.", false, null],
+        ["Opportunities", "Regular", "Sales deals in the pipeline, including status, value, probability, stage, and close dates.", false, null],
+        ["Owners", "Regular", "Sales representatives who own opportunities and accounts, and the managers they report to.", false, null],
+        ["Products", "Regular", "Products and product categories sold on opportunities.", false, null],
+        ["Opportunity Forecast Adjustment", "Regular", "Hidden helper table that powers the what-if forecast adjustment slider.", true, null],
+        ["Opportunity Calendar", "Time", "Date dimension for time-based analysis of opportunities, with year, month, week, and relative-time attributes.", false, null],
+        ["Contacts", "Regular", "Individual people at customer accounts, with their job titles.", false, null],
+        ["Territories", "Regular", "Geographic sales territories grouped by region, state/province, and country.", false, null],
+        ["Campaigns", "Regular", "Marketing campaigns that generate or influence sales opportunities.", false, null],
+        ["Calculations", "Regular", "Central home for the model's measures — KPIs and calculations used across reports (revenue, forecast, counts, win rate, etc.).", false, null]
+      ]
+    },
+    {
+      "id": "columns",
+      "query": "EVALUATE SELECTCOLUMNS(FILTER(INFO.VIEW.COLUMNS(), [Type] <> \"RowNumber\"), \"Table\", [Table], \"Name\", [Name], \"DataType\", [DataType], \"IsHidden\", [IsHidden], \"FormatString\", [FormatString], \"SortByColumn\", [SortByColumn], \"SummarizeBy\", [SummarizeBy], \"DataCategory\", [DataCategory], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "columns": ["[Table]", "[Name]", "[DataType]", "[IsHidden]", "[FormatString]", "[SortByColumn]", "[SummarizeBy]", "[DataCategory]", "[DisplayFolder]", "[Description]", "[Expression]"],
+      "rows": [
+        ["Accounts", "Account Name", "Text", false, null, null, "None", "Regular", null, "Name of the customer company.", null],
+        ["Accounts", "State or Province", "Text", false, null, null, "None", "StateOrProvince", null, "State or province where the account is located.", null],
+        ["Accounts", "Country", "Text", false, null, null, "None", "Country", null, "Country where the account is located.", null],
+        ["Accounts", "AccountID", "Text", true, null, null, "None", "Regular", null, null, null],
+        ["Accounts", "AccountSeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Accounts", "IndustrySeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Accounts", "AccountOwnerSeq", "Integer", true, "0", null, "Sum", "Regular", null, null, null],
+        ["Accounts", "Account Number", "Text", false, null, null, "None", "Regular", null, "Unique account identifier used by sales.", null],
+        ["Accounts", "TerritorySeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Industries", "Industry", "Text", false, null, null, "None", "Regular", null, "Industry classification of the account (e.g., Manufacturing, Retail).", null],
+        ["Industries", "IndustrySeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Opportunities", "Purchase Process", "Text", false, null, null, "None", "Regular", null, "How the customer makes buying decisions (e.g., committee, individual).", null],
+        ["Opportunities", "Decision Maker Identified", "True/False", false, "\"TRUE\";\"TRUE\";\"FALSE\"", null, "None", "Regular", null, "Whether the key decision maker for the deal has been identified.", null],
+        ["Opportunities", "Status", "Text", false, null, null, "None", "Regular", null, "Current outcome of the opportunity: Open, Won, or Lost.", null],
+        ["Opportunities", "Sales Stage", "Text", false, null, null, "None", "Regular", null, "Current stage of the opportunity in the sales process.", null],
+        ["Opportunities", "Value", "Integer", true, "\\$#,0;(\\$#,0);\\$#,0", null, "Sum", "Regular", null, null, null],
+        ["Opportunities", "Weeks Open", "Integer", false, "#,0", null, "Average", "Regular", null, "Number of weeks the opportunity has been active.", "\nABS (\n    DATEDIFF (\n        Opportunities[Opportunity Created On],\n        IF (\n            ISBLANK ( Opportunities[CloseDate] ) = TRUE (),\n            TODAY (),\n            Opportunities[CloseDate]\n        ),\n        WEEK\n    )\n)"],
+        ["Opportunities", "DaysToClose", "Integer", false, "0", null, "None", "Regular", null, "Number of days between opportunity creation and expected close date.", null],
+        ["Opportunities", "Discount", "Number", false, "0.0%;-0.0%;0.0%", null, "Average", "Regular", null, "Percentage discount offered on the deal.", null],
+        ["Opportunities", "Probability", "Number", false, "0.0%;-0.0%;0.0%", null, "Average", "Regular", null, "Estimated likelihood (%) of winning the opportunity.", null],
+        ["Opportunities", "Rating", "Text", false, null, null, "None", "Regular", null, "Overall quality rating of the opportunity (e.g., Hot, Warm, Cold).", null],
+        ["Opportunities", "Days Remaining In Pipeline", "Integer", false, "0", null, "Average", "Regular", null, "Days remaining until the opportunity's expected close date.", "IF(Opportunities[Status]=\"Open\", DATEDIFF(TODAY(),Opportunities[CloseDate],DAY),0)"],
+        ["Opportunities", "Probability (raw)", "Number", true, "#,0.0%;-#,0.0%;#,0.0%", null, "Average", "Regular", null, null, null],
+        ["Opportunities", "AccountSeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Opportunities", "OpportunitySeq", "Integer", true, "0", null, "Sum", "Regular", null, null, null],
+        ["Opportunities", "ProductSeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Opportunities", "SystemUserSeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Opportunities", "CampaignSeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Opportunities", "Blank", "Integer", true, "0", null, "None", "Regular", null, null, "BLANK()"],
+        ["Opportunities", "DateDiff-Days", "Integer", true, "0", null, "Sum", "Regular", null, null, null],
+        ["Opportunities", "Opportunity Created On", "Date", false, "dd-mmm-yyyy", null, "None", "Regular", null, "Date the opportunity record was created.", null],
+        ["Opportunities", "CloseDate", "Date", false, "dd-mmm-yyyy", null, "None", "Regular", null, "Expected or actual close date of the opportunity.", null],
+        ["Opportunities", "Days Remaining In Pipeline (bins)", "Integer", true, "0", null, "None", "Regular", null, null, "IF(\n  ISBLANK('Opportunities'[Days Remaining In Pipeline]),\n  BLANK(),\n  INT('Opportunities'[Days Remaining In Pipeline] / 5) * 5\n)"],
+        ["Owners", "Owner", "Text", false, null, null, "None", "Regular", null, "Sales representative who owns the opportunity or account.", null],
+        ["Owners", "Manager", "Text", false, null, null, "None", "Regular", null, "Sales manager the owner reports to.", null],
+        ["Owners", "SystemUserSeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Owners", "systemuserid", "Text", true, null, null, "None", "Regular", null, null, null],
+        ["Products", "Product", "Text", false, null, null, "None", "Regular", null, "Product being sold on the opportunity.", null],
+        ["Products", "ProductSeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Products", "Product Category", "Text", false, null, null, "None", "Regular", null, "High-level category the product belongs to.", null],
+        ["Opportunity Forecast Adjustment", "Forecast Adjustment", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Opportunity Forecast Adjustment", "Blank", "Integer", true, "0", null, "Sum", "Regular", null, null, "1"],
+        ["Opportunity Calendar", "Date", "Date", false, "dd-mmm-yyyy", null, "None", "Regular", null, "Calendar date (day grain).", null],
+        ["Opportunity Calendar", "DAY", "Date", true, "dd-ddd", null, "None", "Regular", null, null, null],
+        ["Opportunity Calendar", "DaySeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Opportunity Calendar", "YEAR", "Integer", false, "0", null, "None", "Regular", null, "Calendar year.", null],
+        ["Opportunity Calendar", "MONTH NUMBER", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Opportunity Calendar", "MONTH", "Text", false, null, "MONTH NUMBER", "None", "Regular", null, "Calendar month name.", null],
+        ["Opportunity Calendar", "YEAR MONTH NUMBER", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Opportunity Calendar", "YEAR MONTH", "Text", false, null, "YEAR MONTH NUMBER", "None", "Regular", null, "Year and month combined for month-level trend analysis.", null],
+        ["Opportunity Calendar", "YEAR WEEK", "Text", false, null, null, "None", "Regular", null, "Year and week combined for week-level trend analysis.", null],
+        ["Opportunity Calendar", "WEEK", "Date", false, "\"Week of \"ddd dd-mmm-yyyy", null, "None", "Regular", null, "Start date of the calendar week.", null],
+        ["Opportunity Calendar", "RELATIVE WEEK", "Number", false, null, null, "None", "Regular", null, "Week offset relative to the current week (0 = current week).", null],
+        ["Opportunity Calendar", "RELATIVE DAY", "Date", false, "dd-mmm-yyyy", null, "None", "Regular", null, "Day offset relative to today (0 = today).", null],
+        ["Opportunity Calendar", "RELATIVE 07 DAY PERIOD", "Number", false, null, null, "None", "Regular", null, "7-day rolling period offset relative to today.", null],
+        ["Opportunity Calendar", "RELATIVE 30 DAY PERIOD", "Number", false, null, null, "None", "Regular", null, "30-day rolling period offset relative to today.", null],
+        ["Opportunity Calendar", "RELATIVE MONTH", "Integer", false, "0", null, "None", "Regular", null, "Month offset relative to the current month (0 = current month).", null],
+        ["Contacts", "Contact", "Text", false, null, null, "None", "Regular", null, "Name of an individual person at a customer account.", null],
+        ["Contacts", "Job Title", "Text", false, null, null, "None", "Regular", null, "Job title of the contact at the account.", null],
+        ["Contacts", "ContactSeq", "Integer", true, "0", null, "Sum", "Regular", null, null, null],
+        ["Contacts", "AccountSeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Territories", "Region", "Text", false, null, null, "None", "Regular", null, "Broad sales region that groups territories.", null],
+        ["Territories", "Territory", "Text", false, null, null, "None", "Regular", null, "Named sales territory.", null],
+        ["Territories", "Country", "Text", true, null, null, "None", "Country", null, null, null],
+        ["Territories", "TerritorySeq", "Text", true, null, null, "None", "Regular", null, null, null],
+        ["Territories", "State or Province", "Text", false, null, null, "None", "StateOrProvince", null, "State or province included in the territory.", null],
+        ["Campaigns", "CampaignSeq", "Integer", true, "0", null, "None", "Regular", null, null, null],
+        ["Campaigns", "Campaign Type", "Text", false, null, null, "None", "Regular", null, "Type of marketing campaign (e.g., Email, Event, Webinar).", null],
+        ["Campaigns", "Campaign", "Text", false, null, null, "None", "Regular", null, "Name of the marketing campaign.", null],
+        ["Calculations", "Value", "Integer", true, "0", null, "Sum", "Regular", null, null, null]
+      ]
+    },
+    {
+      "id": "measures",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.MEASURES(), \"Table\", [Table], \"Name\", [Name], \"IsHidden\", [IsHidden], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "columns": ["[Table]", "[Name]", "[IsHidden]", "[DisplayFolder]", "[Description]", "[Expression]"],
+      "rows": [
+        ["Calculations", "Close %", false, null, "Win rate: Won opportunities as a percentage of closed opportunities (Won + Lost).", "[Count of Won]/([Count of Won]+[Count of Lost])"],
+        ["Calculations", "Count of Lost", false, null, "Number of opportunities that closed as Lost.", "\nCOUNTAX(\n    FILTER(\n        KEEPFILTERS(Opportunities),Opportunities[Status] = \"Lost\"\n        ),\n    Opportunities[OpportunitySeq]\n    ) "],
+        ["Calculations", "Count of Won", false, null, "Number of opportunities that closed as Won.", "\nCOUNTAX(\n    FILTER(\n        KEEPFILTERS(Opportunities),Opportunities[Status] = \"Won\"\n        ),\n    Opportunities[OpportunitySeq]\n    ) "],
+        ["Calculations", "Forecast Adjustment Slicer Alt Text", false, null, "Descriptive label shown alongside the forecast adjustment slicer.", "CONCATENATE(\"Use the slicer to adjust the forecast, current value is \", [Forecast Adjustment Value])"],
+        ["Calculations", "Forecast", false, null, "Projected revenue combining won revenue with weighted pipeline revenue.", "([Revenue Won]+[Revenue In Pipeline])"],
+        ["Calculations", "Forecast %", false, null, "Forecasted revenue as a percentage of the revenue goal.", "(([Revenue Won]+[Revenue In Pipeline]))/ [Rev Goal]"],
+        ["Calculations", "Forecast Adjustment Value", true, null, "Selected adjustment value from the what-if forecast slicer.", "SELECTEDVALUE('Opportunity Forecast Adjustment'[Forecast Adjustment], 0)"],
+        ["Calculations", "Forecast by Win/Loss Ratio", false, null, "Forecast revenue weighted by the historical win-to-loss ratio instead of stated probability.", "[Revenue Open] * [Close %]"],
+        ["Calculations", "Opportunity Count", false, null, "Total number of opportunities regardless of status.", "\nCOUNTAX(Opportunities,TRUE())"],
+        ["Calculations", "Opportunity Count In Pipeline", false, null, "Number of open opportunities currently in the pipeline.", "\n    CALCULATE (\n        COUNT( Opportunities[Value] ),\n        FILTER (\n            Opportunities,\n            Opportunities[Status] = \"Open\"\n              --  && Opportunities[PipelineStep] IN { \"3-Pipeline\", \"4-Mandate\", \"5-Close\" }\n        )\n    )\n"],
+        ["Calculations", "Rev Goal", false, null, "Revenue goal assigned to each sales owner for the period.", "\nVAR RevenueInPipeline =\n    CALCULATE (\n        SUMX ( Opportunities, Opportunities[Value] ),\n        FILTER (\n            Opportunities,\n            Opportunities[Status] = \"Open\"\n            && VALUE(LEFT(Opportunities[Sales Stage],1)) >=2\n        )\n    )\nVAR BaseGoal =  \nMROUND(([Revenue Won]+ (RevenueInPipeline*.60)),1000000)    \nRETURN\nIF(BaseGoal > 0, BaseGoal, MROUND(([Revenue Won]+ (RevenueInPipeline*.60)),100000))"],
+        ["Calculations", "Revenue In Pipeline", false, null, "Probability-weighted revenue from open opportunities (opportunity value multiplied by win probability).", "\nVAR Revenue =\n    CALCULATE (\n        SUMX ( Opportunities, Opportunities[Value] ),\n        FILTER (\n            Opportunities,\n            Opportunities[Status] = \"Open\"\n            && VALUE(LEFT(Opportunities[Sales Stage],1)) >=2\n        )\n    )\nRETURN\n    Revenue + ( Revenue * ( [Forecast Adjustment Value] / 100 ) )\n"],
+        ["Calculations", "Revenue Open", false, null, "Total unweighted value of open opportunities in the pipeline.", "\nVAR Revenue =\n    CALCULATE (\n        SUMX ( Opportunities, Opportunities[Value] ),\n        FILTER (\n            Opportunities,\n            Opportunities[Status] = \"Open\"\n        )\n    )\nRETURN\n    Revenue + ( Revenue * ( [Forecast Adjustment Value] / 100 ) )"],
+        ["Calculations", "Revenue Won", false, null, "Total revenue from opportunities with a Won status.", "\n CALCULATE(\n     SUMX(Opportunities, Opportunities[Value]),\n     FILTER(Opportunities, Opportunities[Status] = \"Won\")\n )"],
+        ["Calculations", "Revenue Won Average Deal Size", false, null, "Average revenue per Won opportunity (Revenue Won divided by Count of Won).", "AVERAGEX(Opportunities,[Revenue Won])"]
+      ]
+    },
+    {
+      "id": "measure-formats",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.MEASURES(), \"Name\", [Name], \"FormatString\", [FormatString])",
+      "columns": ["[Name]", "[FormatString]"],
+      "rows": [
+        ["Close %", "#,0%;-#,0%;#,0%"],
+        ["Count of Lost", "#,0"],
+        ["Count of Won", "#,0"],
+        ["Forecast Adjustment Slicer Alt Text", null],
+        ["Forecast", "\\$#,0;(\\$#,0);\\$#,0"],
+        ["Forecast %", "#,0%;-#,0%;#,0%"],
+        ["Forecast Adjustment Value", null],
+        ["Forecast by Win/Loss Ratio", "\\$#,0;(\\$#,0);\\$#,0"],
+        ["Opportunity Count", "#,0"],
+        ["Opportunity Count In Pipeline", "#,0"],
+        ["Rev Goal", "\\$#,0;(\\$#,0);\\$#,0"],
+        ["Revenue In Pipeline", "\\$#,0;(\\$#,0);\\$#,0"],
+        ["Revenue Open", "\\$#,0;(\\$#,0);\\$#,0"],
+        ["Revenue Won", "\\$#,0;(\\$#,0);\\$#,0"],
+        ["Revenue Won Average Deal Size", "\\$#,0;(\\$#,0);\\$#,0"]
+      ]
+    },
+    {
+      "id": "relationships",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.RELATIONSHIPS(), \"FromTable\", [FromTable], \"FromColumn\", [FromColumn], \"FromCardinality\", [FromCardinality], \"ToTable\", [ToTable], \"ToColumn\", [ToColumn], \"ToCardinality\", [ToCardinality], \"IsActive\", [IsActive], \"CrossFilteringBehavior\", [CrossFilteringBehavior], \"SecurityFilteringBehavior\", [SecurityFilteringBehavior])",
+      "columns": ["[FromTable]", "[FromColumn]", "[FromCardinality]", "[ToTable]", "[ToColumn]", "[ToCardinality]", "[IsActive]", "[CrossFilteringBehavior]", "[SecurityFilteringBehavior]"],
+      "rows": [
+        ["Accounts", "IndustrySeq", "Many", "Industries", "IndustrySeq", "One", true, "OneDirection", "Single"],
+        ["Accounts", "TerritorySeq", "Many", "Territories", "TerritorySeq", "One", true, "OneDirection", "Single"],
+        ["Opportunities", "AccountSeq", "Many", "Accounts", "AccountSeq", "One", true, "OneDirection", "Single"],
+        ["Opportunities", "ProductSeq", "Many", "Products", "ProductSeq", "One", true, "OneDirection", "Single"],
+        ["Opportunities", "SystemUserSeq", "Many", "Owners", "SystemUserSeq", "One", true, "OneDirection", "Single"],
+        ["Opportunities", "CampaignSeq", "Many", "Campaigns", "CampaignSeq", "One", true, "OneDirection", "Single"],
+        ["Opportunities", "CloseDate", "Many", "Opportunity Calendar", "Date", "One", true, "OneDirection", "Single"],
+        ["Contacts", "AccountSeq", "Many", "Accounts", "AccountSeq", "One", true, "OneDirection", "Single"]
+      ]
+    },
+    {
+      "id": "rows/accounts",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Accounts'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [300]
+      ]
+    },
+    {
+      "id": "column/accounts/account-name-94bcfbc6",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[Account Name]), \"blanks\", COUNTBLANK('Accounts'[Account Name]), \"min\", MIN('Accounts'[Account Name]), \"max\", MAX('Accounts'[Account Name]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [299, null, "A. Datum Corporation  (U.S.)", "Zulauf, Brekke and West"]
+      ]
+    },
+    {
+      "id": "column/accounts/state-or-province-59a5c18b",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[State or Province]), \"blanks\", COUNTBLANK('Accounts'[State or Province]), \"min\", MIN('Accounts'[State or Province]), \"max\", MAX('Accounts'[State or Province]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [48, null, "AL", "WY"]
+      ]
+    },
+    {
+      "id": "column/accounts/country-50b7b98d",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[Country]), \"blanks\", COUNTBLANK('Accounts'[Country]), \"min\", MIN('Accounts'[Country]), \"max\", MAX('Accounts'[Country]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [1, null, "United States", "United States"]
+      ]
+    },
+    {
+      "id": "column/accounts/accountid-c7769d07",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[AccountID]), \"blanks\", COUNTBLANK('Accounts'[AccountID]), \"min\", MIN('Accounts'[AccountID]), \"max\", MAX('Accounts'[AccountID]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [300, null, "00c48905-de1e-eb11-a814-000d3a9c7ff2", "fffffc00-f81e-eb11-a814-000d3a9c7ff2"]
+      ]
+    },
+    {
+      "id": "column/accounts/accountseq-c43d1f18",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[AccountSeq]), \"blanks\", COUNTBLANK('Accounts'[AccountSeq]), \"min\", MIN('Accounts'[AccountSeq]), \"max\", MAX('Accounts'[AccountSeq]), \"sum\", SUM('Accounts'[AccountSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [300, null, 1000, 1299, 344850]
+      ]
+    },
+    {
+      "id": "column/accounts/industryseq-563fb40a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[IndustrySeq]), \"blanks\", COUNTBLANK('Accounts'[IndustrySeq]), \"min\", MIN('Accounts'[IndustrySeq]), \"max\", MAX('Accounts'[IndustrySeq]), \"sum\", SUM('Accounts'[IndustrySeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [44, null, 0, 44, 6665]
+      ]
+    },
+    {
+      "id": "column/accounts/accountownerseq-90bf0df8",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[AccountOwnerSeq]), \"blanks\", COUNTBLANK('Accounts'[AccountOwnerSeq]), \"min\", MIN('Accounts'[AccountOwnerSeq]), \"max\", MAX('Accounts'[AccountOwnerSeq]), \"sum\", SUM('Accounts'[AccountOwnerSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [19, null, 1, 20, 2916]
+      ]
+    },
+    {
+      "id": "column/accounts/account-number-470dc200",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[Account Number]), \"blanks\", COUNTBLANK('Accounts'[Account Number]), \"min\", MIN('Accounts'[Account Number]), \"max\", MAX('Accounts'[Account Number]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [300, null, "AN-100001", "AN-100300"]
+      ]
+    },
+    {
+      "id": "column/accounts/territoryseq-049d2cee",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[TerritorySeq]), \"blanks\", COUNTBLANK('Accounts'[TerritorySeq]), \"min\", MIN('Accounts'[TerritorySeq]), \"max\", MAX('Accounts'[TerritorySeq]), \"sum\", SUM('Accounts'[TerritorySeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [48, null, 1, 51, 4589]
+      ]
+    },
+    {
+      "id": "table/accounts",
+      "query": "EVALUATE 'Accounts'",
+      "columns": ["Accounts[Account Name]", "Accounts[State or Province]", "Accounts[Country]", "Accounts[AccountID]", "Accounts[AccountSeq]", "Accounts[IndustrySeq]", "Accounts[AccountOwnerSeq]", "Accounts[Account Number]", "Accounts[TerritorySeq]"],
+      "rows": [
+        ["A. Datum Corporation  (U.S.)", "NC", "United States", "1c6090f3-8f1c-eb11-a813-000d3a9c7ffa", 1000, 20, 11, "AN-100001", 9],
+        ["Morar, Graham and Dickens", "MD", "United States", "22c58905-de1e-eb11-a814-000d3a9c7ff2", 1001, 22, 10, "AN-100002", 18],
+        ["Abbott Group  (Andorra)", "GA", "United States", "113999f9-dd1e-eb11-a814-000d3a9c7ff2", 1002, 37, 9, "AN-100003", 8],
+        ["Walsh-Pacocha", "MI", "United States", "22dde512-f81e-eb11-a814-000d3a9c7ff2", 1003, 19, 2, "AN-100004", 10],
+        ["Graham Inc", "WA", "United States", "322492b1-e41e-eb11-a814-000d3a9c7ff2", 1004, 4, 20, "AN-100005", 13],
+        ["Miller, Jones and Sawayn", "TX", "United States", "9c3f73c9-e41e-eb11-a814-000d3a9c7ff2", 1005, 19, 13, "AN-100006", 2],
+        ["Lang, Carter and Stanton", "HI", "United States", "1d4174a3-e31e-eb11-a814-000d3a9c7ff2", 1006, 19, 18, "AN-100007", 40],
+        ["King Inc", "CT", "United States", "36b0eba1-e51e-eb11-a814-000d3a9c7ff2", 1007, 8, 5, "AN-100008", 29],
+        ["Grady Group", "TX", "United States", "f2026cde-f31e-eb11-a814-000d3a9c7ff2", 1008, 36, 13, "AN-100009", 2],
+        ["Roberts-Bruen", "IA", "United States", "5ae6bbcc-eb1e-eb11-a814-000d3a9c7ff2", 1009, 0, 1, "AN-100010", 31],
+        ["Stoltenberg LLC", "TN", "United States", "a4575859-ef1e-eb11-a814-000d3a9c7ff2", 1010, 0, 12, "AN-100011", 16],
+        ["Fadel and Sons", "IN", "United States", "e4e99a85-e31e-eb11-a814-000d3a9c7ff2", 1011, 26, 2, "AN-100012", 17],
+        ["Williamson Group", "TX", "United States", "4307c90a-f51e-eb11-a814-000d3a9c7ff2", 1012, 8, 13, "AN-100013", 2],
+        ["Kunde-Hagenes", "NH", "United States", "41b682bd-e41e-eb11-a814-000d3a9c7ff2", 1013, 0, 5, "AN-100014", 41],
+        ["Kulas and Sons", "FL", "United States", "fcc9d114-ed1e-eb11-a814-000d3a9c7ff2", 1014, 22, 8, "AN-100015", 3],
+        ["Beahan, Predovic and Morar", "GA", "United States", "3f35dcad-e51e-eb11-a814-000d3a9c7ff2", 1015, 24, 9, "AN-100016", 8],
+        ["Tromp LLC", "SD", "United States", "ec7e43ee-f11e-eb11-a814-000d3a9c7ff2", 1016, 4, 4, "AN-100017", 46],
+        ["Roberts Inc", "OR", "United States", "8601e902-ed1e-eb11-a814-000d3a9c7ff2", 1017, 4, 19, "AN-100018", 27],
+        ["Rice and Sons", "IA", "United States", "6687c12b-f11e-eb11-a814-000d3a9c7ff2", 1018, 0, 1, "AN-100019", 31],
+        ["Torp Inc", "OR", "United States", "42ded114-ed1e-eb11-a814-000d3a9c7ff2", 1019, 39, 19, "AN-100020", 27],
+        ["Schmeler Group", "AL", "United States", "fa475c85-e41e-eb11-a814-000d3a9c7ff2", 1020, 20, 7, "AN-100021", 24],
+        ["Lowe, Emmerich and Casper", "TN", "United States", "2658970b-f01e-eb11-a814-000d3a9c7ff2", 1021, 32, 12, "AN-100022", 16],
+        ["Dooley, Kerluke and Wiza", "FL", "United States", "e4665964-f31e-eb11-a814-000d3a9c7ff2", 1022, 22, 8, "AN-100023", 3],
+        ["Oberbrunner Inc", "FL", "United States", "aa1d3f9c-f41e-eb11-a814-000d3a9c7ff2", 1023, 37, 8, "AN-100024", 3],
+        ["Brakus-Ward", "MO", "United States", "2e1ab4d2-eb1e-eb11-a814-000d3a9c7ff2", 1024, 26, 3, "AN-100025", 19],
+        ["Conn-Jacobi", "IL", "United States", "f5110173-f61e-eb11-a814-000d3a9c7ff2", 1025, 36, 1, "AN-100026", 6],
+        ["Mueller, Bradtke and Mills", "OH", "United States", "864de108-ed1e-eb11-a814-000d3a9c7ff2", 1026, 33, 4, "AN-100027", 7],
+        ["Veum, Krajcik and Pfeffer", "TX", "United States", "307467a5-f51e-eb11-a814-000d3a9c7ff2", 1027, 31, 13, "AN-100028", 2],
+        ["Schroeder, Simonis and Stroman", "TX", "United States", "2c6faa75-df1e-eb11-a814-000d3a9c7ff2", 1028, 7, 13, "AN-100029", 2],
+        ["Goldner Inc", "FL", "United States", "c6b511b2-e21e-eb11-a814-000d3a9c7ff2", 1029, 31, 8, "AN-100030", 3],
+        ["Paucek and Sons", "CA", "United States", "8298a17f-f11e-eb11-a814-000d3a9c7ff2", 1030, 22, 16, "AN-100031", 1],
+        ["Windler-Wilderman", "TN", "United States", "b1cbf0fc-ec1e-eb11-a814-000d3a9c7ff2", 1031, 0, 12, "AN-100032", 16],
+        ["Lakin and Sons", "SC", "United States", "a471f8f6-ec1e-eb11-a814-000d3a9c7ff2", 1032, 16, 12, "AN-100033", 23],
+        ["Sauer LLC", "IA", "United States", "747ac1cb-e51e-eb11-a814-000d3a9c7ff2", 1033, 0, 1, "AN-100034", 31],
+        ["Hagenes-Abshire", "CA", "United States", "bb8295f8-f61e-eb11-a814-000d3a9c7ff2", 1034, 20, 16, "AN-100035", 1],
+        ["Marvin, Feest and Grady", "FL", "United States", "458b119a-e21e-eb11-a814-000d3a9c7ff2", 1035, 14, 8, "AN-100036", 3],
+        ["Denesik, Williamson and Streich", "MO", "United States", "b491a1a5-e41e-eb11-a814-000d3a9c7ff2", 1036, 26, 3, "AN-100037", 19],
+        ["Jast and Sons", "TX", "United States", "4d9879c4-f11e-eb11-a814-000d3a9c7ff2", 1037, 20, 13, "AN-100038", 2],
+        ["Howell-Mohr", "GA", "United States", "32f09a85-e31e-eb11-a814-000d3a9c7ff2", 1038, 22, 9, "AN-100039", 8],
+        ["Miller-Wyman", "CA", "United States", "4546c9c5-e51e-eb11-a814-000d3a9c7ff2", 1039, 0, 18, "AN-100040", 1],
+        ["Schaden-Walsh", "MI", "United States", "2ea98c22-f71e-eb11-a814-000d3a9c7ff2", 1040, 37, 2, "AN-100041", 10],
+        ["Hyatt-Stiedemann", "OH", "United States", "f77273b9-e61e-eb11-a814-000d3a9c7ff2", 1041, 0, 4, "AN-100042", 7],
+        ["Kuhlman Inc", "KY", "United States", "2dc0c830-f81e-eb11-a814-000d3a9c7ff2", 1042, 19, 9, "AN-100043", 26],
+        ["Stamm, Kirlin and Streich", "CA", "United States", "75161419-dd1e-eb11-a814-000d3a9c7ff2", 1043, 34, 16, "AN-100044", 1],
+        ["Nolan, Miller and Windler", "IA", "United States", "bd120173-f61e-eb11-a814-000d3a9c7ff2", 1044, 0, 1, "AN-100045", 31],
+        ["Schneider-Moen", "KY", "United States", "a8b711b2-e21e-eb11-a814-000d3a9c7ff2", 1045, 1, 9, "AN-100046", 26],
+        ["Erdman and Sons", "VA", "United States", "a8a13971-ef1e-eb11-a814-000d3a9c7ff2", 1046, 39, 7, "AN-100047", 12],
+        ["Franecki, Wisozk and O'Connell", "TX", "United States", "1e11830a-f71e-eb11-a814-000d3a9c7ff2", 1047, 37, 13, "AN-100048", 2],
+        ["Batz-Harvey", "TX", "United States", "702e02be-e21e-eb11-a814-000d3a9c7ff2", 1048, 37, 13, "AN-100049", 2],
+        ["Langosh Inc", "NY", "United States", "a325615e-f31e-eb11-a814-000d3a9c7ff2", 1049, 37, 6, "AN-100050", 4],
+        ["Upton-Paucek", "ND", "United States", "f9821067-f61e-eb11-a814-000d3a9c7ff2", 1050, 39, 3, "AN-100051", 47],
+        ["Abbott Group  (Florida)", "WI", "United States", "b85d45fc-f31e-eb11-a814-000d3a9c7ff2", 1051, 22, 4, "AN-100052", 20],
+        ["McLaughlin, Kovacek and Satterfield", "MI", "United States", "3eab4a64-f71e-eb11-a814-000d3a9c7ff2", 1052, 20, 2, "AN-100053", 10],
+        ["Hilll, Mosciski and Ledner", "AL", "United States", "55e2327c-f71e-eb11-a814-000d3a9c7ff2", 1053, 5, 7, "AN-100054", 24],
+        ["Haley LLC", "PA", "United States", "5e163f9c-f41e-eb11-a814-000d3a9c7ff2", 1054, 2, 6, "AN-100055", 5],
+        ["Yost, Predovic and Gaylord", "IL", "United States", "d43099f9-dd1e-eb11-a814-000d3a9c7ff2", 1055, 13, 1, "AN-100056", 6],
+        ["Mante, Lowe and Dickinson", "GA", "United States", "44ad4a64-f71e-eb11-a814-000d3a9c7ff2", 1056, 7, 9, "AN-100057", 8],
+        ["Bayer, O'Connell and Auer", "CA", "United States", "b59c505f-ef1e-eb11-a814-000d3a9c7ff2", 1057, 0, 16, "AN-100058", 1],
+        ["Littel-Hand", "WV", "United States", "fd7279c5-e61e-eb11-a814-000d3a9c7ff2", 1058, 1, 7, "AN-100059", 39],
+        ["Kihn, Runolfsdottir and Turner", "NY", "United States", "c55faa79-e31e-eb11-a814-000d3a9c7ff2", 1059, 39, 6, "AN-100060", 4],
+        ["Purdy, Cassin and Ryan", "OH", "United States", "52cc63d5-e41e-eb11-a814-000d3a9c7ff2", 1060, 22, 4, "AN-100061", 7],
+        ["Fay Inc", "TX", "United States", "8d97f701-f11e-eb11-a814-000d3a9c7ff2", 1061, 37, 13, "AN-100062", 2],
+        ["Stroman, Jacobs and Lubowitz", "GA", "United States", "b94eedc4-f71e-eb11-a814-000d3a9c7ff2", 1062, 0, 9, "AN-100063", 8],
+        ["Champlin and Sons", "TX", "United States", "2a92230d-dd1e-eb11-a814-000d3a9c7ff2", 1063, 37, 13, "AN-100064", 2],
+        ["Beahan and Sons", "OR", "United States", "6cddbce1-ef1e-eb11-a814-000d3a9c7ff2", 1064, 22, 19, "AN-100065", 27],
+        ["Homenick-Hermiston", "FL", "United States", "a8c43bf4-f11e-eb11-a814-000d3a9c7ff2", 1065, 37, 8, "AN-100066", 3],
+        ["Hirthe, Sipes and Hane", "TX", "United States", "da82f2f2-f81e-eb11-a814-000d3a9c7ff2", 1066, 29, 13, "AN-100067", 2],
+        ["Schimmel-Hoeger", "NC", "United States", "bc4820d6-f21e-eb11-a814-000d3a9c7ff2", 1067, 32, 11, "AN-100068", 9],
+        ["Wyman, Lubowitz and Armstrong", "NY", "United States", "c8896d78-f41e-eb11-a814-000d3a9c7ff2", 1068, 19, 6, "AN-100069", 4],
+        ["Tromp-Fadel", "FL", "United States", "e66b3713-e61e-eb11-a814-000d3a9c7ff2", 1069, 0, 8, "AN-100070", 3],
+        ["Kohler-Keeling", "MI", "United States", "906962d6-f11e-eb11-a814-000d3a9c7ff2", 1070, 16, 2, "AN-100071", 10],
+        ["Cummings-Cummerata", "GA", "United States", "7c3e9c85-f11e-eb11-a814-000d3a9c7ff2", 1071, 35, 9, "AN-100072", 8],
+        ["Johnston, Quigley and Lesch", "FL", "United States", "73040c37-e61e-eb11-a814-000d3a9c7ff2", 1072, 22, 8, "AN-100073", 3],
+        ["Olson-Kassulke", "ND", "United States", "9b69aa79-e31e-eb11-a814-000d3a9c7ff2", 1073, 42, 3, "AN-100074", 47],
+        ["Wisoky, Abshire and Ferry", "AZ", "United States", "d279e205-f31e-eb11-a814-000d3a9c7ff2", 1074, 21, 16, "AN-100075", 14],
+        ["Davis-Walsh", "NY", "United States", "e1bac830-f81e-eb11-a814-000d3a9c7ff2", 1075, 21, 6, "AN-100076", 4],
+        ["Reynolds-Crist", "LA", "United States", "9bbfda0b-f31e-eb11-a814-000d3a9c7ff2", 1076, 12, 10, "AN-100077", 25],
+        ["Johns and Sons", "TX", "United States", "bd4720d6-f21e-eb11-a814-000d3a9c7ff2", 1077, 29, 13, "AN-100078", 2],
+        ["Bradtke Group", "ND", "United States", "a0ebaa38-f41e-eb11-a814-000d3a9c7ff2", 1078, 16, 3, "AN-100079", 47],
+        ["Shanahan, Fritsch and Romaguera", "KY", "United States", "dab9d819-f11e-eb11-a814-000d3a9c7ff2", 1079, 7, 9, "AN-100080", 26],
+        ["Schulist and Sons", "FL", "United States", "f675f9d1-f41e-eb11-a814-000d3a9c7ff2", 1080, 14, 8, "AN-100081", 3],
+        ["Heathcote-Heller", "IA", "United States", "9da9f2c9-e21e-eb11-a814-000d3a9c7ff2", 1081, 0, 1, "AN-100082", 31],
+        ["Kutch and Sons", "LA", "United States", "8159cbc0-eb1e-eb11-a814-000d3a9c7ff2", 1082, 0, 10, "AN-100083", 25],
+        ["Leannon-Glover", "NY", "United States", "d55f37a2-f41e-eb11-a814-000d3a9c7ff2", 1083, 25, 6, "AN-100084", 4],
+        ["Strosin-Prohaska", "IL", "United States", "e251c9c5-e51e-eb11-a814-000d3a9c7ff2", 1084, 0, 1, "AN-100085", 6],
+        ["Mitchell-Pacocha", "SC", "United States", "a59d94f0-eb1e-eb11-a814-000d3a9c7ff2", 1085, 20, 12, "AN-100086", 23],
+        ["Gibson Group", "MO", "United States", "96ac10c0-f41e-eb11-a814-000d3a9c7ff2", 1086, 16, 3, "AN-100087", 19],
+        ["Moen, Gerhold and Zulauf", "CA", "United States", "ead954f0-f31e-eb11-a814-000d3a9c7ff2", 1087, 14, 16, "AN-100088", 1],
+        ["Crooks Group", "TN", "United States", "a9df8717-f01e-eb11-a814-000d3a9c7ff2", 1088, 22, 12, "AN-100089", 16],
+        ["Cummings-Becker", "FL", "United States", "cad5633b-e71e-eb11-a814-000d3a9c7ff2", 1089, 3, 8, "AN-100090", 3],
+        ["Erdman, Wunsch and Tromp", "NY", "United States", "a7fa071e-f21e-eb11-a814-000d3a9c7ff2", 1090, 38, 6, "AN-100091", 4],
+        ["Kub and Sons", "TX", "United States", "69095e84-f41e-eb11-a814-000d3a9c7ff2", 1091, 29, 13, "AN-100092", 2],
+        ["Schmeler, Durgan and Hansen", "MI", "United States", "d153568a-f41e-eb11-a814-000d3a9c7ff2", 1092, 17, 2, "AN-100093", 10],
+        ["Bergstrom Inc", "OR", "United States", "7d6662d6-f11e-eb11-a814-000d3a9c7ff2", 1093, 15, 19, "AN-100094", 27],
+        ["Marquardt-O'Kon", "MN", "United States", "5f896d78-f41e-eb11-a814-000d3a9c7ff2", 1094, 30, 2, "AN-100095", 22],
+        ["Marks Group", "NY", "United States", "f2ada27f-e31e-eb11-a814-000d3a9c7ff2", 1095, 29, 6, "AN-100096", 4],
+        ["Grady, Vandervort and Treutel", "KY", "United States", "c2a411b2-e21e-eb11-a814-000d3a9c7ff2", 1096, 22, 9, "AN-100097", 26],
+        ["Sawayn, Blanda and Gerlach", "IL", "United States", "1ccb99ab-e41e-eb11-a814-000d3a9c7ff2", 1097, 0, 1, "AN-100098", 6],
+        ["O'Kon LLC", "AZ", "United States", "85f49ce4-eb1e-eb11-a814-000d3a9c7ff2", 1098, 20, 16, "AN-100099", 14],
+        ["Gaylord and Sons", "TX", "United States", "fffa7b9d-e31e-eb11-a814-000d3a9c7ff2", 1099, 29, 13, "AN-100100", 2],
+        ["Von, Bailey and Yundt", "PA", "United States", "baecb22c-ed1e-eb11-a814-000d3a9c7ff2", 1100, 20, 6, "AN-100101", 5],
+        ["Ernser-Stoltenberg", "NC", "United States", "793a83cc-f31e-eb11-a814-000d3a9c7ff2", 1101, 11, 11, "AN-100102", 9],
+        ["Schimmel-Greenholt", "ME", "United States", "357c91ff-dd1e-eb11-a814-000d3a9c7ff2", 1102, 18, 5, "AN-100103", 42],
+        ["Fay, Torp and Cole", "CA", "United States", "51ee8834-f31e-eb11-a814-000d3a9c7ff2", 1103, 40, 16, "AN-100104", 1],
+        ["Christiansen-Paucek", "NY", "United States", "3af2271f-e61e-eb11-a814-000d3a9c7ff2", 1104, 0, 6, "AN-100105", 4],
+        ["Zboncak Inc", "VA", "United States", "51ca31b0-de1e-eb11-a814-000d3a9c7ff2", 1105, 21, 7, "AN-100106", 12],
+        ["Glover-Hermann", "NC", "United States", "6be1bda8-f61e-eb11-a814-000d3a9c7ff2", 1106, 22, 11, "AN-100107", 9],
+        ["Kuhn-Hammes", "TX", "United States", "b0e7a310-f71e-eb11-a814-000d3a9c7ff2", 1107, 29, 13, "AN-100108", 2],
+        ["Senger-Friesen", "NY", "United States", "df4c1994-e21e-eb11-a814-000d3a9c7ff2", 1108, 13, 6, "AN-100109", 4],
+        ["Little, McGlynn and Lockman", "WV", "United States", "29690dac-e21e-eb11-a814-000d3a9c7ff2", 1109, 20, 7, "AN-100110", 39],
+        ["Champlin-Feest", "CO", "United States", "180cb237-f11e-eb11-a814-000d3a9c7ff2", 1110, 39, 18, "AN-100111", 21],
+        ["Hilpert, Bechtelar and Donnelly", "TX", "United States", "fae5a310-f71e-eb11-a814-000d3a9c7ff2", 1111, 29, 14, "AN-100112", 2],
+        ["Hodkiewicz-Lesch", "NC", "United States", "b4ee9ce4-eb1e-eb11-a814-000d3a9c7ff2", 1112, 41, 11, "AN-100113", 9],
+        ["Upton Group", "GA", "United States", "262a02be-e21e-eb11-a814-000d3a9c7ff2", 1113, 0, 9, "AN-100114", 8],
+        ["Spencer, Auer and Herzog", "VT", "United States", "56cc64af-e31e-eb11-a814-000d3a9c7ff2", 1114, 12, 2, "AN-100115", 50],
+        ["Haley, Kuhlman and Aufderhar", "IL", "United States", "854462d7-e61e-eb11-a814-000d3a9c7ff2", 1115, 41, 1, "AN-100116", 6],
+        ["Kuphal, Prohaska and Jenkins", "CA", "United States", "36138b75-f51e-eb11-a814-000d3a9c7ff2", 1116, 17, 16, "AN-100117", 1],
+        ["Mann Group", "TX", "United States", "0e0a7940-f71e-eb11-a814-000d3a9c7ff2", 1117, 10, 14, "AN-100118", 2],
+        ["Cormier LLC", "MS", "United States", "ae3a1861-f61e-eb11-a814-000d3a9c7ff2", 1118, 37, 10, "AN-100119", 34],
+        ["Dickens Group", "MO", "United States", "3bc4da0b-f31e-eb11-a814-000d3a9c7ff2", 1119, 21, 3, "AN-100120", 19],
+        ["Runolfsdottir-Larson", "TX", "United States", "615b89b2-f81e-eb11-a814-000d3a9c7ff2", 1120, 24, 14, "AN-100121", 2],
+        ["Gerlach Inc (Frontignan, France)", "GA", "United States", "954fe108-ed1e-eb11-a814-000d3a9c7ff2", 1121, 22, 9, "AN-100122", 8],
+        ["Cummings, Mosciski and Crooks", "AL", "United States", "6b2c15a6-e21e-eb11-a814-000d3a9c7ff2", 1122, 34, 7, "AN-100123", 24],
+        ["Ankunding-Robel", "AZ", "United States", "2f6f9828-f31e-eb11-a814-000d3a9c7ff2", 1123, 14, 16, "AN-100124", 14],
+        ["Ritchie, Vandervort and Mante", "LA", "United States", "bdfae802-ed1e-eb11-a814-000d3a9c7ff2", 1124, 14, 10, "AN-100125", 25],
+        ["White, Littel and Nienow", "CA", "United States", "ac1207e3-f71e-eb11-a814-000d3a9c7ff2", 1125, 38, 17, "AN-100126", 1],
+        ["Rosenbaum and Sons", "LA", "United States", "c3f19ce4-eb1e-eb11-a814-000d3a9c7ff2", 1126, 26, 10, "AN-100127", 25],
+        ["Wilderman, Lehner and Runte", "ND", "United States", "867843ee-f11e-eb11-a814-000d3a9c7ff2", 1127, 18, 2, "AN-100128", 47],
+        ["Ondricka Group", "CA", "United States", "5ce3e512-f81e-eb11-a814-000d3a9c7ff2", 1128, 18, 17, "AN-100129", 1],
+        ["Connelly-Schmeler", "NC", "United States", "a5bcccb9-e51e-eb11-a814-000d3a9c7ff2", 1129, 0, 11, "AN-100130", 9],
+        ["Grant Group", "VA", "United States", "2167fac3-e21e-eb11-a814-000d3a9c7ff2", 1130, 3, 7, "AN-100131", 12],
+        ["Kertzmann, Herzog and Gerhold", "VA", "United States", "a040ec84-f61e-eb11-a814-000d3a9c7ff2", 1131, 7, 7, "AN-100132", 12],
+        ["Jakubowski and Sons", "NH", "United States", "b15743ef-e61e-eb11-a814-000d3a9c7ff2", 1132, 34, 2, "AN-100133", 41],
+        ["Doyle-Marquardt", "GA", "United States", "32dfdefd-e51e-eb11-a814-000d3a9c7ff2", 1133, 18, 9, "AN-100134", 8],
+        ["Wunsch Inc", "KS", "United States", "1329e80d-f11e-eb11-a814-000d3a9c7ff2", 1134, 7, 3, "AN-100135", 35],
+        ["Durgan and Sons", "IA", "United States", "fd5881be-f11e-eb11-a814-000d3a9c7ff2", 1135, 18, 1, "AN-100136", 31],
+        ["Mayert-Braun", "MI", "United States", "b78e7217-de1e-eb11-a814-000d3a9c7ff2", 1136, 35, 2, "AN-100137", 10],
+        ["Kihn-Gerlach", "TX", "United States", "995d31cf-f51e-eb11-a814-000d3a9c7ff2", 1137, 44, 14, "AN-100138", 2],
+        ["Gibson LLC", "WV", "United States", "4fc18329-f01e-eb11-a814-000d3a9c7ff2", 1138, 16, 7, "AN-100139", 39],
+        ["Gerhold, Ortiz and Moen", "CA", "United States", "15168e87-f51e-eb11-a814-000d3a9c7ff2", 1139, 19, 17, "AN-100140", 1],
+        ["Hirthe and Sons", "OH", "United States", "450fe3fe-f81e-eb11-a814-000d3a9c7ff2", 1140, 36, 4, "AN-100141", 7],
+        ["Abbott LLC  (Hawaii)", "ID", "United States", "972b02be-e21e-eb11-a814-000d3a9c7ff2", 1141, 19, 18, "AN-100142", 38],
+        ["Baumbach Inc", "TX", "United States", "e4dbbda8-f61e-eb11-a814-000d3a9c7ff2", 1142, 39, 14, "AN-100143", 2],
+        ["Gutmann, Corkery and Lubowitz", "MN", "United States", "dc9d617f-e41e-eb11-a814-000d3a9c7ff2", 1143, 42, 2, "AN-100144", 22],
+        ["Klein and Sons", "WA", "United States", "36daa71c-f31e-eb11-a814-000d3a9c7ff2", 1144, 0, 20, "AN-100145", 13],
+        ["Mertz, Marks and Pagac", "WA", "United States", "05306f9f-f51e-eb11-a814-000d3a9c7ff2", 1145, 1, 20, "AN-100146", 13],
+        ["Fay Group", "WV", "United States", "2e735964-f31e-eb11-a814-000d3a9c7ff2", 1146, 10, 7, "AN-100147", 39],
+        ["Pacocha LLC", "IL", "United States", "f5b4eba1-e51e-eb11-a814-000d3a9c7ff2", 1147, 37, 1, "AN-100148", 6],
+        ["Turcotte-Toy", "AZ", "United States", "0b3bfc7c-f81e-eb11-a814-000d3a9c7ff2", 1148, 20, 16, "AN-100149", 14],
+        ["Fritsch-Maggio", "PA", "United States", "dbd152e3-e61e-eb11-a814-000d3a9c7ff2", 1149, 8, 6, "AN-100150", 5],
+        ["Wilderman, Johnston and Nikolaus", "MD", "United States", "b316d124-f81e-eb11-a814-000d3a9c7ff2", 1150, 17, 10, "AN-100151", 18],
+        ["Hane-Shanahan", "TX", "United States", "d8c6dc90-f61e-eb11-a814-000d3a9c7ff2", 1151, 0, 14, "AN-100152", 2],
+        ["Bergnaum-Langosh", "CA", "United States", "ce2e14ef-f71e-eb11-a814-000d3a9c7ff2", 1152, 21, 17, "AN-100153", 1],
+        ["Medhurst, Von and Mraz", "PA", "United States", "b35474a3-e31e-eb11-a814-000d3a9c7ff2", 1153, 21, 6, "AN-100154", 5],
+        ["Hirthe-Pfannerstill", "OR", "United States", "293f73c9-e41e-eb11-a814-000d3a9c7ff2", 1154, 29, 19, "AN-100155", 27],
+        ["Osinski and Sons", "OK", "United States", "c8f2e3a7-e51e-eb11-a814-000d3a9c7ff2", 1155, 38, 12, "AN-100156", 28],
+        ["Kozey Group", "NC", "United States", "6fb1ba26-ed1e-eb11-a814-000d3a9c7ff2", 1156, 0, 11, "AN-100157", 9],
+        ["Parker, Gleichner and Hoeger", "MO", "United States", "2eecaa38-f41e-eb11-a814-000d3a9c7ff2", 1157, 38, 3, "AN-100158", 19],
+        ["Champlin-Walter", "OH", "United States", "6ca77e93-f51e-eb11-a814-000d3a9c7ff2", 1158, 36, 4, "AN-100159", 7],
+        ["Hansen, Beahan and Leannon", "NJ", "United States", "8a5a5859-ef1e-eb11-a814-000d3a9c7ff2", 1159, 42, 5, "AN-100160", 11],
+        ["Osinski, Witting and Torp", "NE", "United States", "62831067-f61e-eb11-a814-000d3a9c7ff2", 1160, 29, 3, "AN-100161", 37],
+        ["Erdman, Hammes and Gutkowski", "FL", "United States", "604262d7-e61e-eb11-a814-000d3a9c7ff2", 1161, 40, 8, "AN-100162", 3],
+        ["Heathcote Inc", "DC", "United States", "8247e108-ed1e-eb11-a814-000d3a9c7ff2", 1162, 43, 7, "AN-100163", 49],
+        ["Bartell, Harris and Bartell", "PA", "United States", "2d0abd2e-f91e-eb11-a814-000d3a9c7ff2", 1163, 1, 6, "AN-100164", 5],
+        ["Marquardt Group", "TX", "United States", "6797ed0c-f81e-eb11-a814-000d3a9c7ff2", 1164, 10, 14, "AN-100165", 2],
+        ["Botsford-Walter", "NC", "United States", "89aaba26-ed1e-eb11-a814-000d3a9c7ff2", 1165, 12, 11, "AN-100166", 9],
+        ["Nienow-Waters", "OH", "United States", "1bb3f0ec-f81e-eb11-a814-000d3a9c7ff2", 1166, 12, 4, "AN-100167", 7],
+        ["Yost-Bins", "FL", "United States", "b34fbe70-e11e-eb11-a814-000d3a9c7ff2", 1167, 7, 8, "AN-100168", 3],
+        ["Zboncak, Carter and Quigley", "UT", "United States", "077e43ee-f11e-eb11-a814-000d3a9c7ff2", 1168, 5, 20, "AN-100169", 30],
+        ["Langworth Group", "TX", "United States", "0306a544-f41e-eb11-a814-000d3a9c7ff2", 1169, 35, 14, "AN-100170", 2],
+        ["Douglas, Gutmann and Sauer", "MN", "United States", "5b53ccd5-ef1e-eb11-a814-000d3a9c7ff2", 1170, 8, 2, "AN-100171", 22],
+        ["Dooley, Muller and Cummerata", "UT", "United States", "6e87ebc3-de1e-eb11-a814-000d3a9c7ff2", 1171, 15, 20, "AN-100172", 30],
+        ["Pouros Inc", "OK", "United States", "8ad3ccb9-e51e-eb11-a814-000d3a9c7ff2", 1172, 42, 12, "AN-100173", 28],
+        ["Cartwright-Cronin", "CA", "United States", "98c1dc90-f61e-eb11-a814-000d3a9c7ff2", 1173, 0, 17, "AN-100174", 1],
+        ["Macejkovic-Gottlieb", "PA", "United States", "0e6e868d-f51e-eb11-a814-000d3a9c7ff2", 1174, 21, 6, "AN-100175", 5],
+        ["Weissnat Group", "VA", "United States", "b6b85fab-f51e-eb11-a814-000d3a9c7ff2", 1175, 40, 7, "AN-100176", 12],
+        ["Haag-Daugherty", "CO", "United States", "fffffc00-f81e-eb11-a814-000d3a9c7ff2", 1176, 0, 18, "AN-100177", 21],
+        ["Von-Johnston", "HI", "United States", "98169f05-f01e-eb11-a814-000d3a9c7ff2", 1177, 20, 18, "AN-100178", 40],
+        ["Lang, Mosciski and Gutmann", "KS", "United States", "7b8c9a69-f51e-eb11-a814-000d3a9c7ff2", 1178, 4, 3, "AN-100179", 35],
+        ["Frami, Williamson and Willms", "CO", "United States", "835f7a11-de1e-eb11-a814-000d3a9c7ff2", 1179, 10, 18, "AN-100180", 21],
+        ["Huel and Sons", "PA", "United States", "b4dd8d2e-f71e-eb11-a814-000d3a9c7ff2", 1180, 21, 6, "AN-100181", 5],
+        ["Braun, Terry and Kirlin", "TN", "United States", "2f6143ef-e61e-eb11-a814-000d3a9c7ff2", 1181, 20, 12, "AN-100182", 16],
+        ["Rodriguez-Rosenbaum", "OH", "United States", "a97ec1cb-e51e-eb11-a814-000d3a9c7ff2", 1182, 6, 4, "AN-100183", 7],
+        ["Brekke, Terry and Sipes", "NV", "United States", "f38391ff-dd1e-eb11-a814-000d3a9c7ff2", 1183, 19, 19, "AN-100184", 32],
+        ["Harvey, Krajcik and Spencer", "NJ", "United States", "ad2cca22-f91e-eb11-a814-000d3a9c7ff2", 1184, 36, 5, "AN-100185", 11],
+        ["Bernhard, Luettgen and Johnson", "UT", "United States", "50f825de-f01e-eb11-a814-000d3a9c7ff2", 1185, 19, 20, "AN-100186", 30],
+        ["Gleichner-Boyle", "MD", "United States", "2ccb63d5-e41e-eb11-a814-000d3a9c7ff2", 1186, 18, 10, "AN-100187", 18],
+        ["Rau Group", "CA", "United States", "67999055-e41e-eb11-a814-000d3a9c7ff2", 1187, 37, 18, "AN-100188", 1],
+        ["O'Keefe and Sons", "MA", "United States", "bf4fb68b-e41e-eb11-a814-000d3a9c7ff2", 1188, 19, 5, "AN-100189", 15],
+        ["Mills, Rodriguez and Harris", "FL", "United States", "7f3f14ef-f71e-eb11-a814-000d3a9c7ff2", 1189, 20, 8, "AN-100190", 3],
+        ["Schoen LLC", "NC", "United States", "169a9d7b-f51e-eb11-a814-000d3a9c7ff2", 1190, 18, 11, "AN-100191", 9],
+        ["Rodriguez-Reichert", "CO", "United States", "e3d871ca-f11e-eb11-a814-000d3a9c7ff2", 1191, 35, 18, "AN-100192", 21],
+        ["Runolfsson-Rogahn", "TX", "United States", "a191a53e-f41e-eb11-a814-000d3a9c7ff2", 1192, 27, 14, "AN-100193", 2],
+        ["Blick, Stroman and Sanford", "DC", "United States", "a83a1994-e21e-eb11-a814-000d3a9c7ff2", 1193, 42, 7, "AN-100194", 49],
+        ["Lemke, Cummings and Green", "AR", "United States", "cad56441-f01e-eb11-a814-000d3a9c7ff2", 1194, 27, 7, "AN-100195", 33],
+        ["Hodkiewicz and Sons", "LA", "United States", "2049629a-f71e-eb11-a814-000d3a9c7ff2", 1195, 33, 10, "AN-100196", 25],
+        ["Nikolaus-Corkery", "AR", "United States", "c76cfac3-e21e-eb11-a814-000d3a9c7ff2", 1196, 16, 7, "AN-100197", 33],
+        ["Schowalter, Langosh and Nolan", "NV", "United States", "c4bbeba1-e51e-eb11-a814-000d3a9c7ff2", 1197, 2, 19, "AN-100198", 32],
+        ["Abernathy-Kulas", "GA", "United States", "1e02145b-f61e-eb11-a814-000d3a9c7ff2", 1198, 13, 9, "AN-100199", 8],
+        ["Larkin and Sons", "OR", "United States", "a4f7b4b0-ed1e-eb11-a814-000d3a9c7ff2", 1199, 15, 19, "AN-100200", 27],
+        ["Kertzmann, O'Hara and Gutkowski", "AL", "United States", "79618ab7-e41e-eb11-a814-000d3a9c7ff2", 1200, 41, 7, "AN-100201", 24],
+        ["Emmerich, Bruen and Towne", "CT", "United States", "1dc2eaf8-f81e-eb11-a814-000d3a9c7ff2", 1201, 27, 5, "AN-100202", 29],
+        ["Hansen-Spencer", "MI", "United States", "f8d298ea-df1e-eb11-a814-000d3a9c7ff2", 1202, 7, 2, "AN-100203", 10],
+        ["Fay Inc", "NV", "United States", "59900ea0-e21e-eb11-a814-000d3a9c7ff2", 1203, 36, 19, "AN-100204", 32],
+        ["Lesch LLC", "AZ", "United States", "390cf5be-f71e-eb11-a814-000d3a9c7ff2", 1204, 8, 16, "AN-100205", 14],
+        ["Wilkinson, Beatty and Sanford", "TX", "United States", "3c66acd8-eb1e-eb11-a814-000d3a9c7ff2", 1205, 27, 14, "AN-100206", 2],
+        ["Swift Inc", "CA", "United States", "fa2a00f1-ec1e-eb11-a814-000d3a9c7ff2", 1206, 4, 17, "AN-100207", 1],
+        ["Schaefer, Gusikowski and Torp", "VA", "United States", "2e6d3713-e61e-eb11-a814-000d3a9c7ff2", 1207, 21, 7, "AN-100208", 12],
+        ["Hahn, Bayer and Stokes", "NM", "United States", "0ce46a1d-de1e-eb11-a814-000d3a9c7ff2", 1208, 14, 18, "AN-100209", 36],
+        ["Torphy-Stoltenberg", "MI", "United States", "1540c9c5-e51e-eb11-a814-000d3a9c7ff2", 1209, 5, 2, "AN-100210", 10],
+        ["Ziemann-Senger", "NC", "United States", "2d6143ef-e61e-eb11-a814-000d3a9c7ff2", 1210, 39, 11, "AN-100211", 9],
+        ["Kuhic, Torphy and Hudson", "MI", "United States", "52a8ba26-ed1e-eb11-a814-000d3a9c7ff2", 1211, 43, 2, "AN-100212", 10],
+        ["Reinger-Romaguera", "IN", "United States", "8bde09b8-e21e-eb11-a814-000d3a9c7ff2", 1212, 36, 2, "AN-100213", 17],
+        ["Keebler, Parisian and Cassin", "CA", "United States", "af73d8fe-f41e-eb11-a814-000d3a9c7ff2", 1213, 40, 17, "AN-100214", 1],
+        ["Hettinger and Sons", "FL", "United States", "dfa94a64-f71e-eb11-a814-000d3a9c7ff2", 1214, 20, 8, "AN-100215", 3],
+        ["O'Hara-Rodriguez", "DC", "United States", "d2797940-f31e-eb11-a814-000d3a9c7ff2", 1215, 39, 7, "AN-100216", 49],
+        ["Schmeler-Bartell", "IA", "United States", "4dbd0f18-f21e-eb11-a814-000d3a9c7ff2", 1216, 34, 1, "AN-100217", 31],
+        ["Batz, Lesch and Wiza", "DC", "United States", "bf57e554-e61e-eb11-a814-000d3a9c7ff2", 1217, 40, 7, "AN-100218", 49],
+        ["Lebsack, Block and Hudson", "AZ", "United States", "3f91b142-f81e-eb11-a814-000d3a9c7ff2", 1218, 7, 16, "AN-100219", 14],
+        ["Bartoletti Inc", "UT", "United States", "b2dd633b-e71e-eb11-a814-000d3a9c7ff2", 1219, 37, 20, "AN-100220", 30],
+        ["Schuster-Nienow", "IA", "United States", "c3c35fab-f51e-eb11-a814-000d3a9c7ff2", 1220, 30, 1, "AN-100221", 31],
+        ["Herzog-Jones", "OR", "United States", "9ed4a948-f81e-eb11-a814-000d3a9c7ff2", 1221, 37, 19, "AN-100222", 27],
+        ["Treutel, Flatley and Emmerich", "LA", "United States", "b40e5e84-f41e-eb11-a814-000d3a9c7ff2", 1222, 35, 10, "AN-100223", 25],
+        ["Thiel-Keebler", "TX", "United States", "e17ad4b3-e51e-eb11-a814-000d3a9c7ff2", 1223, 35, 14, "AN-100224", 2],
+        ["Toy-Schimmel", "LA", "United States", "974b50b7-f51e-eb11-a814-000d3a9c7ff2", 1224, 18, 10, "AN-100225", 25],
+        ["Lebsack-Smitham", "LA", "United States", "7d51cbc0-eb1e-eb11-a814-000d3a9c7ff2", 1225, 39, 10, "AN-100226", 25],
+        ["Moen-Cremin", "AR", "United States", "72178e87-f51e-eb11-a814-000d3a9c7ff2", 1226, 15, 7, "AN-100227", 33],
+        ["Sporer-Buckridge", "PA", "United States", "00c48905-de1e-eb11-a814-000d3a9c7ff2", 1227, 35, 6, "AN-100228", 5],
+        ["Crooks and Sons", "MO", "United States", "cfc3eba1-e51e-eb11-a814-000d3a9c7ff2", 1228, 39, 3, "AN-100229", 19],
+        ["Bashirian-Torp", "CA", "United States", "dd79d4b3-e51e-eb11-a814-000d3a9c7ff2", 1229, 34, 17, "AN-100230", 1],
+        ["Kiehn and Sons", "IA", "United States", "54cf2b83-ef1e-eb11-a814-000d3a9c7ff2", 1230, 30, 1, "AN-100231", 31],
+        ["Gutmann, Powlowski and Gusikowski", "MO", "United States", "2cfb9ce4-eb1e-eb11-a814-000d3a9c7ff2", 1231, 20, 3, "AN-100232", 19],
+        ["Kilback, Greenfelder and Dare", "MN", "United States", "5440c925-f11e-eb11-a814-000d3a9c7ff2", 1232, 26, 2, "AN-100233", 22],
+        ["Abbott-Ferry", "FL", "United States", "ca0b6ad1-e61e-eb11-a814-000d3a9c7ff2", 1233, 32, 8, "AN-100234", 3],
+        ["Osinski-Schulist", "WA", "United States", "8f4fcd9c-f61e-eb11-a814-000d3a9c7ff2", 1234, 8, 20, "AN-100235", 13],
+        ["Gibson-Corwin", "OK", "United States", "a2d46441-f01e-eb11-a814-000d3a9c7ff2", 1235, 29, 12, "AN-100236", 28],
+        ["Terry, Goldner and Brekke", "TX", "United States", "dc9b94f0-eb1e-eb11-a814-000d3a9c7ff2", 1236, 35, 14, "AN-100237", 2],
+        ["Emard-Price", "SC", "United States", "4b57fffb-f01e-eb11-a814-000d3a9c7ff2", 1237, 26, 12, "AN-100238", 23],
+        ["Zulauf, Brekke and West", "CA", "United States", "8d89fc42-e61e-eb11-a814-000d3a9c7ff2", 1238, 38, 17, "AN-100239", 1],
+        ["Kuphal, Johns and Schinner", "OH", "United States", "63cbc428-f91e-eb11-a814-000d3a9c7ff2", 1239, 43, 4, "AN-100240", 7],
+        ["Kautzer-Schumm", "NC", "United States", "d51cde18-f81e-eb11-a814-000d3a9c7ff2", 1240, 19, 11, "AN-100241", 9],
+        ["Grimes-Bauch", "IN", "United States", "0706c90a-f51e-eb11-a814-000d3a9c7ff2", 1241, 25, 2, "AN-100242", 17],
+        ["Sauer, Robel and Legros", "MN", "United States", "f37ff8f6-ec1e-eb11-a814-000d3a9c7ff2", 1242, 26, 2, "AN-100243", 22],
+        ["Hilpert, Wunsch and O'Hara", "TX", "United States", "3f9c2fa8-f41e-eb11-a814-000d3a9c7ff2", 1243, 35, 14, "AN-100244", 2],
+        ["Wuckert Inc", "CA", "United States", "170f5db5-e31e-eb11-a814-000d3a9c7ff2", 1244, 29, 17, "AN-100245", 1],
+        ["Turcotte-McGlynn", "MA", "United States", "8fae5adc-f11e-eb11-a814-000d3a9c7ff2", 1245, 35, 5, "AN-100246", 15],
+        ["Deckow, Block and Rath", "DC", "United States", "3a3d3b77-ef1e-eb11-a814-000d3a9c7ff2", 1246, 1, 7, "AN-100247", 49],
+        ["Heaney, Koelpin and Waters", "CA", "United States", "93cf0ef0-f01e-eb11-a814-000d3a9c7ff2", 1247, 40, 18, "AN-100248", 1],
+        ["Metz Inc", "TX", "United States", "a5cb4ed7-f61e-eb11-a814-000d3a9c7ff2", 1248, 35, 14, "AN-100249", 2],
+        ["Johns-Friesen", "AZ", "United States", "c6204df6-f31e-eb11-a814-000d3a9c7ff2", 1249, 32, 16, "AN-100250", 14],
+        ["Murazik, Swift and Cassin", "DC", "United States", "c1366f9f-f51e-eb11-a814-000d3a9c7ff2", 1250, 9, 7, "AN-100251", 49],
+        ["Weber, Dicki and Jakubowski", "CA", "United States", "22cd64af-e31e-eb11-a814-000d3a9c7ff2", 1251, 40, 17, "AN-100252", 1],
+        ["Rempel-Moore", "WY", "United States", "e4a1c3c6-eb1e-eb11-a814-000d3a9c7ff2", 1252, 30, 20, "AN-100253", 51],
+        ["McGlynn-Padberg", "NC", "United States", "91cc4ed7-f61e-eb11-a814-000d3a9c7ff2", 1253, 2, 11, "AN-100254", 9],
+        ["Gerhold, Douglas and Weissnat", "VA", "United States", "4c22a2b4-f31e-eb11-a814-000d3a9c7ff2", 1254, 44, 7, "AN-100255", 12],
+        ["Homenick Inc", "TN", "United States", "b614ca1a-ed1e-eb11-a814-000d3a9c7ff2", 1255, 30, 12, "AN-100256", 16],
+        ["Wunsch, Carter and Langosh", "NJ", "United States", "d38216ea-f01e-eb11-a814-000d3a9c7ff2", 1256, 40, 5, "AN-100257", 11],
+        ["Kemmer, Streich and Kunze", "MT", "United States", "cfd3bce1-ef1e-eb11-a814-000d3a9c7ff2", 1257, 19, 18, "AN-100258", 44],
+        ["Sanford, Sauer and McCullough", "NC", "United States", "49cf3acc-f01e-eb11-a814-000d3a9c7ff2", 1258, 43, 11, "AN-100259", 9],
+        ["Hilpert-O'Keefe", "TN", "United States", "ea301f0c-f21e-eb11-a814-000d3a9c7ff2", 1259, 37, 12, "AN-100260", 16],
+        ["Pagac-Funk", "KY", "United States", "648b3043-f61e-eb11-a814-000d3a9c7ff2", 1260, 15, 9, "AN-100261", 26],
+        ["Cremin, Larson and Prosacco", "OH", "United States", "3396f17e-f61e-eb11-a814-000d3a9c7ff2", 1261, 40, 4, "AN-100262", 7],
+        ["Reichel Inc", "NY", "United States", "ffdabce1-ef1e-eb11-a814-000d3a9c7ff2", 1262, 1, 6, "AN-100263", 4],
+        ["Quigley-Jacobson", "OH", "United States", "bcafcb2a-f81e-eb11-a814-000d3a9c7ff2", 1263, 35, 4, "AN-100264", 7],
+        ["Kassulke-Hills", "TX", "United States", "d824ed4e-e61e-eb11-a814-000d3a9c7ff2", 1264, 35, 14, "AN-100265", 2],
+        ["Predovic-Goodwin", "MO", "United States", "feb082bd-e41e-eb11-a814-000d3a9c7ff2", 1265, 17, 3, "AN-100266", 19],
+        ["Walker-Harvey", "MO", "United States", "13f89391-f11e-eb11-a814-000d3a9c7ff2", 1266, 23, 3, "AN-100267", 19],
+        ["D'Amore, Dickinson and Botsford", "WA", "United States", "a879f9d1-f41e-eb11-a814-000d3a9c7ff2", 1267, 36, 20, "AN-100268", 13],
+        ["Gusikowski Inc", "FL", "United States", "15fec036-f81e-eb11-a814-000d3a9c7ff2", 1268, 21, 8, "AN-100269", 3],
+        ["Stokes-O'Keefe", "NY", "United States", "e1c8eaf8-f81e-eb11-a814-000d3a9c7ff2", 1269, 25, 6, "AN-100270", 4],
+        ["Gleichner Inc", "TX", "United States", "728dc12b-f11e-eb11-a814-000d3a9c7ff2", 1270, 34, 14, "AN-100271", 2],
+        ["Collins Inc", "FL", "United States", "0b4e2b07-dd1e-eb11-a814-000d3a9c7ff2", 1271, 16, 8, "AN-100272", 3],
+        ["Toy, Lemke and Stracke", "CO", "United States", "3cccccb9-e51e-eb11-a814-000d3a9c7ff2", 1272, 35, 18, "AN-100273", 21],
+        ["Sporer-Hoppe", "CA", "United States", "2c16b5e7-ef1e-eb11-a814-000d3a9c7ff2", 1273, 29, 18, "AN-100274", 1],
+        ["Reichert, Yundt and Weimann", "TX", "United States", "fd56c220-ed1e-eb11-a814-000d3a9c7ff2", 1274, 16, 14, "AN-100275", 2],
+        ["Gutkowski-Tromp", "CA", "United States", "e93502be-e21e-eb11-a814-000d3a9c7ff2", 1275, 29, 17, "AN-100276", 1],
+        ["Gleichner-Christiansen", "GA", "United States", "31a24a64-f71e-eb11-a814-000d3a9c7ff2", 1276, 29, 9, "AN-100277", 8],
+        ["Schamberger, Deckow and Johns", "FL", "United States", "1502c136-f81e-eb11-a814-000d3a9c7ff2", 1277, 38, 8, "AN-100278", 3],
+        ["Hammes, Will and Beer", "IA", "United States", "a3788b23-f01e-eb11-a814-000d3a9c7ff2", 1278, 11, 1, "AN-100279", 31],
+        ["Lang-Gerhold", "UT", "United States", "8dec7699-f51e-eb11-a814-000d3a9c7ff2", 1279, 26, 20, "AN-100280", 30],
+        ["Gleason, Heathcote and Rohan", "NY", "United States", "7de28d2e-f71e-eb11-a814-000d3a9c7ff2", 1280, 1, 6, "AN-100281", 4],
+        ["Ebert, Volkman and Gusikowski", "DC", "United States", "ed14214f-f61e-eb11-a814-000d3a9c7ff2", 1281, 20, 7, "AN-100282", 49],
+        ["Rosenbaum, Crist and Mosciski", "CA", "United States", "1fd5d114-ed1e-eb11-a814-000d3a9c7ff2", 1282, 10, 17, "AN-100283", 1],
+        ["Kunze and Sons", "MI", "United States", "27bd3bf4-f11e-eb11-a814-000d3a9c7ff2", 1283, 4, 2, "AN-100284", 10],
+        ["Reynolds and Sons", "TX", "United States", "2b39eaff-f21e-eb11-a814-000d3a9c7ff2", 1284, 44, 14, "AN-100285", 2],
+        ["Jones LLC", "NJ", "United States", "b37179c5-e61e-eb11-a814-000d3a9c7ff2", 1285, 23, 5, "AN-100286", 11],
+        ["Altenwerth-Halvorson", "CA", "United States", "0df0e3a7-e51e-eb11-a814-000d3a9c7ff2", 1286, 24, 17, "AN-100287", 1],
+        ["Ortiz-Effertz", "SC", "United States", "ff2f73c9-e41e-eb11-a814-000d3a9c7ff2", 1287, 20, 12, "AN-100288", 23],
+        ["Blick-Ernser", "NC", "United States", "c5a5d916-f91e-eb11-a814-000d3a9c7ff2", 1288, 5, 11, "AN-100289", 9],
+        ["Koelpin-McKenzie", "TN", "United States", "fd0ce3fe-f81e-eb11-a814-000d3a9c7ff2", 1289, 24, 12, "AN-100290", 16],
+        ["Klocko-Schinner", "IN", "United States", "6be354f0-f31e-eb11-a814-000d3a9c7ff2", 1290, 40, 2, "AN-100291", 17],
+        ["Waters, Osinski and Runte", "DC", "United States", "66378543-e51e-eb11-a814-000d3a9c7ff2", 1291, 2, 7, "AN-100292", 49],
+        ["Tremblay-Collier", "NY", "United States", "19c08329-f01e-eb11-a814-000d3a9c7ff2", 1292, 37, 6, "AN-100293", 4],
+        ["Satterfield, Stroman and Zemlak", "PA", "United States", "63de8d2e-f71e-eb11-a814-000d3a9c7ff2", 1293, 3, 6, "AN-100294", 5],
+        ["Hauck, Torp and Leffler", "LA", "United States", "fb1ca2b4-f31e-eb11-a814-000d3a9c7ff2", 1294, 36, 10, "AN-100295", 25],
+        ["Beer, Abernathy and Emard", "GA", "United States", "85821067-f61e-eb11-a814-000d3a9c7ff2", 1295, 13, 9, "AN-100296", 8],
+        ["Rice-Pouros", "CA", "United States", "bad2633b-e71e-eb11-a814-000d3a9c7ff2", 1296, 44, 17, "AN-100297", 1],
+        ["Legros and Sons", "UT", "United States", "d35fd61e-f81e-eb11-a814-000d3a9c7ff2", 1297, 39, 20, "AN-100298", 30],
+        ["Ebert-Boyer", "NC", "United States", "13c3da0b-f31e-eb11-a814-000d3a9c7ff2", 1298, 14, 11, "AN-100299", 9],
+        ["Hyatt-Hand", "OR", "United States", "870dbeed-ef1e-eb11-a814-000d3a9c7ff2", 1299, 36, 19, "AN-100300", 27]
+      ]
+    },
+    {
+      "id": "rows/industries",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Industries'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [45]
+      ]
+    },
+    {
+      "id": "column/industries/industry-9fd95ed9",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Industries'[Industry]), \"blanks\", COUNTBLANK('Industries'[Industry]), \"min\", MIN('Industries'[Industry]), \"max\", MAX('Industries'[Industry]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [45, null, "Air Freight/Delivery Services", "Water Supply"]
+      ]
+    },
+    {
+      "id": "column/industries/industryseq-1f817c28",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Industries'[IndustrySeq]), \"blanks\", COUNTBLANK('Industries'[IndustrySeq]), \"min\", MIN('Industries'[IndustrySeq]), \"max\", MAX('Industries'[IndustrySeq]), \"sum\", SUM('Industries'[IndustrySeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [45, null, 0, 44, 990]
+      ]
+    },
+    {
+      "id": "table/industries",
+      "query": "EVALUATE 'Industries'",
+      "columns": ["Industries[Industry]", "Industries[IndustrySeq]"],
+      "rows": [
+        ["n/a", 0],
+        ["Air Freight/Delivery Services", 1],
+        ["Automotive Aftermarket", 2],
+        ["Biotechnology: Commercial Physical & Biological Research", 3],
+        ["Business Services", 4],
+        ["Clothing/Shoe/Accessory Stores", 5],
+        ["Computer Manufacturing", 6],
+        ["Computer Software: Prepackaged Software", 7],
+        ["Computer Software: Programming, Data Processing", 8],
+        ["Diversified Commercial Services", 9],
+        ["EDP Services", 10],
+        ["Electric Utilities: Central", 11],
+        ["Food Distributors", 12],
+        ["Forest Products", 13],
+        ["Home Furnishings", 14],
+        ["Hospital/Nursing Management", 15],
+        ["Industrial Machinery/Components", 16],
+        ["Integrated oil Companies", 17],
+        ["Investment Managers", 18],
+        ["Life Insurance", 19],
+        ["Major Banks", 20],
+        ["Major Chemicals", 21],
+        ["Major Pharmaceuticals", 22],
+        ["Marine Transportation", 23],
+        ["Medical Specialties", 24],
+        ["Medical/Dental Instruments", 25],
+        ["Medical/Nursing Services", 26],
+        ["Oil & Gas Production", 27],
+        ["Oil/Gas Transmission", 28],
+        ["Oilfield Services/Equipment", 29],
+        ["Ordnance And Accessories", 30],
+        ["Other Specialty Stores", 31],
+        ["Packaged Foods", 32],
+        ["Paper", 33],
+        ["Precious Metals", 34],
+        ["Property-Casualty Insurers", 35],
+        ["Real Estate", 36],
+        ["Real Estate Investment Trusts", 37],
+        ["Recreational Products/Toys", 38],
+        ["Restaurants", 39],
+        ["Savings Institutions", 40],
+        ["Specialty Foods", 41],
+        ["Telecommunications Equipment", 42],
+        ["Transportation Services", 43],
+        ["Water Supply", 44]
+      ]
+    },
+    {
+      "id": "rows/opportunities",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Opportunities'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [20000]
+      ]
+    },
+    {
+      "id": "column/opportunities/purchase-process-180baf64",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Purchase Process]), \"blanks\", COUNTBLANK('Opportunities'[Purchase Process]), \"min\", MIN('Opportunities'[Purchase Process]), \"max\", MAX('Opportunities'[Purchase Process]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [3, null, "Committee", "Unknown"]
+      ]
+    },
+    {
+      "id": "column/opportunities/decision-maker-identified-5e4f2f8e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Decision Maker Identified]), \"blanks\", COUNTBLANK('Opportunities'[Decision Maker Identified]))",
+      "columns": ["[distinct]", "[blanks]"],
+      "rows": [
+        [2, null]
+      ]
+    },
+    {
+      "id": "column/opportunities/status-d249150d",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Status]), \"blanks\", COUNTBLANK('Opportunities'[Status]), \"min\", MIN('Opportunities'[Status]), \"max\", MAX('Opportunities'[Status]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [3, null, "Lost", "Won"]
+      ]
+    },
+    {
+      "id": "column/opportunities/sales-stage-811cb4a5",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Sales Stage]), \"blanks\", COUNTBLANK('Opportunities'[Sales Stage]), \"min\", MIN('Opportunities'[Sales Stage]), \"max\", MAX('Opportunities'[Sales Stage]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [4, null, "1-Qualify", "4-Close"]
+      ]
+    },
+    {
+      "id": "column/opportunities/value-0109d310",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Value]), \"blanks\", COUNTBLANK('Opportunities'[Value]), \"min\", MIN('Opportunities'[Value]), \"max\", MAX('Opportunities'[Value]), \"sum\", SUM('Opportunities'[Value]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [6754, null, 3, 8473, 77252216]
+      ]
+    },
+    {
+      "id": "column/opportunities/weeks-open-f3dffb00",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Weeks Open]), \"blanks\", COUNTBLANK('Opportunities'[Weeks Open]), \"min\", MIN('Opportunities'[Weeks Open]), \"max\", MAX('Opportunities'[Weeks Open]), \"sum\", SUM('Opportunities'[Weeks Open]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [23, null, 6, 28, 314094]
+      ]
+    },
+    {
+      "id": "column/opportunities/daystoclose-5a1f4b9a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[DaysToClose]), \"blanks\", COUNTBLANK('Opportunities'[DaysToClose]), \"min\", MIN('Opportunities'[DaysToClose]), \"max\", MAX('Opportunities'[DaysToClose]), \"sum\", SUM('Opportunities'[DaysToClose]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [128, null, 46, 198, 2198954]
+      ]
+    },
+    {
+      "id": "column/opportunities/discount-1d6d3a70",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Discount]), \"blanks\", COUNTBLANK('Opportunities'[Discount]), \"min\", MIN('Opportunities'[Discount]), \"max\", MAX('Opportunities'[Discount]), \"sum\", SUM('Opportunities'[Discount]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [37, null, 0.0, 0.18, 2158.0949999999816]
+      ]
+    },
+    {
+      "id": "column/opportunities/probability-ba538fe7",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Probability]), \"blanks\", COUNTBLANK('Opportunities'[Probability]), \"min\", MIN('Opportunities'[Probability]), \"max\", MAX('Opportunities'[Probability]), \"sum\", SUM('Opportunities'[Probability]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [4, null, 0.1, 0.9, 6190.8]
+      ]
+    },
+    {
+      "id": "column/opportunities/rating-401bd623",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Rating]), \"blanks\", COUNTBLANK('Opportunities'[Rating]), \"min\", MIN('Opportunities'[Rating]), \"max\", MAX('Opportunities'[Rating]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [3, null, "Cold", "Warm"]
+      ]
+    },
+    {
+      "id": "column/opportunities/days-remaining-in-pipeline-c61ede63",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Days Remaining In Pipeline]), \"blanks\", COUNTBLANK('Opportunities'[Days Remaining In Pipeline]), \"min\", MIN('Opportunities'[Days Remaining In Pipeline]), \"max\", MAX('Opportunities'[Days Remaining In Pipeline]), \"sum\", SUM('Opportunities'[Days Remaining In Pipeline]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [167, null, -1822, 0, -9404885]
+      ]
+    },
+    {
+      "id": "column/opportunities/probability-raw-a2d79f44",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Probability (raw)]), \"blanks\", COUNTBLANK('Opportunities'[Probability (raw)]), \"min\", MIN('Opportunities'[Probability (raw)]), \"max\", MAX('Opportunities'[Probability (raw)]), \"sum\", SUM('Opportunities'[Probability (raw)]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [864, null, 0.0, 1.0, 9980.738000000041]
+      ]
+    },
+    {
+      "id": "column/opportunities/accountseq-9a7409ed",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[AccountSeq]), \"blanks\", COUNTBLANK('Opportunities'[AccountSeq]), \"min\", MIN('Opportunities'[AccountSeq]), \"max\", MAX('Opportunities'[AccountSeq]), \"sum\", SUM('Opportunities'[AccountSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [296, null, 1000, 1299, 21694621]
+      ]
+    },
+    {
+      "id": "column/opportunities/opportunityseq-9dab2869",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[OpportunitySeq]), \"blanks\", COUNTBLANK('Opportunities'[OpportunitySeq]), \"min\", MIN('Opportunities'[OpportunitySeq]), \"max\", MAX('Opportunities'[OpportunitySeq]), \"sum\", SUM('Opportunities'[OpportunitySeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [20000, null, 10000, 29999, 399990000]
+      ]
+    },
+    {
+      "id": "column/opportunities/productseq-cceeb3e8",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[ProductSeq]), \"blanks\", COUNTBLANK('Opportunities'[ProductSeq]), \"min\", MIN('Opportunities'[ProductSeq]), \"max\", MAX('Opportunities'[ProductSeq]), \"sum\", SUM('Opportunities'[ProductSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [9, null, 1, 9, 117182]
+      ]
+    },
+    {
+      "id": "column/opportunities/systemuserseq-4d706aff",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[SystemUserSeq]), \"blanks\", COUNTBLANK('Opportunities'[SystemUserSeq]), \"min\", MIN('Opportunities'[SystemUserSeq]), \"max\", MAX('Opportunities'[SystemUserSeq]), \"sum\", SUM('Opportunities'[SystemUserSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [19, null, 1, 20, 202688]
+      ]
+    },
+    {
+      "id": "column/opportunities/campaignseq-ecd09405",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[CampaignSeq]), \"blanks\", COUNTBLANK('Opportunities'[CampaignSeq]), \"min\", MIN('Opportunities'[CampaignSeq]), \"max\", MAX('Opportunities'[CampaignSeq]), \"sum\", SUM('Opportunities'[CampaignSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [13, 6732, 7000, 7011, 92945873]
+      ]
+    },
+    {
+      "id": "column/opportunities/blank-b35286fb",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Blank]), \"blanks\", COUNTBLANK('Opportunities'[Blank]), \"min\", MIN('Opportunities'[Blank]), \"max\", MAX('Opportunities'[Blank]), \"sum\", SUM('Opportunities'[Blank]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [1, 20000, null, null, null]
+      ]
+    },
+    {
+      "id": "column/opportunities/datediff-days-f68ffb00",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[DateDiff-Days]), \"blanks\", COUNTBLANK('Opportunities'[DateDiff-Days]), \"min\", MIN('Opportunities'[DateDiff-Days]), \"max\", MAX('Opportunities'[DateDiff-Days]), \"sum\", SUM('Opportunities'[DateDiff-Days]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [872, null, -871, 0, -6176950]
+      ]
+    },
+    {
+      "id": "column/opportunities/opportunity-created-on-8f337e28",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Opportunity Created On]), \"blanks\", COUNTBLANK('Opportunities'[Opportunity Created On]), \"min\", MIN('Opportunities'[Opportunity Created On]), \"max\", MAX('Opportunities'[Opportunity Created On]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [872, null, {"dateTime":"2019-06-22T00:00:00.000"}, {"dateTime":"2021-11-09T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "column/opportunities/closedate-8810e508",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[CloseDate]), \"blanks\", COUNTBLANK('Opportunities'[CloseDate]), \"min\", MIN('Opportunities'[CloseDate]), \"max\", MAX('Opportunities'[CloseDate]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [963, null, {"dateTime":"2019-08-24T00:00:00.000"}, {"dateTime":"2022-05-01T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "column/opportunities/days-remaining-in-pipeline-bins-609c92a8",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Days Remaining In Pipeline (bins)]), \"blanks\", COUNTBLANK('Opportunities'[Days Remaining In Pipeline (bins)]), \"min\", MIN('Opportunities'[Days Remaining In Pipeline (bins)]), \"max\", MAX('Opportunities'[Days Remaining In Pipeline (bins)]), \"sum\", SUM('Opportunities'[Days Remaining In Pipeline (bins)]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [37, null, -1825, 0, -9415470]
+      ]
+    },
+    {
+      "id": "rows/owners",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Owners'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [20]
+      ]
+    },
+    {
+      "id": "column/owners/owner-a433aee1",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Owners'[Owner]), \"blanks\", COUNTBLANK('Owners'[Owner]), \"min\", MIN('Owners'[Owner]), \"max\", MAX('Owners'[Owner]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [20, null, "Alan Steiner", "Spencer Low"]
+      ]
+    },
+    {
+      "id": "column/owners/manager-a8a3147f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Owners'[Manager]), \"blanks\", COUNTBLANK('Owners'[Manager]), \"min\", MIN('Owners'[Manager]), \"max\", MAX('Owners'[Manager]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [3, null, "Amelie Garner", "Peyton Davis"]
+      ]
+    },
+    {
+      "id": "column/owners/systemuserseq-be24db4c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Owners'[SystemUserSeq]), \"blanks\", COUNTBLANK('Owners'[SystemUserSeq]), \"min\", MIN('Owners'[SystemUserSeq]), \"max\", MAX('Owners'[SystemUserSeq]), \"sum\", SUM('Owners'[SystemUserSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [20, null, 1, 20, 210]
+      ]
+    },
+    {
+      "id": "column/owners/systemuserid-7cae72c4",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Owners'[systemuserid]), \"blanks\", COUNTBLANK('Owners'[systemuserid]), \"min\", MIN('Owners'[systemuserid]), \"max\", MAX('Owners'[systemuserid]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [20, null, "113999f9-dd1e-eb11-a814-000d3a9c7ff2", "fcc9d114-ed1e-eb11-a814-000d3a9c7ff2"]
+      ]
+    },
+    {
+      "id": "table/owners",
+      "query": "EVALUATE 'Owners'",
+      "columns": ["Owners[Owner]", "Owners[Manager]", "Owners[SystemUserSeq]", "Owners[systemuserid]"],
+      "rows": [
+        ["Alicia Thomber", "Amelie Garner", 1, "a4575859-ef1e-eb11-a814-000d3a9c7ff2"],
+        ["Alan Steiner", "Amelie Garner", 2, "5ae6bbcc-eb1e-eb11-a814-000d3a9c7ff2"],
+        ["Anne Weiler", "Amelie Garner", 3, "e4e99a85-e31e-eb11-a814-000d3a9c7ff2"],
+        ["David So", "Amelie Garner", 4, "f2026cde-f31e-eb11-a814-000d3a9c7ff2"],
+        ["Greg Winston", "Amelie Garner", 5, "4307c90a-f51e-eb11-a814-000d3a9c7ff2"],
+        ["Sanjay Shah", "Amelie Garner", 6, "36b0eba1-e51e-eb11-a814-000d3a9c7ff2"],
+        ["Spencer Low", "Amelie Garner", 7, "1d4174a3-e31e-eb11-a814-000d3a9c7ff2"],
+        ["Dan Jump", "Ethan Brooks", 8, "322492b1-e41e-eb11-a814-000d3a9c7ff2"],
+        ["Eric Gruber", "Ethan Brooks", 9, "22c58905-de1e-eb11-a814-000d3a9c7ff2"],
+        ["Jeff Hay", "Ethan Brooks", 10, "113999f9-dd1e-eb11-a814-000d3a9c7ff2"],
+        ["Julian Isla", "Ethan Brooks", 11, "22dde512-f81e-eb11-a814-000d3a9c7ff2"],
+        ["Molly Clark", "Ethan Brooks", 12, "1c6090f3-8f1c-eb11-a813-000d3a9c7ffa"],
+        ["Renee Lo", "Ethan Brooks", 13, "9c3f73c9-e41e-eb11-a814-000d3a9c7ff2"],
+        ["Angel Brown", "Peyton Davis", 14, "8601e902-ed1e-eb11-a814-000d3a9c7ff2"],
+        ["Archie Boyle", "Peyton Davis", 15, "3f35dcad-e51e-eb11-a814-000d3a9c7ff2"],
+        ["Hollie Rees", "Peyton Davis", 16, "6687c12b-f11e-eb11-a814-000d3a9c7ff2"],
+        ["Jennifer Wilkins", "Peyton Davis", 17, "41b682bd-e41e-eb11-a814-000d3a9c7ff2"],
+        ["Jordan Williams", "Peyton Davis", 18, "42ded114-ed1e-eb11-a814-000d3a9c7ff2"],
+        ["Mia Steele", "Peyton Davis", 19, "fcc9d114-ed1e-eb11-a814-000d3a9c7ff2"],
+        ["Riley Johnson", "Peyton Davis", 20, "ec7e43ee-f11e-eb11-a814-000d3a9c7ff2"]
+      ]
+    },
+    {
+      "id": "rows/products",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Products'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [9]
+      ]
+    },
+    {
+      "id": "column/products/product-e3255c0f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Products'[Product]), \"blanks\", COUNTBLANK('Products'[Product]), \"min\", MIN('Products'[Product]), \"max\", MAX('Products'[Product]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [9, null, "1 Year Warranty", "E-reader Standard 6\" 8 GB"]
+      ]
+    },
+    {
+      "id": "column/products/productseq-3000bed2",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Products'[ProductSeq]), \"blanks\", COUNTBLANK('Products'[ProductSeq]), \"min\", MIN('Products'[ProductSeq]), \"max\", MAX('Products'[ProductSeq]), \"sum\", SUM('Products'[ProductSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [9, null, 1, 9, 45]
+      ]
+    },
+    {
+      "id": "column/products/product-category-80719ca1",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Products'[Product Category]), \"blanks\", COUNTBLANK('Products'[Product Category]), \"min\", MIN('Products'[Product Category]), \"max\", MAX('Products'[Product Category]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [3, null, "Accessories", "Warranties"]
+      ]
+    },
+    {
+      "id": "table/products",
+      "query": "EVALUATE 'Products'",
+      "columns": ["Products[Product]", "Products[ProductSeq]", "Products[Product Category]"],
+      "rows": [
+        ["E-reader Standard 6\" 8 GB", 1, "Devices"],
+        ["E-reader Diamond 7\" 8 GB", 2, "Devices"],
+        ["E-reader Diamond 7\" 16 GB", 3, "Devices"],
+        ["E-reader Platinum 8\" 32 GB", 4, "Devices"],
+        ["E-reader Platinum 8\" 64 GB", 5, "Devices"],
+        ["1 Year Warranty", 6, "Warranties"],
+        ["E-reader pen", 7, "Accessories"],
+        ["Black cover 6\"", 8, "Accessories"],
+        ["Black cover 7\"", 9, "Accessories"]
+      ]
+    },
+    {
+      "id": "rows/opportunity-forecast-adjustment",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Opportunity Forecast Adjustment'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [11]
+      ]
+    },
+    {
+      "id": "column/opportunity-forecast-adjustment/forecast-adjustment-7ff58048",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Forecast Adjustment'[Forecast Adjustment]), \"blanks\", COUNTBLANK('Opportunity Forecast Adjustment'[Forecast Adjustment]), \"min\", MIN('Opportunity Forecast Adjustment'[Forecast Adjustment]), \"max\", MAX('Opportunity Forecast Adjustment'[Forecast Adjustment]), \"sum\", SUM('Opportunity Forecast Adjustment'[Forecast Adjustment]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [11, null, -80, 20, -330]
+      ]
+    },
+    {
+      "id": "column/opportunity-forecast-adjustment/blank-e8592464",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Forecast Adjustment'[Blank]), \"blanks\", COUNTBLANK('Opportunity Forecast Adjustment'[Blank]), \"min\", MIN('Opportunity Forecast Adjustment'[Blank]), \"max\", MAX('Opportunity Forecast Adjustment'[Blank]), \"sum\", SUM('Opportunity Forecast Adjustment'[Blank]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [1, null, 1, 1, 11]
+      ]
+    },
+    {
+      "id": "table/opportunity-forecast-adjustment",
+      "query": "EVALUATE 'Opportunity Forecast Adjustment'",
+      "columns": ["Opportunity Forecast Adjustment[Forecast Adjustment]", "Opportunity Forecast Adjustment[Blank]"],
+      "rows": [
+        [-80, 1],
+        [-70, 1],
+        [-60, 1],
+        [-50, 1],
+        [-40, 1],
+        [-30, 1],
+        [-20, 1],
+        [-10, 1],
+        [0, 1],
+        [10, 1],
+        [20, 1]
+      ]
+    },
+    {
+      "id": "rows/opportunity-calendar",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Opportunity Calendar'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [1461]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/date-cc90bf32",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[Date]), \"blanks\", COUNTBLANK('Opportunity Calendar'[Date]), \"min\", MIN('Opportunity Calendar'[Date]), \"max\", MAX('Opportunity Calendar'[Date]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [1461, null, {"dateTime":"2019-01-01T00:00:00.000"}, {"dateTime":"2022-12-31T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/day-2cd51c9e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[DAY]), \"blanks\", COUNTBLANK('Opportunity Calendar'[DAY]), \"min\", MIN('Opportunity Calendar'[DAY]), \"max\", MAX('Opportunity Calendar'[DAY]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [1461, null, {"dateTime":"2019-01-01T00:00:00.000"}, {"dateTime":"2022-12-31T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/dayseq-bdda357e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[DaySeq]), \"blanks\", COUNTBLANK('Opportunity Calendar'[DaySeq]), \"min\", MIN('Opportunity Calendar'[DaySeq]), \"max\", MAX('Opportunity Calendar'[DaySeq]), \"sum\", SUM('Opportunity Calendar'[DaySeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [1461, null, 1, 1461, 1067991]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/year-91ca8329",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[YEAR]), \"blanks\", COUNTBLANK('Opportunity Calendar'[YEAR]), \"min\", MIN('Opportunity Calendar'[YEAR]), \"max\", MAX('Opportunity Calendar'[YEAR]), \"sum\", SUM('Opportunity Calendar'[YEAR]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [4, null, 2019, 2022, 2951950]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/month-number-29ef090c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[MONTH NUMBER]), \"blanks\", COUNTBLANK('Opportunity Calendar'[MONTH NUMBER]), \"min\", MIN('Opportunity Calendar'[MONTH NUMBER]), \"max\", MAX('Opportunity Calendar'[MONTH NUMBER]), \"sum\", SUM('Opportunity Calendar'[MONTH NUMBER]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [12, null, 1, 12, 9530]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/month-f1eaaad2",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[MONTH]), \"blanks\", COUNTBLANK('Opportunity Calendar'[MONTH]), \"min\", MIN('Opportunity Calendar'[MONTH]), \"max\", MAX('Opportunity Calendar'[MONTH]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [12, null, "April", "September"]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/year-month-number-3bc8436e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[YEAR MONTH NUMBER]), \"blanks\", COUNTBLANK('Opportunity Calendar'[YEAR MONTH NUMBER]), \"min\", MIN('Opportunity Calendar'[YEAR MONTH NUMBER]), \"max\", MAX('Opportunity Calendar'[YEAR MONTH NUMBER]), \"sum\", SUM('Opportunity Calendar'[YEAR MONTH NUMBER]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [48, null, 24228, 24275, 35431469]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/year-month-5d9db778",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[YEAR MONTH]), \"blanks\", COUNTBLANK('Opportunity Calendar'[YEAR MONTH]), \"min\", MIN('Opportunity Calendar'[YEAR MONTH]), \"max\", MAX('Opportunity Calendar'[YEAR MONTH]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [48, null, "Apr 2019", "Sep 2022"]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/year-week-49dfc3d7",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[YEAR WEEK]), \"blanks\", COUNTBLANK('Opportunity Calendar'[YEAR WEEK]), \"min\", MIN('Opportunity Calendar'[YEAR WEEK]), \"max\", MAX('Opportunity Calendar'[YEAR WEEK]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [212, null, "2019-W01", "2022-W53"]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/week-59d5cb0a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[WEEK]), \"blanks\", COUNTBLANK('Opportunity Calendar'[WEEK]), \"min\", MIN('Opportunity Calendar'[WEEK]), \"max\", MAX('Opportunity Calendar'[WEEK]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [209, null, {"dateTime":"2018-12-29T00:00:00.000"}, {"dateTime":"2022-12-24T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/relative-week-c6c17c65",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE WEEK]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE WEEK]), \"min\", MIN('Opportunity Calendar'[RELATIVE WEEK]), \"max\", MAX('Opportunity Calendar'[RELATIVE WEEK]), \"sum\", SUM('Opportunity Calendar'[RELATIVE WEEK]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [209, null, -409.0, -201.0, -445397.0]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/relative-day-4aace1c7",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE DAY]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE DAY]), \"min\", MIN('Opportunity Calendar'[RELATIVE DAY]), \"max\", MAX('Opportunity Calendar'[RELATIVE DAY]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [1461, null, {"dateTime":"1892-02-25T00:00:00.000"}, {"dateTime":"1896-02-24T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/relative-07-day-period-518121a5",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]), \"min\", MIN('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]), \"max\", MAX('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]), \"sum\", SUM('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [210, null, -408.0, -199.0, -443518.0]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/relative-30-day-period-e4b16945",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]), \"min\", MIN('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]), \"max\", MAX('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]), \"sum\", SUM('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [50, null, -95.0, -46.0, -103270.0]
+      ]
+    },
+    {
+      "id": "column/opportunity-calendar/relative-month-bcac2e84",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE MONTH]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE MONTH]), \"min\", MIN('Opportunity Calendar'[RELATIVE MONTH]), \"max\", MAX('Opportunity Calendar'[RELATIVE MONTH]), \"sum\", SUM('Opportunity Calendar'[RELATIVE MONTH]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [48, null, -94, -47, -102973]
+      ]
+    },
+    {
+      "id": "rows/contacts",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Contacts'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "column/contacts/contact-7e4d80af",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Contacts'[Contact]), \"blanks\", COUNTBLANK('Contacts'[Contact]), \"min\", MIN('Contacts'[Contact]), \"max\", MAX('Contacts'[Contact]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [1, null, "ContactName", "ContactName"]
+      ]
+    },
+    {
+      "id": "column/contacts/job-title-1dc6c481",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Contacts'[Job Title]), \"blanks\", COUNTBLANK('Contacts'[Job Title]), \"min\", MIN('Contacts'[Job Title]), \"max\", MAX('Contacts'[Job Title]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [1, null, "Sample", "Sample"]
+      ]
+    },
+    {
+      "id": "column/contacts/contactseq-51b58a9e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Contacts'[ContactSeq]), \"blanks\", COUNTBLANK('Contacts'[ContactSeq]), \"min\", MIN('Contacts'[ContactSeq]), \"max\", MAX('Contacts'[ContactSeq]), \"sum\", SUM('Contacts'[ContactSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [1, null, 1, 1, 1]
+      ]
+    },
+    {
+      "id": "column/contacts/accountseq-17271d01",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Contacts'[AccountSeq]), \"blanks\", COUNTBLANK('Contacts'[AccountSeq]), \"min\", MIN('Contacts'[AccountSeq]), \"max\", MAX('Contacts'[AccountSeq]), \"sum\", SUM('Contacts'[AccountSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [1, null, 1000, 1000, 1000]
+      ]
+    },
+    {
+      "id": "table/contacts",
+      "query": "EVALUATE 'Contacts'",
+      "columns": ["Contacts[Contact]", "Contacts[Job Title]", "Contacts[ContactSeq]", "Contacts[AccountSeq]"],
+      "rows": [
+        ["ContactName", "Sample", 1, 1000]
+      ]
+    },
+    {
+      "id": "rows/territories",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Territories'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [51]
+      ]
+    },
+    {
+      "id": "column/territories/region-a037e9cf",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[Region]), \"blanks\", COUNTBLANK('Territories'[Region]), \"min\", MIN('Territories'[Region]), \"max\", MAX('Territories'[Region]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [1, null, "North America", "North America"]
+      ]
+    },
+    {
+      "id": "column/territories/territory-1d362d73",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[Territory]), \"blanks\", COUNTBLANK('Territories'[Territory]), \"min\", MIN('Territories'[Territory]), \"max\", MAX('Territories'[Territory]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [4, null, "US-MIDWEST", "US-WEST"]
+      ]
+    },
+    {
+      "id": "column/territories/country-0a0aea9c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[Country]), \"blanks\", COUNTBLANK('Territories'[Country]), \"min\", MIN('Territories'[Country]), \"max\", MAX('Territories'[Country]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [1, null, "United States", "United States"]
+      ]
+    },
+    {
+      "id": "column/territories/territoryseq-8b015141",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[TerritorySeq]), \"blanks\", COUNTBLANK('Territories'[TerritorySeq]), \"min\", MIN('Territories'[TerritorySeq]), \"max\", MAX('Territories'[TerritorySeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [51, null, "1", "9"]
+      ]
+    },
+    {
+      "id": "column/territories/state-or-province-11761467",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[State Or Province]), \"blanks\", COUNTBLANK('Territories'[State Or Province]), \"min\", MIN('Territories'[State Or Province]), \"max\", MAX('Territories'[State Or Province]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [51, null, "AK", "WY"]
+      ]
+    },
+    {
+      "id": "table/territories",
+      "query": "EVALUATE 'Territories'",
+      "columns": ["Territories[Region]", "Territories[Territory]", "Territories[Country]", "Territories[TerritorySeq]", "Territories[State Or Province]"],
+      "rows": [
+        ["North America", "US-WEST", "United States", "1", "CA"],
+        ["North America", "US-SOUTH", "United States", "2", "TX"],
+        ["North America", "US-SOUTH", "United States", "3", "FL"],
+        ["North America", "US-NORTHEAST", "United States", "4", "NY"],
+        ["North America", "US-NORTHEAST", "United States", "5", "PA"],
+        ["North America", "US-MIDWEST", "United States", "6", "IL"],
+        ["North America", "US-MIDWEST", "United States", "7", "OH"],
+        ["North America", "US-SOUTH", "United States", "8", "GA"],
+        ["North America", "US-SOUTH", "United States", "9", "NC"],
+        ["North America", "US-MIDWEST", "United States", "10", "MI"],
+        ["North America", "US-NORTHEAST", "United States", "11", "NJ"],
+        ["North America", "US-SOUTH", "United States", "12", "VA"],
+        ["North America", "US-WEST", "United States", "13", "WA"],
+        ["North America", "US-WEST", "United States", "14", "AZ"],
+        ["North America", "US-NORTHEAST", "United States", "15", "MA"],
+        ["North America", "US-SOUTH", "United States", "16", "TN"],
+        ["North America", "US-MIDWEST", "United States", "17", "IN"],
+        ["North America", "US-SOUTH", "United States", "18", "MD"],
+        ["North America", "US-MIDWEST", "United States", "19", "MO"],
+        ["North America", "US-MIDWEST", "United States", "20", "WI"],
+        ["North America", "US-WEST", "United States", "21", "CO"],
+        ["North America", "US-MIDWEST", "United States", "22", "MN"],
+        ["North America", "US-SOUTH", "United States", "23", "SC"],
+        ["North America", "US-SOUTH", "United States", "24", "AL"],
+        ["North America", "US-SOUTH", "United States", "25", "LA"],
+        ["North America", "US-SOUTH", "United States", "26", "KY"],
+        ["North America", "US-WEST", "United States", "27", "OR"],
+        ["North America", "US-SOUTH", "United States", "28", "OK"],
+        ["North America", "US-NORTHEAST", "United States", "29", "CT"],
+        ["North America", "US-WEST", "United States", "30", "UT"],
+        ["North America", "US-MIDWEST", "United States", "31", "IA"],
+        ["North America", "US-WEST", "United States", "32", "NV"],
+        ["North America", "US-SOUTH", "United States", "33", "AR"],
+        ["North America", "US-SOUTH", "United States", "34", "MS"],
+        ["North America", "US-MIDWEST", "United States", "35", "KS"],
+        ["North America", "US-WEST", "United States", "36", "NM"],
+        ["North America", "US-MIDWEST", "United States", "37", "NE"],
+        ["North America", "US-WEST", "United States", "38", "ID"],
+        ["North America", "US-SOUTH", "United States", "39", "WV"],
+        ["North America", "US-WEST", "United States", "40", "HI"],
+        ["North America", "US-NORTHEAST", "United States", "41", "NH"],
+        ["North America", "US-NORTHEAST", "United States", "42", "ME"],
+        ["North America", "US-NORTHEAST", "United States", "43", "RI"],
+        ["North America", "US-WEST", "United States", "44", "MT"],
+        ["North America", "US-SOUTH", "United States", "45", "DE"],
+        ["North America", "US-MIDWEST", "United States", "46", "SD"],
+        ["North America", "US-MIDWEST", "United States", "47", "ND"],
+        ["North America", "US-WEST", "United States", "48", "AK"],
+        ["North America", "US-SOUTH", "United States", "49", "DC"],
+        ["North America", "US-NORTHEAST", "United States", "50", "VT"],
+        ["North America", "US-WEST", "United States", "51", "WY"]
+      ]
+    },
+    {
+      "id": "rows/campaigns",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Campaigns'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [12]
+      ]
+    },
+    {
+      "id": "column/campaigns/campaignseq-ce78dd8e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Campaigns'[CampaignSeq]), \"blanks\", COUNTBLANK('Campaigns'[CampaignSeq]), \"min\", MIN('Campaigns'[CampaignSeq]), \"max\", MAX('Campaigns'[CampaignSeq]), \"sum\", SUM('Campaigns'[CampaignSeq]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [12, null, 7000, 7011, 84066]
+      ]
+    },
+    {
+      "id": "column/campaigns/campaign-type-8bfe9a76",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Campaigns'[Campaign Type]), \"blanks\", COUNTBLANK('Campaigns'[Campaign Type]), \"min\", MIN('Campaigns'[Campaign Type]), \"max\", MAX('Campaigns'[Campaign Type]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [6, null, "Email", "Tradeshow"]
+      ]
+    },
+    {
+      "id": "column/campaigns/campaign-9ee617ba",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Campaigns'[Campaign]), \"blanks\", COUNTBLANK('Campaigns'[Campaign]), \"min\", MIN('Campaigns'[Campaign]), \"max\", MAX('Campaigns'[Campaign]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]"],
+      "rows": [
+        [12, null, "Bing Ad Placement", "Twitter"]
+      ]
+    },
+    {
+      "id": "table/campaigns",
+      "query": "EVALUATE 'Campaigns'",
+      "columns": ["Campaigns[CampaignSeq]", "Campaigns[Campaign Type]", "Campaigns[Campaign]"],
+      "rows": [
+        [7000, "Sales", "Customer Reference Lead"],
+        [7001, "Email", "Market Trends Newsletter"],
+        [7002, "Email", "Monthly Newsletter"],
+        [7003, "Email", "New Product Releases"],
+        [7004, "Online", "Bing Ad Placement"],
+        [7005, "Online", "Instagram"],
+        [7006, "Online", "Twitter"],
+        [7007, "Phone", "Customer Care Campaign"],
+        [7008, "Phone", "Customer Follow-up"],
+        [7009, "Tradeshow", "Commercial Tradeshow"],
+        [7010, "Tradeshow", "Consumer Tradeshow"],
+        [7011, "Promotion", "QuarterlySales Contest"]
+      ]
+    },
+    {
+      "id": "rows/calculations",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Calculations'))",
+      "columns": ["[rows]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "column/calculations/value-51a22728",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Value]), \"blanks\", COUNTBLANK('Calculations'[Value]), \"min\", MIN('Calculations'[Value]), \"max\", MAX('Calculations'[Value]), \"sum\", SUM('Calculations'[Value]))",
+      "columns": ["[distinct]", "[blanks]", "[min]", "[max]", "[sum]"],
+      "rows": [
+        [1, null, 1, 1, 1]
+      ]
+    },
+    {
+      "id": "table/calculations",
+      "query": "EVALUATE 'Calculations'",
+      "columns": ["Calculations[Value]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "measure/close-48c073b5",
+      "query": "EVALUATE ROW(\"v\", [Close %])",
+      "columns": ["[v]"],
+      "rows": [
+        [0.4964887161655417]
+      ]
+    },
+    {
+      "id": "measure/count-of-lost-ead0f7b9",
+      "query": "EVALUATE ROW(\"v\", [Count of Lost])",
+      "columns": ["[v]"],
+      "rows": [
+        [7385]
+      ]
+    },
+    {
+      "id": "measure/count-of-won-5bc70611",
+      "query": "EVALUATE ROW(\"v\", [Count of Won])",
+      "columns": ["[v]"],
+      "rows": [
+        [7282]
+      ]
+    },
+    {
+      "id": "measure/forecast-adjustment-slicer-alt-text-95a0a4a6",
+      "query": "EVALUATE ROW(\"v\", [Forecast Adjustment Slicer Alt Text])",
+      "columns": ["[v]"],
+      "rows": [
+        ["Use the slicer to adjust the forecast, current value is 0"]
+      ]
+    },
+    {
+      "id": "measure/forecast-b9f1c797",
+      "query": "EVALUATE ROW(\"v\", [Forecast])",
+      "columns": ["[v]"],
+      "rows": [
+        [46336286.0]
+      ]
+    },
+    {
+      "id": "measure/forecast-856a00b2",
+      "query": "EVALUATE ROW(\"v\", [Forecast %])",
+      "columns": ["[v]"],
+      "rows": [
+        [1.2193759473684211]
+      ]
+    },
+    {
+      "id": "measure/forecast-adjustment-value-f750e9d1",
+      "query": "EVALUATE ROW(\"v\", [Forecast Adjustment Value])",
+      "columns": ["[v]"],
+      "rows": [
+        [0]
+      ]
+    },
+    {
+      "id": "measure/forecast-by-win-loss-ratio-b620b8f3",
+      "query": "EVALUATE ROW(\"v\", [Forecast by Win/Loss Ratio])",
+      "columns": ["[v]"],
+      "rows": [
+        [13808533.336196905]
+      ]
+    },
+    {
+      "id": "measure/opportunity-count-76c380bf",
+      "query": "EVALUATE ROW(\"v\", [Opportunity Count])",
+      "columns": ["[v]"],
+      "rows": [
+        [20000]
+      ]
+    },
+    {
+      "id": "measure/opportunity-count-in-pipeline-4948df0d",
+      "query": "EVALUATE ROW(\"v\", [Opportunity Count In Pipeline])",
+      "columns": ["[v]"],
+      "rows": [
+        [5333]
+      ]
+    },
+    {
+      "id": "measure/rev-goal-00be0510",
+      "query": "EVALUATE ROW(\"v\", [Rev Goal])",
+      "columns": ["[v]"],
+      "rows": [
+        [38000000]
+      ]
+    },
+    {
+      "id": "measure/revenue-in-pipeline-ba7ca31a",
+      "query": "EVALUATE ROW(\"v\", [Revenue In Pipeline])",
+      "columns": ["[v]"],
+      "rows": [
+        [19900361.0]
+      ]
+    },
+    {
+      "id": "measure/revenue-open-7b90b99c",
+      "query": "EVALUATE ROW(\"v\", [Revenue Open])",
+      "columns": ["[v]"],
+      "rows": [
+        [27812381.0]
+      ]
+    },
+    {
+      "id": "measure/revenue-won-51cfd326",
+      "query": "EVALUATE ROW(\"v\", [Revenue Won])",
+      "columns": ["[v]"],
+      "rows": [
+        [26435925]
+      ]
+    },
+    {
+      "id": "measure/revenue-won-average-deal-size-2e53b0ee",
+      "query": "EVALUATE ROW(\"v\", [Revenue Won Average Deal Size])",
+      "columns": ["[v]"],
+      "rows": [
+        [3630.3110409228234]
+      ]
+    }
+  ]
+}

@@ -79,6 +79,9 @@ pub mod rules {
     /// A column's `sortByColumn` or a hierarchy level references a missing
     /// column.
     pub const MODEL_COLUMN_REF: &str = "LINT017";
+    /// A measure has both a static `formatString` and a dynamic
+    /// `formatStringDefinition` (Power BI Desktop refuses to load it).
+    pub const MEASURE_FORMAT: &str = "LINT018";
 }
 
 /// A lint rule: stable id, default severity and a one-line title.
@@ -177,6 +180,11 @@ pub const RULES: &[Rule] = &[
         id: rules::MODEL_COLUMN_REF,
         severity: Severity::Error,
         title: "sortByColumn / hierarchy level references a missing column",
+    },
+    Rule {
+        id: rules::MEASURE_FORMAT,
+        severity: Severity::Error,
+        title: "measure has both formatString and formatStringDefinition",
     },
 ];
 
@@ -803,6 +811,6 @@ mod tests {
             None
         );
         assert!(rule("lint001").is_some());
-        assert_eq!(RULES.len(), 17);
+        assert_eq!(RULES.len(), 18);
     }
 }

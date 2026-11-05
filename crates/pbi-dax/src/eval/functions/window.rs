@@ -218,6 +218,7 @@ fn prepare(
     f: &str,
     rest: &[Expr],
     need_current: bool,
+    apply_when_unknown: bool,
 ) -> Result<Option<Prepared>> {
     let spec = parse_spec(f, rest)?;
     let rel = relation(i, env, f, &spec)?;
@@ -258,23 +259,29 @@ fn prepare(
     let mut current_row: Option<RowPos> = None;
     if need_current {
         let mut wanted: Vec<(usize, ValueKey)> = Vec::with_capacity(candidates.len());
+        let mut missing_required = false;
         for &ix in &candidates {
             match current_value(i, env, &rel, ix)? {
                 Some(v) => wanted.push((ix, ValueKey::from(v))),
-                None if required.contains(&ix) => return Ok(None),
+                None if required.contains(&ix) => missing_required = true,
                 None => {}
             }
         }
-        if wanted.is_empty() {
-            return Ok(None);
-        }
-        current_row = rel.positions().into_iter().find(|p| {
-            wanted
-                .iter()
-                .all(|(ix, w)| ValueKey::from(rel.value(*p, *ix)) == *w)
-        });
-        if current_row.is_none() {
-            return Ok(None);
+        // Apply semantics: nothing in the context identifies a row, so the
+        // caller evaluates for every row of the (single) partition.
+        let apply = apply_when_unknown && wanted.is_empty() && part_cols.is_empty();
+        if !apply {
+            if missing_required || wanted.is_empty() {
+                return Ok(None);
+            }
+            current_row = rel.positions().into_iter().find(|p| {
+                wanted
+                    .iter()
+                    .all(|(ix, w)| ValueKey::from(rel.value(*p, *ix)) == *w)
+            });
+            if current_row.is_none() {
+                return Ok(None);
+            }
         }
     }
 
@@ -349,7 +356,7 @@ fn index(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("INDEX", args, 1, usize::MAX)?;
     let pos = int_arg(i, env, "INDEX", arg("INDEX", args, 0)?)?;
     let rest = args.get(1..).unwrap_or_default();
-    let Some(p) = prepare(i, env, "INDEX", rest, false)? else {
+    let Some(p) = prepare(i, env, "INDEX", rest, false, false)? else {
         return empty_like(i, env, "INDEX", rest);
     };
     if pos == 0 {
@@ -364,11 +371,15 @@ fn offset(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("OFFSET", args, 1, usize::MAX)?;
     let delta = int_arg(i, env, "OFFSET", arg("OFFSET", args, 0)?)?;
     let rest = args.get(1..).unwrap_or_default();
-    let Some(p) = prepare(i, env, "OFFSET", rest, true)? else {
+    let Some(p) = prepare(i, env, "OFFSET", rest, true, true)? else {
         return empty_like(i, env, "OFFSET", rest);
     };
     let Some(cur) = p.current else {
-        return pick(&p, 1, 0);
+        // Apply semantics (no current row): the union of every row's offset
+        // row, as in Desktop (`OFFSET(-1, ALL(T[C]), ORDERBY(T[C]))` keeps all
+        // rows but the last).
+        let last = i64::try_from(p.partition.len()).unwrap_or(i64::MAX) - 1;
+        return pick(&p, delta.max(0), last.saturating_add(delta.min(0)));
     };
     let ix = i64::try_from(cur).unwrap_or(0).saturating_add(delta);
     pick(&p, ix, ix)
@@ -406,7 +417,7 @@ fn window(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
         None => true,
     };
     let rest = args.get(k..).unwrap_or_default();
-    let Some(p) = prepare(i, env, "WINDOW", rest, from_rel || to_rel)? else {
+    let Some(p) = prepare(i, env, "WINDOW", rest, from_rel || to_rel, false)? else {
         return empty_like(i, env, "WINDOW", rest);
     };
     let resolve = |v: i64, rel: bool| -> Option<i64> {
@@ -426,7 +437,7 @@ fn window(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
 /// `ROWNUMBER([relation][, ORDERBY(…)]…)`: 1-based position of the
 /// current row in its sorted partition (BLANK when undetermined).
 fn rownumber(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
-    let Some(p) = prepare(i, env, "ROWNUMBER", args, true)? else {
+    let Some(p) = prepare(i, env, "ROWNUMBER", args, true, false)? else {
         return Ok(Val::Scalar(Value::Blank));
     };
     Ok(Val::Scalar(p.current.map_or(Value::Blank, |c| {
@@ -440,7 +451,7 @@ fn rank(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     let dense = args
         .first()
         .is_some_and(|a| matches!(&a.unparen().kind, ExprKind::Keyword(k) if k == "DENSE"));
-    let Some(p) = prepare(i, env, "RANK", args, true)? else {
+    let Some(p) = prepare(i, env, "RANK", args, true, false)? else {
         return Ok(Val::Scalar(Value::Blank));
     };
     let Some(current) = p.current.and_then(|c| p.keys.get(c)) else {

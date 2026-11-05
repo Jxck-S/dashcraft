@@ -330,14 +330,15 @@ pub fn format_datetime(us: i64, fmt: &str) -> String {
 }
 
 /// `General Date`: `M/d/yyyy h:nn:ss AM/PM`, without the time at midnight
-/// and without the date on serial day 0 (1899-12-30).
+/// and without the date on serial day 0 (1899-12-30, which alone is
+/// `12:00:00 AM`).
 #[must_use]
 pub fn general_date(us: i64) -> String {
     let time = us.rem_euclid(MICROS_PER_DAY) != 0;
     let date = us.div_euclid(MICROS_PER_DAY) != SERIAL_ZERO_MICROS / MICROS_PER_DAY;
     let pattern = match (date, time) {
-        (_, false) => "m/d/yyyy",
-        (false, true) => "h:nn:ss AM/PM",
+        (true, false) => "m/d/yyyy",
+        (false, _) => "h:nn:ss AM/PM",
         (true, true) => "m/d/yyyy h:nn:ss AM/PM",
     };
     format_datetime(us, pattern)

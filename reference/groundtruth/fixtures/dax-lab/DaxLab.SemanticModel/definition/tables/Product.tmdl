@@ -1,0 +1,48 @@
+/// functions.rs fx(): four products; Sales has an unmatched key (P9), so Product gets a blank row.
+table Product
+	lineageTag: 409d9253-3fb9-58ed-9f68-00306af63be1
+
+	measure 'Product Count' = COUNTROWS(Product)
+		lineageTag: 2f17c15b-e544-58fb-a603-1a660c0c7fea
+
+	column ProductKey
+		dataType: string
+		lineageTag: 99fa773c-81e4-5417-9c4a-18ae7dcf657f
+		summarizeBy: none
+		sourceColumn: ProductKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column Name
+		dataType: string
+		lineageTag: 0f91ae23-458f-5060-a3bd-5d861681c589
+		summarizeBy: none
+		sourceColumn: Name
+
+		annotation SummarizationSetBy = Automatic
+
+	column Color
+		dataType: string
+		lineageTag: 902a6b39-68f5-580a-94ce-6105f2b56e52
+		summarizeBy: none
+		sourceColumn: Color
+
+		annotation SummarizationSetBy = Automatic
+
+	column Category
+		dataType: string
+		lineageTag: e4806712-4c4c-5dc7-80bc-59d38cf62f55
+		summarizeBy: none
+		sourceColumn: Category
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Product = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [ProductKey = text, Name = text, Color = text, Category = text], {{"P1", "Apple", "Red", "Fruit"}, {"P2", "Banana", "Yellow", "Fruit"}, {"P3", "Carrot", "Orange", "Veg"}, {"P4", "Cherry", "Red", "Fruit"}})
+				in
+				    Source
+
+	annotation PBI_ResultType = Table

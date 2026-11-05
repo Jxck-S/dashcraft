@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "suite": "acme-calcgroup-rls",
+  "desktop": { "version": "2.159.1231.0", "engine": "17.0.93.23", "culture": "en-US" },
+  "recordedOn": "2026-11-05",
+  "cases": [
+    {
+      "id": "calc-group/total-sales/month",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Time Calc'[Time Calculation], \"v\", [Total Sales]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year Month] IN {\"2025-06\"}\n)",
+      "columns": ["Time Calc[Time Calculation]", "[v]"],
+      "rows": [
+        ["Current", 41267.95],
+        ["YTD", 204412.5499999999],
+        ["PY", 35804.75],
+        ["YoY %", 0.15258310698999425]
+      ]
+    },
+    {
+      "id": "calc-group/total-sales/by-year",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Date'[Year], 'Time Calc'[Time Calculation], \"v\", [Total Sales]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)",
+      "columns": ["Date[Year]", "Time Calc[Time Calculation]", "[v]"],
+      "rows": [
+        [2024, "Current", 372196.85000000114],
+        [2025, "Current", 457432.1500000002],
+        [2024, "YTD", 372196.8500000001],
+        [2025, "YTD", 457432.1500000002],
+        [2025, "PY", 372196.8500000001],
+        [2025, "YoY %", 0.2290059682127887]
+      ]
+    },
+    {
+      "id": "calc-group/order-count/month",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Time Calc'[Time Calculation], \"v\", [Order Count]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year Month] IN {\"2025-06\"}\n)",
+      "columns": ["Time Calc[Time Calculation]", "[v]"],
+      "rows": [
+        ["Current", 181],
+        ["YTD", 879],
+        ["PY", 146],
+        ["YoY %", 0.23972602739726026]
+      ]
+    },
+    {
+      "id": "calc-group/order-count/by-year",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Date'[Year], 'Time Calc'[Time Calculation], \"v\", [Order Count]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)",
+      "columns": ["Date[Year]", "Time Calc[Time Calculation]", "[v]"],
+      "rows": [
+        [2024, "Current", 1605],
+        [2025, "Current", 2024],
+        [2024, "YTD", 1605],
+        [2025, "YTD", 2024],
+        [2025, "PY", 1605],
+        [2025, "YoY %", 0.26105919003115263]
+      ]
+    },
+    {
+      "id": "calc-group/margin/month",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Time Calc'[Time Calculation], \"v\", [Margin %]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year Month] IN {\"2025-06\"}\n)",
+      "columns": ["Time Calc[Time Calculation]", "[v]"],
+      "rows": [
+        ["Current", 0.4339437747695245],
+        ["YTD", 0.4488150067106934],
+        ["PY", 0.45899077636347163],
+        ["YoY %", -0.054569727506054676]
+      ]
+    },
+    {
+      "id": "calc-group/margin/by-year",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Date'[Year], 'Time Calc'[Time Calculation], \"v\", [Margin %]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)",
+      "columns": ["Date[Year]", "Time Calc[Time Calculation]", "[v]"],
+      "rows": [
+        [2024, "Current", 0.45030956065318795],
+        [2025, "Current", 0.4529148421246741],
+        [2024, "YTD", 0.4503095606531866],
+        [2025, "YTD", 0.4529148421246739],
+        [2025, "PY", 0.4503095606531866],
+        [2025, "YoY %", 0.005785534439260942]
+      ]
+    },
+    {
+      "id": "calc-group/units-sold/month",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Time Calc'[Time Calculation], \"v\", [Units Sold]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year Month] IN {\"2025-06\"}\n)",
+      "columns": ["Time Calc[Time Calculation]", "[v]"],
+      "rows": [
+        ["Current", 296],
+        ["YTD", 1482],
+        ["PY", 230],
+        ["YoY %", 0.28695652173913044]
+      ]
+    },
+    {
+      "id": "calc-group/units-sold/by-year",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Date'[Year], 'Time Calc'[Time Calculation], \"v\", [Units Sold]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)",
+      "columns": ["Date[Year]", "Time Calc[Time Calculation]", "[v]"],
+      "rows": [
+        [2024, "Current", 2613],
+        [2025, "Current", 3348],
+        [2024, "YTD", 2613],
+        [2025, "YTD", 3348],
+        [2025, "PY", 2613],
+        [2025, "YoY %", 0.28128587830080365]
+      ]
+    },
+    {
+      "id": "calc-group/total-sales/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], 'Time Calc'[Time Calculation], \"v\", [Total Sales])",
+      "columns": ["Date[Year Month]", "Time Calc[Time Calculation]", "[v]"],
+      "rows": [
+        ["2024-01", "Current", 21155.650000000005],
+        ["2024-02", "Current", 23437.399999999998],
+        ["2024-03", "Current", 28133.8],
+        ["2024-04", "Current", 30930.150000000012],
+        ["2024-05", "Current", 42658.6],
+        ["2024-06", "Current", 39596.450000000004],
+        ["2024-07", "Current", 29585.75],
+        ["2024-08", "Current", 34620.100000000006],
+        ["2024-09", "Current", 26756.200000000008],
+        ["2024-10", "Current", 35170.25],
+        ["2024-11", "Current", 39926.49999999999],
+        ["2024-12", "Current", 54056.9],
+        ["2025-01", "Current", 27188.6],
+        ["2025-02", "Current", 30895.84999999999],
+        ["2025-03", "Current", 26667.049999999996],
+        ["2025-04", "Current", 41205.90000000001],
+        ["2025-05", "Current", 48471.900000000016],
+        ["2025-06", "Current", 43805.2],
+        ["2025-07", "Current", 44057.200000000004],
+        ["2025-08", "Current", 43472.650000000016],
+        ["2025-09", "Current", 43228.65],
+        ["2025-10", "Current", 37501.69999999999],
+        ["2025-11", "Current", 42432.200000000026],
+        ["2025-12", "Current", 59345.850000000006],
+        ["2024-01", "YTD", 21155.65],
+        ["2024-02", "YTD", 44593.05],
+        ["2024-03", "YTD", 72726.85],
+        ["2024-04", "YTD", 103657.0],
+        ["2024-05", "YTD", 146315.6],
+        ["2024-06", "YTD", 185912.05],
+        ["2024-07", "YTD", 215497.80000000002],
+        ["2024-08", "YTD", 250117.9],
+        ["2024-09", "YTD", 276874.0999999999],
+        ["2024-10", "YTD", 312044.35000000003],
+        ["2024-11", "YTD", 351970.85000000003],
+        ["2024-12", "YTD", 406027.75000000006],
+        ["2025-01", "YTD", 27188.6],
+        ["2025-02", "YTD", 58084.44999999998],
+        ["2025-03", "YTD", 84751.49999999999],
+        ["2025-04", "YTD", 125957.4],
+        ["2025-05", "YTD", 174429.30000000002],
+        ["2025-06", "YTD", 218234.49999999994],
+        ["2025-07", "YTD", 262291.6999999999],
+        ["2025-08", "YTD", 305764.35000000003],
+        ["2025-09", "YTD", 348993.0],
+        ["2025-10", "YTD", 386494.7000000002],
+        ["2025-11", "YTD", 428926.90000000014],
+        ["2025-12", "YTD", 488272.75000000023],
+        ["2025-01", "PY", 21155.65],
+        ["2025-02", "PY", 23437.4],
+        ["2025-03", "PY", 28133.8],
+        ["2025-04", "PY", 30930.15],
+        ["2025-05", "PY", 42658.600000000006],
+        ["2025-06", "PY", 39596.45],
+        ["2025-07", "PY", 29585.749999999996],
+        ["2025-08", "PY", 34620.1],
+        ["2025-09", "PY", 26756.2],
+        ["2025-10", "PY", 35170.25],
+        ["2025-11", "PY", 39926.49999999999],
+        ["2025-12", "PY", 54056.89999999999],
+        ["2025-01", "YoY %", 0.2851696828034117],
+        ["2025-02", "YoY %", 0.3182285577751794],
+        ["2025-03", "YoY %", -0.05213479871186984],
+        ["2025-04", "YoY %", 0.3322243830049323],
+        ["2025-05", "YoY %", 0.13627498323901885],
+        ["2025-06", "YoY %", 0.10629109427739104],
+        ["2025-07", "YoY %", 0.4891358170740985],
+        ["2025-08", "YoY %", 0.25570550056181285],
+        ["2025-09", "YoY %", 0.6156498306934468],
+        ["2025-10", "YoY %", 0.06629040168892714],
+        ["2025-11", "YoY %", 0.06275781748963806],
+        ["2025-12", "YoY %", 0.09784042370169248]
+      ]
+    },
+    {
+      "id": "calc-group/items",
+      "query": "EVALUATE 'Time Calc'",
+      "columns": ["Time Calc[Time Calculation]", "Time Calc[Ordinal]"],
+      "rows": [
+        ["Current", 0],
+        ["YTD", 1],
+        ["PY", 2],
+        ["YoY %", 3]
+      ]
+    },
+    {
+      "id": "rls/region-west/visible-rows",
+      "query": "EVALUATE ROW(\"Orders\", COUNTROWS('Orders'), \"Customers\", COUNTROWS('Customers'), \"Products\", COUNTROWS('Products'), \"Stores\", COUNTROWS('Stores'), \"Targets\", COUNTROWS('Targets'), \"Returns\", COUNTROWS('Returns'), \"Web Sessions\", COUNTROWS('Web Sessions'), \"Date\", COUNTROWS('Date'), \"Time Calc\", COUNTROWS('Time Calc'), \"Products Never Sold\", COUNTROWS('Products Never Sold'), \"Last Refreshed\", COUNTROWS('Last Refreshed'))",
+      "columns": ["[Orders]", "[Customers]", "[Products]", "[Stores]", "[Targets]", "[Returns]", "[Web Sessions]", "[Date]", "[Time Calc]", "[Products Never Sold]", "[Last Refreshed]"],
+      "rows": [
+        [880, 400, 120, 4, 24, 34, 1600, 731, 4, 6, 1]
+      ]
+    },
+    {
+      "id": "rls/region-west/measures",
+      "query": "EVALUATE ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Target\", [Target], \"Returns Count\", [Returns Count], \"Sessions\", [Sessions], \"Customer Count\", [Customer Count])",
+      "columns": ["[Total Sales]", "[Order Count]", "[Target]", "[Returns Count]", "[Sessions]", "[Customer Count]"],
+      "rows": [
+        [196776.6499999998, 880, {"decimal":"185500"}, 34, 1600, 400]
+      ]
+    },
+    {
+      "id": "rls/region-west/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"Total Sales\", [Total Sales], \"Target\", [Target])",
+      "columns": ["Stores[Store Name]", "[Total Sales]", "[Target]"],
+      "rows": [
+        ["Seattle Flagship", 61231.00000000003, {"decimal":"185500"}],
+        ["Portland Pearl", 47814.95, {"decimal":"185500"}],
+        ["Boise Outlet", 36610.799999999974, {"decimal":"185500"}],
+        ["Salt Lake City Sugar House", 51119.90000000002, {"decimal":"185500"}]
+      ]
+    },
+    {
+      "id": "rls/region-west/stores",
+      "query": "EVALUATE 'Stores'",
+      "columns": ["Stores[Store ID]", "Stores[Store Name]", "Stores[Region]", "Stores[Channel]", "Stores[City]", "Stores[State]", "Stores[Manager Email]", "Stores[Open Date]", "Stores[Square Feet]", "Stores[Store Manager]", "Stores[Region Code]", "Stores[Store Label]"],
+      "rows": [
+        ["S01", "Seattle Flagship", "West", "Retail", "Seattle", "WA", "riley.chen@acmeoutfitters.example", {"dateTime":"2012-04-14T00:00:00.000"}, 32000, "Riley Chen", "WES", "Seattle Flagship (West)"],
+        ["S02", "Portland Pearl", "West", "Retail", "Portland", "OR", "morgan.price@acmeoutfitters.example", {"dateTime":"2014-09-06T00:00:00.000"}, 18000, "Morgan Price", "WES", "Portland Pearl (West)"],
+        ["S03", "Boise Outlet", "West", "Outlet", "Boise", "ID", "casey.nguyen@acmeoutfitters.example", {"dateTime":"2017-03-18T00:00:00.000"}, 12000, "Casey Nguyen", "WES", "Boise Outlet (West)"],
+        ["S13", "Salt Lake City Sugar House", "West", "Retail", "Salt Lake City", "UT", "riley.chen@acmeoutfitters.example", {"dateTime":"2022-05-07T00:00:00.000"}, 15000, "Riley Chen", "WES", "Salt Lake City Sugar House (West)"]
+      ]
+    },
+    {
+      "id": "rls/store-manager/riley-chen/visible-rows",
+      "query": "EVALUATE ROW(\"Orders\", COUNTROWS('Orders'), \"Customers\", COUNTROWS('Customers'), \"Products\", COUNTROWS('Products'), \"Stores\", COUNTROWS('Stores'), \"Targets\", COUNTROWS('Targets'), \"Returns\", COUNTROWS('Returns'), \"Web Sessions\", COUNTROWS('Web Sessions'), \"Date\", COUNTROWS('Date'), \"Time Calc\", COUNTROWS('Time Calc'), \"Products Never Sold\", COUNTROWS('Products Never Sold'), \"Last Refreshed\", COUNTROWS('Last Refreshed'))",
+      "columns": ["[Orders]", "[Customers]", "[Products]", "[Stores]", "[Targets]", "[Returns]", "[Web Sessions]", "[Date]", "[Time Calc]", "[Products Never Sold]", "[Last Refreshed]"],
+      "rows": [
+        [503, 400, 120, 2, 24, 23, 1600, 731, 4, 6, 1]
+      ]
+    },
+    {
+      "id": "rls/store-manager/riley-chen/measures",
+      "query": "EVALUATE ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Target\", [Target], \"Returns Count\", [Returns Count], \"Sessions\", [Sessions], \"Customer Count\", [Customer Count])",
+      "columns": ["[Total Sales]", "[Order Count]", "[Target]", "[Returns Count]", "[Sessions]", "[Customer Count]"],
+      "rows": [
+        [112350.89999999995, 503, {"decimal":"185500"}, 23, 1600, 400]
+      ]
+    },
+    {
+      "id": "rls/store-manager/riley-chen/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"Total Sales\", [Total Sales], \"Target\", [Target])",
+      "columns": ["Stores[Store Name]", "[Total Sales]", "[Target]"],
+      "rows": [
+        ["Seattle Flagship", 61231.00000000003, {"decimal":"185500"}],
+        ["Salt Lake City Sugar House", 51119.90000000002, {"decimal":"185500"}]
+      ]
+    },
+    {
+      "id": "rls/store-manager/riley-chen/stores",
+      "query": "EVALUATE 'Stores'",
+      "columns": ["Stores[Store ID]", "Stores[Store Name]", "Stores[Region]", "Stores[Channel]", "Stores[City]", "Stores[State]", "Stores[Manager Email]", "Stores[Open Date]", "Stores[Square Feet]", "Stores[Store Manager]", "Stores[Region Code]", "Stores[Store Label]"],
+      "rows": [
+        ["S01", "Seattle Flagship", "West", "Retail", "Seattle", "WA", "riley.chen@acmeoutfitters.example", {"dateTime":"2012-04-14T00:00:00.000"}, 32000, "Riley Chen", "WES", "Seattle Flagship (West)"],
+        ["S13", "Salt Lake City Sugar House", "West", "Retail", "Salt Lake City", "UT", "riley.chen@acmeoutfitters.example", {"dateTime":"2022-05-07T00:00:00.000"}, 15000, "Riley Chen", "WES", "Salt Lake City Sugar House (West)"]
+      ]
+    },
+    {
+      "id": "rls/store-manager/nobody/visible-rows",
+      "query": "EVALUATE ROW(\"Orders\", COUNTROWS('Orders'), \"Customers\", COUNTROWS('Customers'), \"Products\", COUNTROWS('Products'), \"Stores\", COUNTROWS('Stores'), \"Targets\", COUNTROWS('Targets'), \"Returns\", COUNTROWS('Returns'), \"Web Sessions\", COUNTROWS('Web Sessions'), \"Date\", COUNTROWS('Date'), \"Time Calc\", COUNTROWS('Time Calc'), \"Products Never Sold\", COUNTROWS('Products Never Sold'), \"Last Refreshed\", COUNTROWS('Last Refreshed'))",
+      "columns": ["[Orders]", "[Customers]", "[Products]", "[Stores]", "[Targets]", "[Returns]", "[Web Sessions]", "[Date]", "[Time Calc]", "[Products Never Sold]", "[Last Refreshed]"],
+      "rows": [
+        [null, 400, 120, null, null, null, 1600, 731, 4, 6, 1]
+      ]
+    },
+    {
+      "id": "rls/store-manager/nobody/measures",
+      "query": "EVALUATE ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Target\", [Target], \"Returns Count\", [Returns Count], \"Sessions\", [Sessions], \"Customer Count\", [Customer Count])",
+      "columns": ["[Total Sales]", "[Order Count]", "[Target]", "[Returns Count]", "[Sessions]", "[Customer Count]"],
+      "rows": [
+        [null, null, null, null, 1600, 400]
+      ]
+    },
+    {
+      "id": "rls/store-manager/nobody/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"Total Sales\", [Total Sales], \"Target\", [Target])",
+      "columns": ["Stores[Store Name]", "[Total Sales]", "[Target]"],
+      "rows": []
+    },
+    {
+      "id": "rls/store-manager/nobody/stores",
+      "query": "EVALUATE 'Stores'",
+      "columns": ["Stores[Store ID]", "Stores[Store Name]", "Stores[Region]", "Stores[Channel]", "Stores[City]", "Stores[State]", "Stores[Manager Email]", "Stores[Open Date]", "Stores[Square Feet]", "Stores[Store Manager]", "Stores[Region Code]", "Stores[Store Label]"],
+      "rows": []
+    },
+    {
+      "id": "rls/region-west-store-manager/riley-chen/visible-rows",
+      "query": "EVALUATE ROW(\"Orders\", COUNTROWS('Orders'), \"Customers\", COUNTROWS('Customers'), \"Products\", COUNTROWS('Products'), \"Stores\", COUNTROWS('Stores'), \"Targets\", COUNTROWS('Targets'), \"Returns\", COUNTROWS('Returns'), \"Web Sessions\", COUNTROWS('Web Sessions'), \"Date\", COUNTROWS('Date'), \"Time Calc\", COUNTROWS('Time Calc'), \"Products Never Sold\", COUNTROWS('Products Never Sold'), \"Last Refreshed\", COUNTROWS('Last Refreshed'))",
+      "columns": ["[Orders]", "[Customers]", "[Products]", "[Stores]", "[Targets]", "[Returns]", "[Web Sessions]", "[Date]", "[Time Calc]", "[Products Never Sold]", "[Last Refreshed]"],
+      "rows": [
+        [880, 400, 120, 4, 24, 34, 1600, 731, 4, 6, 1]
+      ]
+    },
+    {
+      "id": "rls/region-west-store-manager/riley-chen/measures",
+      "query": "EVALUATE ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Target\", [Target], \"Returns Count\", [Returns Count], \"Sessions\", [Sessions], \"Customer Count\", [Customer Count])",
+      "columns": ["[Total Sales]", "[Order Count]", "[Target]", "[Returns Count]", "[Sessions]", "[Customer Count]"],
+      "rows": [
+        [196776.6499999998, 880, {"decimal":"185500"}, 34, 1600, 400]
+      ]
+    },
+    {
+      "id": "rls/region-west-store-manager/riley-chen/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"Total Sales\", [Total Sales], \"Target\", [Target])",
+      "columns": ["Stores[Store Name]", "[Total Sales]", "[Target]"],
+      "rows": [
+        ["Seattle Flagship", 61231.00000000003, {"decimal":"185500"}],
+        ["Portland Pearl", 47814.95, {"decimal":"185500"}],
+        ["Boise Outlet", 36610.799999999974, {"decimal":"185500"}],
+        ["Salt Lake City Sugar House", 51119.90000000002, {"decimal":"185500"}]
+      ]
+    },
+    {
+      "id": "rls/region-west-store-manager/riley-chen/stores",
+      "query": "EVALUATE 'Stores'",
+      "columns": ["Stores[Store ID]", "Stores[Store Name]", "Stores[Region]", "Stores[Channel]", "Stores[City]", "Stores[State]", "Stores[Manager Email]", "Stores[Open Date]", "Stores[Square Feet]", "Stores[Store Manager]", "Stores[Region Code]", "Stores[Store Label]"],
+      "rows": [
+        ["S01", "Seattle Flagship", "West", "Retail", "Seattle", "WA", "riley.chen@acmeoutfitters.example", {"dateTime":"2012-04-14T00:00:00.000"}, 32000, "Riley Chen", "WES", "Seattle Flagship (West)"],
+        ["S02", "Portland Pearl", "West", "Retail", "Portland", "OR", "morgan.price@acmeoutfitters.example", {"dateTime":"2014-09-06T00:00:00.000"}, 18000, "Morgan Price", "WES", "Portland Pearl (West)"],
+        ["S03", "Boise Outlet", "West", "Outlet", "Boise", "ID", "casey.nguyen@acmeoutfitters.example", {"dateTime":"2017-03-18T00:00:00.000"}, 12000, "Casey Nguyen", "WES", "Boise Outlet (West)"],
+        ["S13", "Salt Lake City Sugar House", "West", "Retail", "Salt Lake City", "UT", "riley.chen@acmeoutfitters.example", {"dateTime":"2022-05-07T00:00:00.000"}, 15000, "Riley Chen", "WES", "Salt Lake City Sugar House (West)"]
+      ]
+    }
+  ]
+}

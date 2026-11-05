@@ -196,12 +196,6 @@ fn int_arg(i: &Interp<'_>, env: &Env, f: &str, args: &[Expr], n: usize) -> Resul
     Ok(ops::to_f64(&v)?.map_or(0, |x| x.round().clamp(-1.0e15, 1.0e15) as i64))
 }
 
-/// Integer argument, truncated (BLANK → 0).
-fn trunc_arg(i: &Interp<'_>, env: &Env, f: &str, args: &[Expr], n: usize) -> Result<i64> {
-    let v = i.scalar(env, arg(f, args, n)?)?;
-    Ok(ops::to_f64(&v)?.map_or(0, |x| x.trunc().clamp(-1.0e15, 1.0e15) as i64))
-}
-
 /// Day number of the DAX zero date, 1899-12-30 (what BLANK dates mean).
 fn zero_day() -> i64 {
     match ops::date_from_serial(0.0) {
@@ -430,13 +424,14 @@ fn eomonth(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     ok(date_value(month_end(day)))
 }
 
-/// `EDATE(start_date, months)`: `months` is truncated (`EOMONTH` rounds).
+/// `EDATE(start_date, months)`: `months` is rounded like `EOMONTH` (Desktop
+/// gives `EDATE(DATE(2024, 1, 31), 1.9)` = 2024-03-31).
 fn edate(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("EDATE", args, 2, 2)?;
     let Some(us) = datetime_arg(i, env, "EDATE", args, 0)? else {
         return ok(Value::Blank);
     };
-    let months = trunc_arg(i, env, "EDATE", args, 1)?;
+    let months = int_arg(i, env, "EDATE", args, 1)?;
     let day = add_months(day_of(us), months)
         .ok_or_else(|| DaxError::argument("EDATE", "date out of range"))?;
     ok(date_value(day))
@@ -653,29 +648,12 @@ fn yearfrac(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
 }
 
 /// Weekend days (index: Sunday = 0) of a `NETWORKDAYS` weekend argument:
-/// codes 1–7 (two days: 1 = Saturday/Sunday … 7 = Friday/Saturday), 11–17
-/// (one day: 11 = Sunday … 17 = Saturday), or a 7-character `0`/`1` mask
-/// starting on Monday.
+/// codes 1–7 (two days: 1 = Saturday/Sunday … 7 = Friday/Saturday) or 11–17
+/// (one day: 11 = Sunday … 17 = Saturday). Text is converted to a number, so
+/// an Excel-style mask such as `"0000011"` is code 11 (as in Desktop).
 fn weekend_arg(v: &Value) -> Result<[bool; 7]> {
-    let bad = || {
-        DaxError::argument(
-            "NETWORKDAYS",
-            "the weekend must be 1 to 7, 11 to 17 or a 7-character mask of 0 and 1",
-        )
-    };
+    let bad = || DaxError::argument("NETWORKDAYS", "the weekend must be 1 to 7 or 11 to 17");
     let mut days = [false; 7];
-    if let Value::String(mask) = v
-        && mask.chars().count() == 7
-        && mask.chars().all(|c| c == '0' || c == '1')
-    {
-        for (j, c) in mask.chars().enumerate() {
-            days[(j + 1) % 7] = c == '1';
-        }
-        if days.iter().all(|d| *d) {
-            return Err(bad());
-        }
-        return Ok(days);
-    }
     let code = ops::to_f64(v)?.unwrap_or(1.0);
     match code {
         c if (1.0..=7.0).contains(&c) && c.fract() == 0.0 => {

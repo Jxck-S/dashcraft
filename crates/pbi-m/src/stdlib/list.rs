@@ -67,6 +67,15 @@ pub(super) fn register(b: &mut Builder) {
         accumulate,
     );
     b.func("List.Numbers", &["start", "count", "?increment"], numbers);
+    b.func("List.Dates", &["start", "count", "step"], dates);
+    b.func("List.DateTimes", &["start", "count", "step"], datetimes);
+    b.func(
+        "List.DateTimeZones",
+        &["start", "count", "step"],
+        datetimezones,
+    );
+    b.func("List.Times", &["start", "count", "step"], times);
+    b.func("List.Durations", &["start", "count", "step"], durations);
     b.func("List.Reverse", &["list"], reverse);
     b.func("List.Sort", &["list", "?comparisonCriteria"], sort);
     b.func("List.AnyTrue", &["list"], any_true);
@@ -436,6 +445,57 @@ fn numbers(it: &Interp, args: &[Value]) -> Result<Value, MError> {
             .map(|i| Value::Number(start + step * i as f64))
             .collect(),
     ))
+}
+
+/// `List.Dates` & co.: `count` values from `start`, each `step` (a
+/// duration) after the previous one.
+fn series(it: &Interp, args: &[Value], kind: &str) -> Result<Value, MError> {
+    let start = arg(args, 0).plain().clone();
+    let type_ok = match kind {
+        "Date" => matches!(start, Value::Date(_)),
+        "DateTime" => matches!(start, Value::DateTime(_)),
+        "DateTimeZone" => matches!(start, Value::DateTimeZone(_)),
+        "Time" => matches!(start, Value::Time(_)),
+        _ => matches!(start, Value::Duration(_)),
+    };
+    if !type_ok {
+        return Err(convert_error(&start, kind));
+    }
+    let step = arg(args, 2).plain().clone();
+    if !matches!(step, Value::Duration(_)) {
+        return Err(convert_error(&step, "Duration"));
+    }
+    let n = count_arg(args, 1)?.unwrap_or(0);
+    it.check_rows(n)?;
+    let mut out = Vec::with_capacity(n);
+    let mut current = start;
+    for i in 0..n {
+        if i > 0 {
+            current = arithmetic(BinaryOp::Add, &current, &step)?;
+        }
+        out.push(current.clone());
+    }
+    Ok(list_of(out))
+}
+
+fn dates(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    series(it, args, "Date")
+}
+
+fn datetimes(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    series(it, args, "DateTime")
+}
+
+fn datetimezones(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    series(it, args, "DateTimeZone")
+}
+
+fn times(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    series(it, args, "Time")
+}
+
+fn durations(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    series(it, args, "Duration")
 }
 
 fn reverse(_: &Interp, args: &[Value]) -> Result<Value, MError> {

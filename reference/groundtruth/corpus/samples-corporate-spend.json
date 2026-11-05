@@ -1,0 +1,341 @@
+{
+  "schemaVersion": 1,
+  "suite": "samples-corporate-spend",
+  "title": "Microsoft sample Corporate Spend.pbix (MIT): metadata, row counts, column aggregates, small tables and every measure, Desktop's engine vs DashCraft's VertiPaq decoder and DAX engine",
+  "fixture": "sample:Corporate Spend.pbix",
+  "requiresTables": [
+    "Business Area",
+    "Cost Element",
+    "Country Region",
+    "Date",
+    "Department",
+    "Calculations",
+    "IT Area",
+    "Scenario",
+    "Toggle for variance to plan",
+    "Toggle for breakdown"
+  ],
+  "cases": [
+    {
+      "id": "tables",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.TABLES(), \"Name\", [Name], \"DataCategory\", [DataCategory], \"Description\", [Description], \"IsHidden\", [IsHidden], \"CalculationGroupPrecedence\", [CalculationGroupPrecedence])",
+      "metadata": "tables"
+    },
+    {
+      "id": "columns",
+      "query": "EVALUATE SELECTCOLUMNS(FILTER(INFO.VIEW.COLUMNS(), [Type] <> \"RowNumber\"), \"Table\", [Table], \"Name\", [Name], \"DataType\", [DataType], \"IsHidden\", [IsHidden], \"FormatString\", [FormatString], \"SortByColumn\", [SortByColumn], \"SummarizeBy\", [SummarizeBy], \"DataCategory\", [DataCategory], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "metadata": "columns"
+    },
+    {
+      "id": "measures",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.MEASURES(), \"Table\", [Table], \"Name\", [Name], \"IsHidden\", [IsHidden], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "metadata": "measures"
+    },
+    {
+      "id": "measure-formats",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.MEASURES(), \"Name\", [Name], \"FormatString\", [FormatString])",
+      "metadata": "measure-formats"
+    },
+    {
+      "id": "relationships",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.RELATIONSHIPS(), \"FromTable\", [FromTable], \"FromColumn\", [FromColumn], \"FromCardinality\", [FromCardinality], \"ToTable\", [ToTable], \"ToColumn\", [ToColumn], \"ToCardinality\", [ToCardinality], \"IsActive\", [IsActive], \"CrossFilteringBehavior\", [CrossFilteringBehavior], \"SecurityFilteringBehavior\", [SecurityFilteringBehavior])",
+      "metadata": "relationships"
+    },
+    {
+      "id": "rows/business-area",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Business Area'))"
+    },
+    {
+      "id": "column/business-area/business-area-3fed5ebe",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Business Area'[Business Area]), \"blanks\", COUNTBLANK('Business Area'[Business Area]), \"min\", MIN('Business Area'[Business Area]), \"max\", MAX('Business Area'[Business Area]))"
+    },
+    {
+      "id": "column/business-area/business-area-id-d0e929ac",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Business Area'[Business Area ID]), \"blanks\", COUNTBLANK('Business Area'[Business Area ID]), \"min\", MIN('Business Area'[Business Area ID]), \"max\", MAX('Business Area'[Business Area ID]), \"sum\", SUM('Business Area'[Business Area ID]))"
+    },
+    {
+      "id": "table/business-area",
+      "query": "EVALUATE 'Business Area'"
+    },
+    {
+      "id": "rows/cost-element",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Cost Element'))"
+    },
+    {
+      "id": "column/cost-element/cost-element-name-c9e95d9a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Cost Element'[Cost element name]), \"blanks\", COUNTBLANK('Cost Element'[Cost element name]), \"min\", MIN('Cost Element'[Cost element name]), \"max\", MAX('Cost Element'[Cost element name]))"
+    },
+    {
+      "id": "column/cost-element/cost-element-group-7d4a3576",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Cost Element'[Cost Element Group]), \"blanks\", COUNTBLANK('Cost Element'[Cost Element Group]), \"min\", MIN('Cost Element'[Cost Element Group]), \"max\", MAX('Cost Element'[Cost Element Group]))"
+    },
+    {
+      "id": "column/cost-element/cost-element-sub-group-39a965e6",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Cost Element'[Cost Element Sub Group]), \"blanks\", COUNTBLANK('Cost Element'[Cost Element Sub Group]), \"min\", MIN('Cost Element'[Cost Element Sub Group]), \"max\", MAX('Cost Element'[Cost Element Sub Group]))"
+    },
+    {
+      "id": "column/cost-element/cost-element-id-fd5b26dd",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Cost Element'[Cost Element ID]), \"blanks\", COUNTBLANK('Cost Element'[Cost Element ID]), \"min\", MIN('Cost Element'[Cost Element ID]), \"max\", MAX('Cost Element'[Cost Element ID]), \"sum\", SUM('Cost Element'[Cost Element ID]))"
+    },
+    {
+      "id": "table/cost-element",
+      "query": "EVALUATE 'Cost Element'"
+    },
+    {
+      "id": "rows/country-region",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Country Region'))"
+    },
+    {
+      "id": "column/country-region/sales-region-df486a19",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Country Region'[Sales Region]), \"blanks\", COUNTBLANK('Country Region'[Sales Region]), \"min\", MIN('Country Region'[Sales Region]), \"max\", MAX('Country Region'[Sales Region]))"
+    },
+    {
+      "id": "column/country-region/country-region-d3bea789",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Country Region'[Country/Region]), \"blanks\", COUNTBLANK('Country Region'[Country/Region]), \"min\", MIN('Country Region'[Country/Region]), \"max\", MAX('Country Region'[Country/Region]))"
+    },
+    {
+      "id": "column/country-region/country-region-id-452f8336",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Country Region'[Country/Region ID]), \"blanks\", COUNTBLANK('Country Region'[Country/Region ID]), \"min\", MIN('Country Region'[Country/Region ID]), \"max\", MAX('Country Region'[Country/Region ID]), \"sum\", SUM('Country Region'[Country/Region ID]))"
+    },
+    {
+      "id": "column/country-region/country-region-b0c9c82e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Country Region'[Country / Region]), \"blanks\", COUNTBLANK('Country Region'[Country / Region]), \"min\", MIN('Country Region'[Country / Region]), \"max\", MAX('Country Region'[Country / Region]))"
+    },
+    {
+      "id": "table/country-region",
+      "query": "EVALUATE 'Country Region'"
+    },
+    {
+      "id": "rows/date",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Date'))"
+    },
+    {
+      "id": "column/date/date-3c87b9af",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Date'[Date]), \"blanks\", COUNTBLANK('Date'[Date]), \"min\", MIN('Date'[Date]), \"max\", MAX('Date'[Date]))"
+    },
+    {
+      "id": "column/date/year-3871d84a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Date'[Year]), \"blanks\", COUNTBLANK('Date'[Year]), \"min\", MIN('Date'[Year]), \"max\", MAX('Date'[Year]), \"sum\", SUM('Date'[Year]))"
+    },
+    {
+      "id": "column/date/period-e890dee0",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Date'[Period]), \"blanks\", COUNTBLANK('Date'[Period]), \"min\", MIN('Date'[Period]), \"max\", MAX('Date'[Period]), \"sum\", SUM('Date'[Period]))"
+    },
+    {
+      "id": "column/date/month-49389354",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Date'[Month]), \"blanks\", COUNTBLANK('Date'[Month]), \"min\", MIN('Date'[Month]), \"max\", MAX('Date'[Month]))"
+    },
+    {
+      "id": "table/date",
+      "query": "EVALUATE 'Date'"
+    },
+    {
+      "id": "rows/department",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Department'))"
+    },
+    {
+      "id": "column/department/vp-34f5d4e5",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Department'[VP]), \"blanks\", COUNTBLANK('Department'[VP]), \"min\", MIN('Department'[VP]), \"max\", MAX('Department'[VP]))"
+    },
+    {
+      "id": "column/department/department-70e56945",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Department'[Department]), \"blanks\", COUNTBLANK('Department'[Department]), \"min\", MIN('Department'[Department]), \"max\", MAX('Department'[Department]), \"sum\", SUM('Department'[Department]))"
+    },
+    {
+      "id": "table/department",
+      "query": "EVALUATE 'Department'"
+    },
+    {
+      "id": "rows/calculations",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Calculations'))"
+    },
+    {
+      "id": "column/calculations/date-3fb678d9",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Date]), \"blanks\", COUNTBLANK('Calculations'[Date]), \"min\", MIN('Calculations'[Date]), \"max\", MAX('Calculations'[Date]))"
+    },
+    {
+      "id": "column/calculations/value-51a22728",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Value]), \"blanks\", COUNTBLANK('Calculations'[Value]), \"min\", MIN('Calculations'[Value]), \"max\", MAX('Calculations'[Value]), \"sum\", SUM('Calculations'[Value]))"
+    },
+    {
+      "id": "column/calculations/department-76b3e600",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Department]), \"blanks\", COUNTBLANK('Calculations'[Department]), \"min\", MIN('Calculations'[Department]), \"max\", MAX('Calculations'[Department]), \"sum\", SUM('Calculations'[Department]))"
+    },
+    {
+      "id": "column/calculations/cost-element-id-059a9a1f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Cost Element ID]), \"blanks\", COUNTBLANK('Calculations'[Cost Element ID]), \"min\", MIN('Calculations'[Cost Element ID]), \"max\", MAX('Calculations'[Cost Element ID]))"
+    },
+    {
+      "id": "column/calculations/country-region-id-44655e59",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Country/Region ID]), \"blanks\", COUNTBLANK('Calculations'[Country/Region ID]), \"min\", MIN('Calculations'[Country/Region ID]), \"max\", MAX('Calculations'[Country/Region ID]), \"sum\", SUM('Calculations'[Country/Region ID]))"
+    },
+    {
+      "id": "column/calculations/business-area-id-e722f5e4",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Business Area ID]), \"blanks\", COUNTBLANK('Calculations'[Business Area ID]), \"min\", MIN('Calculations'[Business Area ID]), \"max\", MAX('Calculations'[Business Area ID]), \"sum\", SUM('Calculations'[Business Area ID]))"
+    },
+    {
+      "id": "column/calculations/it-sub-area-id-29390b41",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[IT Sub Area ID]), \"blanks\", COUNTBLANK('Calculations'[IT Sub Area ID]), \"min\", MIN('Calculations'[IT Sub Area ID]), \"max\", MAX('Calculations'[IT Sub Area ID]), \"sum\", SUM('Calculations'[IT Sub Area ID]))"
+    },
+    {
+      "id": "column/calculations/scenario-id-0fcaf485",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Scenario ID]), \"blanks\", COUNTBLANK('Calculations'[Scenario ID]), \"min\", MIN('Calculations'[Scenario ID]), \"max\", MAX('Calculations'[Scenario ID]), \"sum\", SUM('Calculations'[Scenario ID]))"
+    },
+    {
+      "id": "measure/amount-4565710a",
+      "query": "EVALUATE ROW(\"v\", [Amount])"
+    },
+    {
+      "id": "measure/actual-b59b6726",
+      "query": "EVALUATE ROW(\"v\", [Actual])"
+    },
+    {
+      "id": "measure/le1-be0d4c4d",
+      "query": "EVALUATE ROW(\"v\", [LE1])"
+    },
+    {
+      "id": "measure/le2-d0c340a7",
+      "query": "EVALUATE ROW(\"v\", [LE2])"
+    },
+    {
+      "id": "measure/le3-fa5c1c57",
+      "query": "EVALUATE ROW(\"v\", [LE3])"
+    },
+    {
+      "id": "measure/plan-cbbde1af",
+      "query": "EVALUATE ROW(\"v\", [Plan])"
+    },
+    {
+      "id": "measure/var-to-le1-3752054b",
+      "query": "EVALUATE ROW(\"v\", [Var to LE1])"
+    },
+    {
+      "id": "measure/var-to-le2-c1cf8ed3",
+      "query": "EVALUATE ROW(\"v\", [Var to LE2])"
+    },
+    {
+      "id": "measure/var-to-le3-a2f20948",
+      "query": "EVALUATE ROW(\"v\", [Var to LE3])"
+    },
+    {
+      "id": "measure/var-to-plan-80845b21",
+      "query": "EVALUATE ROW(\"v\", [Var to Plan])"
+    },
+    {
+      "id": "measure/var-to-le1-f5b479e6",
+      "query": "EVALUATE ROW(\"v\", [Var to LE1 %])"
+    },
+    {
+      "id": "measure/var-to-le2-2d138fa1",
+      "query": "EVALUATE ROW(\"v\", [Var to LE2 %])"
+    },
+    {
+      "id": "measure/var-to-le3-ab328f5c",
+      "query": "EVALUATE ROW(\"v\", [Var to LE3 %])"
+    },
+    {
+      "id": "measure/var-to-plan-71d33ce8",
+      "query": "EVALUATE ROW(\"v\", [Var to Plan %])"
+    },
+    {
+      "id": "measure/actual-plan-7626a757",
+      "query": "EVALUATE ROW(\"v\", [Actual/Plan])"
+    },
+    {
+      "id": "measure/actual-overspent-e67fa874",
+      "query": "EVALUATE ROW(\"v\", [Actual overspent])"
+    },
+    {
+      "id": "measure/acutal-within-plan-1197d6b1",
+      "query": "EVALUATE ROW(\"v\", [Acutal within plan])"
+    },
+    {
+      "id": "measure/actual-vs-plan-title-46466c54",
+      "query": "EVALUATE ROW(\"v\", [Actual vs Plan title])"
+    },
+    {
+      "id": "rows/it-area",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('IT Area'))"
+    },
+    {
+      "id": "column/it-area/it-area-4f510b71",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('IT Area'[IT Area]), \"blanks\", COUNTBLANK('IT Area'[IT Area]), \"min\", MIN('IT Area'[IT Area]), \"max\", MAX('IT Area'[IT Area]))"
+    },
+    {
+      "id": "column/it-area/it-sub-area-e3767676",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('IT Area'[IT Sub Area]), \"blanks\", COUNTBLANK('IT Area'[IT Sub Area]), \"min\", MIN('IT Area'[IT Sub Area]), \"max\", MAX('IT Area'[IT Sub Area]))"
+    },
+    {
+      "id": "column/it-area/it-sub-area-id-cd726c83",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('IT Area'[IT Sub Area ID]), \"blanks\", COUNTBLANK('IT Area'[IT Sub Area ID]), \"min\", MIN('IT Area'[IT Sub Area ID]), \"max\", MAX('IT Area'[IT Sub Area ID]), \"sum\", SUM('IT Area'[IT Sub Area ID]))"
+    },
+    {
+      "id": "table/it-area",
+      "query": "EVALUATE 'IT Area'"
+    },
+    {
+      "id": "measure/it-area-sub-area-50734a1e",
+      "query": "EVALUATE ROW(\"v\", [IT Area/Sub Area])"
+    },
+    {
+      "id": "rows/scenario",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Scenario'))"
+    },
+    {
+      "id": "column/scenario/scenario-cdaec8c0",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Scenario'[Scenario]), \"blanks\", COUNTBLANK('Scenario'[Scenario]), \"min\", MIN('Scenario'[Scenario]), \"max\", MAX('Scenario'[Scenario]))"
+    },
+    {
+      "id": "column/scenario/scenario-id-10a2f812",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Scenario'[Scenario ID]), \"blanks\", COUNTBLANK('Scenario'[Scenario ID]), \"min\", MIN('Scenario'[Scenario ID]), \"max\", MAX('Scenario'[Scenario ID]), \"sum\", SUM('Scenario'[Scenario ID]))"
+    },
+    {
+      "id": "column/scenario/scenariodescription-343f07eb",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Scenario'[ScenarioDescription]), \"blanks\", COUNTBLANK('Scenario'[ScenarioDescription]), \"min\", MIN('Scenario'[ScenarioDescription]), \"max\", MAX('Scenario'[ScenarioDescription]))"
+    },
+    {
+      "id": "table/scenario",
+      "query": "EVALUATE 'Scenario'"
+    },
+    {
+      "id": "rows/toggle-for-variance-to-plan",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Toggle for variance to plan'))"
+    },
+    {
+      "id": "column/toggle-for-variance-to-plan/-ee224e1c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Toggle for variance to plan'[# / %]), \"blanks\", COUNTBLANK('Toggle for variance to plan'[# / %]), \"min\", MIN('Toggle for variance to plan'[# / %]), \"max\", MAX('Toggle for variance to plan'[# / %]))"
+    },
+    {
+      "id": "column/toggle-for-variance-to-plan/parameter-fields-9dddb4ab",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Toggle for variance to plan'[Parameter Fields]), \"blanks\", COUNTBLANK('Toggle for variance to plan'[Parameter Fields]), \"min\", MIN('Toggle for variance to plan'[Parameter Fields]), \"max\", MAX('Toggle for variance to plan'[Parameter Fields]))"
+    },
+    {
+      "id": "column/toggle-for-variance-to-plan/parameter-order-e99f59a1",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Toggle for variance to plan'[Parameter Order]), \"blanks\", COUNTBLANK('Toggle for variance to plan'[Parameter Order]), \"min\", MIN('Toggle for variance to plan'[Parameter Order]), \"max\", MAX('Toggle for variance to plan'[Parameter Order]), \"sum\", SUM('Toggle for variance to plan'[Parameter Order]))"
+    },
+    {
+      "id": "table/toggle-for-variance-to-plan",
+      "query": "EVALUATE 'Toggle for variance to plan'"
+    },
+    {
+      "id": "rows/toggle-for-breakdown",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Toggle for breakdown'))"
+    },
+    {
+      "id": "column/toggle-for-breakdown/breakdown-by-76ae67b6",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Toggle for breakdown'[Breakdown by]), \"blanks\", COUNTBLANK('Toggle for breakdown'[Breakdown by]), \"min\", MIN('Toggle for breakdown'[Breakdown by]), \"max\", MAX('Toggle for breakdown'[Breakdown by]))"
+    },
+    {
+      "id": "column/toggle-for-breakdown/parameter-fields-3b19905f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Toggle for breakdown'[Parameter Fields]), \"blanks\", COUNTBLANK('Toggle for breakdown'[Parameter Fields]), \"min\", MIN('Toggle for breakdown'[Parameter Fields]), \"max\", MAX('Toggle for breakdown'[Parameter Fields]))"
+    },
+    {
+      "id": "column/toggle-for-breakdown/parameter-order-166c5ab2",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Toggle for breakdown'[Parameter Order]), \"blanks\", COUNTBLANK('Toggle for breakdown'[Parameter Order]), \"min\", MIN('Toggle for breakdown'[Parameter Order]), \"max\", MAX('Toggle for breakdown'[Parameter Order]), \"sum\", SUM('Toggle for breakdown'[Parameter Order]))"
+    },
+    {
+      "id": "table/toggle-for-breakdown",
+      "query": "EVALUATE 'Toggle for breakdown'"
+    }
+  ]
+}

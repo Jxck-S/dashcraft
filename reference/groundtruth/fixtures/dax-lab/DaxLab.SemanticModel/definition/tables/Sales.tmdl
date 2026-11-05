@@ -1,0 +1,69 @@
+/// functions.rs fx(): six sales lines, one blank quantity and one blank date.
+table Sales
+	lineageTag: 4c8efc8b-8b4a-5037-b379-df305cef1e5f
+
+	measure 'Total Qty' = SUM(Sales[Qty])
+		lineageTag: 8358b63d-464b-545f-ba78-f44e78ddb636
+
+	measure Rows = COUNTROWS(Sales)
+		lineageTag: 4d62f2ba-04d0-5e12-8cb9-9255c7f991fb
+
+	measure 'Red Qty' = CALCULATE([Total Qty], Product[Color] = "Red")
+		lineageTag: 736fcc82-4da2-51b8-94fc-7ca09dbebccd
+
+	column Id
+		dataType: int64
+		lineageTag: 62a102d0-dc19-5d99-a2fc-5c5654a178b1
+		summarizeBy: sum
+		sourceColumn: Id
+
+		annotation SummarizationSetBy = Automatic
+
+	column ProductKey
+		dataType: string
+		lineageTag: 9268d0a4-d852-5ba5-924b-5527f3ee33e7
+		summarizeBy: none
+		sourceColumn: ProductKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column Qty
+		dataType: int64
+		lineageTag: 7a7f4dc7-3a5d-579f-bb09-9a179d320f70
+		summarizeBy: sum
+		sourceColumn: Qty
+
+		annotation SummarizationSetBy = Automatic
+
+	column Price
+		dataType: double
+		lineageTag: 015ca65f-0bb3-581c-8f75-2612dbf9a866
+		summarizeBy: sum
+		sourceColumn: Price
+
+		annotation SummarizationSetBy = Automatic
+
+	column Date
+		dataType: dateTime
+		lineageTag: bb5cd284-9e0b-575b-ba6e-935d32dc3cf8
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation SummarizationSetBy = Automatic
+
+	column Line = Sales[Qty] * [Price]
+		dataType: double
+		lineageTag: b87cdeeb-2926-5dfd-a640-34bddcf66a4b
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Sales = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [Id = Int64.Type, ProductKey = text, Qty = Int64.Type, Price = number, Date = datetime], {{1, "P1", 3, 1.5, #datetime(2024, 1, 5, 0, 0, 0)}, {2, "P1", 2, 1.5, #datetime(2024, 2, 10, 0, 0, 0)}, {3, "P2", 5, 0.25, #datetime(2024, 1, 20, 0, 0, 0)}, {4, "P3", 1, 2.0, #datetime(2024, 3, 1, 0, 0, 0)}, {5, "P9", 4, 3.0, #datetime(2024, 3, 15, 0, 0, 0)}, {6, "P2", null, 0.5, null}})
+				in
+				    Source
+
+	annotation PBI_ResultType = Table

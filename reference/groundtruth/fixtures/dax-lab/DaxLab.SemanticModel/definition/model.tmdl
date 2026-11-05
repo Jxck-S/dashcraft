@@ -1,0 +1,17 @@
+/// DaxLab: the DAX function test models of crates/pbi-dax/tests/functions.rs (ground truth).
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+ref table Product
+ref table Sales
+ref table Date
+ref table Orders
+ref table Emp

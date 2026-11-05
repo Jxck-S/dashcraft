@@ -808,11 +808,12 @@ fn userelationship_override_activates_an_inactive_relationship() {
     assert_eq!(rows(&direct), [0]);
     assert_eq!(e.graph_for(&by_ship).active_relationships(), [ship]);
     assert_eq!(e.graph_for(&d2).active_relationships(), [order]);
-    // The ship relationship has an unmatched key: Days gets a blank row.
+    // The ship relationship has an unmatched key: Days gets a blank row, even
+    // while that relationship is inactive (as in Desktop).
     let none =
         FilterContext::new().with_relationship_override(RelationshipOverride::Activate(ship));
     assert!(none.is_empty() && none.has_relationship_overrides());
-    assert!(!e.visible(&FilterContext::new(), "Days").unwrap().blank_row);
+    assert!(e.visible(&FilterContext::new(), "Days").unwrap().blank_row);
     assert!(e.visible(&none, "Days").unwrap().blank_row);
     // ALL() keeps the override; contexts differ in equality and fingerprint.
     let mut cleared = by_ship.clone();

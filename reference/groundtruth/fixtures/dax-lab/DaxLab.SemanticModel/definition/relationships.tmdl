@@ -1,0 +1,12 @@
+relationship 02dbd7f4-e1b9-55a5-a49f-a90d97145b67
+	fromColumn: Sales.ProductKey
+	toColumn: Product.ProductKey
+
+relationship 5cf2d862-699d-58ed-b8dc-f4135e14a262
+	fromColumn: Orders.OrderDate
+	toColumn: Date.Date
+
+relationship 8de3f1f4-23e2-5b0f-97be-cc89a5e0e30d
+	isActive: false
+	fromColumn: Orders.ShipDate
+	toColumn: Date.Date
