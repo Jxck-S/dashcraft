@@ -7,6 +7,23 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-04
 
+### CI build reuse, Windows linking and test scheduling
+
+- **What:** Added tested conservative frontend-only job selection, workspace-only compiler
+  caching alongside existing dependency caches, trusted-PR dependency-cache saves, bundled
+  Windows LLD with debug symbols disabled, and nextest with separate doctests. App checks
+  remain on all three platforms; Rust changes still run the complete matrix and perf jobs.
+- **Why:** PR #16 took about 34 minutes versus 11 for its identical merged tree with warmer
+  caches. Windows spent 24m16s compiling/linking tests and about four minutes executing them.
+- **Numbers:** Six change-selection regression tests; existing assertions, ignored-test policy,
+  performance budgets and golden thresholds are unchanged. CI run `41927081220`, attempts 1/2
+  on `d71dcc1`, passed all ten jobs both times: workflow 37m28s → 7m02s; Windows Rust
+  37m14s → 6m46s, test compilation 25m46s → 1m45s. All 1,228 Windows tests and twelve
+  doctests passed; two doctests remain ignored. APT was uncached and varied 10m12s → 23s:
+  slow package downloads remain open. Initial cache migration can still require a full build;
+  these runs demonstrate warm reuse, not a controlled old/new benchmark. Commits `b1c69b0`,
+  `d71dcc1`; details and all-platform timings in [CI](ci.md#build-reuse-and-test-execution).
+
 ### Dependabot PR #16: SQLite serialization compatibility
 
 - **What:** The two synthetic SQLite fixture builders in `pbi-vertipaq` use mutable

@@ -272,6 +272,9 @@ page where optional local golden images exist (no exceptions; none are committed
 commands tested through `Registry::execute`. Add tests for the behaviour you change, preferably
 in existing test files.
 
+CI runs the same default-member tests with `cargo nextest run --locked --no-fail-fast` plus
+`cargo test --doc --locked --no-fail-fast`; local `cargo test` remains the standard gate.
+
 ### Fixtures and expected values
 
 Fixture root: `$DASHCRAFT_REFERENCE`, else `<workspace>/reference`; [reference/README.md](reference/README.md)

@@ -307,7 +307,7 @@ Source: [docs/packaging.md](packaging.md), [docs/ci.md](ci.md), `.github/workflo
 
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
-| CI matrix: macOS arm64, Windows x64, Ubuntu (fmt, layers, clippy, tests, app, deny, perf) | ✅ | 5 | `.github/workflows/ci.yml` | — |
+| CI matrix: macOS arm64, Windows x64, Ubuntu (fmt, layers, clippy, tests, app, deny, perf) | ✅ | 5 | `.github/workflows/ci.yml`; tested frontend-only selection; both full validation attempts passed, warm workflow 7m02s ([CI](ci.md#build-reuse-and-test-execution)) | Cache APT download archives; monitor cold builds and cache storage |
 | macOS app + dmg (arm64, x64) | 🟡 | 3 | `release.yml`; ad-hoc signature without secrets | Signing + notarization |
 | Windows msi + nsis | 🟡 | 3 | `release.yml`; unsigned | Code signing |
 | Linux AppImage + deb | ✅ | 4 | `release.yml` (ubuntu-22.04 glibc); deb package `dash-craft` ([decision](packaging.md#linux-package-name-dash-craft-decided)) | — |
