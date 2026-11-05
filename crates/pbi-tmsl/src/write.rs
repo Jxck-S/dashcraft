@@ -166,7 +166,8 @@ fn write_selection_expression(e: &CalculationGroupExpression, style: KeyOrder) -
 }
 
 fn write_column(c: &Column, style: KeyOrder) -> Value {
-    let mut w = ObjWriter::new(&c.extra);
+    let extra = tom_related_column_details(c);
+    let mut w = ObjWriter::new(&extra);
     let column_type = match c.kind {
         ColumnKind::Data { .. } => ColumnType::Data,
         ColumnKind::Calculated { .. } => ColumnType::Calculated,
@@ -221,6 +222,31 @@ fn write_measure(m: &Measure, style: KeyOrder) -> Value {
     w.put("dataCategory", &OPT_SINGLE, &m.data_category);
     w.put("annotations", &Annotations, &m.annotations);
     w.finish(order::MEASURE, style)
+}
+
+/// A column's `relatedColumnDetails` read from TMDL or VertiPaq metadata is a
+/// TMDL object (`groupByColumn: Name`); TOM JSON writes it as
+/// `{"groupByColumns": [{"groupingColumn": …}]}`. JSON read from TMSL is
+/// written as it was.
+fn tom_related_column_details(c: &Column) -> Cow<'_, PropertyBag> {
+    let Some((key, PropValue::Object(_) | PropValue::List(_))) = c
+        .extra
+        .iter()
+        .find(|(k, _)| k.eq_ignore_ascii_case("relatedColumnDetails"))
+    else {
+        return Cow::Borrowed(&c.extra);
+    };
+    let groupings: Vec<Value> = c
+        .group_by_columns()
+        .into_iter()
+        .map(|name| serde_json::json!({ "groupingColumn": name }))
+        .collect();
+    let mut bag = c.extra.clone();
+    bag.insert(
+        key.clone(),
+        PropValue::Json(serde_json::json!({ "groupByColumns": groupings })),
+    );
+    Cow::Owned(bag)
 }
 
 /// A measure's dynamic format string read from TMDL (or set in code) is an

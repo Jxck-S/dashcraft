@@ -126,6 +126,10 @@ fn simple_agg_at(i: &Interp<'_>, env: &Env, e: &Expr, chain: usize) -> Option<Si
                 return None;
             };
             let (table, column) = i.resolve_column(env, table.as_deref(), column).ok()?;
+            // The interpreter raises Desktop's composite-key error.
+            if i.is_grouped_column(&table, &column) {
+                return None;
+            }
             Some(SimpleAgg { table, column, agg })
         }
         ExprKind::ColumnRef { table, column } => {

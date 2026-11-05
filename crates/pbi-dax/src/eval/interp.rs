@@ -553,6 +553,16 @@ impl<'a> Interp<'a> {
         self.query_tables.contains_key(&name_key(name)) || self.snapshot.table(name).is_ok()
     }
 
+    /// `true` if the model column is grouped by other columns
+    /// (`relatedColumnDetails`, e.g. a field parameter's display column), so
+    /// it is one part of a composite key.
+    pub fn is_grouped_column(&self, table: &str, column: &str) -> bool {
+        self.model
+            .table(table)
+            .and_then(|t| t.column(column))
+            .is_some_and(|c| !c.group_by_columns().is_empty())
+    }
+
     // ---- measures --------------------------------------------------------
 
     pub fn find_measure(&self, table: Option<&str>, name: &str) -> Result<Option<MeasureRef>> {

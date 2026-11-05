@@ -966,6 +966,38 @@ fn writes_a_model_built_in_code() {
     assert_eq!(back.expressions, model.expressions);
 }
 
+#[test]
+fn tmdl_group_by_columns_are_written_as_tom_json() {
+    let mut details = pbi_model::RawObject::default();
+    details
+        .properties
+        .insert("groupByColumn".into(), "'Parameter Fields'".into());
+    let mut display = Column::data("Breakdown by", DataType::String);
+    display.extra.insert(
+        "relatedColumnDetails".into(),
+        PropValue::Object(Box::new(details)),
+    );
+    let mut t = Table::new("Toggle");
+    t.columns = vec![display, Column::data("Parameter Fields", DataType::String)];
+    let model = Model {
+        tables: vec![t],
+        ..Model::default()
+    };
+    let text = write_bim(&model, None, None);
+    let out = value(&text);
+    assert_eq!(
+        out["model"]["tables"][0]["columns"][0]["relatedColumnDetails"],
+        json!({"groupByColumns": [{"groupingColumn": "Parameter Fields"}]})
+    );
+    let back = read_bim(&text).unwrap().model;
+    let column = back
+        .table("Toggle")
+        .unwrap()
+        .column("Breakdown by")
+        .unwrap();
+    assert_eq!(column.group_by_columns(), ["Parameter Fields"]);
+}
+
 // ---------------------------------------------------------------------------
 // Layout detection, encodings and origins
 

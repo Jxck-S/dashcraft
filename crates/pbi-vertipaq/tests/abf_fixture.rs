@@ -392,3 +392,28 @@ fn fixture_options_and_direct_metadata_access() {
     );
     assert_eq!(db.storage_map().unwrap().tables.len(), 84);
 }
+
+#[test]
+fn fixture_field_parameter_group_by_columns() {
+    let Some((_, loaded)) = load(common::CORPORATE_SPEND) else {
+        return;
+    };
+    let model = &loaded.model;
+    for (table, column) in [
+        ("Toggle for variance to plan", "# / %"),
+        ("Toggle for breakdown", "Breakdown by"),
+    ] {
+        let col = model.table(table).unwrap().column(column).unwrap();
+        assert_eq!(
+            col.group_by_columns(),
+            ["Parameter Fields"],
+            "{table}[{column}]"
+        );
+    }
+    let fields = model
+        .table("Toggle for breakdown")
+        .unwrap()
+        .column("Parameter Fields")
+        .unwrap();
+    assert!(fields.group_by_columns().is_empty());
+}

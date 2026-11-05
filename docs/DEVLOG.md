@@ -7,6 +7,21 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-05
 
+### Field-parameter composite keys
+
+- **What:** `pbi-model` `Column::group_by_columns()` reads `relatedColumnDetails` (TMDL
+  `groupByColumn`, TOM JSON `groupByColumns`); `pbi-vertipaq` fills it from the
+  `RelatedColumnDetails`/`GroupByColumn` metadata tables; the TMDL and TMSL writers convert
+  between the two shapes; `pbi-dax` raises Desktop's "part of composite key" error when such a
+  column is aggregated alone (and the storage-engine fast path falls back to that error).
+- **Why:** The last fixable deviation-ledger entry (`samples-corporate-spend`
+  `column/toggle-for-*`).
+- **Numbers:** `samples-corporate-spend` 79/79 equal to Desktop without a ledger entry; ledger
+  2 → 1. The remaining entry (`format` `measure/sales-scaled`, by design) is the 15th digit of a
+  double sum: adding Orders[Line Amount] in Desktop's own storage row order reproduces its
+  …003 exactly, the CSV order gives …4999999986 and DashCraft's per-dictionary-value sum …001, so
+  matching would mean reproducing VertiPaq's row-reordering heuristic.
+
 ### DAX context semantics from the ground-truth ledger
 
 - **What:** `pbi-dax` gains per-iteration `ALLSELECTED` shadow contexts (`context::Shadow`,

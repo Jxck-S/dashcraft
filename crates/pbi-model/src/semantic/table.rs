@@ -7,8 +7,8 @@ use super::calc_group::{CalculationGroup, prop_expression};
 use super::types::{DataType, PartitionMode, SummarizeBy};
 use crate::ids::ObjectId;
 use crate::macros::lenient_eq;
-use crate::names::names_eq;
-use crate::props::{Annotation, Origin, PropertyBag};
+use crate::names::{names_eq, tmdl_unquote};
+use crate::props::{Annotation, Origin, PropValue, PropertyBag};
 use crate::serde_util::is_false;
 
 /// What kind of table this is, derived from its partitions.
@@ -271,6 +271,65 @@ impl Column {
             ColumnKind::Data { source_column }
             | ColumnKind::CalculatedTableColumn { source_column } => Some(source_column),
             _ => None,
+        }
+    }
+
+    /// Names of the columns this column is grouped by (TOM
+    /// `relatedColumnDetails.groupByColumns`, kept in `extra`), e.g. a field
+    /// parameter's display column grouped by its `Parameter Fields` column.
+    /// Reads the TMDL shape (`groupByColumn: 'Name'`) and the TMSL shape
+    /// (`{"groupByColumns": [{"groupingColumn": "Name"}]}`).
+    pub fn group_by_columns(&self) -> Vec<String> {
+        let Some(details) = self
+            .extra
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case("relatedColumnDetails"))
+            .map(|(_, v)| v)
+        else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        collect_group_by(details, &mut out);
+        out
+    }
+}
+
+fn collect_group_by(value: &PropValue, out: &mut Vec<String>) {
+    match value {
+        PropValue::Object(object) => {
+            for (key, v) in &object.properties {
+                if key.eq_ignore_ascii_case("groupByColumn") {
+                    collect_group_by_names(v, out);
+                }
+            }
+        }
+        PropValue::Json(serde_json::Value::Object(map)) => {
+            let Some(serde_json::Value::Array(items)) = map.get("groupByColumns") else {
+                return;
+            };
+            for item in items {
+                if let Some(name) = item.get("groupingColumn").and_then(|v| v.as_str()) {
+                    out.push(name.to_owned());
+                }
+            }
+        }
+        PropValue::List(items) => items.iter().for_each(|i| collect_group_by(i, out)),
+        _ => {}
+    }
+}
+
+fn collect_group_by_names(value: &PropValue, out: &mut Vec<String>) {
+    match value {
+        PropValue::List(items) => items.iter().for_each(|i| collect_group_by_names(i, out)),
+        PropValue::Object(object) => {
+            if let Some(name) = &object.name {
+                out.push(tmdl_unquote(name.trim()).into_owned());
+            }
+        }
+        other => {
+            if let Some(text) = other.as_str() {
+                out.push(tmdl_unquote(text.trim()).into_owned());
+            }
         }
     }
 }
@@ -574,6 +633,28 @@ mod tests {
         };
         let json = serde_json::to_string(&p).unwrap();
         assert_eq!(serde_json::from_str::<Partition>(&json).unwrap(), p);
+    }
+
+    #[test]
+    fn group_by_columns_reads_tmdl_and_tmsl_shapes() {
+        let mut tmdl = Column::data("Breakdown by", DataType::String);
+        assert!(tmdl.group_by_columns().is_empty());
+        let mut details = crate::props::RawObject::default();
+        details
+            .properties
+            .insert("groupByColumn".into(), "'Parameter Fields'".into());
+        tmdl.extra.insert(
+            "relatedColumnDetails".into(),
+            PropValue::Object(Box::new(details)),
+        );
+        assert_eq!(tmdl.group_by_columns(), ["Parameter Fields"]);
+
+        let mut tmsl = Column::data("# / %", DataType::String);
+        tmsl.extra.insert(
+            "relatedColumnDetails".into(),
+            serde_json::json!({"groupByColumns": [{"groupingColumn": "Parameter Fields"}]}).into(),
+        );
+        assert_eq!(tmsl.group_by_columns(), ["Parameter Fields"]);
     }
 
     #[test]

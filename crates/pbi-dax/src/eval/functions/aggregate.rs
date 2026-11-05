@@ -56,6 +56,7 @@ pub(crate) fn count_value(n: usize) -> Value {
 fn column_agg(i: &Interp<'_>, env: &Env, args: &[Expr], f: &str, agg: Agg) -> R {
     arity(f, args, 1, 1)?;
     let (t, c) = i.column_arg(env, arg(f, args, 0)?, f)?;
+    reject_partial_composite_key(i, &t, &c)?;
     let vis = i.snapshot.visible(&env.filter, &t)?;
     // Desktop leaves the relationship blank row out of DISTINCTCOUNT and
     // COUNTBLANK (ground truth: 3 colours plus the blank row count 3; the
@@ -63,6 +64,20 @@ fn column_agg(i: &Interp<'_>, env: &Env, args: &[Expr], f: &str, agg: Agg) -> R 
     let blank_row = vis.blank_row && !matches!(agg, Agg::DistinctCount | Agg::CountBlank);
     ok(i.snapshot
         .aggregate_with_blank_row(&t, &c, &vis.rows, blank_row, agg)?)
+}
+
+/// A column grouped by other columns (`relatedColumnDetails`, e.g. a field
+/// parameter's display column) is one part of a composite key; Desktop refuses
+/// to aggregate it alone (ground truth: `DISTINCTCOUNT`/`MIN`/`MAX` of
+/// `'Toggle for breakdown'[Breakdown by]` fail).
+fn reject_partial_composite_key(i: &Interp<'_>, table: &str, column: &str) -> Result<()> {
+    if i.is_grouped_column(table, column) {
+        return Err(DaxError::evaluation(format!(
+            "Column [{column}] is part of composite key, but not all columns of the \
+             composite key are included in the expression or its dependent expression."
+        )));
+    }
+    Ok(())
 }
 
 fn sum(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {

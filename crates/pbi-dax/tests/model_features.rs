@@ -14,7 +14,7 @@ use pbi_dax::{DaxError, EvalContext, evaluate_measure, evaluate_scalar, format_v
 use pbi_engine::{ColumnFilter, Engine, FilterContext, SecurityContext, UserIdentity, Value};
 use pbi_model::{
     CalculationGroup, CalculationGroupExpression, CalculationItem, Cardinality, Column, ColumnKind,
-    ColumnRef, CrossFilter, DataType, Measure, Model, PropValue, Relationship, Table,
+    ColumnRef, CrossFilter, DataType, Measure, Model, PropValue, RawObject, Relationship, Table,
 };
 use pretty_assertions::assert_eq;
 
@@ -725,4 +725,93 @@ fn identity_functions_return_the_effective_user() {
     );
     assert_eq!(eval(&engine, "USEROBJECTID()"), Value::string("0f1e"));
     assert_eq!(eval(&engine, "CUSTOMDATA()"), Value::string("tenant=7"));
+}
+
+// ---- field parameters ------------------------------------------------------------
+
+/// A field-parameter table: the display column `Breakdown by` is grouped by
+/// `Parameter Fields` (`relatedColumnDetails`), so the two form a composite
+/// key. Desktop (ground truth, Corporate Spend) refuses to aggregate the
+/// display column alone; the other columns and the table aggregate normally.
+#[test]
+fn field_parameter_display_column_is_part_of_a_composite_key() {
+    let mut display = Column::data("Breakdown by", DataType::String);
+    let mut details = RawObject::default();
+    details.properties.insert(
+        "groupByColumn".into(),
+        PropValue::Text("'Parameter Fields'".into()),
+    );
+    display.extra.insert(
+        "relatedColumnDetails".into(),
+        PropValue::Object(Box::new(details)),
+    );
+    let mut t = Table::new("Toggle");
+    t.columns = vec![
+        display,
+        Column::data("Parameter Fields", DataType::String),
+        Column::data("Parameter Order", DataType::Int64),
+    ];
+    t.measures = vec![Measure::new("Kinds", "DISTINCTCOUNT(Toggle[Breakdown by])")];
+    let model = Model {
+        tables: vec![t],
+        ..Model::default()
+    };
+    let mut engine = Engine::new(&model);
+    engine
+        .load_table(
+            "Toggle",
+            batch(vec![
+                ("Breakdown by", texts(&["Region", "Category"])),
+                (
+                    "Parameter Fields",
+                    texts(&["'Geo'[Region]", "'Item'[Category]"]),
+                ),
+                ("Parameter Order", ints(&[Some(0), Some(1)])),
+            ]),
+        )
+        .unwrap();
+    let snapshot = engine.snapshot();
+    let ctx = FilterContext::new();
+    for expr in [
+        "DISTINCTCOUNT(Toggle[Breakdown by])",
+        "COUNTBLANK(Toggle[Breakdown by])",
+        "MIN(Toggle[Breakdown by])",
+        "MAX(Toggle[Breakdown by])",
+    ] {
+        let err = evaluate_scalar(&snapshot, &model, expr, &ctx).unwrap_err();
+        assert!(
+            err.to_string().contains("is part of composite key"),
+            "{expr}: {err}"
+        );
+    }
+    // The storage-engine fast path falls back to the interpreter's error.
+    let ectx = EvalContext::new(snapshot.clone(), Arc::new(model.clone()));
+    assert!(
+        ectx.evaluate_query("EVALUATE SUMMARIZECOLUMNS(Toggle[Parameter Order], \"K\", [Kinds])")
+            .is_err()
+    );
+    assert_eq!(
+        evaluate_scalar(
+            &snapshot,
+            &model,
+            "DISTINCTCOUNT(Toggle[Parameter Fields])",
+            &ctx
+        )
+        .unwrap(),
+        i(2)
+    );
+    assert_eq!(
+        evaluate_scalar(&snapshot, &model, "MAX(Toggle[Parameter Order])", &ctx).unwrap(),
+        i(1)
+    );
+    assert_eq!(
+        evaluate_scalar(
+            &snapshot,
+            &model,
+            "COUNTROWS(VALUES(Toggle[Breakdown by]))",
+            &ctx
+        )
+        .unwrap(),
+        i(2)
+    );
 }

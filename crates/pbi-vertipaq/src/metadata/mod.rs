@@ -248,6 +248,8 @@ impl MetadataDb {
             format_string_definitions: self.rows("FormatStringDefinition")?,
             detail_rows_definitions: self.rows("DetailRowsDefinition")?,
             kpis: self.rows("KPI")?,
+            related_column_details: self.rows("RelatedColumnDetails")?,
+            group_by_columns: self.rows("GroupByColumn")?,
         })
     }
 
