@@ -2,31 +2,6 @@
   "schemaVersion": 1,
   "deviations": [
     {
-      "suite": "dax-functions",
-      "case": "table/06b8f448",
-      "kind": "lenient",
-      "reason": "KEEPFILTERS outside a CALCULATE filter argument or a table-scanning function argument (COUNTROWS(KEEPFILTERS(...))) is an error in Desktop; DashCraft evaluates its table argument."
-    },
-    {
-      "suite": "dax-functions",
-      "case": "misc/3656ae1f",
-      "kind": "lenient",
-      "reason": "IGNORE outside SUMMARIZECOLUMNS is an error in Desktop; DashCraft evaluates its argument."
-    },
-    {
-      "suite": "dax-functions",
-      "case": "time-intelligence/f06840d5",
-      "kind": "lenient",
-      "reason": "CROSSFILTER(..., OneWay_LeftFiltersRight) naming the many side so that only the many side filters the one side is an error in Desktop; DashCraft applies the direction."
-    },
-    {
-      "suite": "dax-functions",
-      "case": "window/ae56c26b",
-      "kind": "bug",
-      "reason": "The implied ALLSELECTED of OFFSET/WINDOW outside any iteration keeps the outer CALCULATE filters in Desktop; DashCraft restores the query's root filter context (the ALLSELECTED shadow is the root filter, pbi-dax eval/context.rs). Needs shadow filter contexts per CALCULATE.",
-      "gap": "DAX engine"
-    },
-    {
       "suite": "format",
       "case": "measure/sales-scaled",
       "kind": "byDesign",

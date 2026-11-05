@@ -23,7 +23,7 @@ use super::aggregate::cmp_keys;
 use super::{Builtin, arg, arity, scalar_fn, table_fn};
 use crate::eval::context::Env;
 use crate::eval::error::{DaxError, Result};
-use crate::eval::filters::{Selected, apply_allselected};
+use crate::eval::filters::Selected;
 use crate::eval::interp::{Interp, Val};
 use crate::eval::ops;
 use crate::eval::table::{RowPos, VColumn, VirtualTable};
@@ -123,14 +123,7 @@ fn relation(i: &Interp<'_>, env: &Env, f: &str, spec: &Spec<'_>) -> Result<Arc<V
             feature: format!("{f} without a relation over columns of several tables"),
         });
     }
-    let mut filter = (*env.filter).clone();
-    let graph = i.snapshot.graph_for(&filter);
-    apply_allselected(
-        &mut filter,
-        &Selected::Columns(cols.clone()),
-        &env.shadow,
-        &graph,
-    );
+    let filter = i.allselected_table_context(env, &Selected::Columns(cols.clone()))?;
     let names: Vec<String> = cols.iter().map(|(_, c)| c.clone()).collect();
     let combos = super::tables::visible_combos(i, &filter, &table, &names)?;
     let columns = cols

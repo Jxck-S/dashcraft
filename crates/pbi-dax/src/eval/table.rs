@@ -120,6 +120,9 @@ pub struct VirtualTable {
     pub(crate) columns: Arc<[VColumn]>,
     pub(crate) base: Option<Arc<TableData>>,
     pub(crate) rows: Rows,
+    /// Wrapped in `KEEPFILTERS` as the table of an iterator (see
+    /// [`crate::eval::context::RowFrame`]); never set on a derived table.
+    pub(crate) keep_filters: bool,
 }
 
 impl VirtualTable {
@@ -131,6 +134,7 @@ impl VirtualTable {
             columns,
             base: Some(data),
             rows: Rows::Set { rows, blank_row },
+            keep_filters: false,
         }
     }
 
@@ -144,6 +148,7 @@ impl VirtualTable {
                     .map(|values| VRow { base: 0, values })
                     .collect(),
             ),
+            keep_filters: false,
         }
     }
 
@@ -269,6 +274,13 @@ impl VirtualTable {
             .collect()
     }
 
+    /// A copy marked as the `KEEPFILTERS` table of an iterator.
+    pub(crate) fn with_keep_filters(&self) -> VirtualTable {
+        let mut t = self.clone();
+        t.keep_filters = true;
+        t
+    }
+
     /// The rows at `keep` (same structure: a set-backed table stays one).
     pub(crate) fn subset(&self, keep: &[RowPos]) -> VirtualTable {
         let rows = match &self.rows {
@@ -302,6 +314,7 @@ impl VirtualTable {
             columns: Arc::clone(&self.columns),
             base: self.base.clone(),
             rows,
+            keep_filters: false,
         }
     }
 
@@ -318,6 +331,7 @@ impl VirtualTable {
             columns: Arc::clone(&self.columns),
             base: self.base.clone(),
             rows: Rows::List(list),
+            keep_filters: false,
         }
     }
 
@@ -346,6 +360,7 @@ impl VirtualTable {
             columns: columns.into(),
             base: self.base.clone(),
             rows: Rows::List(list),
+            keep_filters: false,
         }
     }
 
@@ -384,6 +399,7 @@ impl VirtualTable {
             columns: columns.into(),
             base: self.base.clone(),
             rows: self.rows.clone(),
+            keep_filters: false,
         }
     }
 

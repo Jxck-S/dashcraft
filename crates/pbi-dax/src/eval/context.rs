@@ -1,8 +1,8 @@
 //! Evaluation context: filter context, row context (stack of row frames),
 //! variable scope.
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, OnceLock};
 
 use pbi_engine::{CancellationToken, ColumnFilter, EngineSnapshot, FilterContext, RowSet, Value};
 use pbi_model::names::name_key;
@@ -18,11 +18,16 @@ use super::table::{RowPos, VirtualTable};
 pub struct RowFrame {
     pub(crate) table: Arc<VirtualTable>,
     pub(crate) pos: RowPos,
+    /// The table was iterated through `KEEPFILTERS`: context transition
+    /// intersects the row with the existing filters instead of replacing
+    /// them.
+    pub(crate) keep: bool,
 }
 
 impl RowFrame {
     pub(crate) fn new(table: Arc<VirtualTable>, pos: RowPos) -> Self {
-        Self { table, pos }
+        let keep = table.keep_filters;
+        Self { table, pos, keep }
     }
 
     /// The table being iterated.
@@ -373,6 +378,57 @@ impl EvalContext {
     }
 }
 
+/// The *shadow* filter context that `ALLSELECTED` restores: set by a
+/// visual / `SUMMARIZECOLUMNS` data point (a fixed context) or by the
+/// innermost iteration (the filter context where the iteration started,
+/// with the iterated table applied as a filter; computed on first use).
+#[derive(Debug, Clone)]
+pub(crate) struct Shadow(Arc<ShadowInner>);
+
+#[derive(Debug)]
+struct ShadowInner {
+    base: Arc<FilterContext>,
+    iterated: Option<Arc<VirtualTable>>,
+    resolved: OnceLock<Arc<FilterContext>>,
+}
+
+impl Shadow {
+    /// A fixed shadow context.
+    pub fn fixed(filter: Arc<FilterContext>) -> Self {
+        Shadow(Arc::new(ShadowInner {
+            base: filter,
+            iterated: None,
+            resolved: OnceLock::new(),
+        }))
+    }
+
+    /// The shadow context of an iteration over `table` started in `base`.
+    pub fn iteration(base: Arc<FilterContext>, table: Arc<VirtualTable>) -> Self {
+        Shadow(Arc::new(ShadowInner {
+            base,
+            iterated: Some(table),
+            resolved: OnceLock::new(),
+        }))
+    }
+
+    /// The shadow filter context; `apply` turns the iterated table into
+    /// filters on `base` (called at most once per shadow).
+    pub fn resolve(
+        &self,
+        apply: impl FnOnce(&FilterContext, &VirtualTable) -> Result<FilterContext>,
+    ) -> Result<Arc<FilterContext>> {
+        let inner = &self.0;
+        let Some(table) = &inner.iterated else {
+            return Ok(Arc::clone(&inner.base));
+        };
+        if let Some(f) = inner.resolved.get() {
+            return Ok(Arc::clone(f));
+        }
+        let f = Arc::new(apply(&inner.base, table)?);
+        Ok(Arc::clone(inner.resolved.get_or_init(|| f)))
+    }
+}
+
 /// Internal per-evaluation environment (cheap to clone).
 #[derive(Debug, Clone)]
 pub(crate) struct Env {
@@ -382,8 +438,9 @@ pub(crate) struct Env {
     /// Table owning the expression (measure or calculated column), used to
     /// resolve bare `[Column]` references.
     pub home: Option<Arc<str>>,
-    /// Shadow filter context restored by `ALLSELECTED`.
-    pub shadow: Arc<FilterContext>,
+    /// Shadow filter context restored by `ALLSELECTED` (`None`: the
+    /// current filter context, so `ALLSELECTED` changes nothing).
+    pub shadow: Option<Shadow>,
     /// Group-by columns of the current level (`ISINSCOPE`).
     pub scope: Arc<[ColumnRef]>,
     /// Calculation items applied along this evaluation.
@@ -394,11 +451,11 @@ pub(crate) struct Env {
 }
 
 impl Env {
-    /// An environment whose shadow context is `filter` itself.
+    /// An environment without a shadow context.
     pub fn new(filter: FilterContext) -> Self {
         let filter = Arc::new(filter);
         Self {
-            shadow: Arc::clone(&filter),
+            shadow: None,
             filter,
             rows: RowContext::new(),
             vars: VarScope::new(),

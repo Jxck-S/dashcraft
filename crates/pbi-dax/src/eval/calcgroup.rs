@@ -298,7 +298,7 @@ impl Interp<'_> {
             rows: RowContext::default(),
             vars: VarScope::new(),
             home: Some(Arc::from(home)),
-            shadow: Arc::clone(&env.shadow),
+            shadow: env.shadow.clone(),
             scope: Arc::clone(&env.scope),
             applied,
             selected: Some(Arc::new(m.clone())),

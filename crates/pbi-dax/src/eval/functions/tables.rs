@@ -15,10 +15,9 @@ use pbi_model::names::{name_key, names_eq};
 
 use super::aggregate::{cmp_keys, order_specs, sort_positions};
 use super::{Builtin, arg, arity, name_arg, opt_arg, scalar_fn, table_fn};
-use crate::eval::context::{Env, RowFrame, VarValue};
+use crate::eval::context::{Env, RowFrame, Shadow, VarValue};
 use crate::eval::error::{DaxError, Result};
 use crate::eval::fast;
-use crate::eval::filters::apply_allselected;
 use crate::eval::interp::{Interp, Val};
 use crate::eval::ops;
 use crate::eval::table::{RowPos, VColumn, VirtualTable, group_positions};
@@ -79,7 +78,7 @@ fn tbl(t: VirtualTable) -> R {
 
 fn filter(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("FILTER", args, 2, 2)?;
-    let table = i.table(env, arg("FILTER", args, 0)?)?;
+    let table = i.iter_table(env, arg("FILTER", args, 0)?)?;
     let pred = arg("FILTER", args, 1)?;
     let mut keep = Vec::new();
     i.iterate(env, &table, |row_env, pos| {
@@ -299,7 +298,7 @@ fn row_values(
 
 fn selectcolumns(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("SELECTCOLUMNS", args, 1, usize::MAX)?;
-    let table = i.table(env, arg("SELECTCOLUMNS", args, 0)?)?;
+    let table = i.iter_table(env, arg("SELECTCOLUMNS", args, 0)?)?;
     let mut columns = Vec::new();
     let mut exprs: Vec<&Expr> = Vec::new();
     let mut k = 1;
@@ -330,7 +329,7 @@ fn selectcolumns(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
 
 fn addcolumns(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("ADDCOLUMNS", args, 3, usize::MAX)?;
-    let table = i.table(env, arg("ADDCOLUMNS", args, 0)?)?;
+    let table = i.iter_table(env, arg("ADDCOLUMNS", args, 0)?)?;
     let pairs = name_expr_pairs("ADDCOLUMNS", args, 1)?;
     let columns = pairs
         .iter()
@@ -548,6 +547,7 @@ fn summarizecolumns(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
         .collect();
     let fa = i.collect_filter_args(env, &filter_args, "SUMMARIZECOLUMNS")?;
     let fctx = Arc::new(i.apply_filter_args(&env.filter, fa));
+    let shadow = Shadow::fixed(Arc::clone(&fctx));
 
     // Group columns by table, remembering their output positions.
     let mut by_table: Vec<(String, Vec<(usize, String)>)> = Vec::new();
@@ -673,7 +673,7 @@ fn summarizecolumns(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
                 }
             }
             let mut cenv = env.with_filter(Arc::new(f));
-            cenv.shadow = Arc::clone(&fctx);
+            cenv.shadow = Some(shadow.clone());
             cenv.scope = Arc::clone(&scope);
             let values = pairs
                 .iter()
@@ -685,11 +685,9 @@ fn summarizecolumns(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
                 .filter(|(_, (_, _, ignored))| !ignored)
                 .map(|(v, _)| v)
                 .collect();
-            let empty = if counted.is_empty() {
-                values.iter().all(Value::is_blank)
-            } else {
-                counted.iter().all(|v| v.is_blank())
-            };
+            // Only non-IGNORE values decide whether a row is kept; with
+            // every expression ignored, every combination is kept.
+            let empty = !counted.is_empty() && counted.iter().all(|v| v.is_blank());
             if empty {
                 continue;
             }
@@ -738,11 +736,15 @@ fn rollup_only(_: &Interp<'_>, _: &Env, _: &[Expr]) -> R {
     ))
 }
 
-/// `IGNORE(expr)`: in `SUMMARIZECOLUMNS` the expression does not decide
-/// whether a row is kept; elsewhere it is `expr`.
-fn ignore(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
+/// `IGNORE(expr)` is only valid as a whole extension expression of
+/// `SUMMARIZECOLUMNS`, which unwraps it; evaluated anywhere else it is an
+/// error, as in Power BI.
+fn ignore(_: &Interp<'_>, _: &Env, args: &[Expr]) -> R {
     arity("IGNORE", args, 1, 1)?;
-    i.eval(env, arg("IGNORE", args, 0)?)
+    Err(DaxError::argument(
+        "IGNORE",
+        "it can only be used in the SUMMARIZECOLUMNS function",
+    ))
 }
 
 /// `ALLSELECTED(T)` / `ALLSELECTED(T[c], …)` as a table: the rows (value
@@ -756,9 +758,7 @@ fn allselected(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
         ));
     }
     let target = i.selected_target(env, args)?;
-    let mut f = (*env.filter).clone();
-    let graph = i.snapshot.graph_for(&f);
-    apply_allselected(&mut f, &target, &env.shadow, &graph);
+    let f = i.allselected_table_context(env, &target)?;
     match target {
         crate::eval::filters::Selected::Table(t) => {
             let data = i.snapshot.table(&t)?;
@@ -815,7 +815,7 @@ fn filters(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
 /// with BLANKs).
 fn generate_impl(i: &Interp<'_>, env: &Env, args: &[Expr], f: &str, all: bool) -> R {
     arity(f, args, 2, 2)?;
-    let left = i.table(env, arg(f, args, 0)?)?;
+    let left = i.iter_table(env, arg(f, args, 0)?)?;
     let right_expr = arg(f, args, 1)?;
     let mut right_columns: Option<Vec<VColumn>> = None;
     let mut rows: Vec<(Vec<Value>, Vec<Vec<Value>>)> = Vec::new();
@@ -1379,9 +1379,16 @@ fn treatas(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     tbl(table.relabeled(columns))
 }
 
-fn keepfilters(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
+/// `KEEPFILTERS` is only valid as a `CALCULATE`/`CALCULATETABLE` filter
+/// argument ([`Interp::collect_filter_args`]) or as the table of an
+/// iterator ([`Interp::iter_table`]); anywhere else it is an error, as in
+/// Power BI.
+fn keepfilters(_: &Interp<'_>, _: &Env, args: &[Expr]) -> R {
     arity("KEEPFILTERS", args, 1, 1)?;
-    Ok(Val::Table(i.table(env, arg("KEEPFILTERS", args, 0)?)?))
+    Err(DaxError::argument(
+        "KEEPFILTERS",
+        "it can only be used as a top level filter argument of CALCULATE and CALCULATETABLE or with a table argument of a function performing a table scan",
+    ))
 }
 
 fn generateseries(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {

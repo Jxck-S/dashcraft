@@ -167,7 +167,7 @@ fn countrows(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
 /// Evaluates `args[1]` for every row of the table `args[0]`.
 fn iterate_values(i: &Interp<'_>, env: &Env, args: &[Expr], f: &str) -> Result<Vec<Value>> {
     arity(f, args, 2, 2)?;
-    let table = i.table(env, arg(f, args, 0)?)?;
+    let table = i.iter_table(env, arg(f, args, 0)?)?;
     let expr = arg(f, args, 1)?;
     let mut out = Vec::with_capacity(table.row_count());
     if let Some(columnar) = Columnar::compile(i, &table, expr) {
@@ -190,7 +190,7 @@ fn iterate_values(i: &Interp<'_>, env: &Env, args: &[Expr], f: &str) -> Result<V
 fn accumulate(i: &Interp<'_>, env: &Env, args: &[Expr], f: &str) -> Result<NumAcc> {
     let mut acc = NumAcc::default();
     arity(f, args, 2, 2)?;
-    let table = i.table(env, arg(f, args, 0)?)?;
+    let table = i.iter_table(env, arg(f, args, 0)?)?;
     let expr = arg(f, args, 1)?;
     if let Some(columnar) = Columnar::compile(i, &table, expr) {
         let mut wrong_type = None;
@@ -372,7 +372,7 @@ pub(crate) fn cmp_keys(a: &[Value], b: &[Value], desc: &[bool]) -> Ordering {
 
 fn concatenatex(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("CONCATENATEX", args, 2, usize::MAX)?;
-    let table = i.table(env, arg("CONCATENATEX", args, 0)?)?;
+    let table = i.iter_table(env, arg("CONCATENATEX", args, 0)?)?;
     let expr = arg("CONCATENATEX", args, 1)?;
     let delimiter = match opt_arg(args, 2) {
         Some(d) => ops::to_text(&i.scalar(env, d)?),

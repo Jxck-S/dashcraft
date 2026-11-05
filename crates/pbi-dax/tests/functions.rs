@@ -452,7 +452,42 @@ fn table_cases() -> Vec<(&'static str, Value)> {
             i(6),
         ),
         ("SUMX(GENERATESERIES(1, 4), [Value])", i(10)),
-        ("COUNTROWS(KEEPFILTERS(Product))", i(4)),
+        ("COUNTROWS(KEEPFILTERS(Product))", expect_error()),
+        // KEEPFILTERS on the table of an iterator: context transition
+        // intersects with the outer filters instead of replacing them.
+        (
+            "CALCULATE(SUMX(KEEPFILTERS(ALL(Product[Name])), [Total Qty]), Product[Name] = \"Apple\")",
+            i(5),
+        ),
+        (
+            "CALCULATE(COUNTX(KEEPFILTERS(ALL(Product[Name])), [Total Qty]), Product[Name] = \"Apple\")",
+            i(1),
+        ),
+        (
+            "CALCULATE(COUNTROWS(FILTER(KEEPFILTERS(ALL(Product[Name])), [Total Qty] > 0)), Product[Name] = \"Apple\")",
+            i(1),
+        ),
+        (
+            "SUMX(KEEPFILTERS(VALUES(Product[Name])), [Total Qty])",
+            i(15),
+        ),
+        ("COUNTROWS(FILTER(KEEPFILTERS(Product), TRUE()))", i(4)),
+        (
+            "COUNTROWS(ADDCOLUMNS(KEEPFILTERS(VALUES(Product[Name])), \"q\", [Total Qty]))",
+            i(5),
+        ),
+        (
+            "COUNTROWS(CALCULATETABLE(Product, KEEPFILTERS(Product[Color] = \"Red\")))",
+            i(2),
+        ),
+        (
+            "CALCULATE(COUNTROWS(Product), KEEPFILTERS(ALL(Product[Name])), Product[Color] = \"Red\")",
+            i(2),
+        ),
+        (
+            "COUNTROWS(VALUES(KEEPFILTERS(Product[Name])))",
+            expect_error(),
+        ),
         ("2 IN {1, 2}", b(true)),
         ("(\"A\", 1) IN {(\"a\", 1), (\"b\", 2)}", b(true)),
         ("BLANK() IN {0}", b(false)),
@@ -641,10 +676,23 @@ fn window_cases() -> Vec<(&'static str, Value)> {
             "CALCULATE(RANK(SKIP, ALL(Product[Name]), ORDERBY([Total Qty], DESC)), Product[Name] = \"Carrot\")",
             i(4),
         ),
-        // No relation: the ALLSELECTED values of the ORDERBY column.
+        // No relation: the ALLSELECTED values of the ORDERBY column; without
+        // an iteration ALLSELECTED keeps the current filters (Desktop).
         (
             "CALCULATE(CALCULATE([Total Qty], OFFSET(1, ORDERBY(Product[Name]))), Product[Name] = \"Apple\")",
+            Value::Blank,
+        ),
+        (
+            "SUMX(VALUES(Product[Name]), CALCULATE([Total Qty], OFFSET(1, ORDERBY(Product[Name]))))",
+            i(11),
+        ),
+        (
+            "CALCULATE(SUMX(VALUES(Product[Name]), CALCULATE([Total Qty], OFFSET(-1, ORDERBY(Product[Name])))), Product[Color] = \"Red\")",
             i(5),
+        ),
+        (
+            "CALCULATE(CALCULATE([Total Qty], OFFSET(-1, ORDERBY(Product[Name]))), Product[Name] IN {\"Apple\", \"Cherry\"}, Product[Name] = \"Cherry\")",
+            Value::Blank,
         ),
     ]
 }
@@ -733,7 +781,15 @@ fn misc_cases() -> Vec<(&'static str, Value)> {
             "COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"One\", 1))",
             i(5),
         ),
-        ("IGNORE(7)", i(7)),
+        ("IGNORE(7)", expect_error()),
+        (
+            "COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"Two\", IGNORE(1) + 1))",
+            expect_error(),
+        ),
+        (
+            "COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", IGNORE([Total Qty])))",
+            i(5),
+        ),
     ]
 }
 
@@ -806,6 +862,56 @@ fn visual_cases() -> Vec<(&'static str, Value)> {
         (
             "CALCULATE(ISFILTERED(Product), ALLSELECTED(Product[Color]))",
             b(false),
+        ),
+        // The ALLSELECTED shadow context: outer CALCULATE filters at query
+        // level, and the filter context in which an iteration starts.
+        (
+            "CALCULATE(COUNTROWS(ALLSELECTED(Product[Name])), Product[Color] = \"Red\")",
+            i(5),
+        ),
+        (
+            "CALCULATE(CALCULATE(COUNTROWS(Product), ALLSELECTED(Product[Name])), Product[Name] = \"Apple\")",
+            i(1),
+        ),
+        (
+            "CALCULATE(CALCULATE([Total Qty], ALLSELECTED()), Product[Color] = \"Red\")",
+            i(5),
+        ),
+        (
+            "CALCULATE(CALCULATE(COUNTROWS(ALLSELECTED(Product)), Product[Color] = \"Red\"), Product[Category] = \"Fruit\")",
+            i(2),
+        ),
+        (
+            "COUNTROWS(CALCULATETABLE(ALLSELECTED(Product[Name]), Product[Color] = \"Red\"))",
+            i(5),
+        ),
+        (
+            "CALCULATE(SUMX(VALUES(Product[Name]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Name])))), Product[Color] = \"Red\")",
+            i(4),
+        ),
+        (
+            "SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color]))))",
+            i(16),
+        ),
+        (
+            "SUMX(VALUES(Product[Category]), CALCULATE(SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color]))))))",
+            i(6),
+        ),
+        (
+            "SUMX(VALUES(Product[Category]), SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color])))))",
+            i(48),
+        ),
+        (
+            "CALCULATE(COUNTROWS(FILTER(VALUES(Product[Name]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Name]))) = 2)), Product[Color] = \"Red\")",
+            i(2),
+        ),
+        (
+            "CALCULATE(MAXX(SUMMARIZECOLUMNS(Product[Name], \"N\", COUNTROWS(ALLSELECTED(Product[Name]))), [N]), Product[Color] = \"Red\")",
+            i(5),
+        ),
+        (
+            "SUMX(VALUES(Product[Category]), CALCULATE(CALCULATE(COUNTROWS(ALLSELECTED(Product[Category])))))",
+            i(9),
         ),
     ]
 }
@@ -1679,7 +1785,23 @@ fn time_intelligence_cases() -> Vec<(&'static str, Value)> {
         ),
         (
             "CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_LeftFiltersRight))",
-            i(360),
+            expect_error(),
+        ),
+        (
+            "CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_RightFiltersLeft))",
+            i(110),
+        ),
+        (
+            "CALCULATE([Amt], CROSSFILTER('Date'[Date], Orders[OrderDate], OneWay_LeftFiltersRight))",
+            i(110),
+        ),
+        (
+            "CALCULATE([Amt], CROSSFILTER('Date'[Date], Orders[OrderDate], OneWay_RightFiltersLeft))",
+            expect_error(),
+        ),
+        (
+            "CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], 2))",
+            i(110),
         ),
         (
             "CALCULATE(COUNTROWS('Date'), Orders[Region] = \"East\", CROSSFILTER(Orders[OrderDate], 'Date'[Date], Both), ALL('Date'))",

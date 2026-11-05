@@ -7,6 +7,20 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-05
 
+### DAX context semantics from the ground-truth ledger
+
+- **What:** `pbi-dax` gains per-iteration `ALLSELECTED` shadow contexts (`context::Shadow`,
+  resolved lazily; `SUMMARIZECOLUMNS` rows and `EvalContext::with_allselected` set fixed ones), the
+  table form of `ALLSELECTED` and the implied relation of the window functions keep only the
+  shadow's filters on their scope, `KEEPFILTERS` on an iterator's table (context transition
+  intersects), and Desktop's errors for `KEEPFILTERS`/`IGNORE` outside their valid positions and
+  for a many-to-one-side-only `CROSSFILTER`. 30 new `functions.rs` cases, recorded in Desktop.
+- **Why:** The 4 non-trivial entries of the deviation ledger (1 bug, 3 lenient) and the GAPS DAX
+  row "`ALLSELECTED` shadow contexts".
+- **Numbers:** `dax-functions` 522 → 552 cases, all equal to Desktop; ledger 6 → 2 entries (left:
+  float summation order in one `FORMAT` case, by design; the field-parameter composite key of one
+  MIT sample). GAPS DAX 3.8 → 3.9.
+
 ### Power BI Desktop ground truth (ADR-0011)
 
 - **What:** A one-to-one oracle for computed values. `scripts/groundtruth/` records DAX query

@@ -138,7 +138,7 @@ fn simple_agg_at(i: &Interp<'_>, env: &Env, e: &Expr, chain: usize) -> Option<Si
                 rows: Default::default(),
                 vars: VarScope::new(),
                 home: Some(Arc::from(m.table.as_str())),
-                shadow: Arc::clone(&env.shadow),
+                shadow: env.shadow.clone(),
                 scope: Arc::clone(&env.scope),
                 applied: env.applied.clone(),
                 selected: None,
@@ -185,7 +185,11 @@ pub(crate) fn summarize_columns(
     by_table: &[(String, Vec<(usize, String)>)],
     exprs: &[(&Expr, bool)],
 ) -> Result<Option<Vec<Vec<Value>>>> {
-    if !i.fast_paths || group.is_empty() || exprs.is_empty() || fctx.has_relationship_overrides() {
+    if !i.fast_paths
+        || group.is_empty()
+        || exprs.iter().all(|(_, ignored)| *ignored)
+        || fctx.has_relationship_overrides()
+    {
         return Ok(None);
     }
     // A calculation item applied per row (group-by column of a calculation
@@ -248,17 +252,13 @@ pub(crate) fn summarize_columns(
             .iter()
             .map(|c| c.get(g).cloned().unwrap_or_default())
             .collect();
-        let mut counted = values
+        // At least one expression is counted (all-IGNORE takes the general
+        // path).
+        let empty = values
             .iter()
             .zip(exprs)
             .filter(|(_, (_, ignored))| !ignored)
-            .map(|(v, _)| v)
-            .peekable();
-        let empty = if counted.peek().is_none() {
-            values.iter().all(Value::is_blank)
-        } else {
-            counted.all(Value::is_blank)
-        };
+            .all(|(v, _)| v.is_blank());
         if empty {
             continue;
         }

@@ -19,7 +19,11 @@
 //! - `ALLSELECTED()`, `ALLSELECTED(T)`, `ALLSELECTED(T[c], …)` remove the
 //!   filters on everything / `T`'s expanded table / those columns, then
 //!   restore the filters of the *shadow* context ([`Env::shadow`]: the
-//!   query's or visual's outer filters) on the same scope;
+//!   innermost iteration's filters, or the query's or visual's outer
+//!   filters; none: the current filters) on the same scope. The table
+//!   function form keeps only the shadow's filters on its scope;
+//! - `CROSSFILTER` refuses a direction that lets only the many side of a
+//!   many-to-one relationship filter the one side, as DAX does;
 //! - `USERELATIONSHIP(a, b)` and `CROSSFILTER(a, b, dir)` set relationship
 //!   overrides on the new context
 //!   ([`pbi_engine::FilterContext::set_relationship_override`]).
@@ -193,7 +197,7 @@ impl Interp<'_> {
                     "ALLSELECTED" => {
                         out.modifiers.push(Modifier::AllSelected {
                             target: self.selected_target(env, fargs)?,
-                            shadow: Arc::clone(&env.shadow),
+                            shadow: self.shadow_context(env)?,
                         });
                         continue;
                     }
@@ -323,6 +327,20 @@ impl Interp<'_> {
                 .any(|d| d.one.matches(table, column))
     }
 
+    /// The filter context of `ALLSELECTED(target)` used as a table (and of
+    /// the implied relation of the window functions): only the shadow
+    /// context's filters on `target` apply; filters on other columns do
+    /// not (Desktop: `CALCULATE(COUNTROWS(ALLSELECTED(Product[Name])),
+    /// Product[Color] = "Red")` counts every name).
+    pub fn allselected_table_context(&self, env: &Env, target: &Selected) -> Result<FilterContext> {
+        let shadow = self.shadow_context(env)?;
+        let mut f = (*env.filter).clone();
+        f.clear();
+        let graph = self.snapshot.graph_for(&f);
+        apply_allselected(&mut f, target, &shadow, &graph);
+        Ok(f)
+    }
+
     /// The scope of an `ALLSELECTED(…)` call.
     pub fn selected_target(&self, env: &Env, args: &[Expr]) -> Result<Selected> {
         let Some(first) = args.first() else {
@@ -375,10 +393,9 @@ impl Interp<'_> {
         if name == "USERELATIONSHIP" {
             return Ok(RelationshipOverride::Activate(index));
         }
-        let left_is_many = graph
-            .definitions()
-            .get(index)
-            .is_some_and(|d| d.many.matches(&t1, &c1));
+        let def = graph.definitions().get(index);
+        let left_is_many = def.is_some_and(|d| d.many.matches(&t1, &c1));
+        let many_to_one = def.is_some_and(|d| d.kind == pbi_engine::RelationshipKind::ManyToOne);
         let dir = super::functions::arg(name, args, 2)?;
         let word = match &dir.unparen().kind {
             ExprKind::Keyword(k) | ExprKind::TableRef { name: k } => k.to_ascii_uppercase(),
@@ -405,6 +422,12 @@ impl Interp<'_> {
                 ));
             }
         };
+        if direction == CrossFilterDirection::ManyToOne && many_to_one {
+            return Err(DaxError::argument(
+                "CROSSFILTER",
+                "it cannot be used to enable only the many-side of a many-to-one relationship to filter the one-side",
+            ));
+        }
         Ok(RelationshipOverride::CrossFilter(index, direction))
     }
 
