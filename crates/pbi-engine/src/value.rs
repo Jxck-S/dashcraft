@@ -259,6 +259,25 @@ impl Value {
         ValueKey::from(self)
     }
 
+    /// The key of this value converted across the text/number divide, used by
+    /// relationships whose key columns have different types: Desktop joins a
+    /// Text `"155"` to a Number `155` (ground truth: the Corporate Spend
+    /// sample). Text that is not a number, and other types, have none.
+    pub fn cross_type_key(&self) -> Option<ValueKey> {
+        match self {
+            Value::String(s) => s
+                .trim()
+                .parse::<f64>()
+                .ok()
+                .filter(|d| d.is_finite())
+                .map(ValueKey::number),
+            Value::Integer(_) | Value::Double(_) | Value::Decimal(_) => {
+                Some(ValueKey::text(&self.to_text()))
+            }
+            _ => None,
+        }
+    }
+
     /// DAX text conversion (`BLANK` → `""`, `TRUE` → `"True"`); dates are
     /// formatted as `yyyy-mm-dd hh:mm:ss`. `FORMAT` belongs to `pbi-dax`.
     pub fn to_text(&self) -> String {

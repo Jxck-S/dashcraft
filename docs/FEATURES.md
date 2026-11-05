@@ -14,7 +14,7 @@ plan to close them is in [DESKTOP-PLAN.md](DESKTOP-PLAN.md).
 - DAX engine for measures, calculated columns and tables, and `EVALUATE` queries, with calculation groups, many-to-many relationships and row-level security ("View as" roles and a user).
 - Virtualized data grid with sort, SQL filter and column statistics; session-derived columns ("Parse people field", DAX expressions).
 - Exports: table to CSV (optional formula-injection guard) or Parquet; model to JSON or a Markdown data dictionary. Conversion to a PBIP project or PBIT template.
-- Broken-reference linter ([17 rules](../crates/pbi-core/src/lint/RULES.md)), including stale `queryRef`s.
+- Broken-reference linter ([18 rules](../crates/pbi-core/src/lint/RULES.md)), including stale `queryRef`s.
 
 **Report Renderer**
 

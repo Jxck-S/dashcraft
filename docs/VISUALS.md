@@ -288,6 +288,8 @@ Every check below runs on committed fixtures, except the golden-image comparison
 
 **Synthetic tests** (`visuals_basics.rs`, `visuals_grids.rs`, `visuals_charts.rs`, `visuals_more.rs`, `conditional_format.rs`): each visual's layout rules on hand-built DataViews.
 
+**Desktop ground truth** ([reference/groundtruth](../reference/groundtruth/README.md), ADR-0011): the values behind the visuals come from DAX that is compared with Power BI Desktop's engine: every Acme measure per page and slicer filter and grouped by the visuals' dimensions, `SUMMARIZECOLUMNS` queries shaped like the report's visuals (`acme-visuals`) and every `FORMAT` string the model uses. This checks the numbers, not the drawing; the queries Desktop's own visuals send (Performance analyzer) are not recorded yet.
+
 ### Golden-image comparison
 
 `crates/pbi-render/tests/golden.rs` renders each Acme Outfitters page at scale 2 and compares it with a PNG export of the same page made by Power BI (Desktop or the service), wherever one exists at `reference/golden/<example>/<report>/<page>.png`: the report's short name (`--report`) and the page's display name, for example `reference/golden/acme-outfitters/Overview/Executive Summary.png`. Golden images are optional local files: `reference/golden/` is gitignored, none are committed, and a page without one prints `SKIP: <file> missing`.

@@ -5,6 +5,39 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-05
+
+### Power BI Desktop ground truth (ADR-0011)
+
+- **What:** A one-to-one oracle for computed values. `scripts/groundtruth/` records DAX query
+  corpora (`gen_corpus.py`) against Power BI Desktop 2.159's local engine over ADOMD.NET
+  (`Record-GroundTruth.ps1`, black-box); `reference/groundtruth/` commits corpora, recordings,
+  the deviation ledger and the generated `dax-lab` fixture (`gen_dax_lab.py`, the models of
+  `functions.rs`); `crates/pbi-session/tests/groundtruth.rs` compares value by value;
+  `cargo xtask groundtruth [--check]` reports status. Writer check (GT-6): DashCraft's PBIP and
+  PBIT opened in Desktop, re-recorded and compared (`compare_recordings.py`). New lint rule
+  `LINT018`; M `List.Dates` and siblings.
+- **Why:** Every test so far encoded our own reading of Power BI; ROADMAP
+  `m4-windows-groundtruth` (GT-2, GT-6), DESKTOP-PLAN M13.5, the GAPS "differential testing" row
+  (score 0). Done before new features, at the owner's request.
+- **Numbers:** 11 suites, 2,212 cases (601 Acme measures, 747 `FORMAT`, 522 DAX function
+  cases, 286 on three MIT samples, …), all equal or ledgered: 6 ledger entries (1 bug: the
+  implied `ALLSELECTED` of `OFFSET`/`WINDOW`; 4 lenient; 1 float summation order), 29 volatile
+  cases. 22 findings: 9 DashCraft bug classes fixed (BLANK logic, `FORMAT` rules, `MEDIAN` over
+  dates, `List.Dates`, blank rows of inactive relationships, Text↔Number keys,
+  `COUNTBLANK`/`DISTINCTCOUNT` and the blank row, text case variants, out-of-range `FORMAT`
+  dates), 2 PBIT writer bugs fixed (`QueriesSettings` without `Version`, missing level ordinals:
+  Desktop could not open our PBIT), 2 Acme model errors fixed (static plus dynamic format string,
+  now `LINT018`; the reserved name `Catalog`), 6 ledger entries, 1 adapter difference
+  (`INFO.VIEW.RELATIONSHIPS` lists one-to-one relationships twice), `TODAY()` calculated columns
+  marked volatile, and 1 Desktop behaviour documented (template import resets a custom date
+  format).
+  PBIP written by DashCraft: 643/643 equal in Desktop; PBIT: 642/643. Two Acme render snapshots
+  gain the "(Blank)" member Desktop shows. GAPS DAX 3.3 → 3.8.
+- **Open:** Desktop's own visual queries (Performance analyzer export) and golden images need
+  manual GUI steps ([reference/groundtruth/README.md](../reference/groundtruth/README.md#manual-sessions-not-yet-recorded));
+  the `ALLSELECTED` shadow-context bug; GT-1, GT-4 and GT-5.
+
 ## 2026-11-04
 
 ### CI build reuse, Windows linking and test scheduling

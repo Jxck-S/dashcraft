@@ -634,6 +634,22 @@ fn list_functions() {
     check("List.Combine({{1}, {2, 3}})", "{1, 2, 3}");
     check("List.Accumulate({1, 2, 3}, 0, (s, x) => s + x)", "6");
     check("List.Numbers(1, 3, 2)", "{1, 3, 5}");
+    check(
+        "List.Dates(#date(2024, 2, 28), 3, #duration(1, 0, 0, 0))",
+        "{#date(2024, 2, 28), #date(2024, 2, 29), #date(2024, 3, 1)}",
+    );
+    check(
+        "List.DateTimes(#datetime(2024, 1, 1, 23, 0, 0), 2, #duration(0, 2, 0, 0))",
+        "{#datetime(2024, 1, 1, 23, 0, 0), #datetime(2024, 1, 2, 1, 0, 0)}",
+    );
+    check(
+        "List.Dates(#date(2024, 1, 1), 0, #duration(1, 0, 0, 0))",
+        "{}",
+    );
+    check(
+        "List.Durations(#duration(0, 0, 0, 0), 2, #duration(0, 1, 0, 0))",
+        "{#duration(0, 0, 0, 0), #duration(0, 1, 0, 0)}",
+    );
     check("List.Reverse({1, 2})", "{2, 1}");
     check("List.Sort({3, 1, 2})", "{1, 2, 3}");
     check("List.Sort({3, 1, 2}, Order.Descending)", "{3, 2, 1}");

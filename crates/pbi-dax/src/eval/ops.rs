@@ -350,20 +350,13 @@ pub(crate) fn is_true(v: &Value) -> Result<bool> {
 
 /// `&&` / `AND` over already-evaluated operands.
 pub(crate) fn and(l: Option<bool>, r: Option<bool>) -> Value {
-    match (l, r) {
-        (None, None) => Value::Blank,
-        (Some(true), Some(true)) => Value::Boolean(true),
-        _ => Value::Boolean(false),
-    }
+    // Desktop: `AND(BLANK(), BLANK())` is FALSE, never BLANK (ground truth).
+    Value::Boolean(matches!((l, r), (Some(true), Some(true))))
 }
 
 /// `||` / `OR` over already-evaluated operands.
 pub(crate) fn or(l: Option<bool>, r: Option<bool>) -> Value {
-    match (l, r) {
-        (None, None) => Value::Blank,
-        (Some(true), _) | (_, Some(true)) => Value::Boolean(true),
-        _ => Value::Boolean(false),
-    }
+    Value::Boolean(matches!((l, r), (Some(true), _) | (_, Some(true))))
 }
 
 /// `&` concatenation.
@@ -606,8 +599,8 @@ mod tests {
         assert_eq!(and(Some(true), None), Value::Boolean(false));
         assert_eq!(or(Some(true), None), Value::Boolean(true));
         assert_eq!(or(Some(false), None), Value::Boolean(false));
-        assert_eq!(and(None, None), Value::Blank);
-        assert_eq!(or(None, None), Value::Blank);
+        assert_eq!(and(None, None), Value::Boolean(false));
+        assert_eq!(or(None, None), Value::Boolean(false));
         assert_eq!(concat(&Value::Blank, &"a".into()), Value::from("a"));
     }
 

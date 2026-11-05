@@ -1,0 +1,4152 @@
+{
+  "schemaVersion": 1,
+  "suite": "dax-functions",
+  "desktop": { "version": "2.159.1231.0", "engine": "17.0.93.23", "culture": "en-US" },
+  "recordedOn": "2026-11-05",
+  "cases": [
+    {
+      "id": "logical/1c6a28bc",
+      "query": "EVALUATE ROW(\"v\", IF(1 > 2, \"a\", \"b\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["b"]
+      ]
+    },
+    {
+      "id": "logical/af21a1bd",
+      "query": "EVALUATE ROW(\"v\", IF(FALSE(), 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "logical/ff5fcd98",
+      "query": "EVALUATE ROW(\"v\", IF(BLANK(), 1, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "logical/01d9b04c",
+      "query": "EVALUATE ROW(\"v\", SWITCH(2, 1, \"one\", 2, \"two\", \"other\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["two"]
+      ]
+    },
+    {
+      "id": "logical/95d550bd",
+      "query": "EVALUATE ROW(\"v\", SWITCH(TRUE(), 1 > 2, \"a\", \"else\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["else"]
+      ]
+    },
+    {
+      "id": "logical/acbf7c59",
+      "query": "EVALUATE ROW(\"v\", SWITCH(9, 1, \"one\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "logical/e75e6af4",
+      "query": "EVALUATE ROW(\"v\", COALESCE(BLANK(), BLANK(), 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "logical/238ae8bb",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(BLANK()))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "logical/3f839b7d",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "logical/9a4d3781",
+      "query": "EVALUATE ROW(\"v\", BLANK())",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "logical/5d0dfab6",
+      "query": "EVALUATE ROW(\"v\", TRUE())",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "logical/d038915c",
+      "query": "EVALUATE ROW(\"v\", FALSE())",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "logical/3ce1e813",
+      "query": "EVALUATE ROW(\"v\", NOT(1 = 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "logical/093c9185",
+      "query": "EVALUATE ROW(\"v\", NOT(BLANK()))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "logical/2fe67e8c",
+      "query": "EVALUATE ROW(\"v\", AND(TRUE(), BLANK()))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "logical/f0dd4eaf",
+      "query": "EVALUATE ROW(\"v\", OR(FALSE(), BLANK()))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "logical/e52a6e6c",
+      "query": "EVALUATE ROW(\"v\", OR(BLANK(), BLANK()))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "logical/e8cc8df1",
+      "query": "EVALUATE ROW(\"v\", IFERROR(VALUE(\"abc\"), -1))",
+      "columns": ["[v]"],
+      "rows": [
+        [-1.0]
+      ]
+    },
+    {
+      "id": "logical/02880ca8",
+      "query": "EVALUATE ROW(\"v\", ISERROR(VALUE(\"abc\")))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "logical/e1795989",
+      "query": "EVALUATE ROW(\"v\", ISNUMBER(1.5))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "logical/96faed71",
+      "query": "EVALUATE ROW(\"v\", ISTEXT(\"a\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "logical/94c67635",
+      "query": "EVALUATE ROW(\"v\", ISLOGICAL(TRUE()))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "math/0a9fb394",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(10, 4))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.5]
+      ]
+    },
+    {
+      "id": "math/b81fe426",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1, 0))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "math/bcd64556",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1, 0, -1))",
+      "columns": ["[v]"],
+      "rows": [
+        [-1.0]
+      ]
+    },
+    {
+      "id": "math/11923e2c",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1, BLANK(), 9))",
+      "columns": ["[v]"],
+      "rows": [
+        [9.0]
+      ]
+    },
+    {
+      "id": "math/210c2cb2",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(BLANK(), 5))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "math/e4b63a8d",
+      "query": "EVALUATE ROW(\"v\", ABS(-3))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "math/b3678be0",
+      "query": "EVALUATE ROW(\"v\", INT(-2.5))",
+      "columns": ["[v]"],
+      "rows": [
+        [-3]
+      ]
+    },
+    {
+      "id": "math/e12d7267",
+      "query": "EVALUATE ROW(\"v\", ROUND(2.345, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.35]
+      ]
+    },
+    {
+      "id": "math/357e8bcd",
+      "query": "EVALUATE ROW(\"v\", ROUND(1.005, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.01]
+      ]
+    },
+    {
+      "id": "math/1128a12c",
+      "query": "EVALUATE ROW(\"v\", ROUNDDOWN(2.3, 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.3]
+      ]
+    },
+    {
+      "id": "math/dde75b71",
+      "query": "EVALUATE ROW(\"v\", ROUND(1234, -2))",
+      "columns": ["[v]"],
+      "rows": [
+        [1200]
+      ]
+    },
+    {
+      "id": "math/28e0126e",
+      "query": "EVALUATE ROW(\"v\", ROUNDUP(1.21, 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.3]
+      ]
+    },
+    {
+      "id": "math/4eab38a0",
+      "query": "EVALUATE ROW(\"v\", ROUNDDOWN(1.29, 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.2]
+      ]
+    },
+    {
+      "id": "math/e10014ef",
+      "query": "EVALUATE ROW(\"v\", TRUNC(-1.7))",
+      "columns": ["[v]"],
+      "rows": [
+        [-1.0]
+      ]
+    },
+    {
+      "id": "math/312e827f",
+      "query": "EVALUATE ROW(\"v\", MOD(7, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "math/0a8bbbac",
+      "query": "EVALUATE ROW(\"v\", MOD(-7, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "math/62b9ceb8",
+      "query": "EVALUATE ROW(\"v\", POWER(2, 10))",
+      "columns": ["[v]"],
+      "rows": [
+        [1024.0]
+      ]
+    },
+    {
+      "id": "math/9264d718",
+      "query": "EVALUATE ROW(\"v\", SQRT(16))",
+      "columns": ["[v]"],
+      "rows": [
+        [4.0]
+      ]
+    },
+    {
+      "id": "math/6aa13151",
+      "query": "EVALUATE ROW(\"v\", SIGN(-5))",
+      "columns": ["[v]"],
+      "rows": [
+        [-1]
+      ]
+    },
+    {
+      "id": "text/4ebcef16",
+      "query": "EVALUATE ROW(\"v\", UPPER(\"abc\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["ABC"]
+      ]
+    },
+    {
+      "id": "text/2c004a60",
+      "query": "EVALUATE ROW(\"v\", LOWER(\"ABC\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "text/4340d0e1",
+      "query": "EVALUATE ROW(\"v\", LEN(\"héllo\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "text/f356ff5f",
+      "query": "EVALUATE ROW(\"v\", LEFT(\"abcdef\", 2))",
+      "columns": ["[v]"],
+      "rows": [
+        ["ab"]
+      ]
+    },
+    {
+      "id": "text/a204800a",
+      "query": "EVALUATE ROW(\"v\", RIGHT(\"abcdef\", 3))",
+      "columns": ["[v]"],
+      "rows": [
+        ["def"]
+      ]
+    },
+    {
+      "id": "text/d39389a5",
+      "query": "EVALUATE ROW(\"v\", MID(\"abcdef\", 2, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        ["bcd"]
+      ]
+    },
+    {
+      "id": "text/ca3e246c",
+      "query": "EVALUATE ROW(\"v\", TRIM(\"  a   b  \"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["a b"]
+      ]
+    },
+    {
+      "id": "text/800ffd7e",
+      "query": "EVALUATE ROW(\"v\", CONCATENATE(\"a\", 1))",
+      "columns": ["[v]"],
+      "rows": [
+        ["a1"]
+      ]
+    },
+    {
+      "id": "text/27d6e674",
+      "query": "EVALUATE ROW(\"v\", SUBSTITUTE(\"a-b-c\", \"-\", \"+\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["a+b+c"]
+      ]
+    },
+    {
+      "id": "text/7767efc4",
+      "query": "EVALUATE ROW(\"v\", SUBSTITUTE(\"a-b-c\", \"-\", \"+\", 2))",
+      "columns": ["[v]"],
+      "rows": [
+        ["a-b+c"]
+      ]
+    },
+    {
+      "id": "text/c9ec99df",
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRING(\"Web Sessions\", \"SESSION\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "text/3942b3fd",
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRING(\"abc\", \"a?c\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "text/b90cc9d8",
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRING(\"abc\", \"x*\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "text/ddac4c37",
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRINGEXACT(\"abc\", \"B\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "text/9693a8df",
+      "query": "EVALUATE ROW(\"v\", EXACT(\"a\", \"A\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "text/bc4845f1",
+      "query": "EVALUATE ROW(\"v\", VALUE(\"12.5\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [12.5]
+      ]
+    },
+    {
+      "id": "text/ccc4e357",
+      "query": "EVALUATE ROW(\"v\", FORMAT(5 / 11, \"0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45.5%"]
+      ]
+    },
+    {
+      "id": "text/e0083a9c",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567, \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234,567"]
+      ]
+    },
+    {
+      "id": "text/64cd17c1",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5, \"\\$#,0.00;(\\$#,0.00)\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["($1,234.50)"]
+      ]
+    },
+    {
+      "id": "text/4ad4847f",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "text/18d158e3",
+      "query": "EVALUATE ROW(\"v\", FORMAT(12345.67, \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12,345.67"]
+      ]
+    },
+    {
+      "id": "text/f93afb9c",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2026, 10, 21) + 0.5, \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2026-10-21 12:00"]
+      ]
+    },
+    {
+      "id": "text/3b8c8028",
+      "query": "EVALUATE ROW(\"v\", FORMAT(MAX(Sales[Date]), \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/15/2024"]
+      ]
+    },
+    {
+      "id": "text/c312646e",
+      "query": "EVALUATE ROW(\"v\", FORMAT(3, BLANK()))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3"]
+      ]
+    },
+    {
+      "id": "text/8a2409bc",
+      "query": "EVALUATE ROW(\"v\", \"a\" & BLANK() & 1)",
+      "columns": ["[v]"],
+      "rows": [
+        ["a1"]
+      ]
+    },
+    {
+      "id": "date/cbe76211",
+      "query": "EVALUATE ROW(\"v\", DATE(2024, 2, 30))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-03-01T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "date/c045f7f0",
+      "query": "EVALUATE ROW(\"v\", YEAR(DATE(2024, 5, 6)))",
+      "columns": ["[v]"],
+      "rows": [
+        [2024]
+      ]
+    },
+    {
+      "id": "date/1834b3af",
+      "query": "EVALUATE ROW(\"v\", MONTH(DATE(2024, 5, 6)))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "date/57f80abb",
+      "query": "EVALUATE ROW(\"v\", DAY(DATE(2024, 5, 6)))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "date/7203b6d6",
+      "query": "EVALUATE ROW(\"v\", HOUR(dt\"2024-01-01T13:45:10\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [13]
+      ]
+    },
+    {
+      "id": "date/9313cfa5",
+      "query": "EVALUATE ROW(\"v\", MINUTE(dt\"2024-01-01T13:45:10\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [45]
+      ]
+    },
+    {
+      "id": "date/7b887763",
+      "query": "EVALUATE ROW(\"v\", SECOND(dt\"2024-01-01T13:45:10\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [10]
+      ]
+    },
+    {
+      "id": "date/097bea06",
+      "query": "EVALUATE ROW(\"v\", YEAR(NOW()) >= 2024)",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "date/342a3537",
+      "query": "EVALUATE ROW(\"v\", TODAY() <= NOW())",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "date/b3065a07",
+      "query": "EVALUATE ROW(\"v\", YEAR(UTCNOW()) >= 2024)",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "date/bc148dda",
+      "query": "EVALUATE ROW(\"v\", UTCTODAY() <= UTCNOW())",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "date/27d75a4c",
+      "query": "EVALUATE ROW(\"v\", MAX(Sales[Date]))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-03-15T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "aggregate/f52f5b51",
+      "query": "EVALUATE ROW(\"v\", SUM(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [15]
+      ]
+    },
+    {
+      "id": "aggregate/4a14d577",
+      "query": "EVALUATE ROW(\"v\", SUM(Sales[Line]))",
+      "columns": ["[v]"],
+      "rows": [
+        [22.75]
+      ]
+    },
+    {
+      "id": "aggregate/cd8c9669",
+      "query": "EVALUATE ROW(\"v\", MIN(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "aggregate/2b2dee01",
+      "query": "EVALUATE ROW(\"v\", MAX(Sales[Price]))",
+      "columns": ["[v]"],
+      "rows": [
+        [3.0]
+      ]
+    },
+    {
+      "id": "aggregate/cbf278eb",
+      "query": "EVALUATE ROW(\"v\", MAX(1, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "aggregate/e0fd7a28",
+      "query": "EVALUATE ROW(\"v\", MIN(BLANK(), -1))",
+      "columns": ["[v]"],
+      "rows": [
+        [-1]
+      ]
+    },
+    {
+      "id": "aggregate/e0c8b417",
+      "query": "EVALUATE ROW(\"v\", MAX(-1, BLANK()))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "aggregate/5b08ad23",
+      "query": "EVALUATE ROW(\"v\", AVERAGE(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [3.0]
+      ]
+    },
+    {
+      "id": "aggregate/3cd68118",
+      "query": "EVALUATE ROW(\"v\", COUNT(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "aggregate/a3744549",
+      "query": "EVALUATE ROW(\"v\", COUNTA(Sales[Date]))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "aggregate/9428e28f",
+      "query": "EVALUATE ROW(\"v\", COUNTBLANK(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "aggregate/9e21ba1b",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(Sales))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "aggregate/e2d7a26f",
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNT(Sales[ProductKey]))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "aggregate/b8820ec1",
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNT(Product[Color]))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "aggregate/7e486ff5",
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNTNOBLANK(Product[Color]))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "aggregate/2c2d8a34",
+      "query": "EVALUATE ROW(\"v\", SUMX(Sales, Sales[Qty] * Sales[Price]))",
+      "columns": ["[v]"],
+      "rows": [
+        [22.75]
+      ]
+    },
+    {
+      "id": "aggregate/77c62c43",
+      "query": "EVALUATE ROW(\"v\", COUNTX(Sales, Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "aggregate/16dd18dd",
+      "query": "EVALUATE ROW(\"v\", COUNTAX(Sales, Sales[Date]))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "aggregate/362a9ac3",
+      "query": "EVALUATE ROW(\"v\", MINX(Sales, Sales[Price]))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.25]
+      ]
+    },
+    {
+      "id": "aggregate/51344a9a",
+      "query": "EVALUATE ROW(\"v\", MAXX(Product, Product[Name]))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Cherry"]
+      ]
+    },
+    {
+      "id": "aggregate/ee38de48",
+      "query": "EVALUATE ROW(\"v\", AVERAGEX(Sales, Sales[Price]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.4583333333333333]
+      ]
+    },
+    {
+      "id": "aggregate/14ae1055",
+      "query": "EVALUATE ROW(\"v\", CONCATENATEX(Product, Product[Name], \", \", Product[Name], DESC))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Cherry, Carrot, Banana, Apple"]
+      ]
+    },
+    {
+      "id": "context/3f53d099",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "context/c0fe07ab",
+      "query": "EVALUATE ROW(\"v\", [Red Qty])",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "context/4e770e12",
+      "query": "EVALUATE ROW(\"v\", Sales[Red Qty] + [Rows])",
+      "columns": ["[v]"],
+      "rows": [
+        [11]
+      ]
+    },
+    {
+      "id": "context/cfa84838",
+      "query": "EVALUATE ROW(\"v\", ISEMPTY(FILTER(Product, Product[Color] = \"Blue\")))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "context/a5e4f12c",
+      "query": "EVALUATE ROW(\"v\", ISEMPTY(Product))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "context/3267a1c9",
+      "query": "EVALUATE ROW(\"v\", HASONEVALUE(Product[Color]))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "context/f70e775e",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(HASONEVALUE(Product[Color]), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "context/7003a62d",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SELECTEDVALUE(Product[Color]), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Red"]
+      ]
+    },
+    {
+      "id": "context/ded260c4",
+      "query": "EVALUATE ROW(\"v\", SELECTEDVALUE(Product[Color], \"many\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["many"]
+      ]
+    },
+    {
+      "id": "context/79f67e23",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISFILTERED(Product[Color]), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "context/81a7a742",
+      "query": "EVALUATE ROW(\"v\", ISFILTERED(Product[Color]))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "context/4d519f22",
+      "query": "EVALUATE ROW(\"v\", MAXX(Sales, RELATED(Product[Name])))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Carrot"]
+      ]
+    },
+    {
+      "id": "context/28544321",
+      "query": "EVALUATE ROW(\"v\", SUMX(Sales, COUNTROWS(FILTER(Sales, Sales[Qty] > EARLIER(Sales[Qty])))))",
+      "columns": ["[v]"],
+      "rows": [
+        [15]
+      ]
+    },
+    {
+      "id": "context/f1cf7d0d",
+      "query": "EVALUATE ROW(\"v\", SUMX(Sales, COUNTROWS(FILTER(Sales, Sales[Qty] > EARLIEST(Sales[Qty])))))",
+      "columns": ["[v]"],
+      "rows": [
+        [15]
+      ]
+    },
+    {
+      "id": "context/a91b03ad",
+      "query": "EVALUATE ROW(\"v\", LOOKUPVALUE(Product[Name], Product[ProductKey], \"P2\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Banana"]
+      ]
+    },
+    {
+      "id": "context/2c568e80",
+      "query": "EVALUATE ROW(\"v\", LOOKUPVALUE(Product[Name], Product[ProductKey], \"PX\", \"none\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["none"]
+      ]
+    },
+    {
+      "id": "context/d3bd283a",
+      "query": "EVALUATE ROW(\"v\", MAXX(Product, COUNTROWS(RELATEDTABLE(Sales))))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "context/405d0671",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(Sales, Product[Category] = \"Fruit\")))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "context/5b5acf65",
+      "query": "EVALUATE ROW(\"v\", MAXX(Product, [Total Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "context/39459754",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Category]), [Total Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [15]
+      ]
+    },
+    {
+      "id": "context/66b778ac",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\" || Product[Color] = \"Orange\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "context/48818610",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\", Product[Color] = \"Orange\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "context/7549545c",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\" && Product[Category] = \"Fruit\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "context/fc529a8b",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\", KEEPFILTERS(Product[Name] = \"Banana\")))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "context/c677fb2a",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), TREATAS({\"P2\"}, Product[ProductKey])))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "context/c066df74",
+      "query": "EVALUATE ROW(\"v\", CALCULATE([Total Qty], ISBLANK(Product[Color])))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "table/a4dfd9b7",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(Sales, Sales[Qty] >= 3)))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "table/1de6e4a2",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALL(Product[Color])))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "table/3cccc68b",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALL(Product[Color], Product[Category])))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "table/52162888",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLNOBLANKROW(Product[Color])))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "table/26db886b",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(VALUES(Product[Category])))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "table/efbaa3f3",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(VALUES(Product)))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "table/16deb9f8",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DISTINCT(Sales[ProductKey])))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "table/d6a22432",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DISTINCT({1, 1, 2})))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "table/4da3d96f",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZE(Sales, Product[Category])))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "table/f586619c",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZE(Sales, Product[Category], \"Q\", SUM(Sales[Qty])), [Q]))",
+      "columns": ["[v]"],
+      "rows": [
+        [10]
+      ]
+    },
+    {
+      "id": "table/302e34e3",
+      "query": "EVALUATE ROW(\"v\", SUMX(SUMMARIZECOLUMNS(Product[Category], \"Q\", [Total Qty]), [Q]))",
+      "columns": ["[v]"],
+      "rows": [
+        [15]
+      ]
+    },
+    {
+      "id": "table/70fc3606",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Category], \"Q\", [Total Qty])))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "table/4bfd5f76",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Category], FILTER(ALL(Product[Color]), Product[Color] = \"Red\"), \"Q\", [Total Qty])))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "table/7f734e01",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SELECTCOLUMNS(Product, \"N\", Product[Name])))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "table/4c85bf02",
+      "query": "EVALUATE ROW(\"v\", MAXX(ADDCOLUMNS(Product, \"Q\", [Total Qty]), [Q]))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "table/6b5fd1a7",
+      "query": "EVALUATE ROW(\"v\", CONCATENATEX(TOPN(2, Product, Product[Name], ASC), Product[Name], \",\", Product[Name], ASC))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Apple,Banana"]
+      ]
+    },
+    {
+      "id": "table/93661efa",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(1, Product, Product[Category], ASC)))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "table/f13ef95c",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(0, Product, Product[Name])))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "table/db38de41",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(UNION({1, 2}, {2, 3})))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "table/1f809095",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(INTERSECT({1, 2, 2}, {2, 3})))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "table/2ecf0686",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(EXCEPT(VALUES(Product[Color]), {\"Red\"})))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "table/6282801a",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ROW(\"a\", 1, \"b\", \"x\")))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "table/863e9731",
+      "query": "EVALUATE ROW(\"v\", SUMX(DATATABLE(\"Name\", STRING, \"Value\", INTEGER, {{\"a\", 1}, {\"b\", 2}}), [Value]))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "table/6b73e26f",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CROSSJOIN(VALUES(Product[Category]), {1, 2})))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "table/94947e26",
+      "query": "EVALUATE ROW(\"v\", SUMX(GENERATESERIES(1, 4), [Value]))",
+      "columns": ["[v]"],
+      "rows": [
+        [10]
+      ]
+    },
+    {
+      "id": "table/06b8f448",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(KEEPFILTERS(Product)))",
+      "error": "Query (1, 29) KEEPFILTERS function can only be used as a top level filter argument of CALCULATE and CALCULATETABLE or with a table argument of a function performing a table scan."
+    },
+    {
+      "id": "table/854ac4f2",
+      "query": "EVALUATE ROW(\"v\", 2 IN {1, 2})",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "table/592dcf91",
+      "query": "EVALUATE ROW(\"v\", (\"A\", 1) IN {(\"a\", 1), (\"b\", 2)})",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "table/1486950a",
+      "query": "EVALUATE ROW(\"v\", BLANK() IN {0})",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "table/398a6ad2",
+      "query": "EVALUATE ROW(\"v\", {5})",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "table/fd16101a",
+      "query": "EVALUATE ROW(\"v\", VAR t = FILTER(Product, Product[Color] = \"Red\") RETURN COUNTROWS(t))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "table/8f71dadb",
+      "query": "EVALUATE ROW(\"v\", VAR t = FILTER(ALL(Product[Color]), Product[Color] = \"Red\") RETURN CALCULATE([Total Qty], t))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "date-more/8f75e9e4",
+      "query": "EVALUATE ROW(\"v\", EOMONTH(DATE(2024, 1, 15), 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-02-29T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "date-more/7af586b2",
+      "query": "EVALUATE ROW(\"v\", EOMONTH(BLANK(), 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "date-more/df1a332b",
+      "query": "EVALUATE ROW(\"v\", EDATE(DATE(2024, 1, 31), 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-02-29T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "date-more/a4e03015",
+      "query": "EVALUATE ROW(\"v\", EDATE(DATE(2024, 3, 31), -13))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2023-02-28T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "date-more/f9f65541",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 1, 31), DATE(2024, 3, 1), MONTH))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "date-more/1d1d3aa7",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 1, 31), DATE(2024, 3, 1), DAY))",
+      "columns": ["[v]"],
+      "rows": [
+        [30]
+      ]
+    },
+    {
+      "id": "date-more/c6373f9f",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 3, 1), DATE(2023, 12, 31), YEAR))",
+      "columns": ["[v]"],
+      "rows": [
+        [-1]
+      ]
+    },
+    {
+      "id": "date-more/b6d0180a",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 1, 6), DATE(2024, 1, 7), WEEK))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "date-more/8fa8d08a",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 3, 31), DATE(2024, 4, 1), QUARTER))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "date-more/c623199b",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(dt\"2024-01-01T10:00:00\", dt\"2024-01-01T12:30:00\", MINUTE))",
+      "columns": ["[v]"],
+      "rows": [
+        [150]
+      ]
+    },
+    {
+      "id": "date-more/80bce4da",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(dt\"2024-01-01T10:59:59\", dt\"2024-01-01T11:00:00\", HOUR))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "date-more/779ba69c",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(dt\"2024-01-01T10:00:00\", dt\"2024-01-01T10:00:09\", SECOND))",
+      "columns": ["[v]"],
+      "rows": [
+        [9]
+      ]
+    },
+    {
+      "id": "date-more/2a7fb47e",
+      "query": "EVALUATE ROW(\"v\", WEEKDAY(DATE(2024, 1, 7)))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "date-more/9ef9a707",
+      "query": "EVALUATE ROW(\"v\", WEEKDAY(DATE(2024, 1, 7), 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [7]
+      ]
+    },
+    {
+      "id": "date-more/7989d786",
+      "query": "EVALUATE ROW(\"v\", WEEKDAY(DATE(2024, 1, 8), 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [0]
+      ]
+    },
+    {
+      "id": "date-more/d30903ae",
+      "query": "EVALUATE ROW(\"v\", WEEKNUM(DATE(2024, 1, 7)))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "date-more/ff49ecb2",
+      "query": "EVALUATE ROW(\"v\", WEEKNUM(DATE(2024, 1, 7), 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "date-more/df6c6748",
+      "query": "EVALUATE ROW(\"v\", WEEKNUM(DATE(2024, 12, 30), 21))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "date-more/cadc58aa",
+      "query": "EVALUATE ROW(\"v\", QUARTER(DATE(2024, 5, 6)))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "date-more/cd18e95d",
+      "query": "EVALUATE ROW(\"v\", DATEVALUE(\"2024-03-05\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-03-05T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "date-more/e47bf5f8",
+      "query": "EVALUATE ROW(\"v\", DATEVALUE(\"3/5/2024 10:30\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-03-05T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "date-more/b87c78ed",
+      "query": "EVALUATE ROW(\"v\", TIMEVALUE(\"1:30 PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"1899-12-30T13:30:00.000"}]
+      ]
+    },
+    {
+      "id": "date-more/b3e299cc",
+      "query": "EVALUATE ROW(\"v\", TIME(1, 30, 15))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"1899-12-30T01:30:15.000"}]
+      ]
+    },
+    {
+      "id": "date-more/7abea0ca",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 12, 31))))",
+      "columns": ["[v]"],
+      "rows": [
+        [366]
+      ]
+    },
+    {
+      "id": "date-more/13f84881",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDARAUTO()))",
+      "columns": ["[v]"],
+      "rows": [
+        [731]
+      ]
+    },
+    {
+      "id": "date-more/81b8c167",
+      "query": "EVALUATE ROW(\"v\", MINX(CALENDARAUTO(6), [Date]))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2022-07-01T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "stats/8f4cd8bf",
+      "query": "EVALUATE ROW(\"v\", MEDIAN(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "stats/168f2aed",
+      "query": "EVALUATE ROW(\"v\", MEDIANX(Sales, Sales[Price]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.5]
+      ]
+    },
+    {
+      "id": "stats/f2df1a7b",
+      "query": "EVALUATE ROW(\"v\", MEDIAN(Sales[Date]))",
+      "error": "Query (1, 26) MEDIAN does not support expressions of type string/Boolean/date."
+    },
+    {
+      "id": "stats/4c93925b",
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.INC(Sales[Qty], 0.25))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "stats/d37eaf8f",
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.EXC(Sales[Qty], 0.5))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "stats/3792709b",
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.INC(Sales, Sales[Qty], 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "stats/f0ffef88",
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.EXC(Sales, Sales[Qty], 0.25))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.75]
+      ]
+    },
+    {
+      "id": "stats/b551b8ee",
+      "query": "EVALUATE ROW(\"v\", STDEV.P(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.4142135623730951]
+      ]
+    },
+    {
+      "id": "stats/a0eadc9d",
+      "query": "EVALUATE ROW(\"v\", STDEV.S(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.5811388300841898]
+      ]
+    },
+    {
+      "id": "stats/e6d58506",
+      "query": "EVALUATE ROW(\"v\", VAR.P(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.0]
+      ]
+    },
+    {
+      "id": "stats/0e62097f",
+      "query": "EVALUATE ROW(\"v\", VAR.S(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.5]
+      ]
+    },
+    {
+      "id": "stats/dfeb7261",
+      "query": "EVALUATE ROW(\"v\", STDEVX.P(Sales, Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.4142135623730951]
+      ]
+    },
+    {
+      "id": "stats/5fba77e4",
+      "query": "EVALUATE ROW(\"v\", STDEVX.S(Sales, Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.5811388300841898]
+      ]
+    },
+    {
+      "id": "stats/8c4ea248",
+      "query": "EVALUATE ROW(\"v\", VARX.P(Sales, Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.0]
+      ]
+    },
+    {
+      "id": "stats/7a299e14",
+      "query": "EVALUATE ROW(\"v\", VARX.S(Sales, Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.5]
+      ]
+    },
+    {
+      "id": "stats/28155d94",
+      "query": "EVALUATE ROW(\"v\", VARX.S(FILTER(Sales, Sales[Qty] = 3), Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"double":"NaN"}]
+      ]
+    },
+    {
+      "id": "stats/7f94e1e9",
+      "query": "EVALUATE ROW(\"v\", PRODUCT(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [119.99999999999997]
+      ]
+    },
+    {
+      "id": "stats/f7a3b989",
+      "query": "EVALUATE ROW(\"v\", PRODUCTX(Sales, Sales[Price]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.6875000000000004]
+      ]
+    },
+    {
+      "id": "stats/7d39cb9e",
+      "query": "EVALUATE ROW(\"v\", PRODUCTX(FILTER(Sales, FALSE()), Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "stats/ecd54b2e",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANKX(ALL(Product[Name]), [Total Qty]), Product[Name] = \"Banana\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "stats/b9eb9caa",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANKX(ALL(Product[Name]), [Total Qty]), Product[Name] = \"Carrot\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "stats/ada3e6bf",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANKX(ALL(Product[Name]), [Total Qty], , DESC, DENSE), Product[Name] = \"Carrot\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "stats/5c7a40e2",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANKX(ALL(Product[Name]), [Total Qty], , ASC), Product[Name] = \"Carrot\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "stats/65e02316",
+      "query": "EVALUATE ROW(\"v\", RANKX(ALL(Product[Name]), [Total Qty], 4))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "stats/b428fcb0",
+      "query": "EVALUATE ROW(\"v\", RANKX(ALL(Product[Name]), [Total Qty], 4, 1, SKIP))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "stats/1873dbd0",
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(4, Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "stats/0d67ddf0",
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(4, Sales[Qty], ASC))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "stats/a1f0c065",
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(99, Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "stats/1b56bb9e",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(1, VALUES(Product[Name]), [Total Qty])))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "stats/00ad4dcf",
+      "query": "EVALUATE ROW(\"v\", CONCATENATEX(TOPN(1, VALUES(Product[Name]), [Total Qty], DESC, Product[Name], DESC), Product[Name]))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Banana"]
+      ]
+    },
+    {
+      "id": "stats/b727e5c3",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(2, VALUES(Product[Name]), [Total Qty], ASC)))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "stats/b068b7e8",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(-1, Product, Product[Name])))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "window/751a16c7",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], OFFSET(-1, ALL(Product[Name]), ORDERBY(Product[Name]))), Product[Name] = \"Banana\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "window/dc77a652",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], OFFSET(1, ALL(Product[Name]), ORDERBY(Product[Name]))), Product[Name] = \"Banana\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "window/b22cfce4",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(OFFSET(-1, ALL(Product[Name]), ORDERBY(Product[Name]))))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "window/5e4f8875",
+      "query": "EVALUATE ROW(\"v\", INDEX(1, ALL(Product[Name]), ORDERBY(Product[Name], DESC)))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Cherry"]
+      ]
+    },
+    {
+      "id": "window/3e310b8b",
+      "query": "EVALUATE ROW(\"v\", INDEX(-1, ALL(Product[Name]), ORDERBY(Product[Name])))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Cherry"]
+      ]
+    },
+    {
+      "id": "window/0d760f78",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(WINDOW(1, ABS, -1, ABS, ALL(Product[Name]), ORDERBY(Product[Name]))))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "window/166ddc4e",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(WINDOW(-1, REL, 0, REL, ALL(Product[Name]), ORDERBY(Product[Name])), [Total Qty]), Product[Name] = \"Banana\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [10]
+      ]
+    },
+    {
+      "id": "window/d154449d",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CONCATENATEX(INDEX(1, ALL(Product[Category], Product[Name]), ORDERBY(Product[Name], DESC), PARTITIONBY(Product[Category])), Product[Name]), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Cherry"]
+      ]
+    },
+    {
+      "id": "window/0a7be582",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CONCATENATEX(OFFSET(1, ALL(Product[Category], Product[Name]), ORDERBY(Product[Name]), PARTITIONBY(Product[Category]), MATCHBY(Product[Category], Product[Name])), Product[Name]), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Banana"]
+      ]
+    },
+    {
+      "id": "window/fcd49ecd",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ROWNUMBER(ALL(Product[Name]), ORDERBY(Product[Name])), Product[Name] = \"Banana\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "window/c78a9f8a",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANK(DENSE, ALL(Product[Name]), ORDERBY([Total Qty], DESC)), Product[Name] = \"Carrot\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "window/ae64b726",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANK(SKIP, ALL(Product[Name]), ORDERBY([Total Qty], DESC)), Product[Name] = \"Carrot\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "window/ae56c26b",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], OFFSET(1, ORDERBY(Product[Name]))), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "misc/90ed429a",
+      "query": "EVALUATE ROW(\"v\", SWITCH(TRUE(), 1 > 2, \"a\", 2 > 1, \"b\", \"c\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["b"]
+      ]
+    },
+    {
+      "id": "misc/1e1bf2c8",
+      "query": "EVALUATE ROW(\"v\", ISNONTEXT(1))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "misc/fd058651",
+      "query": "EVALUATE ROW(\"v\", ISEVEN(4))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "misc/910ce7d1",
+      "query": "EVALUATE ROW(\"v\", ISODD(-3))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "misc/e361bb52",
+      "query": "EVALUATE ROW(\"v\", CONVERT(\"12\", INTEGER))",
+      "columns": ["[v]"],
+      "rows": [
+        [12]
+      ]
+    },
+    {
+      "id": "misc/43b7944a",
+      "query": "EVALUATE ROW(\"v\", CONVERT(2.5, INTEGER))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "misc/1189551e",
+      "query": "EVALUATE ROW(\"v\", CONVERT(1.5, STRING))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1.5"]
+      ]
+    },
+    {
+      "id": "misc/d1840272",
+      "query": "EVALUATE ROW(\"v\", CONVERT(1, BOOLEAN))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "misc/0de39339",
+      "query": "EVALUATE ROW(\"v\", CONVERT(1.23456, CURRENCY))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"decimal":"1.2346"}]
+      ]
+    },
+    {
+      "id": "misc/33df4277",
+      "query": "EVALUATE ROW(\"v\", CONVERT(\"2024-01-02\", DATETIME))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-01-02T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "misc/369acbcc",
+      "query": "EVALUATE ROW(\"v\", CONVERT(DATE(1900, 1, 1), DOUBLE))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.0]
+      ]
+    },
+    {
+      "id": "misc/d9c5f01b",
+      "query": "EVALUATE ROW(\"v\", CURRENCY(1.23456))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"decimal":"1.2346"}]
+      ]
+    },
+    {
+      "id": "misc/daf54a5e",
+      "query": "EVALUATE ROW(\"v\", FIXED(1234.567, 1))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.6"]
+      ]
+    },
+    {
+      "id": "misc/abfe99db",
+      "query": "EVALUATE ROW(\"v\", FIXED(1234.567, 1, TRUE()))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.6"]
+      ]
+    },
+    {
+      "id": "misc/0a68b022",
+      "query": "EVALUATE ROW(\"v\", FIXED(1234.5))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.50"]
+      ]
+    },
+    {
+      "id": "misc/d1211acd",
+      "query": "EVALUATE ROW(\"v\", FIXED(1250, -2))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,300"]
+      ]
+    },
+    {
+      "id": "misc/473d6609",
+      "query": "EVALUATE ROW(\"v\", UNICHAR(65))",
+      "columns": ["[v]"],
+      "rows": [
+        ["A"]
+      ]
+    },
+    {
+      "id": "misc/81481615",
+      "query": "EVALUATE ROW(\"v\", UNICODE(\"é\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [233]
+      ]
+    },
+    {
+      "id": "misc/ee649dcf",
+      "query": "EVALUATE ROW(\"v\", REPT(\"ab\", 3))",
+      "columns": ["[v]"],
+      "rows": [
+        ["ababab"]
+      ]
+    },
+    {
+      "id": "misc/e1037a9e",
+      "query": "EVALUATE ROW(\"v\", REPT(\"ab\", 0))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "misc/b283a71f",
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"b?d\", \"ABCD\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "misc/b079e810",
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"C*\", \"abcabc\", 4))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "misc/0312f497",
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"x\", \"abc\", 1, -1))",
+      "columns": ["[v]"],
+      "rows": [
+        [-1]
+      ]
+    },
+    {
+      "id": "misc/a8f0579d",
+      "query": "EVALUATE ROW(\"v\", FIND(\"B\", \"aBcB\", 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "misc/c6231aa1",
+      "query": "EVALUATE ROW(\"v\", FIND(\"b\", \"aBc\", 1, 0))",
+      "columns": ["[v]"],
+      "rows": [
+        [0]
+      ]
+    },
+    {
+      "id": "misc/259bcd70",
+      "query": "EVALUATE ROW(\"v\", REPLACE(\"abcdef\", 2, 3, \"X\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["aXef"]
+      ]
+    },
+    {
+      "id": "misc/470f7e4f",
+      "query": "EVALUATE ROW(\"v\", COMBINEVALUES(\"-\", \"a\", 1))",
+      "columns": ["[v]"],
+      "rows": [
+        ["a-1"]
+      ]
+    },
+    {
+      "id": "misc/1e916ad5",
+      "query": "EVALUATE ROW(\"v\", CONTAINS(Product, Product[Color], \"red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "misc/ef4ea6b1",
+      "query": "EVALUATE ROW(\"v\", CONTAINS(Product, Product[Color], \"Red\", Product[Category], \"Veg\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "misc/97d4ae33",
+      "query": "EVALUATE ROW(\"v\", CONTAINSROW({1, 2}, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "misc/f57c8de5",
+      "query": "EVALUATE ROW(\"v\", CONTAINSROW(VALUES(Product[Color]), \"RED\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "misc/36aa2c09",
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"1|2|3\", 2))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2"]
+      ]
+    },
+    {
+      "id": "misc/3897e174",
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"1|2|3\", 2, 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "misc/e3497c36",
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"1|2|3\", 9))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "misc/d40efd7e",
+      "query": "EVALUATE ROW(\"v\", PATHITEMREVERSE(\"1|2|3\", 1))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3"]
+      ]
+    },
+    {
+      "id": "misc/2f4f9d21",
+      "query": "EVALUATE ROW(\"v\", PATHLENGTH(\"1|2|3\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "misc/3eca1efd",
+      "query": "EVALUATE ROW(\"v\", PATHCONTAINS(\"1|2|3\", \"2\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "misc/fa229209",
+      "query": "EVALUATE ROW(\"v\", USERPRINCIPALNAME())",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "misc/3e9d8db4",
+      "query": "EVALUATE ROW(\"v\", USERNAME() & \"|\" & USEROBJECTID())",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "misc/f96fb362",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(CUSTOMDATA()))",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "misc/e775393b",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATE(VALUES(Product[Category]), CALCULATETABLE(VALUES(Product[Color])))))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "misc/73d177d0",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATE(VALUES(Product[Category]), FILTER(VALUES(Product[Color]), FALSE()))))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "misc/efacd972",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATEALL(VALUES(Product[Category]), FILTER(VALUES(Product[Color]), FALSE()))))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "misc/535714fb",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALINNERJOIN(SELECTCOLUMNS(Sales, \"K\", Sales[ProductKey] & \"\"), SELECTCOLUMNS(Product, \"K\", Product[ProductKey] & \"\", \"N\", Product[Name]))))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "misc/923d2f5e",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALLEFTOUTERJOIN(SELECTCOLUMNS(Sales, \"K\", Sales[ProductKey] & \"\"), SELECTCOLUMNS(Product, \"K\", Product[ProductKey] & \"\", \"N\", Product[Name]))))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "misc/bbbc07e3",
+      "query": "EVALUATE ROW(\"v\", SUMX(GROUPBY(Sales, Product[Category], \"Q\", SUMX(CURRENTGROUP(), Sales[Qty])), [Q]))",
+      "columns": ["[v]"],
+      "rows": [
+        [15]
+      ]
+    },
+    {
+      "id": "misc/28f1acc9",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GROUPBY(Sales, Product[Category])))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "misc/8b8d1218",
+      "query": "EVALUATE ROW(\"v\", MAXX(GROUPBY(Sales, Sales[ProductKey], \"Q\", SUMX(CURRENTGROUP(), Sales[Qty])), [Q]))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "misc/f6cd48c9",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"One\", IGNORE(1))))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "misc/4c8dd378",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"One\", 1)))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "misc/3656ae1f",
+      "query": "EVALUATE ROW(\"v\", IGNORE(7))",
+      "error": "Query (1, 19) IGNORE function can only be used in the SUMMARIZECOLUMNS function."
+    },
+    {
+      "id": "visual/c2ff4539",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Pct\", DIVIDE([Total Qty], CALCULATE([Total Qty], ALLSELECTED()))), [Pct]))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.9090909090909091]
+      ]
+    },
+    {
+      "id": "visual/e91a8d80",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"N\", COUNTROWS(ALLSELECTED(Product[Category]))), [N]))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "visual/17ca9360",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Color], TREATAS({\"Red\"}, Product[Color]), \"N\", COUNTROWS(ALLSELECTED(Product))), [N]))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "visual/3fd1aa18",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Q\", CALCULATE([Total Qty], ALLSELECTED(Product[Category]))), [Q]))",
+      "columns": ["[v]"],
+      "rows": [
+        [11]
+      ]
+    },
+    {
+      "id": "visual/b2e71863",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLSELECTED(Product[Category])))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "visual/30d37a3e",
+      "query": "EVALUATE ROW(\"v\", CALCULATE([Total Qty], ALLSELECTED(Product)))",
+      "columns": ["[v]"],
+      "rows": [
+        [15]
+      ]
+    },
+    {
+      "id": "visual/b870a3ed",
+      "query": "EVALUATE ROW(\"v\", ISINSCOPE(Product[Color]))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "visual/beaab34d",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(SUMMARIZECOLUMNS(Product[Category], \"S\", ISINSCOPE(Product[Category])), [S])))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "visual/6035744d",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL(Product[Category], \"CatTotal\", Product[Color], \"ColorTotal\"), \"Q\", [Total Qty])))",
+      "columns": ["[v]"],
+      "rows": [
+        [8]
+      ]
+    },
+    {
+      "id": "visual/a992f955",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL(ROLLUPGROUP(Product[Category], Product[Color]), \"T\"), \"Q\", [Total Qty])))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "visual/35b70d4c",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTERS(Product[Color])))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "visual/0985ee57",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(FILTERS(Product[Color])), Product[Color] IN {\"Red\", \"Orange\"}, Product[Category] = \"Fruit\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "visual/64b5492c",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(HASONEFILTER(Product[Color]), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "visual/c63b842f",
+      "query": "EVALUATE ROW(\"v\", HASONEFILTER(Product[Color]))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "visual/d9ffa435",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(HASONEFILTER(Product[Color]), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "visual/382468f4",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISCROSSFILTERED(Sales[Qty]), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "visual/45c13ab1",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISCROSSFILTERED(Product), Sales[Qty] = 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "visual/7bf2ef31",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISCROSSFILTERED(Product[Name]), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "visual/de4223d6",
+      "query": "EVALUATE ROW(\"v\", ISCROSSFILTERED(Product[Name]))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "visual/9475de73",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISCROSSFILTERED(Product), FILTER(Sales, Sales[Qty] = 3)))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "visual/ffaa2d99",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISFILTERED(Product), ALLSELECTED(Product[Color])))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "library/0a6ffbb1",
+      "query": "EVALUATE ROW(\"v\", PI())",
+      "columns": ["[v]"],
+      "rows": [
+        [3.141592653589793]
+      ]
+    },
+    {
+      "id": "library/54ef484e",
+      "query": "EVALUATE ROW(\"v\", EXP(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.0]
+      ]
+    },
+    {
+      "id": "library/b72aab53",
+      "query": "EVALUATE ROW(\"v\", EXP(BLANK()))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.0]
+      ]
+    },
+    {
+      "id": "library/1a1eab09",
+      "query": "EVALUATE ROW(\"v\", LN(1))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/f48a6040",
+      "query": "EVALUATE ROW(\"v\", LOG(1000))",
+      "columns": ["[v]"],
+      "rows": [
+        [3.0]
+      ]
+    },
+    {
+      "id": "library/89fd4257",
+      "query": "EVALUATE ROW(\"v\", LOG(8, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [3.0]
+      ]
+    },
+    {
+      "id": "library/9603394c",
+      "query": "EVALUATE ROW(\"v\", LOG10(100))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.0]
+      ]
+    },
+    {
+      "id": "library/202c183b",
+      "query": "EVALUATE ROW(\"v\", SQRTPI(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/95f74ead",
+      "query": "EVALUATE ROW(\"v\", SIN(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/d5479451",
+      "query": "EVALUATE ROW(\"v\", COS(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.0]
+      ]
+    },
+    {
+      "id": "library/935c0221",
+      "query": "EVALUATE ROW(\"v\", TAN(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/fb88a4c4",
+      "query": "EVALUATE ROW(\"v\", ASIN(1) * 2 = PI())",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "library/7fc34fcb",
+      "query": "EVALUATE ROW(\"v\", ACOS(1))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/ce9a897c",
+      "query": "EVALUATE ROW(\"v\", ATAN(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/cce7ea0d",
+      "query": "EVALUATE ROW(\"v\", ACOT(0) * 2 = PI())",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "library/bdf724b5",
+      "query": "EVALUATE ROW(\"v\", SINH(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/16f263b8",
+      "query": "EVALUATE ROW(\"v\", COSH(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.0]
+      ]
+    },
+    {
+      "id": "library/9548e60c",
+      "query": "EVALUATE ROW(\"v\", TANH(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/a2dc7a7d",
+      "query": "EVALUATE ROW(\"v\", ASINH(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/26b6e49e",
+      "query": "EVALUATE ROW(\"v\", ACOSH(1))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/069f7259",
+      "query": "EVALUATE ROW(\"v\", ATANH(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/cb0e4b5e",
+      "query": "EVALUATE ROW(\"v\", FACT(5))",
+      "columns": ["[v]"],
+      "rows": [
+        [120.0]
+      ]
+    },
+    {
+      "id": "library/c011194b",
+      "query": "EVALUATE ROW(\"v\", FACT(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.0]
+      ]
+    },
+    {
+      "id": "library/3f612005",
+      "query": "EVALUATE ROW(\"v\", FACT(3.9))",
+      "columns": ["[v]"],
+      "rows": [
+        [6.0]
+      ]
+    },
+    {
+      "id": "library/c9d5e1e8",
+      "query": "EVALUATE ROW(\"v\", COMBIN(8, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [28.0]
+      ]
+    },
+    {
+      "id": "library/102dedfd",
+      "query": "EVALUATE ROW(\"v\", COMBIN(60, 30))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.1826458156486144E+17]
+      ]
+    },
+    {
+      "id": "library/a07afb21",
+      "query": "EVALUATE ROW(\"v\", COMBINA(4, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [20.0]
+      ]
+    },
+    {
+      "id": "library/f2c98711",
+      "query": "EVALUATE ROW(\"v\", PERMUT(100, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [970200.0]
+      ]
+    },
+    {
+      "id": "library/17578380",
+      "query": "EVALUATE ROW(\"v\", GCD(24, 36))",
+      "columns": ["[v]"],
+      "rows": [
+        [12]
+      ]
+    },
+    {
+      "id": "library/294e8e20",
+      "query": "EVALUATE ROW(\"v\", GCD(BLANK(), 4))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "library/c85fe235",
+      "query": "EVALUATE ROW(\"v\", LCM(4, 6))",
+      "columns": ["[v]"],
+      "rows": [
+        [12]
+      ]
+    },
+    {
+      "id": "library/8241e6dc",
+      "query": "EVALUATE ROW(\"v\", QUOTIENT(5, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "library/146fa6ca",
+      "query": "EVALUATE ROW(\"v\", QUOTIENT(-10, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [-3]
+      ]
+    },
+    {
+      "id": "library/51b2fecb",
+      "query": "EVALUATE ROW(\"v\", QUOTIENT(4.5, 3.1))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "library/2a1706a3",
+      "query": "EVALUATE ROW(\"v\", EVEN(1.5))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.0]
+      ]
+    },
+    {
+      "id": "library/bb513e4c",
+      "query": "EVALUATE ROW(\"v\", EVEN(-1))",
+      "columns": ["[v]"],
+      "rows": [
+        [-2]
+      ]
+    },
+    {
+      "id": "library/5036bd1c",
+      "query": "EVALUATE ROW(\"v\", ODD(0))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "library/ce6693c7",
+      "query": "EVALUATE ROW(\"v\", ODD(-2))",
+      "columns": ["[v]"],
+      "rows": [
+        [-3]
+      ]
+    },
+    {
+      "id": "library/44071fe8",
+      "query": "EVALUATE ROW(\"v\", ODD(3))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "library/be8d00db",
+      "query": "EVALUATE ROW(\"v\", MROUND(10, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [9]
+      ]
+    },
+    {
+      "id": "library/6d8c586f",
+      "query": "EVALUATE ROW(\"v\", MROUND(-10, -3))",
+      "columns": ["[v]"],
+      "rows": [
+        [-9]
+      ]
+    },
+    {
+      "id": "library/1caf87e3",
+      "query": "EVALUATE ROW(\"v\", MROUND(1.3, 0.2))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.4000000000000001]
+      ]
+    },
+    {
+      "id": "library/26249e6e",
+      "query": "EVALUATE ROW(\"v\", MROUND(BLANK(), 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "library/090f29c1",
+      "query": "EVALUATE ROW(\"v\", CEILING(4.42, 0.05))",
+      "columns": ["[v]"],
+      "rows": [
+        [4.45]
+      ]
+    },
+    {
+      "id": "library/0c95e599",
+      "query": "EVALUATE ROW(\"v\", CEILING(1.5, 0.1))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.5]
+      ]
+    },
+    {
+      "id": "library/2b9e3ed5",
+      "query": "EVALUATE ROW(\"v\", CEILING(2.5, 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [3]
+      ]
+    },
+    {
+      "id": "library/b356ca7a",
+      "query": "EVALUATE ROW(\"v\", CEILING(-2.5, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [-2]
+      ]
+    },
+    {
+      "id": "library/d92dcbc0",
+      "query": "EVALUATE ROW(\"v\", CEILING(-2.5, -2))",
+      "columns": ["[v]"],
+      "rows": [
+        [-4]
+      ]
+    },
+    {
+      "id": "library/9e4a2c6f",
+      "query": "EVALUATE ROW(\"v\", CEILING(CURRENCY(1.23), 0.5))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"decimal":"1.5"}]
+      ]
+    },
+    {
+      "id": "library/d5bfe8ba",
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING(-4.3))",
+      "columns": ["[v]"],
+      "rows": [
+        [-4]
+      ]
+    },
+    {
+      "id": "library/cc11c41d",
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING(4.3, -2))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "library/dc0c7324",
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING(7, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [8]
+      ]
+    },
+    {
+      "id": "library/b398f9da",
+      "query": "EVALUATE ROW(\"v\", FLOOR(10.8423, 0.1))",
+      "columns": ["[v]"],
+      "rows": [
+        [10.8]
+      ]
+    },
+    {
+      "id": "library/0ef462c7",
+      "query": "EVALUATE ROW(\"v\", FLOOR(2.9733, 0.1))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.9000000000000004]
+      ]
+    },
+    {
+      "id": "library/0171626a",
+      "query": "EVALUATE ROW(\"v\", FLOOR(-2.5, -2))",
+      "columns": ["[v]"],
+      "rows": [
+        [-2]
+      ]
+    },
+    {
+      "id": "library/3517a15f",
+      "query": "EVALUATE ROW(\"v\", RANDBETWEEN(3, 3))",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "library/1db97acd",
+      "query": "EVALUATE ROW(\"v\", RAND() >= 0 && RAND() < 1)",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "library/1cabb0c5",
+      "query": "EVALUATE ROW(\"v\", BITAND(13, 11))",
+      "columns": ["[v]"],
+      "rows": [
+        [9]
+      ]
+    },
+    {
+      "id": "library/ef141e07",
+      "query": "EVALUATE ROW(\"v\", BITOR(9, 4))",
+      "columns": ["[v]"],
+      "rows": [
+        [13]
+      ]
+    },
+    {
+      "id": "library/75854453",
+      "query": "EVALUATE ROW(\"v\", BITXOR(5, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "library/cce7c40c",
+      "query": "EVALUATE ROW(\"v\", BITLSHIFT(2, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [16]
+      ]
+    },
+    {
+      "id": "library/3e2d0c03",
+      "query": "EVALUATE ROW(\"v\", BITLSHIFT(128, -1))",
+      "columns": ["[v]"],
+      "rows": [
+        [64]
+      ]
+    },
+    {
+      "id": "library/cbf29b04",
+      "query": "EVALUATE ROW(\"v\", BITRSHIFT(-16, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [-4]
+      ]
+    },
+    {
+      "id": "library/f4e0098c",
+      "query": "EVALUATE ROW(\"v\", IF.EAGER(1 > 2, \"a\", \"b\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["b"]
+      ]
+    },
+    {
+      "id": "library/52c97f21",
+      "query": "EVALUATE ROW(\"v\", IFERROR(ERROR(\"boom\"), 7))",
+      "columns": ["[v]"],
+      "rows": [
+        [7]
+      ]
+    },
+    {
+      "id": "library/7a49646f",
+      "query": "EVALUATE ROW(\"v\", EVALUATEANDLOG(1 + 1, \"two\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "library/b690f8b0",
+      "query": "EVALUATE ROW(\"v\", USERCULTURE())",
+      "columns": ["[v]"],
+      "rowCount": 1
+    },
+    {
+      "id": "library/de220a82",
+      "query": "EVALUATE ROW(\"v\", ISAFTER(2, 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "library/bc09eac9",
+      "query": "EVALUATE ROW(\"v\", ISAFTER(1, 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "library/86eb43c4",
+      "query": "EVALUATE ROW(\"v\", ISONORAFTER(1, 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "library/176f8de5",
+      "query": "EVALUATE ROW(\"v\", ISAFTER(\"a\", \"b\", DESC))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "library/699de51f",
+      "query": "EVALUATE ROW(\"v\", ISONORAFTER(1, 1, ASC, 2, 3, ASC))",
+      "columns": ["[v]"],
+      "rows": [
+        [false]
+      ]
+    },
+    {
+      "id": "library/50c29341",
+      "query": "EVALUATE ROW(\"v\", MAXA(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "library/e2cb91c6",
+      "query": "EVALUATE ROW(\"v\", MINA(Sales[Price]))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.25]
+      ]
+    },
+    {
+      "id": "library/c60d02b2",
+      "query": "EVALUATE ROW(\"v\", MAXA(Sales[Date]))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-03-15T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "library/b3ad55e3",
+      "query": "EVALUATE ROW(\"v\", MAXA(Product[Color]))",
+      "columns": ["[v]"],
+      "rows": [
+        [0]
+      ]
+    },
+    {
+      "id": "library/8de459fd",
+      "query": "EVALUATE ROW(\"v\", AVERAGEA(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [3.0]
+      ]
+    },
+    {
+      "id": "library/b98280a9",
+      "query": "EVALUATE ROW(\"v\", AVERAGEA(Product[Name]))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0]
+      ]
+    },
+    {
+      "id": "library/fca1099a",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(MINA(Sales[Qty]), Product[Color] = \"Blue\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "library/a51278f8",
+      "query": "EVALUATE ROW(\"v\", GEOMEANX(FILTER(Sales, FALSE()), Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "library/419fb877",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 1, 1), DATE(2012, 7, 30)))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.5805555555555556]
+      ]
+    },
+    {
+      "id": "library/b6cf9312",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 7, 30), DATE(2012, 1, 1), 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.5765027322404371]
+      ]
+    },
+    {
+      "id": "library/51bfbe94",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 1, 1), DATE(2012, 7, 30), 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.5861111111111111]
+      ]
+    },
+    {
+      "id": "library/e3a15997",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 1, 1), DATE(2012, 7, 30), 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.5780821917808219]
+      ]
+    },
+    {
+      "id": "library/47067b52",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 1, 31), DATE(2012, 3, 31), 4))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.16666666666666666]
+      ]
+    },
+    {
+      "id": "library/16ffa87a",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2011, 2, 28), DATE(2012, 2, 29)))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.0]
+      ]
+    },
+    {
+      "id": "library/665ce094",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2011, 1, 31), DATE(2011, 2, 28)))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.07777777777777778]
+      ]
+    },
+    {
+      "id": "library/be43d913",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2010, 6, 1), DATE(2013, 6, 1), 1))",
+      "columns": ["[v]"],
+      "rows": [
+        [3.0006844626967832]
+      ]
+    },
+    {
+      "id": "library/9a9e50d0",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2022, 5, 28), DATE(2022, 5, 30), 1, {DATE(2022, 5, 30)}))",
+      "columns": ["[v]"],
+      "rows": [
+        [0]
+      ]
+    },
+    {
+      "id": "library/285460a0",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 31)))",
+      "columns": ["[v]"],
+      "rows": [
+        [23]
+      ]
+    },
+    {
+      "id": "library/3f32f682",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 31), DATE(2024, 1, 1)))",
+      "columns": ["[v]"],
+      "rows": [
+        [-23]
+      ]
+    },
+    {
+      "id": "library/172d753d",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 31), 11))",
+      "columns": ["[v]"],
+      "rows": [
+        [27]
+      ]
+    },
+    {
+      "id": "library/d020fc8a",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 7), \"0000011\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "library/ab8cbd6a",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 12, 23), DATE(2025, 1, 3), 1, {DATE(2024, 12, 25), DATE(2024, 12, 26), DATE(2025, 1, 1), DATE(2024, 12, 28)}))",
+      "columns": ["[v]"],
+      "rows": [
+        [7]
+      ]
+    },
+    {
+      "id": "library/f8504e0d",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(NETWORKDAYS(BLANK(), BLANK())))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "library/f9defa79",
+      "query": "EVALUATE ROW(\"v\", EDATE(DATE(2024, 1, 31), 1.9))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-03-31T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "library/84bc39a1",
+      "query": "EVALUATE ROW(\"v\", EOMONTH(DATE(2008, 3, 3), 1.5))",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2008-05-31T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "library/d651f11e",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(QUARTER(BLANK())))",
+      "columns": ["[v]"],
+      "rows": [
+        [true]
+      ]
+    },
+    {
+      "id": "library/ef518989",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), YEAR))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "library/40acbbfe",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), QUARTER))",
+      "columns": ["[v]"],
+      "rows": [
+        [9]
+      ]
+    },
+    {
+      "id": "library/a11c999a",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), MONTH))",
+      "columns": ["[v]"],
+      "rows": [
+        [29]
+      ]
+    },
+    {
+      "id": "library/8bf31353",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), WEEK))",
+      "columns": ["[v]"],
+      "rows": [
+        [130]
+      ]
+    },
+    {
+      "id": "library/ce27b7ad",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), DAY))",
+      "columns": ["[v]"],
+      "rows": [
+        [914]
+      ]
+    },
+    {
+      "id": "library-approx/76b124df",
+      "query": "EVALUATE ROW(\"v\", SQRTPI(2))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.5066282746310002]
+      ]
+    },
+    {
+      "id": "library-approx/846304af",
+      "query": "EVALUATE ROW(\"v\", LOG(125, 5))",
+      "columns": ["[v]"],
+      "rows": [
+        [3.0000000000000004]
+      ]
+    },
+    {
+      "id": "library-approx/7a498842",
+      "query": "EVALUATE ROW(\"v\", LOG10(0.001))",
+      "columns": ["[v]"],
+      "rows": [
+        [-3.0]
+      ]
+    },
+    {
+      "id": "library-approx/0c3ca5ce",
+      "query": "EVALUATE ROW(\"v\", SIN(PI() / 6))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.49999999999999994]
+      ]
+    },
+    {
+      "id": "library-approx/d143ca92",
+      "query": "EVALUATE ROW(\"v\", COS(PI() / 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.5000000000000001]
+      ]
+    },
+    {
+      "id": "library-approx/fbf7c3d7",
+      "query": "EVALUATE ROW(\"v\", TAN(PI() / 4))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.9999999999999999]
+      ]
+    },
+    {
+      "id": "library-approx/82f95a34",
+      "query": "EVALUATE ROW(\"v\", COT(PI() / 4))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.0]
+      ]
+    },
+    {
+      "id": "library-approx/fb0589e4",
+      "query": "EVALUATE ROW(\"v\", ACOS(0.5))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.0471975511965976]
+      ]
+    },
+    {
+      "id": "library-approx/dffbfc90",
+      "query": "EVALUATE ROW(\"v\", ASIN(0.5))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.5235987755982989]
+      ]
+    },
+    {
+      "id": "library-approx/6ca38104",
+      "query": "EVALUATE ROW(\"v\", ATAN(1))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.7853981633974483]
+      ]
+    },
+    {
+      "id": "library-approx/e20565fe",
+      "query": "EVALUATE ROW(\"v\", ACOT(1))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.7853981633974483]
+      ]
+    },
+    {
+      "id": "library-approx/ed742124",
+      "query": "EVALUATE ROW(\"v\", COTH(1))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.3130352854993315]
+      ]
+    },
+    {
+      "id": "library-approx/92954b85",
+      "query": "EVALUATE ROW(\"v\", ACOTH(2))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.5493061443340549]
+      ]
+    },
+    {
+      "id": "library-approx/454c6eb4",
+      "query": "EVALUATE ROW(\"v\", SINH(1))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.1752011936438014]
+      ]
+    },
+    {
+      "id": "library-approx/9a27a8fb",
+      "query": "EVALUATE ROW(\"v\", DEGREES(PI()))",
+      "columns": ["[v]"],
+      "rows": [
+        [180.0]
+      ]
+    },
+    {
+      "id": "library-approx/2e0497d0",
+      "query": "EVALUATE ROW(\"v\", RADIANS(180))",
+      "columns": ["[v]"],
+      "rows": [
+        [3.141592653589793]
+      ]
+    },
+    {
+      "id": "library-approx/4676a0a7",
+      "query": "EVALUATE ROW(\"v\", EXP(1))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.718281828459045]
+      ]
+    },
+    {
+      "id": "library-approx/6febf022",
+      "query": "EVALUATE ROW(\"v\", LN(EXP(2)))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.0]
+      ]
+    },
+    {
+      "id": "library-approx/62433a33",
+      "query": "EVALUATE ROW(\"v\", FACT(170))",
+      "columns": ["[v]"],
+      "rows": [
+        [7.257415615308004E+306]
+      ]
+    },
+    {
+      "id": "library-approx/db242e2e",
+      "query": "EVALUATE ROW(\"v\", GEOMEAN(Sales[Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.6051710846973517]
+      ]
+    },
+    {
+      "id": "library-approx/e2acf898",
+      "query": "EVALUATE ROW(\"v\", GEOMEANX(Sales, Sales[Price]))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.0911236359717214]
+      ]
+    },
+    {
+      "id": "library-approx/f93a91f7",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(GEOMEAN(Sales[Qty]), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.449489742783178]
+      ]
+    },
+    {
+      "id": "library-approx/9d5dc67a",
+      "query": "EVALUATE ROW(\"v\", NORM.S.DIST(1.96, TRUE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.9750021048517795]
+      ]
+    },
+    {
+      "id": "library-approx/2d9e3af2",
+      "query": "EVALUATE ROW(\"v\", NORM.S.DIST(0, FALSE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.3989422804014327]
+      ]
+    },
+    {
+      "id": "library-approx/1307f726",
+      "query": "EVALUATE ROW(\"v\", NORM.S.INV(0.975))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.9599639845400536]
+      ]
+    },
+    {
+      "id": "library-approx/49937a61",
+      "query": "EVALUATE ROW(\"v\", NORM.DIST(42, 40, 1.5, TRUE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.9087887802741321]
+      ]
+    },
+    {
+      "id": "library-approx/a4d4778e",
+      "query": "EVALUATE ROW(\"v\", NORM.DIST(42, 40, 1.5, FALSE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.10934004978399575]
+      ]
+    },
+    {
+      "id": "library-approx/0003e1a1",
+      "query": "EVALUATE ROW(\"v\", NORM.INV(0.908789, 40, 1.5))",
+      "columns": ["[v]"],
+      "rows": [
+        [42.00000200956616]
+      ]
+    },
+    {
+      "id": "library-approx/a55f7750",
+      "query": "EVALUATE ROW(\"v\", EXPON.DIST(0.2, 10, TRUE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.8646647167633873]
+      ]
+    },
+    {
+      "id": "library-approx/8ba4417c",
+      "query": "EVALUATE ROW(\"v\", EXPON.DIST(0.2, 10, FALSE))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.353352832366127]
+      ]
+    },
+    {
+      "id": "library-approx/18966c75",
+      "query": "EVALUATE ROW(\"v\", POISSON.DIST(2, 5, FALSE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.08422433748856833]
+      ]
+    },
+    {
+      "id": "library-approx/1fe9cfa5",
+      "query": "EVALUATE ROW(\"v\", POISSON.DIST(2, 5, TRUE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.12465201948308113]
+      ]
+    },
+    {
+      "id": "library-approx/837d719a",
+      "query": "EVALUATE ROW(\"v\", BETA.DIST(2, 8, 10, TRUE, 1, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.6854705810546873]
+      ]
+    },
+    {
+      "id": "library-approx/79cf39bd",
+      "query": "EVALUATE ROW(\"v\", BETA.DIST(2, 8, 10, FALSE, 1, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.4837646484375]
+      ]
+    },
+    {
+      "id": "library-approx/7ee42a33",
+      "query": "EVALUATE ROW(\"v\", BETA.INV(0.685470581, 8, 10, 1, 3))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.9999999999631426]
+      ]
+    },
+    {
+      "id": "library-approx/5deb7876",
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST(3, 2, TRUE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.7768698398515702]
+      ]
+    },
+    {
+      "id": "library-approx/ba5767fa",
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST(2, 3, FALSE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.20755374871029736]
+      ]
+    },
+    {
+      "id": "library-approx/88716b61",
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST.RT(18.307, 10))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.05000058909139811]
+      ]
+    },
+    {
+      "id": "library-approx/a72c9544",
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV(0.6, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [1.83258146374831]
+      ]
+    },
+    {
+      "id": "library-approx/7631eb39",
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV.RT(0.05, 10))",
+      "columns": ["[v]"],
+      "rows": [
+        [18.307038053275146]
+      ]
+    },
+    {
+      "id": "library-approx/ded7c0e1",
+      "query": "EVALUATE ROW(\"v\", T.DIST(60, 1, TRUE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.9946953263673767]
+      ]
+    },
+    {
+      "id": "library-approx/2e495f22",
+      "query": "EVALUATE ROW(\"v\", T.DIST(8, 3, FALSE))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.0007369065209469266]
+      ]
+    },
+    {
+      "id": "library-approx/f764dda2",
+      "query": "EVALUATE ROW(\"v\", T.DIST.2T(1.959999998, 60))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.05464492997592096]
+      ]
+    },
+    {
+      "id": "library-approx/1b9982f5",
+      "query": "EVALUATE ROW(\"v\", T.DIST.RT(1.959999998, 60))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.02732246498796048]
+      ]
+    },
+    {
+      "id": "library-approx/ae0e4c1c",
+      "query": "EVALUATE ROW(\"v\", T.INV(0.75, 2))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.8164965809277259]
+      ]
+    },
+    {
+      "id": "library-approx/6f21b49e",
+      "query": "EVALUATE ROW(\"v\", T.INV.2T(0.05, 10))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.2281388519862744]
+      ]
+    },
+    {
+      "id": "library-approx/5a0cb465",
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.NORM(0.05, 2.5, 50))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.6929519121748386]
+      ]
+    },
+    {
+      "id": "library-approx/c85c8c20",
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.T(0.05, 1, 50))",
+      "columns": ["[v]"],
+      "rows": [
+        [0.2841968554957298]
+      ]
+    },
+    {
+      "id": "library-approx/79c5eacb",
+      "query": "EVALUATE ROW(\"v\", PMT(0.05, 10, 1000))",
+      "columns": ["[v]"],
+      "rows": [
+        [-129.50457496545667]
+      ]
+    },
+    {
+      "id": "library-approx/f98ff56d",
+      "query": "EVALUATE ROW(\"v\", PV(0.05, 10, -129.5045749654566))",
+      "columns": ["[v]"],
+      "rows": [
+        [999.9999999999994]
+      ]
+    },
+    {
+      "id": "library-approx/4c65946a",
+      "query": "EVALUATE ROW(\"v\", FV(0.05, 10, -100))",
+      "columns": ["[v]"],
+      "rows": [
+        [1257.789253554883]
+      ]
+    },
+    {
+      "id": "library-approx/108168aa",
+      "query": "EVALUATE ROW(\"v\", NPER(0.05, -129.5045749654566, 1000))",
+      "columns": ["[v]"],
+      "rows": [
+        [9.999999999999998]
+      ]
+    },
+    {
+      "id": "library-approx/b6472569",
+      "query": "EVALUATE ROW(\"v\", SUMX(GENERATESERIES(1, 3), NORM.S.DIST([Value], TRUE)))",
+      "columns": ["[v]"],
+      "rows": [
+        [2.8172447160887337]
+      ]
+    },
+    {
+      "id": "library-approx/dd6e688f",
+      "query": "EVALUATE ROW(\"v\", SUMX(FILTER(Sales, NOT ISBLANK(Sales[Qty])), LN(Sales[Qty])))",
+      "columns": ["[v]"],
+      "rows": [
+        [4.787491742782046]
+      ]
+    },
+    {
+      "id": "library-approx/afa34ce9",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(Sales, EXP(Sales[Qty])), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [27.47459302211832]
+      ]
+    },
+    {
+      "id": "time-intelligence/976e36fe",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", [Amt]), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [110]
+      ]
+    },
+    {
+      "id": "time-intelligence/a1bc0423",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALYTD([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [150]
+      ]
+    },
+    {
+      "id": "time-intelligence/67032eb8",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALYTD([Amt], 'Date'[Date], Orders[Region] = \"West\")), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [100]
+      ]
+    },
+    {
+      "id": "time-intelligence/6ef1145b",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALYTD([Amt], 'Date'[Date], \"6/30\")), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [180]
+      ]
+    },
+    {
+      "id": "time-intelligence/1989e788",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALQTD([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [150]
+      ]
+    },
+    {
+      "id": "time-intelligence/d571a820",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALMTD([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [110]
+      ]
+    },
+    {
+      "id": "time-intelligence/2548a8da",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATESYTD('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [150]
+      ]
+    },
+    {
+      "id": "time-intelligence/96569bf9",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATESYTD('Date'[Date], \"6/30\"))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [244]
+      ]
+    },
+    {
+      "id": "time-intelligence/db2af831",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATESQTD('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [60]
+      ]
+    },
+    {
+      "id": "time-intelligence/f5870228",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATESMTD('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [29]
+      ]
+    },
+    {
+      "id": "time-intelligence/e2f1d9ea",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], SAMEPERIODLASTYEAR('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [20]
+      ]
+    },
+    {
+      "id": "time-intelligence/1238ddb2",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [28]
+      ]
+    },
+    {
+      "id": "time-intelligence/b005132f",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATEADD('Date'[Date], -1, MONTH))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [40]
+      ]
+    },
+    {
+      "id": "time-intelligence/ab384031",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATEADD('Date'[Date], -1, MONTH))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [31]
+      ]
+    },
+    {
+      "id": "time-intelligence/e70879a9",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATEADD('Date'[Date], -1, YEAR))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [20]
+      ]
+    },
+    {
+      "id": "time-intelligence/1bea7faf",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", FIRSTDATE(DATEADD('Date'[Date], 1, DAY))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-02-02T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/bf701e67",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PARALLELPERIOD('Date'[Date], -1, YEAR))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [60]
+      ]
+    },
+    {
+      "id": "time-intelligence/d21c75dc",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PARALLELPERIOD('Date'[Date], 1, QUARTER))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [80]
+      ]
+    },
+    {
+      "id": "time-intelligence/939a325d",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PREVIOUSMONTH('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [40]
+      ]
+    },
+    {
+      "id": "time-intelligence/e77c4b43",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], NEXTMONTH('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [70]
+      ]
+    },
+    {
+      "id": "time-intelligence/a3ae936b",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PREVIOUSYEAR('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [60]
+      ]
+    },
+    {
+      "id": "time-intelligence/f207cb75",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(NEXTYEAR('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "time-intelligence/95b71013",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(PREVIOUSQUARTER('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [92]
+      ]
+    },
+    {
+      "id": "time-intelligence/d40487bf",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(NEXTQUARTER('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [91]
+      ]
+    },
+    {
+      "id": "time-intelligence/d7c4d88b",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", PREVIOUSDAY('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-01-31T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/48558175",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", NEXTDAY('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-03-01T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/b20a7ee0",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", STARTOFMONTH('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-02-01T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/f7694261",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", ENDOFMONTH('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-02-29T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/44bb90ab",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", STARTOFQUARTER('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-01-01T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/75b2320b",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", ENDOFQUARTER('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-03-31T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/951ed68a",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", STARTOFYEAR('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-01-01T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/549b31b3",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", ENDOFYEAR('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-12-31T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/69ae65c8",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", STARTOFYEAR('Date'[Date], \"6/30\")), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2023-07-01T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/a3d9824d",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", FIRSTDATE('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-02-01T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/98bfa3ee",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", LASTDATE('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-02-29T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/c14acd20",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATESBETWEEN('Date'[Date], DATE(2024, 1, 1), DATE(2024, 2, 15)))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [90]
+      ]
+    },
+    {
+      "id": "time-intelligence/ead2ee54",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATESBETWEEN('Date'[Date], BLANK(), DATE(2023, 12, 31)))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [60]
+      ]
+    },
+    {
+      "id": "time-intelligence/92c53227",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATESINPERIOD('Date'[Date], DATE(2024, 3, 31), -3, MONTH))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [220]
+      ]
+    },
+    {
+      "id": "time-intelligence/a0a7334f",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 1, 1), 1, YEAR))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [366]
+      ]
+    },
+    {
+      "id": "time-intelligence/86b15112",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", FIRSTNONBLANK('Date'[Date], [Amt])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-02-10T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/976513f0",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", LASTNONBLANK('Date'[Date], [Amt])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [{"dateTime":"2024-02-29T00:00:00.000"}]
+      ]
+    },
+    {
+      "id": "time-intelligence/160bef8f",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", FIRSTNONBLANKVALUE('Date'[Date], [Amt])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [50]
+      ]
+    },
+    {
+      "id": "time-intelligence/f287d997",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", LASTNONBLANKVALUE('Date'[Date], [Amt])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [60]
+      ]
+    },
+    {
+      "id": "time-intelligence/2070d4df",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CLOSINGBALANCEMONTH([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [60]
+      ]
+    },
+    {
+      "id": "time-intelligence/c316120a",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CLOSINGBALANCEQUARTER([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [70]
+      ]
+    },
+    {
+      "id": "time-intelligence/ae445d7f",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CLOSINGBALANCEYEAR([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "time-intelligence/6d24cd04",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", OPENINGBALANCEMONTH([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
+      "id": "time-intelligence/e9cebd18",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", OPENINGBALANCEQUARTER([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [30]
+      ]
+    },
+    {
+      "id": "time-intelligence/661253da",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", OPENINGBALANCEYEAR([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [30]
+      ]
+    },
+    {
+      "id": "time-intelligence/ce390494",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], USERELATIONSHIP(Orders[ShipDate], 'Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [90]
+      ]
+    },
+    {
+      "id": "time-intelligence/7aa7c5e3",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], USERELATIONSHIP('Date'[Date], Orders[ShipDate]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [90]
+      ]
+    },
+    {
+      "id": "time-intelligence/3a03c1dd",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], None))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [360]
+      ]
+    },
+    {
+      "id": "time-intelligence/f06840d5",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_LeftFiltersRight))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "error": "Query (1, 51) The CROSSFILTER function cannot be used to enable only the many-side of a many-to-one relationship to filter the one-side."
+    },
+    {
+      "id": "time-intelligence/1915df3a",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE(COUNTROWS('Date'), Orders[Region] = \"East\", CROSSFILTER(Orders[OrderDate], 'Date'[Date], Both), ALL('Date'))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "time-intelligence/9dd26d3e",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE(COUNTROWS('Date'), Orders[Region] = \"East\", CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay), ALL('Date'))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [731]
+      ]
+    },
+    {
+      "id": "time-intelligence/fb026e34",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE(TOTALYTD([Amt], 'Date'[Date]), USERELATIONSHIP(Orders[ShipDate], 'Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [120]
+      ]
+    },
+    {
+      "id": "time-intelligence/3b7fb57e",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CONCATENATEX(Emp, PATH(Emp[Id], Emp[Parent]), \";\", Emp[Id], ASC)), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        ["1;1|2;1|2|3;1|4"]
+      ]
+    },
+    {
+      "id": "time-intelligence/ad438bcb",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", OPENINGBALANCEMONTH([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 3)",
+      "columns": ["[v]"],
+      "rows": [
+        [60]
+      ]
+    },
+    {
+      "id": "time-intelligence/41ee93f2",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PREVIOUSMONTH('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 3)",
+      "columns": ["[v]"],
+      "rows": [
+        [110]
+      ]
+    },
+    {
+      "id": "time-intelligence/62bd5309",
+      "query": "EVALUATE ROW(\"v\", TOTALYTD([Amt], 'Date'[Date]))",
+      "columns": ["[v]"],
+      "rows": [
+        [300]
+      ]
+    },
+    {
+      "id": "time-intelligence/cb956d2a",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESYTD('Date'[Date])))",
+      "columns": ["[v]"],
+      "rows": [
+        [366]
+      ]
+    },
+    {
+      "id": "time-intelligence/a2cf1bba",
+      "query": "EVALUATE ROW(\"v\", CALCULATE([Amt], SAMEPERIODLASTYEAR('Date'[Date])))",
+      "columns": ["[v]"],
+      "rows": [
+        [60]
+      ]
+    },
+    {
+      "id": "time-intelligence/ec113282",
+      "query": "EVALUATE ROW(\"v\", MINX(VALUES('Date'[Year]), TOTALYTD([Amt], 'Date'[Date])))",
+      "columns": ["[v]"],
+      "rows": [
+        [60]
+      ]
+    }
+  ]
+}

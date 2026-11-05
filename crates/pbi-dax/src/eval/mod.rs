@@ -17,9 +17,9 @@
 //! - **Filter context** ([`pbi_engine::FilterContext`]) flows through every
 //!   evaluation; table references (`'Web Sessions'`) are the visible rows,
 //!   without the blank row. `VALUES(T)`/`ALL(T)`/`VALUES(T[c])`/
-//!   `ALL(T[c])`/`DISTINCTCOUNT` include the blank row (or its BLANK value)
-//!   when visible; `DISTINCT`, `ALLNOBLANKROW` and plain table references
-//!   do not.
+//!   `ALL(T[c])` include the blank row (or its BLANK value) when visible;
+//!   `DISTINCT`, `DISTINCTCOUNT`, `ALLNOBLANKROW` and plain table
+//!   references do not.
 //! - **Row context**: iterators (`FILTER`, `SUMX`, `ADDCOLUMNS`, …) and
 //!   calculated columns push row frames; `T[c]` reads the innermost frame
 //!   that has the column (by name, then lineage); `EARLIER` reads outer

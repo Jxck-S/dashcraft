@@ -289,7 +289,7 @@ pub fn pbit_bytes(doc: &OpenedDocument) -> Result<Vec<u8>, CoreError> {
     format.encoding = pbi_tmsl::TextEncoding::Utf16Le;
     format.bom = false;
     let schema = pbi_tmsl::write_bytes(
-        &crate::reader::model_for_writing(model),
+        &with_level_ordinals(crate::reader::model_for_writing(model)),
         &pbi_tmsl::WriteOptions {
             format,
             ..pbi_tmsl::WriteOptions::default()
@@ -333,7 +333,8 @@ pub fn pbit_bytes(doc: &OpenedDocument) -> Result<Vec<u8>, CoreError> {
     parts.push((
         "Settings".into(),
         original("Settings").unwrap_or_else(|| {
-            utf16le(r#"{"Version":4,"ReportSettings":{},"QueriesSettings":{"TypeDetectionEnabled":true,"RelationshipImportEnabled":true}}"#)
+            // Desktop refuses a `QueriesSettings` without its own version string.
+            utf16le(r#"{"Version":4,"ReportSettings":{}}"#)
         }),
     ));
     parts.push((
@@ -664,6 +665,22 @@ fn copy_tree(out: &mut Files, container: &dyn Container, from: &str, to: &str) {
             out.put(join(to, rel), bytes);
         }
     }
+}
+
+/// Numbers hierarchy levels without an `ordinal` by position. TMDL leaves
+/// the ordinal implicit, but Desktop rejects TMSL levels without one
+/// ("invalid index '-1'").
+fn with_level_ordinals(mut model: Model) -> Model {
+    for t in &mut model.tables {
+        for h in &mut t.hierarchies {
+            for (i, level) in h.levels.iter_mut().enumerate() {
+                if level.ordinal.is_none() {
+                    level.ordinal = i64::try_from(i).ok();
+                }
+            }
+        }
+    }
+    model
 }
 
 /// `[Content_Types].xml` for the parts of a PBIT.

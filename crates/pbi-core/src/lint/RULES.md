@@ -31,6 +31,7 @@
 | LINT015 | Warning | A visual is outside its page or has zero size |
 | LINT016 | Info | Two visuals overlap |
 | LINT017 | Error | `sortByColumn` or a hierarchy level references a missing column |
+| LINT018 | Error | A measure has both `formatString` and `formatStringDefinition` |
 
 ## LINT001 / LINT002: visual field missing from the model
 
@@ -158,3 +159,7 @@ Pages with more than 1000 visuals are skipped (noted).
 ## LINT017: model column references
 
 A column's `sortByColumn` and every hierarchy level's `column` must name a column of the same table.
+
+## LINT018: measure format strings
+
+A measure may have a static `formatString` or a dynamic `formatStringDefinition`, not both. Power BI Desktop refuses to load a model that sets both; this was found by the Desktop ground-truth suites (`reference/groundtruth/`). The suggestion is to remove `formatString`.

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "suite": "acme-metadata",
+  "title": "The Acme Outfitters model as Desktop sees it (INFO.VIEW functions) vs the model DashCraft reads",
+  "fixture": "acme",
+  "requiresTables": [
+    "Orders",
+    "Customers",
+    "Products",
+    "Stores",
+    "Targets",
+    "Returns",
+    "Web Sessions",
+    "Date",
+    "Time Calc",
+    "Products Never Sold",
+    "Last Refreshed"
+  ],
+  "cases": [
+    {
+      "id": "tables",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.TABLES(), \"Name\", [Name], \"DataCategory\", [DataCategory], \"Description\", [Description], \"IsHidden\", [IsHidden], \"CalculationGroupPrecedence\", [CalculationGroupPrecedence])",
+      "metadata": "tables"
+    },
+    {
+      "id": "columns",
+      "query": "EVALUATE SELECTCOLUMNS(FILTER(INFO.VIEW.COLUMNS(), [Type] <> \"RowNumber\"), \"Table\", [Table], \"Name\", [Name], \"DataType\", [DataType], \"IsHidden\", [IsHidden], \"FormatString\", [FormatString], \"SortByColumn\", [SortByColumn], \"SummarizeBy\", [SummarizeBy], \"DataCategory\", [DataCategory], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "metadata": "columns"
+    },
+    {
+      "id": "measures",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.MEASURES(), \"Table\", [Table], \"Name\", [Name], \"IsHidden\", [IsHidden], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "metadata": "measures"
+    },
+    {
+      "id": "measure-formats",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.MEASURES(), \"Name\", [Name], \"FormatString\", [FormatString])",
+      "metadata": "measure-formats"
+    },
+    {
+      "id": "relationships",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.RELATIONSHIPS(), \"FromTable\", [FromTable], \"FromColumn\", [FromColumn], \"FromCardinality\", [FromCardinality], \"ToTable\", [ToTable], \"ToColumn\", [ToColumn], \"ToCardinality\", [ToCardinality], \"IsActive\", [IsActive], \"CrossFilteringBehavior\", [CrossFilteringBehavior], \"SecurityFilteringBehavior\", [SecurityFilteringBehavior])",
+      "metadata": "relationships"
+    }
+  ]
+}

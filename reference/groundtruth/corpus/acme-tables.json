@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "suite": "acme-tables",
+  "title": "Every Acme Outfitters table after refresh (M, types, calculated columns and tables)",
+  "fixture": "acme",
+  "requiresTables": [
+    "Orders",
+    "Customers",
+    "Products",
+    "Stores",
+    "Targets",
+    "Returns",
+    "Web Sessions",
+    "Date",
+    "Time Calc",
+    "Products Never Sold",
+    "Last Refreshed"
+  ],
+  "cases": [
+    {
+      "id": "orders",
+      "query": "EVALUATE 'Orders'"
+    },
+    {
+      "id": "customers",
+      "query": "EVALUATE 'Customers'"
+    },
+    {
+      "id": "products",
+      "query": "EVALUATE 'Products'"
+    },
+    {
+      "id": "stores",
+      "query": "EVALUATE 'Stores'"
+    },
+    {
+      "id": "targets",
+      "query": "EVALUATE 'Targets'"
+    },
+    {
+      "id": "returns",
+      "query": "EVALUATE 'Returns'"
+    },
+    {
+      "id": "web-sessions",
+      "query": "EVALUATE 'Web Sessions'"
+    },
+    {
+      "id": "date",
+      "query": "EVALUATE 'Date'"
+    },
+    {
+      "id": "time-calc",
+      "query": "EVALUATE 'Time Calc'"
+    },
+    {
+      "id": "products-never-sold",
+      "query": "EVALUATE 'Products Never Sold'"
+    },
+    {
+      "id": "last-refreshed",
+      "query": "EVALUATE 'Last Refreshed'",
+      "volatile": "refresh time"
+    }
+  ]
+}

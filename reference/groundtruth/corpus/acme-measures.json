@@ -1,0 +1,2425 @@
+{
+  "schemaVersion": 1,
+  "suite": "acme-measures",
+  "title": "Every Acme Outfitters measure unfiltered, under each report's filters, grouped by the main dimensions, and every page's cards under the report, page and slicer filters",
+  "fixture": "acme",
+  "requiresTables": [
+    "Orders",
+    "Customers",
+    "Products",
+    "Stores",
+    "Targets",
+    "Returns",
+    "Web Sessions",
+    "Date",
+    "Time Calc",
+    "Products Never Sold",
+    "Last Refreshed"
+  ],
+  "cases": [
+    {
+      "id": "total-sales/all",
+      "query": "EVALUATE ROW(\"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Total Sales]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "total-sales/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Total Sales]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "total-sales/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Total Sales]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "total-cost/all",
+      "query": "EVALUATE ROW(\"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Total Cost]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "total-cost/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Total Cost]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "total-cost/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Total Cost]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "gross-margin/all",
+      "query": "EVALUATE ROW(\"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Gross Margin]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "gross-margin/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Gross Margin]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "gross-margin/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Gross Margin]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "margin/all",
+      "query": "EVALUATE ROW(\"v\", [Margin %])"
+    },
+    {
+      "id": "margin/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Margin %]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "margin/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Margin %]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "margin/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Margin %]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "sales-scaled/all",
+      "query": "EVALUATE ROW(\"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales (Scaled)]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "sales-scaled/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales (Scaled)]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "sales-scaled/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales (Scaled)]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "completed-sales/all",
+      "query": "EVALUATE ROW(\"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Completed Sales]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "completed-sales/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Completed Sales]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "completed-sales/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Completed Sales]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "shipped-sales/all",
+      "query": "EVALUATE ROW(\"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Shipped Sales]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "shipped-sales/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Shipped Sales]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "shipped-sales/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Shipped Sales]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "sales-all-stores/all",
+      "query": "EVALUATE ROW(\"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales All Stores]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "sales-all-stores/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales All Stores]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "sales-all-stores/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales All Stores]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "store-share/all",
+      "query": "EVALUATE ROW(\"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Store Share]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "store-share/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Store Share]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "store-share/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Store Share]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "order-count/all",
+      "query": "EVALUATE ROW(\"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Order Count]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "order-count/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Order Count]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "order-count/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Order Count]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "units-sold/all",
+      "query": "EVALUATE ROW(\"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Units Sold]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "units-sold/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Units Sold]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "units-sold/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Units Sold]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "active-customers/all",
+      "query": "EVALUATE ROW(\"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Active Customers]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "active-customers/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Active Customers]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "active-customers/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Active Customers]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "avg-order-value/all",
+      "query": "EVALUATE ROW(\"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Avg Order Value]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "avg-order-value/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Avg Order Value]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "avg-order-value/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Avg Order Value]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "revenue-per-unit/all",
+      "query": "EVALUATE ROW(\"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Revenue per Unit]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "revenue-per-unit/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Revenue per Unit]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "revenue-per-unit/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Revenue per Unit]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "last-order-date/all",
+      "query": "EVALUATE ROW(\"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Last Order Date]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "last-order-date/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Last Order Date]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "last-order-date/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Last Order Date]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "unknown-product-orders/all",
+      "query": "EVALUATE ROW(\"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Unknown Product Orders]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "unknown-product-orders/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Unknown Product Orders]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "unknown-product-orders/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Unknown Product Orders]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "sales-ytd/all",
+      "query": "EVALUATE ROW(\"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales YTD]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "sales-ytd/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales YTD]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "sales-ytd/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales YTD]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "sales-py/all",
+      "query": "EVALUATE ROW(\"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales PY]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "sales-py/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales PY]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "sales-py/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales PY]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "sales-yoy/all",
+      "query": "EVALUATE ROW(\"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales YoY %]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "sales-yoy/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales YoY %]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "sales-yoy/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales YoY %]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "sales-prev-month/all",
+      "query": "EVALUATE ROW(\"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales Prev Month]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "sales-prev-month/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales Prev Month]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "sales-prev-month/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sales Prev Month]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "customer-count/all",
+      "query": "EVALUATE ROW(\"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Customer Count]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "customer-count/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Customer Count]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "customer-count/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Customer Count]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "target/all",
+      "query": "EVALUATE ROW(\"v\", [Target])"
+    },
+    {
+      "id": "target/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Target]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "target/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Target]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "target/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Target]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "target-attainment/all",
+      "query": "EVALUATE ROW(\"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Target Attainment %]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "target-attainment/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Target Attainment %]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "target-attainment/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Target Attainment %]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "target-stretch/all",
+      "query": "EVALUATE ROW(\"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Target Stretch]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "target-stretch/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Target Stretch]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "target-stretch/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Target Stretch]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "returns-count/all",
+      "query": "EVALUATE ROW(\"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Returns Count]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "returns-count/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Returns Count]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "returns-count/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Returns Count]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "refunds/all",
+      "query": "EVALUATE ROW(\"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Refunds]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "refunds/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Refunds]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "refunds/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Refunds]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "return-rate/all",
+      "query": "EVALUATE ROW(\"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Return Rate]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "return-rate/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Return Rate]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "return-rate/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Return Rate]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "sessions/all",
+      "query": "EVALUATE ROW(\"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sessions]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "sessions/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sessions]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "sessions/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sessions]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "converted-sessions/all",
+      "query": "EVALUATE ROW(\"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Converted Sessions]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "converted-sessions/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Converted Sessions]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "converted-sessions/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Converted Sessions]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "conversion-rate/all",
+      "query": "EVALUATE ROW(\"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Conversion Rate]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "conversion-rate/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Conversion Rate]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "conversion-rate/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Conversion Rate]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "avg-pages-per-session/all",
+      "query": "EVALUATE ROW(\"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Avg Pages per Session]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "avg-pages-per-session/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Avg Pages per Session]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "avg-pages-per-session/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Avg Pages per Session]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "sessions-all-devices/all",
+      "query": "EVALUATE ROW(\"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sessions (All Devices)]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "sessions-all-devices/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sessions (All Devices)]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "sessions-all-devices/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Sessions (All Devices)]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "products-never-sold-count/all",
+      "query": "EVALUATE ROW(\"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/overview",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Products Never Sold Count]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"})\n)"
+    },
+    {
+      "id": "products-never-sold-count/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Products Never Sold Count]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "products-never-sold-count/online",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"v\", [Products Never Sold Count]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"}\n)"
+    },
+    {
+      "id": "total-sales/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-sales/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Total Sales])"
+    },
+    {
+      "id": "total-cost/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Total Cost])"
+    },
+    {
+      "id": "total-cost/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Total Cost])"
+    },
+    {
+      "id": "gross-margin/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "gross-margin/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Gross Margin])"
+    },
+    {
+      "id": "margin/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Margin %])"
+    },
+    {
+      "id": "margin/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Margin %])"
+    },
+    {
+      "id": "sales-scaled/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "sales-scaled/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Sales (Scaled)])"
+    },
+    {
+      "id": "completed-sales/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "completed-sales/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Completed Sales])"
+    },
+    {
+      "id": "shipped-sales/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "shipped-sales/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Shipped Sales])"
+    },
+    {
+      "id": "sales-all-stores/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "sales-all-stores/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Sales All Stores])"
+    },
+    {
+      "id": "store-share/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Store Share])"
+    },
+    {
+      "id": "store-share/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Store Share])"
+    },
+    {
+      "id": "order-count/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Order Count])"
+    },
+    {
+      "id": "order-count/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Order Count])"
+    },
+    {
+      "id": "units-sold/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Units Sold])"
+    },
+    {
+      "id": "units-sold/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Units Sold])"
+    },
+    {
+      "id": "active-customers/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Active Customers])"
+    },
+    {
+      "id": "active-customers/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Active Customers])"
+    },
+    {
+      "id": "avg-order-value/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "avg-order-value/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Avg Order Value])"
+    },
+    {
+      "id": "revenue-per-unit/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "revenue-per-unit/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Revenue per Unit])"
+    },
+    {
+      "id": "last-order-date/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "last-order-date/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Last Order Date])"
+    },
+    {
+      "id": "unknown-product-orders/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "unknown-product-orders/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Unknown Product Orders])"
+    },
+    {
+      "id": "sales-ytd/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-ytd/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Sales YTD])"
+    },
+    {
+      "id": "sales-py/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-py/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Sales PY])"
+    },
+    {
+      "id": "sales-yoy/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-yoy/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Sales YoY %])"
+    },
+    {
+      "id": "sales-prev-month/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "sales-prev-month/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Sales Prev Month])"
+    },
+    {
+      "id": "customer-count/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Customer Count])"
+    },
+    {
+      "id": "customer-count/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Customer Count])"
+    },
+    {
+      "id": "target/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Target])"
+    },
+    {
+      "id": "target/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Target])"
+    },
+    {
+      "id": "target-attainment/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-attainment/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Target Attainment %])"
+    },
+    {
+      "id": "target-stretch/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "target-stretch/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Target Stretch])"
+    },
+    {
+      "id": "returns-count/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Returns Count])"
+    },
+    {
+      "id": "returns-count/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Returns Count])"
+    },
+    {
+      "id": "refunds/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Refunds])"
+    },
+    {
+      "id": "refunds/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Refunds])"
+    },
+    {
+      "id": "return-rate/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Return Rate])"
+    },
+    {
+      "id": "return-rate/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Return Rate])"
+    },
+    {
+      "id": "sessions/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Sessions])"
+    },
+    {
+      "id": "sessions/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "converted-sessions/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Converted Sessions])"
+    },
+    {
+      "id": "conversion-rate/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "conversion-rate/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Conversion Rate])"
+    },
+    {
+      "id": "avg-pages-per-session/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "avg-pages-per-session/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Avg Pages per Session])"
+    },
+    {
+      "id": "sessions-all-devices/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "sessions-all-devices/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Sessions (All Devices)])"
+    },
+    {
+      "id": "products-never-sold-count/by-year",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-year-month",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year Month], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-day-type",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Day Type], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-region",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Region], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-channel",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Channel], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-store",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Stores'[Store Name], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-category",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Category], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-price-band",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Products'[Price Band], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-segment",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Segment], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-loyalty-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Loyalty Tier], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-value-tier",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Customers'[Value Tier], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-device",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Web Sessions'[Device], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-status",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Status], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "products-never-sold-count/by-order-size",
+      "query": "EVALUATE SUMMARIZECOLUMNS('Orders'[Order Size], \"v\", [Products Never Sold Count])"
+    },
+    {
+      "id": "page/overview/executive-summary/cards",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Avg Order Value\", [Avg Order Value], \"Margin %\", [Margin %], \"Active Customers\", [Active Customers], \"Sales (Scaled)\", [Sales (Scaled)]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year] IN {2025}\n)"
+    },
+    {
+      "id": "page/overview/product-detail/cards",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"Total Sales\", [Total Sales], \"Units Sold\", [Units Sold], \"Margin %\", [Margin %], \"Revenue per Unit\", [Revenue per Unit], \"Products Never Sold Count\", [Products Never Sold Count], \"Unknown Product Orders\", [Unknown Product Orders]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Products'[Category] IN {\"Camping\", \"Hiking\"},\n    'Products'[List Price] >= 50 && 'Products'[List Price] <= 400\n)"
+    },
+    {
+      "id": "page/overview/time-intelligence/cards",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"Sales YTD\", [Sales YTD], \"Sales PY\", [Sales PY], \"Sales YoY %\", [Sales YoY %], \"Sales Prev Month\", [Sales Prev Month], \"Shipped Sales\", [Shipped Sales]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year Month] IN {\"2025-06\"}\n)"
+    },
+    {
+      "id": "page/stores/store-performance/cards",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"Total Sales\", [Total Sales], \"Target\", [Target], \"Target Attainment %\", [Target Attainment %], \"Return Rate\", [Return Rate], \"Gross Margin\", [Gross Margin]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"},\n    'Stores'[Region] IN {\"West\"},\n    'Date'[Date] >= DATE(2025, 1, 1) && 'Date'[Date] < DATE(2026, 1, 1)\n)"
+    },
+    {
+      "id": "page/stores/store-tooltip/cards",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"Total Sales\", [Total Sales], \"Target Attainment %\", [Target Attainment %]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"}\n)"
+    },
+    {
+      "id": "page/online/online-overview/cards",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"Total Sales\", [Total Sales], \"Order Count\", [Order Count], \"Active Customers\", [Active Customers], \"Customer Count\", [Customer Count], \"Avg Order Value\", [Avg Order Value], \"Sessions\", [Sessions], \"Conversion Rate\", [Conversion Rate], \"Avg Pages per Session\", [Avg Pages per Session], \"Sessions (All Devices)\", [Sessions (All Devices)]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"},\n    NOT ('Customers'[Loyalty Tier] IN {\"Unassigned\"})\n)"
+    },
+    {
+      "id": "page/online/customer-detail/cards",
+      "query": "EVALUATE CALCULATETABLE(\n    ROW(\"Customer Count\", [Customer Count], \"Total Sales\", [Total Sales]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"},\n    'Customers'[Segment] IN {\"Corporate\"}\n)"
+    }
+  ]
+}

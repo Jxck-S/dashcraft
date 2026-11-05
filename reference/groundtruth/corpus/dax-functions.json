@@ -1,0 +1,2635 @@
+{
+  "schemaVersion": 1,
+  "suite": "dax-functions",
+  "title": "Every case of crates/pbi-dax/tests/functions.rs as EVALUATE ROW(\"v\", <expr>) on the dax-lab fixture",
+  "fixture": "dax-lab",
+  "requiresTables": [
+    "Product",
+    "Sales",
+    "Date",
+    "Orders",
+    "Emp"
+  ],
+  "cases": [
+    {
+      "id": "logical/1c6a28bc",
+      "expr": "IF(1 > 2, \"a\", \"b\")",
+      "query": "EVALUATE ROW(\"v\", IF(1 > 2, \"a\", \"b\"))"
+    },
+    {
+      "id": "logical/af21a1bd",
+      "expr": "IF(FALSE(), 1)",
+      "query": "EVALUATE ROW(\"v\", IF(FALSE(), 1))"
+    },
+    {
+      "id": "logical/ff5fcd98",
+      "expr": "IF(BLANK(), 1, 2)",
+      "query": "EVALUATE ROW(\"v\", IF(BLANK(), 1, 2))"
+    },
+    {
+      "id": "logical/01d9b04c",
+      "expr": "SWITCH(2, 1, \"one\", 2, \"two\", \"other\")",
+      "query": "EVALUATE ROW(\"v\", SWITCH(2, 1, \"one\", 2, \"two\", \"other\"))"
+    },
+    {
+      "id": "logical/95d550bd",
+      "expr": "SWITCH(TRUE(), 1 > 2, \"a\", \"else\")",
+      "query": "EVALUATE ROW(\"v\", SWITCH(TRUE(), 1 > 2, \"a\", \"else\"))"
+    },
+    {
+      "id": "logical/acbf7c59",
+      "expr": "SWITCH(9, 1, \"one\")",
+      "query": "EVALUATE ROW(\"v\", SWITCH(9, 1, \"one\"))"
+    },
+    {
+      "id": "logical/e75e6af4",
+      "expr": "COALESCE(BLANK(), BLANK(), 3)",
+      "query": "EVALUATE ROW(\"v\", COALESCE(BLANK(), BLANK(), 3))"
+    },
+    {
+      "id": "logical/238ae8bb",
+      "expr": "ISBLANK(BLANK())",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(BLANK()))"
+    },
+    {
+      "id": "logical/3f839b7d",
+      "expr": "ISBLANK(0)",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(0))"
+    },
+    {
+      "id": "logical/9a4d3781",
+      "expr": "BLANK()",
+      "query": "EVALUATE ROW(\"v\", BLANK())"
+    },
+    {
+      "id": "logical/5d0dfab6",
+      "expr": "TRUE()",
+      "query": "EVALUATE ROW(\"v\", TRUE())"
+    },
+    {
+      "id": "logical/d038915c",
+      "expr": "FALSE()",
+      "query": "EVALUATE ROW(\"v\", FALSE())"
+    },
+    {
+      "id": "logical/3ce1e813",
+      "expr": "NOT(1 = 1)",
+      "query": "EVALUATE ROW(\"v\", NOT(1 = 1))"
+    },
+    {
+      "id": "logical/093c9185",
+      "expr": "NOT(BLANK())",
+      "query": "EVALUATE ROW(\"v\", NOT(BLANK()))"
+    },
+    {
+      "id": "logical/2fe67e8c",
+      "expr": "AND(TRUE(), BLANK())",
+      "query": "EVALUATE ROW(\"v\", AND(TRUE(), BLANK()))"
+    },
+    {
+      "id": "logical/f0dd4eaf",
+      "expr": "OR(FALSE(), BLANK())",
+      "query": "EVALUATE ROW(\"v\", OR(FALSE(), BLANK()))"
+    },
+    {
+      "id": "logical/e52a6e6c",
+      "expr": "OR(BLANK(), BLANK())",
+      "query": "EVALUATE ROW(\"v\", OR(BLANK(), BLANK()))"
+    },
+    {
+      "id": "logical/e8cc8df1",
+      "expr": "IFERROR(VALUE(\"abc\"), -1)",
+      "query": "EVALUATE ROW(\"v\", IFERROR(VALUE(\"abc\"), -1))"
+    },
+    {
+      "id": "logical/02880ca8",
+      "expr": "ISERROR(VALUE(\"abc\"))",
+      "query": "EVALUATE ROW(\"v\", ISERROR(VALUE(\"abc\")))"
+    },
+    {
+      "id": "logical/e1795989",
+      "expr": "ISNUMBER(1.5)",
+      "query": "EVALUATE ROW(\"v\", ISNUMBER(1.5))"
+    },
+    {
+      "id": "logical/96faed71",
+      "expr": "ISTEXT(\"a\")",
+      "query": "EVALUATE ROW(\"v\", ISTEXT(\"a\"))"
+    },
+    {
+      "id": "logical/94c67635",
+      "expr": "ISLOGICAL(TRUE())",
+      "query": "EVALUATE ROW(\"v\", ISLOGICAL(TRUE()))"
+    },
+    {
+      "id": "math/0a9fb394",
+      "expr": "DIVIDE(10, 4)",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(10, 4))"
+    },
+    {
+      "id": "math/b81fe426",
+      "expr": "DIVIDE(1, 0)",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1, 0))"
+    },
+    {
+      "id": "math/bcd64556",
+      "expr": "DIVIDE(1, 0, -1)",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1, 0, -1))"
+    },
+    {
+      "id": "math/11923e2c",
+      "expr": "DIVIDE(1, BLANK(), 9)",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1, BLANK(), 9))"
+    },
+    {
+      "id": "math/210c2cb2",
+      "expr": "DIVIDE(BLANK(), 5)",
+      "query": "EVALUATE ROW(\"v\", DIVIDE(BLANK(), 5))"
+    },
+    {
+      "id": "math/e4b63a8d",
+      "expr": "ABS(-3)",
+      "query": "EVALUATE ROW(\"v\", ABS(-3))"
+    },
+    {
+      "id": "math/b3678be0",
+      "expr": "INT(-2.5)",
+      "query": "EVALUATE ROW(\"v\", INT(-2.5))"
+    },
+    {
+      "id": "math/e12d7267",
+      "expr": "ROUND(2.345, 2)",
+      "query": "EVALUATE ROW(\"v\", ROUND(2.345, 2))"
+    },
+    {
+      "id": "math/357e8bcd",
+      "expr": "ROUND(1.005, 2)",
+      "query": "EVALUATE ROW(\"v\", ROUND(1.005, 2))"
+    },
+    {
+      "id": "math/1128a12c",
+      "expr": "ROUNDDOWN(2.3, 1)",
+      "query": "EVALUATE ROW(\"v\", ROUNDDOWN(2.3, 1))"
+    },
+    {
+      "id": "math/dde75b71",
+      "expr": "ROUND(1234, -2)",
+      "query": "EVALUATE ROW(\"v\", ROUND(1234, -2))"
+    },
+    {
+      "id": "math/28e0126e",
+      "expr": "ROUNDUP(1.21, 1)",
+      "query": "EVALUATE ROW(\"v\", ROUNDUP(1.21, 1))"
+    },
+    {
+      "id": "math/4eab38a0",
+      "expr": "ROUNDDOWN(1.29, 1)",
+      "query": "EVALUATE ROW(\"v\", ROUNDDOWN(1.29, 1))"
+    },
+    {
+      "id": "math/e10014ef",
+      "expr": "TRUNC(-1.7)",
+      "query": "EVALUATE ROW(\"v\", TRUNC(-1.7))"
+    },
+    {
+      "id": "math/312e827f",
+      "expr": "MOD(7, 3)",
+      "query": "EVALUATE ROW(\"v\", MOD(7, 3))"
+    },
+    {
+      "id": "math/0a8bbbac",
+      "expr": "MOD(-7, 3)",
+      "query": "EVALUATE ROW(\"v\", MOD(-7, 3))"
+    },
+    {
+      "id": "math/62b9ceb8",
+      "expr": "POWER(2, 10)",
+      "query": "EVALUATE ROW(\"v\", POWER(2, 10))"
+    },
+    {
+      "id": "math/9264d718",
+      "expr": "SQRT(16)",
+      "query": "EVALUATE ROW(\"v\", SQRT(16))"
+    },
+    {
+      "id": "math/6aa13151",
+      "expr": "SIGN(-5)",
+      "query": "EVALUATE ROW(\"v\", SIGN(-5))"
+    },
+    {
+      "id": "text/4ebcef16",
+      "expr": "UPPER(\"abc\")",
+      "query": "EVALUATE ROW(\"v\", UPPER(\"abc\"))"
+    },
+    {
+      "id": "text/2c004a60",
+      "expr": "LOWER(\"ABC\")",
+      "query": "EVALUATE ROW(\"v\", LOWER(\"ABC\"))"
+    },
+    {
+      "id": "text/4340d0e1",
+      "expr": "LEN(\"héllo\")",
+      "query": "EVALUATE ROW(\"v\", LEN(\"héllo\"))"
+    },
+    {
+      "id": "text/f356ff5f",
+      "expr": "LEFT(\"abcdef\", 2)",
+      "query": "EVALUATE ROW(\"v\", LEFT(\"abcdef\", 2))"
+    },
+    {
+      "id": "text/a204800a",
+      "expr": "RIGHT(\"abcdef\", 3)",
+      "query": "EVALUATE ROW(\"v\", RIGHT(\"abcdef\", 3))"
+    },
+    {
+      "id": "text/d39389a5",
+      "expr": "MID(\"abcdef\", 2, 3)",
+      "query": "EVALUATE ROW(\"v\", MID(\"abcdef\", 2, 3))"
+    },
+    {
+      "id": "text/ca3e246c",
+      "expr": "TRIM(\"  a   b  \")",
+      "query": "EVALUATE ROW(\"v\", TRIM(\"  a   b  \"))"
+    },
+    {
+      "id": "text/800ffd7e",
+      "expr": "CONCATENATE(\"a\", 1)",
+      "query": "EVALUATE ROW(\"v\", CONCATENATE(\"a\", 1))"
+    },
+    {
+      "id": "text/27d6e674",
+      "expr": "SUBSTITUTE(\"a-b-c\", \"-\", \"+\")",
+      "query": "EVALUATE ROW(\"v\", SUBSTITUTE(\"a-b-c\", \"-\", \"+\"))"
+    },
+    {
+      "id": "text/7767efc4",
+      "expr": "SUBSTITUTE(\"a-b-c\", \"-\", \"+\", 2)",
+      "query": "EVALUATE ROW(\"v\", SUBSTITUTE(\"a-b-c\", \"-\", \"+\", 2))"
+    },
+    {
+      "id": "text/c9ec99df",
+      "expr": "CONTAINSSTRING(\"Web Sessions\", \"SESSION\")",
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRING(\"Web Sessions\", \"SESSION\"))"
+    },
+    {
+      "id": "text/3942b3fd",
+      "expr": "CONTAINSSTRING(\"abc\", \"a?c\")",
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRING(\"abc\", \"a?c\"))"
+    },
+    {
+      "id": "text/b90cc9d8",
+      "expr": "CONTAINSSTRING(\"abc\", \"x*\")",
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRING(\"abc\", \"x*\"))"
+    },
+    {
+      "id": "text/ddac4c37",
+      "expr": "CONTAINSSTRINGEXACT(\"abc\", \"B\")",
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRINGEXACT(\"abc\", \"B\"))"
+    },
+    {
+      "id": "text/9693a8df",
+      "expr": "EXACT(\"a\", \"A\")",
+      "query": "EVALUATE ROW(\"v\", EXACT(\"a\", \"A\"))"
+    },
+    {
+      "id": "text/bc4845f1",
+      "expr": "VALUE(\"12.5\")",
+      "query": "EVALUATE ROW(\"v\", VALUE(\"12.5\"))"
+    },
+    {
+      "id": "text/ccc4e357",
+      "expr": "FORMAT(5 / 11, \"0.0%;-0.0%;0.0%\")",
+      "query": "EVALUATE ROW(\"v\", FORMAT(5 / 11, \"0.0%;-0.0%;0.0%\"))"
+    },
+    {
+      "id": "text/e0083a9c",
+      "expr": "FORMAT(1234567, \"#,0\")",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567, \"#,0\"))"
+    },
+    {
+      "id": "text/64cd17c1",
+      "expr": "FORMAT(-1234.5, \"\\$#,0.00;(\\$#,0.00)\")",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5, \"\\$#,0.00;(\\$#,0.00)\"))"
+    },
+    {
+      "id": "text/4ad4847f",
+      "expr": "FORMAT(BLANK(), \"0\")",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"0\"))"
+    },
+    {
+      "id": "text/18d158e3",
+      "expr": "FORMAT(12345.67, \"Standard\")",
+      "query": "EVALUATE ROW(\"v\", FORMAT(12345.67, \"Standard\"))"
+    },
+    {
+      "id": "text/f93afb9c",
+      "expr": "FORMAT(DATE(2026, 10, 21) + 0.5, \"yyyy-mm-dd hh:nn\")",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2026, 10, 21) + 0.5, \"yyyy-mm-dd hh:nn\"))"
+    },
+    {
+      "id": "text/3b8c8028",
+      "expr": "FORMAT(MAX(Sales[Date]), \"Short Date\")",
+      "query": "EVALUATE ROW(\"v\", FORMAT(MAX(Sales[Date]), \"Short Date\"))"
+    },
+    {
+      "id": "text/c312646e",
+      "expr": "FORMAT(3, BLANK())",
+      "query": "EVALUATE ROW(\"v\", FORMAT(3, BLANK()))"
+    },
+    {
+      "id": "text/8a2409bc",
+      "expr": "\"a\" & BLANK() & 1",
+      "query": "EVALUATE ROW(\"v\", \"a\" & BLANK() & 1)"
+    },
+    {
+      "id": "date/cbe76211",
+      "expr": "DATE(2024, 2, 30)",
+      "query": "EVALUATE ROW(\"v\", DATE(2024, 2, 30))"
+    },
+    {
+      "id": "date/c045f7f0",
+      "expr": "YEAR(DATE(2024, 5, 6))",
+      "query": "EVALUATE ROW(\"v\", YEAR(DATE(2024, 5, 6)))"
+    },
+    {
+      "id": "date/1834b3af",
+      "expr": "MONTH(DATE(2024, 5, 6))",
+      "query": "EVALUATE ROW(\"v\", MONTH(DATE(2024, 5, 6)))"
+    },
+    {
+      "id": "date/57f80abb",
+      "expr": "DAY(DATE(2024, 5, 6))",
+      "query": "EVALUATE ROW(\"v\", DAY(DATE(2024, 5, 6)))"
+    },
+    {
+      "id": "date/7203b6d6",
+      "expr": "HOUR(dt\"2024-01-01T13:45:10\")",
+      "query": "EVALUATE ROW(\"v\", HOUR(dt\"2024-01-01T13:45:10\"))"
+    },
+    {
+      "id": "date/9313cfa5",
+      "expr": "MINUTE(dt\"2024-01-01T13:45:10\")",
+      "query": "EVALUATE ROW(\"v\", MINUTE(dt\"2024-01-01T13:45:10\"))"
+    },
+    {
+      "id": "date/7b887763",
+      "expr": "SECOND(dt\"2024-01-01T13:45:10\")",
+      "query": "EVALUATE ROW(\"v\", SECOND(dt\"2024-01-01T13:45:10\"))"
+    },
+    {
+      "id": "date/097bea06",
+      "expr": "YEAR(NOW()) >= 2024",
+      "query": "EVALUATE ROW(\"v\", YEAR(NOW()) >= 2024)",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "date/342a3537",
+      "expr": "TODAY() <= NOW()",
+      "query": "EVALUATE ROW(\"v\", TODAY() <= NOW())",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "date/b3065a07",
+      "expr": "YEAR(UTCNOW()) >= 2024",
+      "query": "EVALUATE ROW(\"v\", YEAR(UTCNOW()) >= 2024)",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "date/bc148dda",
+      "expr": "UTCTODAY() <= UTCNOW()",
+      "query": "EVALUATE ROW(\"v\", UTCTODAY() <= UTCNOW())",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "date/27d75a4c",
+      "expr": "MAX(Sales[Date])",
+      "query": "EVALUATE ROW(\"v\", MAX(Sales[Date]))"
+    },
+    {
+      "id": "aggregate/f52f5b51",
+      "expr": "SUM(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", SUM(Sales[Qty]))"
+    },
+    {
+      "id": "aggregate/4a14d577",
+      "expr": "SUM(Sales[Line])",
+      "query": "EVALUATE ROW(\"v\", SUM(Sales[Line]))"
+    },
+    {
+      "id": "aggregate/cd8c9669",
+      "expr": "MIN(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", MIN(Sales[Qty]))"
+    },
+    {
+      "id": "aggregate/2b2dee01",
+      "expr": "MAX(Sales[Price])",
+      "query": "EVALUATE ROW(\"v\", MAX(Sales[Price]))"
+    },
+    {
+      "id": "aggregate/cbf278eb",
+      "expr": "MAX(1, 2)",
+      "query": "EVALUATE ROW(\"v\", MAX(1, 2))"
+    },
+    {
+      "id": "aggregate/e0fd7a28",
+      "expr": "MIN(BLANK(), -1)",
+      "query": "EVALUATE ROW(\"v\", MIN(BLANK(), -1))"
+    },
+    {
+      "id": "aggregate/e0c8b417",
+      "expr": "MAX(-1, BLANK())",
+      "query": "EVALUATE ROW(\"v\", MAX(-1, BLANK()))"
+    },
+    {
+      "id": "aggregate/5b08ad23",
+      "expr": "AVERAGE(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", AVERAGE(Sales[Qty]))"
+    },
+    {
+      "id": "aggregate/3cd68118",
+      "expr": "COUNT(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", COUNT(Sales[Qty]))"
+    },
+    {
+      "id": "aggregate/a3744549",
+      "expr": "COUNTA(Sales[Date])",
+      "query": "EVALUATE ROW(\"v\", COUNTA(Sales[Date]))"
+    },
+    {
+      "id": "aggregate/9428e28f",
+      "expr": "COUNTBLANK(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", COUNTBLANK(Sales[Qty]))"
+    },
+    {
+      "id": "aggregate/9e21ba1b",
+      "expr": "COUNTROWS(Sales)",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(Sales))"
+    },
+    {
+      "id": "aggregate/e2d7a26f",
+      "expr": "DISTINCTCOUNT(Sales[ProductKey])",
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNT(Sales[ProductKey]))"
+    },
+    {
+      "id": "aggregate/b8820ec1",
+      "expr": "DISTINCTCOUNT(Product[Color])",
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNT(Product[Color]))"
+    },
+    {
+      "id": "aggregate/7e486ff5",
+      "expr": "DISTINCTCOUNTNOBLANK(Product[Color])",
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNTNOBLANK(Product[Color]))"
+    },
+    {
+      "id": "aggregate/2c2d8a34",
+      "expr": "SUMX(Sales, Sales[Qty] * Sales[Price])",
+      "query": "EVALUATE ROW(\"v\", SUMX(Sales, Sales[Qty] * Sales[Price]))"
+    },
+    {
+      "id": "aggregate/77c62c43",
+      "expr": "COUNTX(Sales, Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", COUNTX(Sales, Sales[Qty]))"
+    },
+    {
+      "id": "aggregate/16dd18dd",
+      "expr": "COUNTAX(Sales, Sales[Date])",
+      "query": "EVALUATE ROW(\"v\", COUNTAX(Sales, Sales[Date]))"
+    },
+    {
+      "id": "aggregate/362a9ac3",
+      "expr": "MINX(Sales, Sales[Price])",
+      "query": "EVALUATE ROW(\"v\", MINX(Sales, Sales[Price]))"
+    },
+    {
+      "id": "aggregate/51344a9a",
+      "expr": "MAXX(Product, Product[Name])",
+      "query": "EVALUATE ROW(\"v\", MAXX(Product, Product[Name]))"
+    },
+    {
+      "id": "aggregate/ee38de48",
+      "expr": "AVERAGEX(Sales, Sales[Price])",
+      "query": "EVALUATE ROW(\"v\", AVERAGEX(Sales, Sales[Price]))"
+    },
+    {
+      "id": "aggregate/14ae1055",
+      "expr": "CONCATENATEX(Product, Product[Name], \", \", Product[Name], DESC)",
+      "query": "EVALUATE ROW(\"v\", CONCATENATEX(Product, Product[Name], \", \", Product[Name], DESC))"
+    },
+    {
+      "id": "context/3f53d099",
+      "expr": "CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "context/c0fe07ab",
+      "expr": "[Red Qty]",
+      "query": "EVALUATE ROW(\"v\", [Red Qty])"
+    },
+    {
+      "id": "context/4e770e12",
+      "expr": "Sales[Red Qty] + [Rows]",
+      "query": "EVALUATE ROW(\"v\", Sales[Red Qty] + [Rows])"
+    },
+    {
+      "id": "context/cfa84838",
+      "expr": "ISEMPTY(FILTER(Product, Product[Color] = \"Blue\"))",
+      "query": "EVALUATE ROW(\"v\", ISEMPTY(FILTER(Product, Product[Color] = \"Blue\")))"
+    },
+    {
+      "id": "context/a5e4f12c",
+      "expr": "ISEMPTY(Product)",
+      "query": "EVALUATE ROW(\"v\", ISEMPTY(Product))"
+    },
+    {
+      "id": "context/3267a1c9",
+      "expr": "HASONEVALUE(Product[Color])",
+      "query": "EVALUATE ROW(\"v\", HASONEVALUE(Product[Color]))"
+    },
+    {
+      "id": "context/f70e775e",
+      "expr": "CALCULATE(HASONEVALUE(Product[Color]), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(HASONEVALUE(Product[Color]), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "context/7003a62d",
+      "expr": "CALCULATE(SELECTEDVALUE(Product[Color]), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SELECTEDVALUE(Product[Color]), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "context/ded260c4",
+      "expr": "SELECTEDVALUE(Product[Color], \"many\")",
+      "query": "EVALUATE ROW(\"v\", SELECTEDVALUE(Product[Color], \"many\"))"
+    },
+    {
+      "id": "context/79f67e23",
+      "expr": "CALCULATE(ISFILTERED(Product[Color]), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISFILTERED(Product[Color]), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "context/81a7a742",
+      "expr": "ISFILTERED(Product[Color])",
+      "query": "EVALUATE ROW(\"v\", ISFILTERED(Product[Color]))"
+    },
+    {
+      "id": "context/4d519f22",
+      "expr": "MAXX(Sales, RELATED(Product[Name]))",
+      "query": "EVALUATE ROW(\"v\", MAXX(Sales, RELATED(Product[Name])))"
+    },
+    {
+      "id": "context/28544321",
+      "expr": "SUMX(Sales, COUNTROWS(FILTER(Sales, Sales[Qty] > EARLIER(Sales[Qty]))))",
+      "query": "EVALUATE ROW(\"v\", SUMX(Sales, COUNTROWS(FILTER(Sales, Sales[Qty] > EARLIER(Sales[Qty])))))"
+    },
+    {
+      "id": "context/f1cf7d0d",
+      "expr": "SUMX(Sales, COUNTROWS(FILTER(Sales, Sales[Qty] > EARLIEST(Sales[Qty]))))",
+      "query": "EVALUATE ROW(\"v\", SUMX(Sales, COUNTROWS(FILTER(Sales, Sales[Qty] > EARLIEST(Sales[Qty])))))"
+    },
+    {
+      "id": "context/a91b03ad",
+      "expr": "LOOKUPVALUE(Product[Name], Product[ProductKey], \"P2\")",
+      "query": "EVALUATE ROW(\"v\", LOOKUPVALUE(Product[Name], Product[ProductKey], \"P2\"))"
+    },
+    {
+      "id": "context/2c568e80",
+      "expr": "LOOKUPVALUE(Product[Name], Product[ProductKey], \"PX\", \"none\")",
+      "query": "EVALUATE ROW(\"v\", LOOKUPVALUE(Product[Name], Product[ProductKey], \"PX\", \"none\"))"
+    },
+    {
+      "id": "context/d3bd283a",
+      "expr": "MAXX(Product, COUNTROWS(RELATEDTABLE(Sales)))",
+      "query": "EVALUATE ROW(\"v\", MAXX(Product, COUNTROWS(RELATEDTABLE(Sales))))"
+    },
+    {
+      "id": "context/405d0671",
+      "expr": "COUNTROWS(CALCULATETABLE(Sales, Product[Category] = \"Fruit\"))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(Sales, Product[Category] = \"Fruit\")))"
+    },
+    {
+      "id": "context/5b5acf65",
+      "expr": "MAXX(Product, [Total Qty])",
+      "query": "EVALUATE ROW(\"v\", MAXX(Product, [Total Qty]))"
+    },
+    {
+      "id": "context/39459754",
+      "expr": "SUMX(VALUES(Product[Category]), [Total Qty])",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Category]), [Total Qty]))"
+    },
+    {
+      "id": "context/66b778ac",
+      "expr": "CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\" || Product[Color] = \"Orange\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\" || Product[Color] = \"Orange\"))"
+    },
+    {
+      "id": "context/48818610",
+      "expr": "CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\", Product[Color] = \"Orange\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\", Product[Color] = \"Orange\"))"
+    },
+    {
+      "id": "context/7549545c",
+      "expr": "CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\" && Product[Category] = \"Fruit\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\" && Product[Category] = \"Fruit\"))"
+    },
+    {
+      "id": "context/fc529a8b",
+      "expr": "CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\", KEEPFILTERS(Product[Name] = \"Banana\"))",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), Product[Color] = \"Red\", KEEPFILTERS(Product[Name] = \"Banana\")))"
+    },
+    {
+      "id": "context/c677fb2a",
+      "expr": "CALCULATE(SUM(Sales[Qty]), TREATAS({\"P2\"}, Product[ProductKey]))",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Qty]), TREATAS({\"P2\"}, Product[ProductKey])))"
+    },
+    {
+      "id": "context/c066df74",
+      "expr": "CALCULATE([Total Qty], ISBLANK(Product[Color]))",
+      "query": "EVALUATE ROW(\"v\", CALCULATE([Total Qty], ISBLANK(Product[Color])))"
+    },
+    {
+      "id": "table/a4dfd9b7",
+      "expr": "COUNTROWS(FILTER(Sales, Sales[Qty] >= 3))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(Sales, Sales[Qty] >= 3)))"
+    },
+    {
+      "id": "table/1de6e4a2",
+      "expr": "COUNTROWS(ALL(Product[Color]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALL(Product[Color])))"
+    },
+    {
+      "id": "table/3cccc68b",
+      "expr": "COUNTROWS(ALL(Product[Color], Product[Category]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALL(Product[Color], Product[Category])))"
+    },
+    {
+      "id": "table/52162888",
+      "expr": "COUNTROWS(ALLNOBLANKROW(Product[Color]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLNOBLANKROW(Product[Color])))"
+    },
+    {
+      "id": "table/26db886b",
+      "expr": "COUNTROWS(VALUES(Product[Category]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(VALUES(Product[Category])))"
+    },
+    {
+      "id": "table/efbaa3f3",
+      "expr": "COUNTROWS(VALUES(Product))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(VALUES(Product)))"
+    },
+    {
+      "id": "table/16deb9f8",
+      "expr": "COUNTROWS(DISTINCT(Sales[ProductKey]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DISTINCT(Sales[ProductKey])))"
+    },
+    {
+      "id": "table/d6a22432",
+      "expr": "COUNTROWS(DISTINCT({1, 1, 2}))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DISTINCT({1, 1, 2})))"
+    },
+    {
+      "id": "table/4da3d96f",
+      "expr": "COUNTROWS(SUMMARIZE(Sales, Product[Category]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZE(Sales, Product[Category])))"
+    },
+    {
+      "id": "table/f586619c",
+      "expr": "MAXX(SUMMARIZE(Sales, Product[Category], \"Q\", SUM(Sales[Qty])), [Q])",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZE(Sales, Product[Category], \"Q\", SUM(Sales[Qty])), [Q]))"
+    },
+    {
+      "id": "table/302e34e3",
+      "expr": "SUMX(SUMMARIZECOLUMNS(Product[Category], \"Q\", [Total Qty]), [Q])",
+      "query": "EVALUATE ROW(\"v\", SUMX(SUMMARIZECOLUMNS(Product[Category], \"Q\", [Total Qty]), [Q]))"
+    },
+    {
+      "id": "table/70fc3606",
+      "expr": "COUNTROWS(SUMMARIZECOLUMNS(Product[Category], \"Q\", [Total Qty]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Category], \"Q\", [Total Qty])))"
+    },
+    {
+      "id": "table/4bfd5f76",
+      "expr": "COUNTROWS(SUMMARIZECOLUMNS(Product[Category], FILTER(ALL(Product[Color]), Product[Color] = \"Red\"), \"Q\", [Total Qty]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Category], FILTER(ALL(Product[Color]), Product[Color] = \"Red\"), \"Q\", [Total Qty])))"
+    },
+    {
+      "id": "table/7f734e01",
+      "expr": "COUNTROWS(SELECTCOLUMNS(Product, \"N\", Product[Name]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SELECTCOLUMNS(Product, \"N\", Product[Name])))"
+    },
+    {
+      "id": "table/4c85bf02",
+      "expr": "MAXX(ADDCOLUMNS(Product, \"Q\", [Total Qty]), [Q])",
+      "query": "EVALUATE ROW(\"v\", MAXX(ADDCOLUMNS(Product, \"Q\", [Total Qty]), [Q]))"
+    },
+    {
+      "id": "table/6b5fd1a7",
+      "expr": "CONCATENATEX(TOPN(2, Product, Product[Name], ASC), Product[Name], \",\", Product[Name], ASC)",
+      "query": "EVALUATE ROW(\"v\", CONCATENATEX(TOPN(2, Product, Product[Name], ASC), Product[Name], \",\", Product[Name], ASC))"
+    },
+    {
+      "id": "table/93661efa",
+      "expr": "COUNTROWS(TOPN(1, Product, Product[Category], ASC))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(1, Product, Product[Category], ASC)))"
+    },
+    {
+      "id": "table/f13ef95c",
+      "expr": "COUNTROWS(TOPN(0, Product, Product[Name]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(0, Product, Product[Name])))"
+    },
+    {
+      "id": "table/db38de41",
+      "expr": "COUNTROWS(UNION({1, 2}, {2, 3}))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(UNION({1, 2}, {2, 3})))"
+    },
+    {
+      "id": "table/1f809095",
+      "expr": "COUNTROWS(INTERSECT({1, 2, 2}, {2, 3}))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(INTERSECT({1, 2, 2}, {2, 3})))"
+    },
+    {
+      "id": "table/2ecf0686",
+      "expr": "COUNTROWS(EXCEPT(VALUES(Product[Color]), {\"Red\"}))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(EXCEPT(VALUES(Product[Color]), {\"Red\"})))"
+    },
+    {
+      "id": "table/6282801a",
+      "expr": "COUNTROWS(ROW(\"a\", 1, \"b\", \"x\"))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ROW(\"a\", 1, \"b\", \"x\")))"
+    },
+    {
+      "id": "table/863e9731",
+      "expr": "SUMX(DATATABLE(\"Name\", STRING, \"Value\", INTEGER, {{\"a\", 1}, {\"b\", 2}}), [Value])",
+      "query": "EVALUATE ROW(\"v\", SUMX(DATATABLE(\"Name\", STRING, \"Value\", INTEGER, {{\"a\", 1}, {\"b\", 2}}), [Value]))"
+    },
+    {
+      "id": "table/6b73e26f",
+      "expr": "COUNTROWS(CROSSJOIN(VALUES(Product[Category]), {1, 2}))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CROSSJOIN(VALUES(Product[Category]), {1, 2})))"
+    },
+    {
+      "id": "table/94947e26",
+      "expr": "SUMX(GENERATESERIES(1, 4), [Value])",
+      "query": "EVALUATE ROW(\"v\", SUMX(GENERATESERIES(1, 4), [Value]))"
+    },
+    {
+      "id": "table/06b8f448",
+      "expr": "COUNTROWS(KEEPFILTERS(Product))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(KEEPFILTERS(Product)))"
+    },
+    {
+      "id": "table/854ac4f2",
+      "expr": "2 IN {1, 2}",
+      "query": "EVALUATE ROW(\"v\", 2 IN {1, 2})"
+    },
+    {
+      "id": "table/592dcf91",
+      "expr": "(\"A\", 1) IN {(\"a\", 1), (\"b\", 2)}",
+      "query": "EVALUATE ROW(\"v\", (\"A\", 1) IN {(\"a\", 1), (\"b\", 2)})"
+    },
+    {
+      "id": "table/1486950a",
+      "expr": "BLANK() IN {0}",
+      "query": "EVALUATE ROW(\"v\", BLANK() IN {0})"
+    },
+    {
+      "id": "table/398a6ad2",
+      "expr": "{5}",
+      "query": "EVALUATE ROW(\"v\", {5})"
+    },
+    {
+      "id": "table/fd16101a",
+      "expr": "VAR t = FILTER(Product, Product[Color] = \"Red\") RETURN COUNTROWS(t)",
+      "query": "EVALUATE ROW(\"v\", VAR t = FILTER(Product, Product[Color] = \"Red\") RETURN COUNTROWS(t))"
+    },
+    {
+      "id": "table/8f71dadb",
+      "expr": "VAR t = FILTER(ALL(Product[Color]), Product[Color] = \"Red\") RETURN CALCULATE([Total Qty], t)",
+      "query": "EVALUATE ROW(\"v\", VAR t = FILTER(ALL(Product[Color]), Product[Color] = \"Red\") RETURN CALCULATE([Total Qty], t))"
+    },
+    {
+      "id": "date-more/8f75e9e4",
+      "expr": "EOMONTH(DATE(2024, 1, 15), 1)",
+      "query": "EVALUATE ROW(\"v\", EOMONTH(DATE(2024, 1, 15), 1))"
+    },
+    {
+      "id": "date-more/7af586b2",
+      "expr": "EOMONTH(BLANK(), 1)",
+      "query": "EVALUATE ROW(\"v\", EOMONTH(BLANK(), 1))"
+    },
+    {
+      "id": "date-more/df1a332b",
+      "expr": "EDATE(DATE(2024, 1, 31), 1)",
+      "query": "EVALUATE ROW(\"v\", EDATE(DATE(2024, 1, 31), 1))"
+    },
+    {
+      "id": "date-more/a4e03015",
+      "expr": "EDATE(DATE(2024, 3, 31), -13)",
+      "query": "EVALUATE ROW(\"v\", EDATE(DATE(2024, 3, 31), -13))"
+    },
+    {
+      "id": "date-more/f9f65541",
+      "expr": "DATEDIFF(DATE(2024, 1, 31), DATE(2024, 3, 1), MONTH)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 1, 31), DATE(2024, 3, 1), MONTH))"
+    },
+    {
+      "id": "date-more/1d1d3aa7",
+      "expr": "DATEDIFF(DATE(2024, 1, 31), DATE(2024, 3, 1), DAY)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 1, 31), DATE(2024, 3, 1), DAY))"
+    },
+    {
+      "id": "date-more/c6373f9f",
+      "expr": "DATEDIFF(DATE(2024, 3, 1), DATE(2023, 12, 31), YEAR)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 3, 1), DATE(2023, 12, 31), YEAR))"
+    },
+    {
+      "id": "date-more/b6d0180a",
+      "expr": "DATEDIFF(DATE(2024, 1, 6), DATE(2024, 1, 7), WEEK)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 1, 6), DATE(2024, 1, 7), WEEK))"
+    },
+    {
+      "id": "date-more/8fa8d08a",
+      "expr": "DATEDIFF(DATE(2024, 3, 31), DATE(2024, 4, 1), QUARTER)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 3, 31), DATE(2024, 4, 1), QUARTER))"
+    },
+    {
+      "id": "date-more/c623199b",
+      "expr": "DATEDIFF(dt\"2024-01-01T10:00:00\", dt\"2024-01-01T12:30:00\", MINUTE)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(dt\"2024-01-01T10:00:00\", dt\"2024-01-01T12:30:00\", MINUTE))"
+    },
+    {
+      "id": "date-more/80bce4da",
+      "expr": "DATEDIFF(dt\"2024-01-01T10:59:59\", dt\"2024-01-01T11:00:00\", HOUR)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(dt\"2024-01-01T10:59:59\", dt\"2024-01-01T11:00:00\", HOUR))"
+    },
+    {
+      "id": "date-more/779ba69c",
+      "expr": "DATEDIFF(dt\"2024-01-01T10:00:00\", dt\"2024-01-01T10:00:09\", SECOND)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(dt\"2024-01-01T10:00:00\", dt\"2024-01-01T10:00:09\", SECOND))"
+    },
+    {
+      "id": "date-more/2a7fb47e",
+      "expr": "WEEKDAY(DATE(2024, 1, 7))",
+      "query": "EVALUATE ROW(\"v\", WEEKDAY(DATE(2024, 1, 7)))"
+    },
+    {
+      "id": "date-more/9ef9a707",
+      "expr": "WEEKDAY(DATE(2024, 1, 7), 2)",
+      "query": "EVALUATE ROW(\"v\", WEEKDAY(DATE(2024, 1, 7), 2))"
+    },
+    {
+      "id": "date-more/7989d786",
+      "expr": "WEEKDAY(DATE(2024, 1, 8), 3)",
+      "query": "EVALUATE ROW(\"v\", WEEKDAY(DATE(2024, 1, 8), 3))"
+    },
+    {
+      "id": "date-more/d30903ae",
+      "expr": "WEEKNUM(DATE(2024, 1, 7))",
+      "query": "EVALUATE ROW(\"v\", WEEKNUM(DATE(2024, 1, 7)))"
+    },
+    {
+      "id": "date-more/ff49ecb2",
+      "expr": "WEEKNUM(DATE(2024, 1, 7), 2)",
+      "query": "EVALUATE ROW(\"v\", WEEKNUM(DATE(2024, 1, 7), 2))"
+    },
+    {
+      "id": "date-more/df6c6748",
+      "expr": "WEEKNUM(DATE(2024, 12, 30), 21)",
+      "query": "EVALUATE ROW(\"v\", WEEKNUM(DATE(2024, 12, 30), 21))"
+    },
+    {
+      "id": "date-more/cadc58aa",
+      "expr": "QUARTER(DATE(2024, 5, 6))",
+      "query": "EVALUATE ROW(\"v\", QUARTER(DATE(2024, 5, 6)))"
+    },
+    {
+      "id": "date-more/cd18e95d",
+      "expr": "DATEVALUE(\"2024-03-05\")",
+      "query": "EVALUATE ROW(\"v\", DATEVALUE(\"2024-03-05\"))"
+    },
+    {
+      "id": "date-more/e47bf5f8",
+      "expr": "DATEVALUE(\"3/5/2024 10:30\")",
+      "query": "EVALUATE ROW(\"v\", DATEVALUE(\"3/5/2024 10:30\"))"
+    },
+    {
+      "id": "date-more/b87c78ed",
+      "expr": "TIMEVALUE(\"1:30 PM\")",
+      "query": "EVALUATE ROW(\"v\", TIMEVALUE(\"1:30 PM\"))"
+    },
+    {
+      "id": "date-more/b3e299cc",
+      "expr": "TIME(1, 30, 15)",
+      "query": "EVALUATE ROW(\"v\", TIME(1, 30, 15))"
+    },
+    {
+      "id": "date-more/7abea0ca",
+      "expr": "COUNTROWS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 12, 31)))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 12, 31))))"
+    },
+    {
+      "id": "date-more/13f84881",
+      "expr": "COUNTROWS(CALENDARAUTO())",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDARAUTO()))"
+    },
+    {
+      "id": "date-more/81b8c167",
+      "expr": "MINX(CALENDARAUTO(6), [Date])",
+      "query": "EVALUATE ROW(\"v\", MINX(CALENDARAUTO(6), [Date]))"
+    },
+    {
+      "id": "stats/8f4cd8bf",
+      "expr": "MEDIAN(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", MEDIAN(Sales[Qty]))"
+    },
+    {
+      "id": "stats/168f2aed",
+      "expr": "MEDIANX(Sales, Sales[Price])",
+      "query": "EVALUATE ROW(\"v\", MEDIANX(Sales, Sales[Price]))"
+    },
+    {
+      "id": "stats/f2df1a7b",
+      "expr": "MEDIAN(Sales[Date])",
+      "query": "EVALUATE ROW(\"v\", MEDIAN(Sales[Date]))"
+    },
+    {
+      "id": "stats/4c93925b",
+      "expr": "PERCENTILE.INC(Sales[Qty], 0.25)",
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.INC(Sales[Qty], 0.25))"
+    },
+    {
+      "id": "stats/d37eaf8f",
+      "expr": "PERCENTILE.EXC(Sales[Qty], 0.5)",
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.EXC(Sales[Qty], 0.5))"
+    },
+    {
+      "id": "stats/3792709b",
+      "expr": "PERCENTILEX.INC(Sales, Sales[Qty], 1)",
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.INC(Sales, Sales[Qty], 1))"
+    },
+    {
+      "id": "stats/f0ffef88",
+      "expr": "PERCENTILEX.EXC(Sales, Sales[Qty], 0.25)",
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.EXC(Sales, Sales[Qty], 0.25))"
+    },
+    {
+      "id": "stats/b551b8ee",
+      "expr": "STDEV.P(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", STDEV.P(Sales[Qty]))"
+    },
+    {
+      "id": "stats/a0eadc9d",
+      "expr": "STDEV.S(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", STDEV.S(Sales[Qty]))"
+    },
+    {
+      "id": "stats/e6d58506",
+      "expr": "VAR.P(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", VAR.P(Sales[Qty]))"
+    },
+    {
+      "id": "stats/0e62097f",
+      "expr": "VAR.S(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", VAR.S(Sales[Qty]))"
+    },
+    {
+      "id": "stats/dfeb7261",
+      "expr": "STDEVX.P(Sales, Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", STDEVX.P(Sales, Sales[Qty]))"
+    },
+    {
+      "id": "stats/5fba77e4",
+      "expr": "STDEVX.S(Sales, Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", STDEVX.S(Sales, Sales[Qty]))"
+    },
+    {
+      "id": "stats/8c4ea248",
+      "expr": "VARX.P(Sales, Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", VARX.P(Sales, Sales[Qty]))"
+    },
+    {
+      "id": "stats/7a299e14",
+      "expr": "VARX.S(Sales, Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", VARX.S(Sales, Sales[Qty]))"
+    },
+    {
+      "id": "stats/28155d94",
+      "expr": "VARX.S(FILTER(Sales, Sales[Qty] = 3), Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", VARX.S(FILTER(Sales, Sales[Qty] = 3), Sales[Qty]))"
+    },
+    {
+      "id": "stats/7f94e1e9",
+      "expr": "PRODUCT(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", PRODUCT(Sales[Qty]))"
+    },
+    {
+      "id": "stats/f7a3b989",
+      "expr": "PRODUCTX(Sales, Sales[Price])",
+      "query": "EVALUATE ROW(\"v\", PRODUCTX(Sales, Sales[Price]))"
+    },
+    {
+      "id": "stats/7d39cb9e",
+      "expr": "PRODUCTX(FILTER(Sales, FALSE()), Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", PRODUCTX(FILTER(Sales, FALSE()), Sales[Qty]))"
+    },
+    {
+      "id": "stats/ecd54b2e",
+      "expr": "CALCULATE(RANKX(ALL(Product[Name]), [Total Qty]), Product[Name] = \"Banana\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANKX(ALL(Product[Name]), [Total Qty]), Product[Name] = \"Banana\"))"
+    },
+    {
+      "id": "stats/b9eb9caa",
+      "expr": "CALCULATE(RANKX(ALL(Product[Name]), [Total Qty]), Product[Name] = \"Carrot\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANKX(ALL(Product[Name]), [Total Qty]), Product[Name] = \"Carrot\"))"
+    },
+    {
+      "id": "stats/ada3e6bf",
+      "expr": "CALCULATE(RANKX(ALL(Product[Name]), [Total Qty], , DESC, DENSE), Product[Name] = \"Carrot\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANKX(ALL(Product[Name]), [Total Qty], , DESC, DENSE), Product[Name] = \"Carrot\"))"
+    },
+    {
+      "id": "stats/5c7a40e2",
+      "expr": "CALCULATE(RANKX(ALL(Product[Name]), [Total Qty], , ASC), Product[Name] = \"Carrot\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANKX(ALL(Product[Name]), [Total Qty], , ASC), Product[Name] = \"Carrot\"))"
+    },
+    {
+      "id": "stats/65e02316",
+      "expr": "RANKX(ALL(Product[Name]), [Total Qty], 4)",
+      "query": "EVALUATE ROW(\"v\", RANKX(ALL(Product[Name]), [Total Qty], 4))"
+    },
+    {
+      "id": "stats/b428fcb0",
+      "expr": "RANKX(ALL(Product[Name]), [Total Qty], 4, 1, SKIP)",
+      "query": "EVALUATE ROW(\"v\", RANKX(ALL(Product[Name]), [Total Qty], 4, 1, SKIP))"
+    },
+    {
+      "id": "stats/1873dbd0",
+      "expr": "RANK.EQ(4, Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(4, Sales[Qty]))"
+    },
+    {
+      "id": "stats/0d67ddf0",
+      "expr": "RANK.EQ(4, Sales[Qty], ASC)",
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(4, Sales[Qty], ASC))"
+    },
+    {
+      "id": "stats/a1f0c065",
+      "expr": "RANK.EQ(99, Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(99, Sales[Qty]))"
+    },
+    {
+      "id": "stats/1b56bb9e",
+      "expr": "COUNTROWS(TOPN(1, VALUES(Product[Name]), [Total Qty]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(1, VALUES(Product[Name]), [Total Qty])))"
+    },
+    {
+      "id": "stats/00ad4dcf",
+      "expr": "CONCATENATEX(TOPN(1, VALUES(Product[Name]), [Total Qty], DESC, Product[Name], DESC), Product[Name])",
+      "query": "EVALUATE ROW(\"v\", CONCATENATEX(TOPN(1, VALUES(Product[Name]), [Total Qty], DESC, Product[Name], DESC), Product[Name]))"
+    },
+    {
+      "id": "stats/b727e5c3",
+      "expr": "COUNTROWS(TOPN(2, VALUES(Product[Name]), [Total Qty], ASC))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(2, VALUES(Product[Name]), [Total Qty], ASC)))"
+    },
+    {
+      "id": "stats/b068b7e8",
+      "expr": "COUNTROWS(TOPN(-1, Product, Product[Name]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(-1, Product, Product[Name])))"
+    },
+    {
+      "id": "window/751a16c7",
+      "expr": "CALCULATE(CALCULATE([Total Qty], OFFSET(-1, ALL(Product[Name]), ORDERBY(Product[Name]))), Product[Name] = \"Banana\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], OFFSET(-1, ALL(Product[Name]), ORDERBY(Product[Name]))), Product[Name] = \"Banana\"))"
+    },
+    {
+      "id": "window/dc77a652",
+      "expr": "CALCULATE(CALCULATE([Total Qty], OFFSET(1, ALL(Product[Name]), ORDERBY(Product[Name]))), Product[Name] = \"Banana\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], OFFSET(1, ALL(Product[Name]), ORDERBY(Product[Name]))), Product[Name] = \"Banana\"))"
+    },
+    {
+      "id": "window/b22cfce4",
+      "expr": "COUNTROWS(OFFSET(-1, ALL(Product[Name]), ORDERBY(Product[Name])))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(OFFSET(-1, ALL(Product[Name]), ORDERBY(Product[Name]))))"
+    },
+    {
+      "id": "window/5e4f8875",
+      "expr": "INDEX(1, ALL(Product[Name]), ORDERBY(Product[Name], DESC))",
+      "query": "EVALUATE ROW(\"v\", INDEX(1, ALL(Product[Name]), ORDERBY(Product[Name], DESC)))"
+    },
+    {
+      "id": "window/3e310b8b",
+      "expr": "INDEX(-1, ALL(Product[Name]), ORDERBY(Product[Name]))",
+      "query": "EVALUATE ROW(\"v\", INDEX(-1, ALL(Product[Name]), ORDERBY(Product[Name])))"
+    },
+    {
+      "id": "window/0d760f78",
+      "expr": "COUNTROWS(WINDOW(1, ABS, -1, ABS, ALL(Product[Name]), ORDERBY(Product[Name])))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(WINDOW(1, ABS, -1, ABS, ALL(Product[Name]), ORDERBY(Product[Name]))))"
+    },
+    {
+      "id": "window/166ddc4e",
+      "expr": "CALCULATE(SUMX(WINDOW(-1, REL, 0, REL, ALL(Product[Name]), ORDERBY(Product[Name])), [Total Qty]), Product[Name] = \"Banana\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(WINDOW(-1, REL, 0, REL, ALL(Product[Name]), ORDERBY(Product[Name])), [Total Qty]), Product[Name] = \"Banana\"))"
+    },
+    {
+      "id": "window/d154449d",
+      "expr": "CALCULATE(CONCATENATEX(INDEX(1, ALL(Product[Category], Product[Name]), ORDERBY(Product[Name], DESC), PARTITIONBY(Product[Category])), Product[Name]), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CONCATENATEX(INDEX(1, ALL(Product[Category], Product[Name]), ORDERBY(Product[Name], DESC), PARTITIONBY(Product[Category])), Product[Name]), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "window/0a7be582",
+      "expr": "CALCULATE(CONCATENATEX(OFFSET(1, ALL(Product[Category], Product[Name]), ORDERBY(Product[Name]), PARTITIONBY(Product[Category]), MATCHBY(Product[Category], Product[Name])), Product[Name]), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CONCATENATEX(OFFSET(1, ALL(Product[Category], Product[Name]), ORDERBY(Product[Name]), PARTITIONBY(Product[Category]), MATCHBY(Product[Category], Product[Name])), Product[Name]), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "window/fcd49ecd",
+      "expr": "CALCULATE(ROWNUMBER(ALL(Product[Name]), ORDERBY(Product[Name])), Product[Name] = \"Banana\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ROWNUMBER(ALL(Product[Name]), ORDERBY(Product[Name])), Product[Name] = \"Banana\"))"
+    },
+    {
+      "id": "window/c78a9f8a",
+      "expr": "CALCULATE(RANK(DENSE, ALL(Product[Name]), ORDERBY([Total Qty], DESC)), Product[Name] = \"Carrot\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANK(DENSE, ALL(Product[Name]), ORDERBY([Total Qty], DESC)), Product[Name] = \"Carrot\"))"
+    },
+    {
+      "id": "window/ae64b726",
+      "expr": "CALCULATE(RANK(SKIP, ALL(Product[Name]), ORDERBY([Total Qty], DESC)), Product[Name] = \"Carrot\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(RANK(SKIP, ALL(Product[Name]), ORDERBY([Total Qty], DESC)), Product[Name] = \"Carrot\"))"
+    },
+    {
+      "id": "window/ae56c26b",
+      "expr": "CALCULATE(CALCULATE([Total Qty], OFFSET(1, ORDERBY(Product[Name]))), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], OFFSET(1, ORDERBY(Product[Name]))), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "misc/90ed429a",
+      "expr": "SWITCH(TRUE(), 1 > 2, \"a\", 2 > 1, \"b\", \"c\")",
+      "query": "EVALUATE ROW(\"v\", SWITCH(TRUE(), 1 > 2, \"a\", 2 > 1, \"b\", \"c\"))"
+    },
+    {
+      "id": "misc/1e1bf2c8",
+      "expr": "ISNONTEXT(1)",
+      "query": "EVALUATE ROW(\"v\", ISNONTEXT(1))"
+    },
+    {
+      "id": "misc/fd058651",
+      "expr": "ISEVEN(4)",
+      "query": "EVALUATE ROW(\"v\", ISEVEN(4))"
+    },
+    {
+      "id": "misc/910ce7d1",
+      "expr": "ISODD(-3)",
+      "query": "EVALUATE ROW(\"v\", ISODD(-3))"
+    },
+    {
+      "id": "misc/e361bb52",
+      "expr": "CONVERT(\"12\", INTEGER)",
+      "query": "EVALUATE ROW(\"v\", CONVERT(\"12\", INTEGER))"
+    },
+    {
+      "id": "misc/43b7944a",
+      "expr": "CONVERT(2.5, INTEGER)",
+      "query": "EVALUATE ROW(\"v\", CONVERT(2.5, INTEGER))"
+    },
+    {
+      "id": "misc/1189551e",
+      "expr": "CONVERT(1.5, STRING)",
+      "query": "EVALUATE ROW(\"v\", CONVERT(1.5, STRING))"
+    },
+    {
+      "id": "misc/d1840272",
+      "expr": "CONVERT(1, BOOLEAN)",
+      "query": "EVALUATE ROW(\"v\", CONVERT(1, BOOLEAN))"
+    },
+    {
+      "id": "misc/0de39339",
+      "expr": "CONVERT(1.23456, CURRENCY)",
+      "query": "EVALUATE ROW(\"v\", CONVERT(1.23456, CURRENCY))"
+    },
+    {
+      "id": "misc/33df4277",
+      "expr": "CONVERT(\"2024-01-02\", DATETIME)",
+      "query": "EVALUATE ROW(\"v\", CONVERT(\"2024-01-02\", DATETIME))"
+    },
+    {
+      "id": "misc/369acbcc",
+      "expr": "CONVERT(DATE(1900, 1, 1), DOUBLE)",
+      "query": "EVALUATE ROW(\"v\", CONVERT(DATE(1900, 1, 1), DOUBLE))"
+    },
+    {
+      "id": "misc/d9c5f01b",
+      "expr": "CURRENCY(1.23456)",
+      "query": "EVALUATE ROW(\"v\", CURRENCY(1.23456))"
+    },
+    {
+      "id": "misc/daf54a5e",
+      "expr": "FIXED(1234.567, 1)",
+      "query": "EVALUATE ROW(\"v\", FIXED(1234.567, 1))"
+    },
+    {
+      "id": "misc/abfe99db",
+      "expr": "FIXED(1234.567, 1, TRUE())",
+      "query": "EVALUATE ROW(\"v\", FIXED(1234.567, 1, TRUE()))"
+    },
+    {
+      "id": "misc/0a68b022",
+      "expr": "FIXED(1234.5)",
+      "query": "EVALUATE ROW(\"v\", FIXED(1234.5))"
+    },
+    {
+      "id": "misc/d1211acd",
+      "expr": "FIXED(1250, -2)",
+      "query": "EVALUATE ROW(\"v\", FIXED(1250, -2))"
+    },
+    {
+      "id": "misc/473d6609",
+      "expr": "UNICHAR(65)",
+      "query": "EVALUATE ROW(\"v\", UNICHAR(65))"
+    },
+    {
+      "id": "misc/81481615",
+      "expr": "UNICODE(\"é\")",
+      "query": "EVALUATE ROW(\"v\", UNICODE(\"é\"))"
+    },
+    {
+      "id": "misc/ee649dcf",
+      "expr": "REPT(\"ab\", 3)",
+      "query": "EVALUATE ROW(\"v\", REPT(\"ab\", 3))"
+    },
+    {
+      "id": "misc/e1037a9e",
+      "expr": "REPT(\"ab\", 0)",
+      "query": "EVALUATE ROW(\"v\", REPT(\"ab\", 0))"
+    },
+    {
+      "id": "misc/b283a71f",
+      "expr": "SEARCH(\"b?d\", \"ABCD\")",
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"b?d\", \"ABCD\"))"
+    },
+    {
+      "id": "misc/b079e810",
+      "expr": "SEARCH(\"C*\", \"abcabc\", 4)",
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"C*\", \"abcabc\", 4))"
+    },
+    {
+      "id": "misc/0312f497",
+      "expr": "SEARCH(\"x\", \"abc\", 1, -1)",
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"x\", \"abc\", 1, -1))"
+    },
+    {
+      "id": "misc/a8f0579d",
+      "expr": "FIND(\"B\", \"aBcB\", 3)",
+      "query": "EVALUATE ROW(\"v\", FIND(\"B\", \"aBcB\", 3))"
+    },
+    {
+      "id": "misc/c6231aa1",
+      "expr": "FIND(\"b\", \"aBc\", 1, 0)",
+      "query": "EVALUATE ROW(\"v\", FIND(\"b\", \"aBc\", 1, 0))"
+    },
+    {
+      "id": "misc/259bcd70",
+      "expr": "REPLACE(\"abcdef\", 2, 3, \"X\")",
+      "query": "EVALUATE ROW(\"v\", REPLACE(\"abcdef\", 2, 3, \"X\"))"
+    },
+    {
+      "id": "misc/470f7e4f",
+      "expr": "COMBINEVALUES(\"-\", \"a\", 1)",
+      "query": "EVALUATE ROW(\"v\", COMBINEVALUES(\"-\", \"a\", 1))"
+    },
+    {
+      "id": "misc/1e916ad5",
+      "expr": "CONTAINS(Product, Product[Color], \"red\")",
+      "query": "EVALUATE ROW(\"v\", CONTAINS(Product, Product[Color], \"red\"))"
+    },
+    {
+      "id": "misc/ef4ea6b1",
+      "expr": "CONTAINS(Product, Product[Color], \"Red\", Product[Category], \"Veg\")",
+      "query": "EVALUATE ROW(\"v\", CONTAINS(Product, Product[Color], \"Red\", Product[Category], \"Veg\"))"
+    },
+    {
+      "id": "misc/97d4ae33",
+      "expr": "CONTAINSROW({1, 2}, 2)",
+      "query": "EVALUATE ROW(\"v\", CONTAINSROW({1, 2}, 2))"
+    },
+    {
+      "id": "misc/f57c8de5",
+      "expr": "CONTAINSROW(VALUES(Product[Color]), \"RED\")",
+      "query": "EVALUATE ROW(\"v\", CONTAINSROW(VALUES(Product[Color]), \"RED\"))"
+    },
+    {
+      "id": "misc/36aa2c09",
+      "expr": "PATHITEM(\"1|2|3\", 2)",
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"1|2|3\", 2))"
+    },
+    {
+      "id": "misc/3897e174",
+      "expr": "PATHITEM(\"1|2|3\", 2, 1)",
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"1|2|3\", 2, 1))"
+    },
+    {
+      "id": "misc/e3497c36",
+      "expr": "PATHITEM(\"1|2|3\", 9)",
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"1|2|3\", 9))"
+    },
+    {
+      "id": "misc/d40efd7e",
+      "expr": "PATHITEMREVERSE(\"1|2|3\", 1)",
+      "query": "EVALUATE ROW(\"v\", PATHITEMREVERSE(\"1|2|3\", 1))"
+    },
+    {
+      "id": "misc/2f4f9d21",
+      "expr": "PATHLENGTH(\"1|2|3\")",
+      "query": "EVALUATE ROW(\"v\", PATHLENGTH(\"1|2|3\"))"
+    },
+    {
+      "id": "misc/3eca1efd",
+      "expr": "PATHCONTAINS(\"1|2|3\", \"2\")",
+      "query": "EVALUATE ROW(\"v\", PATHCONTAINS(\"1|2|3\", \"2\"))"
+    },
+    {
+      "id": "misc/fa229209",
+      "expr": "USERPRINCIPALNAME()",
+      "query": "EVALUATE ROW(\"v\", USERPRINCIPALNAME())",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "misc/3e9d8db4",
+      "expr": "USERNAME() & \"|\" & USEROBJECTID()",
+      "query": "EVALUATE ROW(\"v\", USERNAME() & \"|\" & USEROBJECTID())",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "misc/f96fb362",
+      "expr": "ISBLANK(CUSTOMDATA())",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(CUSTOMDATA()))",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "misc/e775393b",
+      "expr": "COUNTROWS(GENERATE(VALUES(Product[Category]), CALCULATETABLE(VALUES(Product[Color]))))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATE(VALUES(Product[Category]), CALCULATETABLE(VALUES(Product[Color])))))"
+    },
+    {
+      "id": "misc/73d177d0",
+      "expr": "COUNTROWS(GENERATE(VALUES(Product[Category]), FILTER(VALUES(Product[Color]), FALSE())))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATE(VALUES(Product[Category]), FILTER(VALUES(Product[Color]), FALSE()))))"
+    },
+    {
+      "id": "misc/efacd972",
+      "expr": "COUNTROWS(GENERATEALL(VALUES(Product[Category]), FILTER(VALUES(Product[Color]), FALSE())))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATEALL(VALUES(Product[Category]), FILTER(VALUES(Product[Color]), FALSE()))))"
+    },
+    {
+      "id": "misc/535714fb",
+      "expr": "COUNTROWS(NATURALINNERJOIN(SELECTCOLUMNS(Sales, \"K\", Sales[ProductKey] & \"\"), SELECTCOLUMNS(Product, \"K\", Product[ProductKey] & \"\", \"N\", Product[Name])))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALINNERJOIN(SELECTCOLUMNS(Sales, \"K\", Sales[ProductKey] & \"\"), SELECTCOLUMNS(Product, \"K\", Product[ProductKey] & \"\", \"N\", Product[Name]))))"
+    },
+    {
+      "id": "misc/923d2f5e",
+      "expr": "COUNTROWS(NATURALLEFTOUTERJOIN(SELECTCOLUMNS(Sales, \"K\", Sales[ProductKey] & \"\"), SELECTCOLUMNS(Product, \"K\", Product[ProductKey] & \"\", \"N\", Product[Name])))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALLEFTOUTERJOIN(SELECTCOLUMNS(Sales, \"K\", Sales[ProductKey] & \"\"), SELECTCOLUMNS(Product, \"K\", Product[ProductKey] & \"\", \"N\", Product[Name]))))"
+    },
+    {
+      "id": "misc/bbbc07e3",
+      "expr": "SUMX(GROUPBY(Sales, Product[Category], \"Q\", SUMX(CURRENTGROUP(), Sales[Qty])), [Q])",
+      "query": "EVALUATE ROW(\"v\", SUMX(GROUPBY(Sales, Product[Category], \"Q\", SUMX(CURRENTGROUP(), Sales[Qty])), [Q]))"
+    },
+    {
+      "id": "misc/28f1acc9",
+      "expr": "COUNTROWS(GROUPBY(Sales, Product[Category]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GROUPBY(Sales, Product[Category])))"
+    },
+    {
+      "id": "misc/8b8d1218",
+      "expr": "MAXX(GROUPBY(Sales, Sales[ProductKey], \"Q\", SUMX(CURRENTGROUP(), Sales[Qty])), [Q])",
+      "query": "EVALUATE ROW(\"v\", MAXX(GROUPBY(Sales, Sales[ProductKey], \"Q\", SUMX(CURRENTGROUP(), Sales[Qty])), [Q]))"
+    },
+    {
+      "id": "misc/f6cd48c9",
+      "expr": "COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"One\", IGNORE(1)))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"One\", IGNORE(1))))"
+    },
+    {
+      "id": "misc/4c8dd378",
+      "expr": "COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"One\", 1))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"One\", 1)))"
+    },
+    {
+      "id": "misc/3656ae1f",
+      "expr": "IGNORE(7)",
+      "query": "EVALUATE ROW(\"v\", IGNORE(7))"
+    },
+    {
+      "id": "visual/c2ff4539",
+      "expr": "MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Pct\", DIVIDE([Total Qty], CALCULATE([Total Qty], ALLSELECTED()))), [Pct])",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Pct\", DIVIDE([Total Qty], CALCULATE([Total Qty], ALLSELECTED()))), [Pct]))"
+    },
+    {
+      "id": "visual/e91a8d80",
+      "expr": "MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"N\", COUNTROWS(ALLSELECTED(Product[Category]))), [N])",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"N\", COUNTROWS(ALLSELECTED(Product[Category]))), [N]))"
+    },
+    {
+      "id": "visual/17ca9360",
+      "expr": "MAXX(SUMMARIZECOLUMNS(Product[Color], TREATAS({\"Red\"}, Product[Color]), \"N\", COUNTROWS(ALLSELECTED(Product))), [N])",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Color], TREATAS({\"Red\"}, Product[Color]), \"N\", COUNTROWS(ALLSELECTED(Product))), [N]))"
+    },
+    {
+      "id": "visual/3fd1aa18",
+      "expr": "MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Q\", CALCULATE([Total Qty], ALLSELECTED(Product[Category]))), [Q])",
+      "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Q\", CALCULATE([Total Qty], ALLSELECTED(Product[Category]))), [Q]))"
+    },
+    {
+      "id": "visual/b2e71863",
+      "expr": "COUNTROWS(ALLSELECTED(Product[Category]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLSELECTED(Product[Category])))"
+    },
+    {
+      "id": "visual/30d37a3e",
+      "expr": "CALCULATE([Total Qty], ALLSELECTED(Product))",
+      "query": "EVALUATE ROW(\"v\", CALCULATE([Total Qty], ALLSELECTED(Product)))"
+    },
+    {
+      "id": "visual/b870a3ed",
+      "expr": "ISINSCOPE(Product[Color])",
+      "query": "EVALUATE ROW(\"v\", ISINSCOPE(Product[Color]))"
+    },
+    {
+      "id": "visual/beaab34d",
+      "expr": "COUNTROWS(FILTER(SUMMARIZECOLUMNS(Product[Category], \"S\", ISINSCOPE(Product[Category])), [S]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(SUMMARIZECOLUMNS(Product[Category], \"S\", ISINSCOPE(Product[Category])), [S])))"
+    },
+    {
+      "id": "visual/6035744d",
+      "expr": "COUNTROWS(SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL(Product[Category], \"CatTotal\", Product[Color], \"ColorTotal\"), \"Q\", [Total Qty]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL(Product[Category], \"CatTotal\", Product[Color], \"ColorTotal\"), \"Q\", [Total Qty])))"
+    },
+    {
+      "id": "visual/a992f955",
+      "expr": "COUNTROWS(SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL(ROLLUPGROUP(Product[Category], Product[Color]), \"T\"), \"Q\", [Total Qty]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL(ROLLUPGROUP(Product[Category], Product[Color]), \"T\"), \"Q\", [Total Qty])))"
+    },
+    {
+      "id": "visual/35b70d4c",
+      "expr": "COUNTROWS(FILTERS(Product[Color]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTERS(Product[Color])))"
+    },
+    {
+      "id": "visual/0985ee57",
+      "expr": "CALCULATE(COUNTROWS(FILTERS(Product[Color])), Product[Color] IN {\"Red\", \"Orange\"}, Product[Category] = \"Fruit\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(FILTERS(Product[Color])), Product[Color] IN {\"Red\", \"Orange\"}, Product[Category] = \"Fruit\"))"
+    },
+    {
+      "id": "visual/64b5492c",
+      "expr": "CALCULATE(HASONEFILTER(Product[Color]), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(HASONEFILTER(Product[Color]), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "visual/c63b842f",
+      "expr": "HASONEFILTER(Product[Color])",
+      "query": "EVALUATE ROW(\"v\", HASONEFILTER(Product[Color]))"
+    },
+    {
+      "id": "visual/d9ffa435",
+      "expr": "CALCULATE(HASONEFILTER(Product[Color]), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(HASONEFILTER(Product[Color]), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "visual/382468f4",
+      "expr": "CALCULATE(ISCROSSFILTERED(Sales[Qty]), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISCROSSFILTERED(Sales[Qty]), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "visual/45c13ab1",
+      "expr": "CALCULATE(ISCROSSFILTERED(Product), Sales[Qty] = 3)",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISCROSSFILTERED(Product), Sales[Qty] = 3))"
+    },
+    {
+      "id": "visual/7bf2ef31",
+      "expr": "CALCULATE(ISCROSSFILTERED(Product[Name]), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISCROSSFILTERED(Product[Name]), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "visual/de4223d6",
+      "expr": "ISCROSSFILTERED(Product[Name])",
+      "query": "EVALUATE ROW(\"v\", ISCROSSFILTERED(Product[Name]))"
+    },
+    {
+      "id": "visual/9475de73",
+      "expr": "CALCULATE(ISCROSSFILTERED(Product), FILTER(Sales, Sales[Qty] = 3))",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISCROSSFILTERED(Product), FILTER(Sales, Sales[Qty] = 3)))"
+    },
+    {
+      "id": "visual/ffaa2d99",
+      "expr": "CALCULATE(ISFILTERED(Product), ALLSELECTED(Product[Color]))",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(ISFILTERED(Product), ALLSELECTED(Product[Color])))"
+    },
+    {
+      "id": "library/0a6ffbb1",
+      "expr": "PI()",
+      "query": "EVALUATE ROW(\"v\", PI())"
+    },
+    {
+      "id": "library/54ef484e",
+      "expr": "EXP(0)",
+      "query": "EVALUATE ROW(\"v\", EXP(0))"
+    },
+    {
+      "id": "library/b72aab53",
+      "expr": "EXP(BLANK())",
+      "query": "EVALUATE ROW(\"v\", EXP(BLANK()))"
+    },
+    {
+      "id": "library/1a1eab09",
+      "expr": "LN(1)",
+      "query": "EVALUATE ROW(\"v\", LN(1))"
+    },
+    {
+      "id": "library/f48a6040",
+      "expr": "LOG(1000)",
+      "query": "EVALUATE ROW(\"v\", LOG(1000))"
+    },
+    {
+      "id": "library/89fd4257",
+      "expr": "LOG(8, 2)",
+      "query": "EVALUATE ROW(\"v\", LOG(8, 2))"
+    },
+    {
+      "id": "library/9603394c",
+      "expr": "LOG10(100)",
+      "query": "EVALUATE ROW(\"v\", LOG10(100))"
+    },
+    {
+      "id": "library/202c183b",
+      "expr": "SQRTPI(0)",
+      "query": "EVALUATE ROW(\"v\", SQRTPI(0))"
+    },
+    {
+      "id": "library/95f74ead",
+      "expr": "SIN(0)",
+      "query": "EVALUATE ROW(\"v\", SIN(0))"
+    },
+    {
+      "id": "library/d5479451",
+      "expr": "COS(0)",
+      "query": "EVALUATE ROW(\"v\", COS(0))"
+    },
+    {
+      "id": "library/935c0221",
+      "expr": "TAN(0)",
+      "query": "EVALUATE ROW(\"v\", TAN(0))"
+    },
+    {
+      "id": "library/fb88a4c4",
+      "expr": "ASIN(1) * 2 = PI()",
+      "query": "EVALUATE ROW(\"v\", ASIN(1) * 2 = PI())"
+    },
+    {
+      "id": "library/7fc34fcb",
+      "expr": "ACOS(1)",
+      "query": "EVALUATE ROW(\"v\", ACOS(1))"
+    },
+    {
+      "id": "library/ce9a897c",
+      "expr": "ATAN(0)",
+      "query": "EVALUATE ROW(\"v\", ATAN(0))"
+    },
+    {
+      "id": "library/cce7ea0d",
+      "expr": "ACOT(0) * 2 = PI()",
+      "query": "EVALUATE ROW(\"v\", ACOT(0) * 2 = PI())"
+    },
+    {
+      "id": "library/bdf724b5",
+      "expr": "SINH(0)",
+      "query": "EVALUATE ROW(\"v\", SINH(0))"
+    },
+    {
+      "id": "library/16f263b8",
+      "expr": "COSH(0)",
+      "query": "EVALUATE ROW(\"v\", COSH(0))"
+    },
+    {
+      "id": "library/9548e60c",
+      "expr": "TANH(0)",
+      "query": "EVALUATE ROW(\"v\", TANH(0))"
+    },
+    {
+      "id": "library/a2dc7a7d",
+      "expr": "ASINH(0)",
+      "query": "EVALUATE ROW(\"v\", ASINH(0))"
+    },
+    {
+      "id": "library/26b6e49e",
+      "expr": "ACOSH(1)",
+      "query": "EVALUATE ROW(\"v\", ACOSH(1))"
+    },
+    {
+      "id": "library/069f7259",
+      "expr": "ATANH(0)",
+      "query": "EVALUATE ROW(\"v\", ATANH(0))"
+    },
+    {
+      "id": "library/cb0e4b5e",
+      "expr": "FACT(5)",
+      "query": "EVALUATE ROW(\"v\", FACT(5))"
+    },
+    {
+      "id": "library/c011194b",
+      "expr": "FACT(0)",
+      "query": "EVALUATE ROW(\"v\", FACT(0))"
+    },
+    {
+      "id": "library/3f612005",
+      "expr": "FACT(3.9)",
+      "query": "EVALUATE ROW(\"v\", FACT(3.9))"
+    },
+    {
+      "id": "library/c9d5e1e8",
+      "expr": "COMBIN(8, 2)",
+      "query": "EVALUATE ROW(\"v\", COMBIN(8, 2))"
+    },
+    {
+      "id": "library/102dedfd",
+      "expr": "COMBIN(60, 30)",
+      "query": "EVALUATE ROW(\"v\", COMBIN(60, 30))"
+    },
+    {
+      "id": "library/a07afb21",
+      "expr": "COMBINA(4, 3)",
+      "query": "EVALUATE ROW(\"v\", COMBINA(4, 3))"
+    },
+    {
+      "id": "library/f2c98711",
+      "expr": "PERMUT(100, 3)",
+      "query": "EVALUATE ROW(\"v\", PERMUT(100, 3))"
+    },
+    {
+      "id": "library/17578380",
+      "expr": "GCD(24, 36)",
+      "query": "EVALUATE ROW(\"v\", GCD(24, 36))"
+    },
+    {
+      "id": "library/294e8e20",
+      "expr": "GCD(BLANK(), 4)",
+      "query": "EVALUATE ROW(\"v\", GCD(BLANK(), 4))"
+    },
+    {
+      "id": "library/c85fe235",
+      "expr": "LCM(4, 6)",
+      "query": "EVALUATE ROW(\"v\", LCM(4, 6))"
+    },
+    {
+      "id": "library/8241e6dc",
+      "expr": "QUOTIENT(5, 2)",
+      "query": "EVALUATE ROW(\"v\", QUOTIENT(5, 2))"
+    },
+    {
+      "id": "library/146fa6ca",
+      "expr": "QUOTIENT(-10, 3)",
+      "query": "EVALUATE ROW(\"v\", QUOTIENT(-10, 3))"
+    },
+    {
+      "id": "library/51b2fecb",
+      "expr": "QUOTIENT(4.5, 3.1)",
+      "query": "EVALUATE ROW(\"v\", QUOTIENT(4.5, 3.1))"
+    },
+    {
+      "id": "library/2a1706a3",
+      "expr": "EVEN(1.5)",
+      "query": "EVALUATE ROW(\"v\", EVEN(1.5))"
+    },
+    {
+      "id": "library/bb513e4c",
+      "expr": "EVEN(-1)",
+      "query": "EVALUATE ROW(\"v\", EVEN(-1))"
+    },
+    {
+      "id": "library/5036bd1c",
+      "expr": "ODD(0)",
+      "query": "EVALUATE ROW(\"v\", ODD(0))"
+    },
+    {
+      "id": "library/ce6693c7",
+      "expr": "ODD(-2)",
+      "query": "EVALUATE ROW(\"v\", ODD(-2))"
+    },
+    {
+      "id": "library/44071fe8",
+      "expr": "ODD(3)",
+      "query": "EVALUATE ROW(\"v\", ODD(3))"
+    },
+    {
+      "id": "library/be8d00db",
+      "expr": "MROUND(10, 3)",
+      "query": "EVALUATE ROW(\"v\", MROUND(10, 3))"
+    },
+    {
+      "id": "library/6d8c586f",
+      "expr": "MROUND(-10, -3)",
+      "query": "EVALUATE ROW(\"v\", MROUND(-10, -3))"
+    },
+    {
+      "id": "library/1caf87e3",
+      "expr": "MROUND(1.3, 0.2)",
+      "query": "EVALUATE ROW(\"v\", MROUND(1.3, 0.2))"
+    },
+    {
+      "id": "library/26249e6e",
+      "expr": "MROUND(BLANK(), 2)",
+      "query": "EVALUATE ROW(\"v\", MROUND(BLANK(), 2))"
+    },
+    {
+      "id": "library/090f29c1",
+      "expr": "CEILING(4.42, 0.05)",
+      "query": "EVALUATE ROW(\"v\", CEILING(4.42, 0.05))"
+    },
+    {
+      "id": "library/0c95e599",
+      "expr": "CEILING(1.5, 0.1)",
+      "query": "EVALUATE ROW(\"v\", CEILING(1.5, 0.1))"
+    },
+    {
+      "id": "library/2b9e3ed5",
+      "expr": "CEILING(2.5, 1)",
+      "query": "EVALUATE ROW(\"v\", CEILING(2.5, 1))"
+    },
+    {
+      "id": "library/b356ca7a",
+      "expr": "CEILING(-2.5, 2)",
+      "query": "EVALUATE ROW(\"v\", CEILING(-2.5, 2))"
+    },
+    {
+      "id": "library/d92dcbc0",
+      "expr": "CEILING(-2.5, -2)",
+      "query": "EVALUATE ROW(\"v\", CEILING(-2.5, -2))"
+    },
+    {
+      "id": "library/9e4a2c6f",
+      "expr": "CEILING(CURRENCY(1.23), 0.5)",
+      "query": "EVALUATE ROW(\"v\", CEILING(CURRENCY(1.23), 0.5))"
+    },
+    {
+      "id": "library/d5bfe8ba",
+      "expr": "ISO.CEILING(-4.3)",
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING(-4.3))"
+    },
+    {
+      "id": "library/cc11c41d",
+      "expr": "ISO.CEILING(4.3, -2)",
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING(4.3, -2))"
+    },
+    {
+      "id": "library/dc0c7324",
+      "expr": "ISO.CEILING(7, 2)",
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING(7, 2))"
+    },
+    {
+      "id": "library/b398f9da",
+      "expr": "FLOOR(10.8423, 0.1)",
+      "query": "EVALUATE ROW(\"v\", FLOOR(10.8423, 0.1))"
+    },
+    {
+      "id": "library/0ef462c7",
+      "expr": "FLOOR(2.9733, 0.1)",
+      "query": "EVALUATE ROW(\"v\", FLOOR(2.9733, 0.1))"
+    },
+    {
+      "id": "library/0171626a",
+      "expr": "FLOOR(-2.5, -2)",
+      "query": "EVALUATE ROW(\"v\", FLOOR(-2.5, -2))"
+    },
+    {
+      "id": "library/3517a15f",
+      "expr": "RANDBETWEEN(3, 3)",
+      "query": "EVALUATE ROW(\"v\", RANDBETWEEN(3, 3))",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "library/1db97acd",
+      "expr": "RAND() >= 0 && RAND() < 1",
+      "query": "EVALUATE ROW(\"v\", RAND() >= 0 && RAND() < 1)",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "library/1cabb0c5",
+      "expr": "BITAND(13, 11)",
+      "query": "EVALUATE ROW(\"v\", BITAND(13, 11))"
+    },
+    {
+      "id": "library/ef141e07",
+      "expr": "BITOR(9, 4)",
+      "query": "EVALUATE ROW(\"v\", BITOR(9, 4))"
+    },
+    {
+      "id": "library/75854453",
+      "expr": "BITXOR(5, 3)",
+      "query": "EVALUATE ROW(\"v\", BITXOR(5, 3))"
+    },
+    {
+      "id": "library/cce7c40c",
+      "expr": "BITLSHIFT(2, 3)",
+      "query": "EVALUATE ROW(\"v\", BITLSHIFT(2, 3))"
+    },
+    {
+      "id": "library/3e2d0c03",
+      "expr": "BITLSHIFT(128, -1)",
+      "query": "EVALUATE ROW(\"v\", BITLSHIFT(128, -1))"
+    },
+    {
+      "id": "library/cbf29b04",
+      "expr": "BITRSHIFT(-16, 2)",
+      "query": "EVALUATE ROW(\"v\", BITRSHIFT(-16, 2))"
+    },
+    {
+      "id": "library/f4e0098c",
+      "expr": "IF.EAGER(1 > 2, \"a\", \"b\")",
+      "query": "EVALUATE ROW(\"v\", IF.EAGER(1 > 2, \"a\", \"b\"))"
+    },
+    {
+      "id": "library/52c97f21",
+      "expr": "IFERROR(ERROR(\"boom\"), 7)",
+      "query": "EVALUATE ROW(\"v\", IFERROR(ERROR(\"boom\"), 7))"
+    },
+    {
+      "id": "library/7a49646f",
+      "expr": "EVALUATEANDLOG(1 + 1, \"two\")",
+      "query": "EVALUATE ROW(\"v\", EVALUATEANDLOG(1 + 1, \"two\"))"
+    },
+    {
+      "id": "library/b690f8b0",
+      "expr": "USERCULTURE()",
+      "query": "EVALUATE ROW(\"v\", USERCULTURE())",
+      "volatile": "depends on the clock, randomness or the signed-in user"
+    },
+    {
+      "id": "library/de220a82",
+      "expr": "ISAFTER(2, 1)",
+      "query": "EVALUATE ROW(\"v\", ISAFTER(2, 1))"
+    },
+    {
+      "id": "library/bc09eac9",
+      "expr": "ISAFTER(1, 1)",
+      "query": "EVALUATE ROW(\"v\", ISAFTER(1, 1))"
+    },
+    {
+      "id": "library/86eb43c4",
+      "expr": "ISONORAFTER(1, 1)",
+      "query": "EVALUATE ROW(\"v\", ISONORAFTER(1, 1))"
+    },
+    {
+      "id": "library/176f8de5",
+      "expr": "ISAFTER(\"a\", \"b\", DESC)",
+      "query": "EVALUATE ROW(\"v\", ISAFTER(\"a\", \"b\", DESC))"
+    },
+    {
+      "id": "library/699de51f",
+      "expr": "ISONORAFTER(1, 1, ASC, 2, 3, ASC)",
+      "query": "EVALUATE ROW(\"v\", ISONORAFTER(1, 1, ASC, 2, 3, ASC))"
+    },
+    {
+      "id": "library/50c29341",
+      "expr": "MAXA(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", MAXA(Sales[Qty]))"
+    },
+    {
+      "id": "library/e2cb91c6",
+      "expr": "MINA(Sales[Price])",
+      "query": "EVALUATE ROW(\"v\", MINA(Sales[Price]))"
+    },
+    {
+      "id": "library/c60d02b2",
+      "expr": "MAXA(Sales[Date])",
+      "query": "EVALUATE ROW(\"v\", MAXA(Sales[Date]))"
+    },
+    {
+      "id": "library/b3ad55e3",
+      "expr": "MAXA(Product[Color])",
+      "query": "EVALUATE ROW(\"v\", MAXA(Product[Color]))"
+    },
+    {
+      "id": "library/8de459fd",
+      "expr": "AVERAGEA(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", AVERAGEA(Sales[Qty]))"
+    },
+    {
+      "id": "library/b98280a9",
+      "expr": "AVERAGEA(Product[Name])",
+      "query": "EVALUATE ROW(\"v\", AVERAGEA(Product[Name]))"
+    },
+    {
+      "id": "library/fca1099a",
+      "expr": "CALCULATE(MINA(Sales[Qty]), Product[Color] = \"Blue\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(MINA(Sales[Qty]), Product[Color] = \"Blue\"))"
+    },
+    {
+      "id": "library/a51278f8",
+      "expr": "GEOMEANX(FILTER(Sales, FALSE()), Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", GEOMEANX(FILTER(Sales, FALSE()), Sales[Qty]))"
+    },
+    {
+      "id": "library/419fb877",
+      "expr": "YEARFRAC(DATE(2012, 1, 1), DATE(2012, 7, 30))",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 1, 1), DATE(2012, 7, 30)))"
+    },
+    {
+      "id": "library/b6cf9312",
+      "expr": "YEARFRAC(DATE(2012, 7, 30), DATE(2012, 1, 1), 1)",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 7, 30), DATE(2012, 1, 1), 1))"
+    },
+    {
+      "id": "library/51bfbe94",
+      "expr": "YEARFRAC(DATE(2012, 1, 1), DATE(2012, 7, 30), 2)",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 1, 1), DATE(2012, 7, 30), 2))"
+    },
+    {
+      "id": "library/e3a15997",
+      "expr": "YEARFRAC(DATE(2012, 1, 1), DATE(2012, 7, 30), 3)",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 1, 1), DATE(2012, 7, 30), 3))"
+    },
+    {
+      "id": "library/47067b52",
+      "expr": "YEARFRAC(DATE(2012, 1, 31), DATE(2012, 3, 31), 4)",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2012, 1, 31), DATE(2012, 3, 31), 4))"
+    },
+    {
+      "id": "library/16ffa87a",
+      "expr": "YEARFRAC(DATE(2011, 2, 28), DATE(2012, 2, 29))",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2011, 2, 28), DATE(2012, 2, 29)))"
+    },
+    {
+      "id": "library/665ce094",
+      "expr": "YEARFRAC(DATE(2011, 1, 31), DATE(2011, 2, 28))",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2011, 1, 31), DATE(2011, 2, 28)))"
+    },
+    {
+      "id": "library/be43d913",
+      "expr": "YEARFRAC(DATE(2010, 6, 1), DATE(2013, 6, 1), 1)",
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2010, 6, 1), DATE(2013, 6, 1), 1))"
+    },
+    {
+      "id": "library/9a9e50d0",
+      "expr": "NETWORKDAYS(DATE(2022, 5, 28), DATE(2022, 5, 30), 1, {DATE(2022, 5, 30)})",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2022, 5, 28), DATE(2022, 5, 30), 1, {DATE(2022, 5, 30)}))"
+    },
+    {
+      "id": "library/285460a0",
+      "expr": "NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 31))",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 31)))"
+    },
+    {
+      "id": "library/3f32f682",
+      "expr": "NETWORKDAYS(DATE(2024, 1, 31), DATE(2024, 1, 1))",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 31), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "library/172d753d",
+      "expr": "NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 31), 11)",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 31), 11))"
+    },
+    {
+      "id": "library/d020fc8a",
+      "expr": "NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 7), \"0000011\")",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 7), \"0000011\"))"
+    },
+    {
+      "id": "library/ab8cbd6a",
+      "expr": "NETWORKDAYS(DATE(2024, 12, 23), DATE(2025, 1, 3), 1, {DATE(2024, 12, 25), DATE(2024, 12, 26), DATE(2025, 1, 1), DATE(2024, 12, 28)})",
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 12, 23), DATE(2025, 1, 3), 1, {DATE(2024, 12, 25), DATE(2024, 12, 26), DATE(2025, 1, 1), DATE(2024, 12, 28)}))"
+    },
+    {
+      "id": "library/f8504e0d",
+      "expr": "ISBLANK(NETWORKDAYS(BLANK(), BLANK()))",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(NETWORKDAYS(BLANK(), BLANK())))"
+    },
+    {
+      "id": "library/f9defa79",
+      "expr": "EDATE(DATE(2024, 1, 31), 1.9)",
+      "query": "EVALUATE ROW(\"v\", EDATE(DATE(2024, 1, 31), 1.9))"
+    },
+    {
+      "id": "library/84bc39a1",
+      "expr": "EOMONTH(DATE(2008, 3, 3), 1.5)",
+      "query": "EVALUATE ROW(\"v\", EOMONTH(DATE(2008, 3, 3), 1.5))"
+    },
+    {
+      "id": "library/d651f11e",
+      "expr": "ISBLANK(QUARTER(BLANK()))",
+      "query": "EVALUATE ROW(\"v\", ISBLANK(QUARTER(BLANK())))"
+    },
+    {
+      "id": "library/ef518989",
+      "expr": "DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), YEAR)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), YEAR))"
+    },
+    {
+      "id": "library/40acbbfe",
+      "expr": "DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), QUARTER)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), QUARTER))"
+    },
+    {
+      "id": "library/a11c999a",
+      "expr": "DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), MONTH)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), MONTH))"
+    },
+    {
+      "id": "library/8bf31353",
+      "expr": "DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), WEEK)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), WEEK))"
+    },
+    {
+      "id": "library/ce27b7ad",
+      "expr": "DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), DAY)",
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2019, 7, 1), DATE(2021, 12, 31), DAY))"
+    },
+    {
+      "id": "library-approx/76b124df",
+      "expr": "SQRTPI(2)",
+      "query": "EVALUATE ROW(\"v\", SQRTPI(2))"
+    },
+    {
+      "id": "library-approx/846304af",
+      "expr": "LOG(125, 5)",
+      "query": "EVALUATE ROW(\"v\", LOG(125, 5))"
+    },
+    {
+      "id": "library-approx/7a498842",
+      "expr": "LOG10(0.001)",
+      "query": "EVALUATE ROW(\"v\", LOG10(0.001))"
+    },
+    {
+      "id": "library-approx/0c3ca5ce",
+      "expr": "SIN(PI() / 6)",
+      "query": "EVALUATE ROW(\"v\", SIN(PI() / 6))"
+    },
+    {
+      "id": "library-approx/d143ca92",
+      "expr": "COS(PI() / 3)",
+      "query": "EVALUATE ROW(\"v\", COS(PI() / 3))"
+    },
+    {
+      "id": "library-approx/fbf7c3d7",
+      "expr": "TAN(PI() / 4)",
+      "query": "EVALUATE ROW(\"v\", TAN(PI() / 4))"
+    },
+    {
+      "id": "library-approx/82f95a34",
+      "expr": "COT(PI() / 4)",
+      "query": "EVALUATE ROW(\"v\", COT(PI() / 4))"
+    },
+    {
+      "id": "library-approx/fb0589e4",
+      "expr": "ACOS(0.5)",
+      "query": "EVALUATE ROW(\"v\", ACOS(0.5))"
+    },
+    {
+      "id": "library-approx/dffbfc90",
+      "expr": "ASIN(0.5)",
+      "query": "EVALUATE ROW(\"v\", ASIN(0.5))"
+    },
+    {
+      "id": "library-approx/6ca38104",
+      "expr": "ATAN(1)",
+      "query": "EVALUATE ROW(\"v\", ATAN(1))"
+    },
+    {
+      "id": "library-approx/e20565fe",
+      "expr": "ACOT(1)",
+      "query": "EVALUATE ROW(\"v\", ACOT(1))"
+    },
+    {
+      "id": "library-approx/ed742124",
+      "expr": "COTH(1)",
+      "query": "EVALUATE ROW(\"v\", COTH(1))"
+    },
+    {
+      "id": "library-approx/92954b85",
+      "expr": "ACOTH(2)",
+      "query": "EVALUATE ROW(\"v\", ACOTH(2))"
+    },
+    {
+      "id": "library-approx/454c6eb4",
+      "expr": "SINH(1)",
+      "query": "EVALUATE ROW(\"v\", SINH(1))"
+    },
+    {
+      "id": "library-approx/9a27a8fb",
+      "expr": "DEGREES(PI())",
+      "query": "EVALUATE ROW(\"v\", DEGREES(PI()))"
+    },
+    {
+      "id": "library-approx/2e0497d0",
+      "expr": "RADIANS(180)",
+      "query": "EVALUATE ROW(\"v\", RADIANS(180))"
+    },
+    {
+      "id": "library-approx/4676a0a7",
+      "expr": "EXP(1)",
+      "query": "EVALUATE ROW(\"v\", EXP(1))"
+    },
+    {
+      "id": "library-approx/6febf022",
+      "expr": "LN(EXP(2))",
+      "query": "EVALUATE ROW(\"v\", LN(EXP(2)))"
+    },
+    {
+      "id": "library-approx/62433a33",
+      "expr": "FACT(170)",
+      "query": "EVALUATE ROW(\"v\", FACT(170))"
+    },
+    {
+      "id": "library-approx/db242e2e",
+      "expr": "GEOMEAN(Sales[Qty])",
+      "query": "EVALUATE ROW(\"v\", GEOMEAN(Sales[Qty]))"
+    },
+    {
+      "id": "library-approx/e2acf898",
+      "expr": "GEOMEANX(Sales, Sales[Price])",
+      "query": "EVALUATE ROW(\"v\", GEOMEANX(Sales, Sales[Price]))"
+    },
+    {
+      "id": "library-approx/f93a91f7",
+      "expr": "CALCULATE(GEOMEAN(Sales[Qty]), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(GEOMEAN(Sales[Qty]), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "library-approx/9d5dc67a",
+      "expr": "NORM.S.DIST(1.96, TRUE)",
+      "query": "EVALUATE ROW(\"v\", NORM.S.DIST(1.96, TRUE))"
+    },
+    {
+      "id": "library-approx/2d9e3af2",
+      "expr": "NORM.S.DIST(0, FALSE)",
+      "query": "EVALUATE ROW(\"v\", NORM.S.DIST(0, FALSE))"
+    },
+    {
+      "id": "library-approx/1307f726",
+      "expr": "NORM.S.INV(0.975)",
+      "query": "EVALUATE ROW(\"v\", NORM.S.INV(0.975))"
+    },
+    {
+      "id": "library-approx/49937a61",
+      "expr": "NORM.DIST(42, 40, 1.5, TRUE)",
+      "query": "EVALUATE ROW(\"v\", NORM.DIST(42, 40, 1.5, TRUE))"
+    },
+    {
+      "id": "library-approx/a4d4778e",
+      "expr": "NORM.DIST(42, 40, 1.5, FALSE)",
+      "query": "EVALUATE ROW(\"v\", NORM.DIST(42, 40, 1.5, FALSE))"
+    },
+    {
+      "id": "library-approx/0003e1a1",
+      "expr": "NORM.INV(0.908789, 40, 1.5)",
+      "query": "EVALUATE ROW(\"v\", NORM.INV(0.908789, 40, 1.5))"
+    },
+    {
+      "id": "library-approx/a55f7750",
+      "expr": "EXPON.DIST(0.2, 10, TRUE)",
+      "query": "EVALUATE ROW(\"v\", EXPON.DIST(0.2, 10, TRUE))"
+    },
+    {
+      "id": "library-approx/8ba4417c",
+      "expr": "EXPON.DIST(0.2, 10, FALSE)",
+      "query": "EVALUATE ROW(\"v\", EXPON.DIST(0.2, 10, FALSE))"
+    },
+    {
+      "id": "library-approx/18966c75",
+      "expr": "POISSON.DIST(2, 5, FALSE)",
+      "query": "EVALUATE ROW(\"v\", POISSON.DIST(2, 5, FALSE))"
+    },
+    {
+      "id": "library-approx/1fe9cfa5",
+      "expr": "POISSON.DIST(2, 5, TRUE)",
+      "query": "EVALUATE ROW(\"v\", POISSON.DIST(2, 5, TRUE))"
+    },
+    {
+      "id": "library-approx/837d719a",
+      "expr": "BETA.DIST(2, 8, 10, TRUE, 1, 3)",
+      "query": "EVALUATE ROW(\"v\", BETA.DIST(2, 8, 10, TRUE, 1, 3))"
+    },
+    {
+      "id": "library-approx/79cf39bd",
+      "expr": "BETA.DIST(2, 8, 10, FALSE, 1, 3)",
+      "query": "EVALUATE ROW(\"v\", BETA.DIST(2, 8, 10, FALSE, 1, 3))"
+    },
+    {
+      "id": "library-approx/7ee42a33",
+      "expr": "BETA.INV(0.685470581, 8, 10, 1, 3)",
+      "query": "EVALUATE ROW(\"v\", BETA.INV(0.685470581, 8, 10, 1, 3))"
+    },
+    {
+      "id": "library-approx/5deb7876",
+      "expr": "CHISQ.DIST(3, 2, TRUE)",
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST(3, 2, TRUE))"
+    },
+    {
+      "id": "library-approx/ba5767fa",
+      "expr": "CHISQ.DIST(2, 3, FALSE)",
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST(2, 3, FALSE))"
+    },
+    {
+      "id": "library-approx/88716b61",
+      "expr": "CHISQ.DIST.RT(18.307, 10)",
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST.RT(18.307, 10))"
+    },
+    {
+      "id": "library-approx/a72c9544",
+      "expr": "CHISQ.INV(0.6, 2)",
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV(0.6, 2))"
+    },
+    {
+      "id": "library-approx/7631eb39",
+      "expr": "CHISQ.INV.RT(0.05, 10)",
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV.RT(0.05, 10))"
+    },
+    {
+      "id": "library-approx/ded7c0e1",
+      "expr": "T.DIST(60, 1, TRUE)",
+      "query": "EVALUATE ROW(\"v\", T.DIST(60, 1, TRUE))"
+    },
+    {
+      "id": "library-approx/2e495f22",
+      "expr": "T.DIST(8, 3, FALSE)",
+      "query": "EVALUATE ROW(\"v\", T.DIST(8, 3, FALSE))"
+    },
+    {
+      "id": "library-approx/f764dda2",
+      "expr": "T.DIST.2T(1.959999998, 60)",
+      "query": "EVALUATE ROW(\"v\", T.DIST.2T(1.959999998, 60))"
+    },
+    {
+      "id": "library-approx/1b9982f5",
+      "expr": "T.DIST.RT(1.959999998, 60)",
+      "query": "EVALUATE ROW(\"v\", T.DIST.RT(1.959999998, 60))"
+    },
+    {
+      "id": "library-approx/ae0e4c1c",
+      "expr": "T.INV(0.75, 2)",
+      "query": "EVALUATE ROW(\"v\", T.INV(0.75, 2))"
+    },
+    {
+      "id": "library-approx/6f21b49e",
+      "expr": "T.INV.2T(0.05, 10)",
+      "query": "EVALUATE ROW(\"v\", T.INV.2T(0.05, 10))"
+    },
+    {
+      "id": "library-approx/5a0cb465",
+      "expr": "CONFIDENCE.NORM(0.05, 2.5, 50)",
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.NORM(0.05, 2.5, 50))"
+    },
+    {
+      "id": "library-approx/c85c8c20",
+      "expr": "CONFIDENCE.T(0.05, 1, 50)",
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.T(0.05, 1, 50))"
+    },
+    {
+      "id": "library-approx/79c5eacb",
+      "expr": "PMT(0.05, 10, 1000)",
+      "query": "EVALUATE ROW(\"v\", PMT(0.05, 10, 1000))"
+    },
+    {
+      "id": "library-approx/f98ff56d",
+      "expr": "PV(0.05, 10, -129.5045749654566)",
+      "query": "EVALUATE ROW(\"v\", PV(0.05, 10, -129.5045749654566))"
+    },
+    {
+      "id": "library-approx/4c65946a",
+      "expr": "FV(0.05, 10, -100)",
+      "query": "EVALUATE ROW(\"v\", FV(0.05, 10, -100))"
+    },
+    {
+      "id": "library-approx/108168aa",
+      "expr": "NPER(0.05, -129.5045749654566, 1000)",
+      "query": "EVALUATE ROW(\"v\", NPER(0.05, -129.5045749654566, 1000))"
+    },
+    {
+      "id": "library-approx/b6472569",
+      "expr": "SUMX(GENERATESERIES(1, 3), NORM.S.DIST([Value], TRUE))",
+      "query": "EVALUATE ROW(\"v\", SUMX(GENERATESERIES(1, 3), NORM.S.DIST([Value], TRUE)))"
+    },
+    {
+      "id": "library-approx/dd6e688f",
+      "expr": "SUMX(FILTER(Sales, NOT ISBLANK(Sales[Qty])), LN(Sales[Qty]))",
+      "query": "EVALUATE ROW(\"v\", SUMX(FILTER(Sales, NOT ISBLANK(Sales[Qty])), LN(Sales[Qty])))"
+    },
+    {
+      "id": "library-approx/afa34ce9",
+      "expr": "CALCULATE(SUMX(Sales, EXP(Sales[Qty])), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(Sales, EXP(Sales[Qty])), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "time-intelligence/976e36fe",
+      "expr": "[Amt]",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", [Amt]), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/a1bc0423",
+      "expr": "TOTALYTD([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALYTD([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/67032eb8",
+      "expr": "TOTALYTD([Amt], 'Date'[Date], Orders[Region] = \"West\")",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALYTD([Amt], 'Date'[Date], Orders[Region] = \"West\")), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/6ef1145b",
+      "expr": "TOTALYTD([Amt], 'Date'[Date], \"6/30\")",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALYTD([Amt], 'Date'[Date], \"6/30\")), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/1989e788",
+      "expr": "TOTALQTD([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALQTD([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/d571a820",
+      "expr": "TOTALMTD([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", TOTALMTD([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/2548a8da",
+      "expr": "CALCULATE([Amt], DATESYTD('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATESYTD('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/96569bf9",
+      "expr": "COUNTROWS(DATESYTD('Date'[Date], \"6/30\"))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATESYTD('Date'[Date], \"6/30\"))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/db2af831",
+      "expr": "COUNTROWS(DATESQTD('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATESQTD('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/f5870228",
+      "expr": "COUNTROWS(DATESMTD('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATESMTD('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/e2f1d9ea",
+      "expr": "CALCULATE([Amt], SAMEPERIODLASTYEAR('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], SAMEPERIODLASTYEAR('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/1238ddb2",
+      "expr": "COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/b005132f",
+      "expr": "CALCULATE([Amt], DATEADD('Date'[Date], -1, MONTH))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATEADD('Date'[Date], -1, MONTH))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/ab384031",
+      "expr": "COUNTROWS(DATEADD('Date'[Date], -1, MONTH))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATEADD('Date'[Date], -1, MONTH))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/e70879a9",
+      "expr": "CALCULATE([Amt], DATEADD('Date'[Date], -1, YEAR))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATEADD('Date'[Date], -1, YEAR))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/1bea7faf",
+      "expr": "FIRSTDATE(DATEADD('Date'[Date], 1, DAY))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", FIRSTDATE(DATEADD('Date'[Date], 1, DAY))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/bf701e67",
+      "expr": "CALCULATE([Amt], PARALLELPERIOD('Date'[Date], -1, YEAR))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PARALLELPERIOD('Date'[Date], -1, YEAR))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/d21c75dc",
+      "expr": "CALCULATE([Amt], PARALLELPERIOD('Date'[Date], 1, QUARTER))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PARALLELPERIOD('Date'[Date], 1, QUARTER))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/939a325d",
+      "expr": "CALCULATE([Amt], PREVIOUSMONTH('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PREVIOUSMONTH('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/e77c4b43",
+      "expr": "CALCULATE([Amt], NEXTMONTH('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], NEXTMONTH('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/a3ae936b",
+      "expr": "CALCULATE([Amt], PREVIOUSYEAR('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PREVIOUSYEAR('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/f207cb75",
+      "expr": "COUNTROWS(NEXTYEAR('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(NEXTYEAR('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/95b71013",
+      "expr": "COUNTROWS(PREVIOUSQUARTER('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(PREVIOUSQUARTER('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/d40487bf",
+      "expr": "COUNTROWS(NEXTQUARTER('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(NEXTQUARTER('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/d7c4d88b",
+      "expr": "PREVIOUSDAY('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", PREVIOUSDAY('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/48558175",
+      "expr": "NEXTDAY('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", NEXTDAY('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/b20a7ee0",
+      "expr": "STARTOFMONTH('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", STARTOFMONTH('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/f7694261",
+      "expr": "ENDOFMONTH('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", ENDOFMONTH('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/44bb90ab",
+      "expr": "STARTOFQUARTER('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", STARTOFQUARTER('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/75b2320b",
+      "expr": "ENDOFQUARTER('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", ENDOFQUARTER('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/951ed68a",
+      "expr": "STARTOFYEAR('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", STARTOFYEAR('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/549b31b3",
+      "expr": "ENDOFYEAR('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", ENDOFYEAR('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/69ae65c8",
+      "expr": "STARTOFYEAR('Date'[Date], \"6/30\")",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", STARTOFYEAR('Date'[Date], \"6/30\")), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/a3d9824d",
+      "expr": "FIRSTDATE('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", FIRSTDATE('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/98bfa3ee",
+      "expr": "LASTDATE('Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", LASTDATE('Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/c14acd20",
+      "expr": "CALCULATE([Amt], DATESBETWEEN('Date'[Date], DATE(2024, 1, 1), DATE(2024, 2, 15)))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATESBETWEEN('Date'[Date], DATE(2024, 1, 1), DATE(2024, 2, 15)))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/ead2ee54",
+      "expr": "CALCULATE([Amt], DATESBETWEEN('Date'[Date], BLANK(), DATE(2023, 12, 31)))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATESBETWEEN('Date'[Date], BLANK(), DATE(2023, 12, 31)))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/92c53227",
+      "expr": "CALCULATE([Amt], DATESINPERIOD('Date'[Date], DATE(2024, 3, 31), -3, MONTH))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], DATESINPERIOD('Date'[Date], DATE(2024, 3, 31), -3, MONTH))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/a0a7334f",
+      "expr": "COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 1, 1), 1, YEAR))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 1, 1), 1, YEAR))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/86b15112",
+      "expr": "FIRSTNONBLANK('Date'[Date], [Amt])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", FIRSTNONBLANK('Date'[Date], [Amt])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/976513f0",
+      "expr": "LASTNONBLANK('Date'[Date], [Amt])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", LASTNONBLANK('Date'[Date], [Amt])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/160bef8f",
+      "expr": "FIRSTNONBLANKVALUE('Date'[Date], [Amt])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", FIRSTNONBLANKVALUE('Date'[Date], [Amt])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/f287d997",
+      "expr": "LASTNONBLANKVALUE('Date'[Date], [Amt])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", LASTNONBLANKVALUE('Date'[Date], [Amt])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/2070d4df",
+      "expr": "CLOSINGBALANCEMONTH([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CLOSINGBALANCEMONTH([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/c316120a",
+      "expr": "CLOSINGBALANCEQUARTER([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CLOSINGBALANCEQUARTER([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/ae445d7f",
+      "expr": "CLOSINGBALANCEYEAR([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CLOSINGBALANCEYEAR([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/6d24cd04",
+      "expr": "OPENINGBALANCEMONTH([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", OPENINGBALANCEMONTH([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/e9cebd18",
+      "expr": "OPENINGBALANCEQUARTER([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", OPENINGBALANCEQUARTER([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/661253da",
+      "expr": "OPENINGBALANCEYEAR([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", OPENINGBALANCEYEAR([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/ce390494",
+      "expr": "CALCULATE([Amt], USERELATIONSHIP(Orders[ShipDate], 'Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], USERELATIONSHIP(Orders[ShipDate], 'Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/7aa7c5e3",
+      "expr": "CALCULATE([Amt], USERELATIONSHIP('Date'[Date], Orders[ShipDate]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], USERELATIONSHIP('Date'[Date], Orders[ShipDate]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/3a03c1dd",
+      "expr": "CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], None))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], None))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/f06840d5",
+      "expr": "CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_LeftFiltersRight))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_LeftFiltersRight))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/1915df3a",
+      "expr": "CALCULATE(COUNTROWS('Date'), Orders[Region] = \"East\", CROSSFILTER(Orders[OrderDate], 'Date'[Date], Both), ALL('Date'))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE(COUNTROWS('Date'), Orders[Region] = \"East\", CROSSFILTER(Orders[OrderDate], 'Date'[Date], Both), ALL('Date'))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/9dd26d3e",
+      "expr": "CALCULATE(COUNTROWS('Date'), Orders[Region] = \"East\", CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay), ALL('Date'))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE(COUNTROWS('Date'), Orders[Region] = \"East\", CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay), ALL('Date'))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/fb026e34",
+      "expr": "CALCULATE(TOTALYTD([Amt], 'Date'[Date]), USERELATIONSHIP(Orders[ShipDate], 'Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE(TOTALYTD([Amt], 'Date'[Date]), USERELATIONSHIP(Orders[ShipDate], 'Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/3b7fb57e",
+      "expr": "CONCATENATEX(Emp, PATH(Emp[Id], Emp[Parent]), \";\", Emp[Id], ASC)",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CONCATENATEX(Emp, PATH(Emp[Id], Emp[Parent]), \";\", Emp[Id], ASC)), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/ad438bcb",
+      "expr": "OPENINGBALANCEMONTH([Amt], 'Date'[Date])",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", OPENINGBALANCEMONTH([Amt], 'Date'[Date])), 'Date'[Year] = 2024, 'Date'[Month] = 3)"
+    },
+    {
+      "id": "time-intelligence/41ee93f2",
+      "expr": "CALCULATE([Amt], PREVIOUSMONTH('Date'[Date]))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], PREVIOUSMONTH('Date'[Date]))), 'Date'[Year] = 2024, 'Date'[Month] = 3)"
+    },
+    {
+      "id": "time-intelligence/62bd5309",
+      "expr": "TOTALYTD([Amt], 'Date'[Date])",
+      "query": "EVALUATE ROW(\"v\", TOTALYTD([Amt], 'Date'[Date]))"
+    },
+    {
+      "id": "time-intelligence/cb956d2a",
+      "expr": "COUNTROWS(DATESYTD('Date'[Date]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESYTD('Date'[Date])))"
+    },
+    {
+      "id": "time-intelligence/a2cf1bba",
+      "expr": "CALCULATE([Amt], SAMEPERIODLASTYEAR('Date'[Date]))",
+      "query": "EVALUATE ROW(\"v\", CALCULATE([Amt], SAMEPERIODLASTYEAR('Date'[Date])))"
+    },
+    {
+      "id": "time-intelligence/ec113282",
+      "expr": "MINX(VALUES('Date'[Year]), TOTALYTD([Amt], 'Date'[Date]))",
+      "query": "EVALUATE ROW(\"v\", MINX(VALUES('Date'[Year]), TOTALYTD([Amt], 'Date'[Date])))"
+    }
+  ]
+}

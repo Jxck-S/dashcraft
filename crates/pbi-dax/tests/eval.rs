@@ -566,7 +566,8 @@ fn context_transition_in_iterators_and_calculate() {
 fn values_and_blank_row() {
     let Some(f) = fixture() else { return };
     // O5's unknown customer creates a blank row in Customers: VALUES/ALL
-    // see it, table references and DISTINCT do not.
+    // see it, table references, DISTINCT and DISTINCTCOUNT do not (Desktop
+    // ground truth for DISTINCTCOUNT).
     assert_eq!(
         f.scalar("COUNTROWS(VALUES(Customers[Loyalty Tier]))"),
         Value::Integer(5)
@@ -583,8 +584,41 @@ fn values_and_blank_row() {
     );
     assert_eq!(
         f.scalar("DISTINCTCOUNT(Customers[Loyalty Tier])"),
-        Value::Integer(5)
+        Value::Integer(4)
     );
+    // COUNTBLANK leaves the blank row out too (Desktop ground truth: the
+    // Regional Sales sample's Campaigns).
+    assert_eq!(
+        f.scalar("COUNTBLANK(Customers[Loyalty Tier])"),
+        f.scalar("COUNTROWS(FILTER(Customers, ISBLANK(Customers[Loyalty Tier])))")
+    );
+}
+
+#[test]
+fn query_results_intern_text_case_per_column() {
+    let Some(f) = fixture() else { return };
+    // Desktop: case-variants in one result column show the first spelling;
+    // other columns keep theirs (ground truth).
+    let q = r#"
+        EVALUATE ADDCOLUMNS({"abc", "ABC", "Abc"}, "Other", "X" & [Value])
+        EVALUATE ADDCOLUMNS({ "b", "B", "a" }, "k", 1) ORDER BY [Value]
+    "#;
+    let results = evaluate_query(&f.engine.snapshot(), &f.model, q).unwrap();
+    let text = |v: &Value| match v {
+        Value::String(s) => s.to_string(),
+        other => format!("{other:?}"),
+    };
+    let rows: Vec<Vec<String>> = results[0]
+        .rows()
+        .iter()
+        .map(|r| r.iter().map(text).collect())
+        .collect();
+    assert_eq!(
+        rows,
+        [["abc", "Xabc"], ["abc", "Xabc"], ["abc", "Xabc"]].map(|r| r.map(String::from))
+    );
+    let ordered: Vec<String> = results[1].rows().iter().map(|r| text(&r[0])).collect();
+    assert_eq!(ordered, ["a", "b", "b"]);
 }
 
 #[test]

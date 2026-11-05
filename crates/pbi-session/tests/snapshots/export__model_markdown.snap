@@ -85,7 +85,7 @@ Kind: table.
 | Total Cost | `\$#,0.00` | Sales |  |
 | Gross Margin | `\$#,0.00` | Sales |  |
 | Margin % | `0.0%` | Sales |  |
-| Sales (Scaled) | `\$#,0.00` | Sales | Total Sales with a dynamic format string: $1.23M, $45.6K or $789.00. |
+| Sales (Scaled) |  | Sales | Total Sales with a dynamic format string: $1.23M, $45.6K or $789.00. |
 | Completed Sales | `\$#,0.00` | Sales |  |
 | Shipped Sales | `\$#,0.00` | Sales | Sales by ship date (inactive relationship). |
 | Sales All Stores (hidden) | `\$#,0.00` | Sales |  |
@@ -793,9 +793,9 @@ Calculated table (DAX) partition `Products Never Sold`, import mode.
 ```dax
 VAR SoldProducts =
     SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), "Product ID", Orders[Product ID])
-VAR Catalog =
+VAR AllProducts =
     SELECTCOLUMNS(ALL(Products), "Product ID", Products[Product ID])
-VAR NeverSold = EXCEPT(Catalog, SoldProducts)
+VAR NeverSold = EXCEPT(AllProducts, SoldProducts)
 RETURN
     SELECTCOLUMNS(
         FILTER(

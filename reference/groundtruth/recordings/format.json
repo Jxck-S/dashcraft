@@ -1,0 +1,5918 @@
+{
+  "schemaVersion": 1,
+  "suite": "format",
+  "desktop": { "version": "2.159.1231.0", "engine": "17.0.93.23", "culture": "en-US" },
+  "recordedOn": "2026-11-05",
+  "cases": [
+    {
+      "id": "general-number-1f8ff05d/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1234.5678"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.125"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234567890.5"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.000456"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.5"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.5"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723.5869097222"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45657"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "general-number-1f8ff05d/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"General Number\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234.00"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["($1,234.57)"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0.13"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0.00"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234,567,890.50"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0.00"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$2.50"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234.50"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "currency-e070de22/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,723.00"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,723.59"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,657.00"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "currency-e070de22/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Currency\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["($1.00)"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.00"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1234.57"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.13"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234567890.50"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.50"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.50"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723.00"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723.59"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45657.00"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "fixed-ab98f5b8/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Fixed\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.00"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.00"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1,234.57"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.13"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234,567,890.50"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.50"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.50"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,723.00"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,723.59"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,657.00"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "standard-2dfa6607/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Standard\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.00"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123400.00%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-123456.78%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12.50%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123456789050.00%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.05%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["250.00%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123450.00%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4572300.00%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4572358.69%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4565700.00%"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "percent-ac556cf5/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Percent\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-100.00%"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1.23E+03"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.23E+03"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1.25E-01"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00E+00"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1.23E+09"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4.56E-04"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.50E+00"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1.23E+03"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4.57E+04"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4.57E+04"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4.57E+04"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "scientific-f828e40c/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Scientific\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.00E+00"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["No"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "yes-no-9f628b61/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Yes/No\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Yes"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["False"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "true-false-9acef652/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"True/False\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Off"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "on-off-97250e53/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"On/Off\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["On"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["5/18/1903"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["8/13/1896 1:37:38 PM"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3:00:00 AM"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00 AM"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"General Date\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'General Date'."
+    },
+    {
+      "id": "general-date-d5080084/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:39 AM"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1/1/1900 12:00:00 PM"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["5/18/1903 12:00:00 PM"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025 2:05:09 PM"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/31/2024"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "general-date-d5080084/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"General Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/29/1899"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Monday, May 18, 1903"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Thursday, August 13, 1896"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Saturday, December 30, 1899"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Saturday, December 30, 1899"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Long Date\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'Long Date'."
+    },
+    {
+      "id": "long-date-28001864/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Saturday, December 30, 1899"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Monday, January 1, 1900"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Monday, May 18, 1903"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "long-date-28001864/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Friday, March 7, 2025"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Friday, March 7, 2025"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Tuesday, December 31, 2024"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "long-date-28001864/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Long Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Friday, December 29, 1899"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["18-May-03"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["13-Aug-96"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["30-Dec-99"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["30-Dec-99"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Medium Date\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'Medium Date'."
+    },
+    {
+      "id": "medium-date-0ce5505c/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["30-Dec-99"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["01-Jan-00"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["18-May-03"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["07-Mar-25"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["07-Mar-25"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["31-Dec-24"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "medium-date-0ce5505c/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Medium Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["29-Dec-99"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["5/18/1903"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["8/13/1896"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/30/1899"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/30/1899"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Short Date\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'Short Date'."
+    },
+    {
+      "id": "short-date-175503db/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/30/1899"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1/1/1900"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["5/18/1903"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "short-date-175503db/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/31/2024"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "short-date-175503db/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Short Date\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/29/1899"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00 AM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1:37:38 PM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3:00:00 AM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00 AM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Long Time\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'Long Time'."
+    },
+    {
+      "id": "long-time-8ca7516e/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:39 AM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00 PM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00 PM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00 AM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2:05:09 PM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00 AM"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "long-time-8ca7516e/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Long Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00 AM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["01:37 PM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["03:00 AM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Medium Time\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'Medium Time'."
+    },
+    {
+      "id": "medium-time-ac3e07e7/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 PM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 PM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["02:05 PM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "medium-time-ac3e07e7/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Medium Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["13:37"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["03:00"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"Short Time\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'Short Time'."
+    },
+    {
+      "id": "short-time-773397c9/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["14:05"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "short-time-773397c9/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"Short Time\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1235"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234567891"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1235"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45724"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45657"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-b6589fc6/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.00"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1234.57"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.13"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234567890.50"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.50"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.50"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723.00"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723.59"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45657.00"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-00-22cf82b6/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.00"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1,235"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234,567,891"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,235"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-1748e81d/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,723"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,724"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,657"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-1748e81d/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.00"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1,234.57"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.13"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234,567,890.50"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.50"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.50"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,723.00"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,723.59"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,657.00"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-00-5033bf42/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.00"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.0"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1,234.57"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.13"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234,567,890.5"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.5"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.5"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,723.0"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,723.59"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,657.0"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-0-0721a17c/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"#,##0.0#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.0"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123400%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-123457%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["13%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123456789050%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["250%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123450%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-433bdb13/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4572300%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4572359%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4565700%"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-433bdb13/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-100%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123400.0%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-123456.8%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12.5%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123456789050.0%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["250.0%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123450.0%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4572300.0%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4572358.7%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4565700.0%"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-0-cd986319/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-100.0%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123400.00%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-123456.78%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12.50%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123456789050.00%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.05%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["250.00%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["123450.00%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4572300.00%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4572358.69%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4565700.00%"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-00-bfbb36f3/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"0.00%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-100.00%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["+123400.0%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-123456.8%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["+12.5%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["+123456789050.0%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["+250.0%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["+123450.0%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["+4572300.0%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["+4572358.7%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["+4565700.0%"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-0-0-0-0-0-254d8209/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-100.0%"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234.00"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["($1,234.57)"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0.13"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234,567,890.50"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$2.50"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234.50"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,723.00"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,723.59"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,657.00"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-00-0-00-4a30d57d/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"$#,0.00;($#,0.00);\"\"-\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["($1.00)"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234.00"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-$1,234.57"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0.13"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0.00"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234,567,890.50"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0.00"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$2.50"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234.50"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,723.00"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,723.59"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,657.00"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-00-2f94b73b/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-$1.00"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234,568K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["46K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["46K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["46K"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-k-66ca21ef/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"#,0,K\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0K"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.0M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1,234.6M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.1M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234,567,890.5M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.5M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,234.5M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,723.0M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,723.6M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45,657.0M"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-0-m-3be63600/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"#,0.0,,\"\"M\"\"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.0M"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1.23E+03"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.23E+03"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1.25E-01"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.00E+00"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1.23E+09"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4.56E-04"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.50E+00"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1.23E+03"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4.57E+04"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4.57E+04"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4.57E+04"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-00e-00-4c96c963/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"0.00E+00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.00E+00"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["001234"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-001235"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["000000"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["000000"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234567891"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["000000"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["000003"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["001235"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["045723"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["045724"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["045657"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "000000-c984aed0/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"000000\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-000001"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1235"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234567891"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1235"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45724"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45657"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "fmt-d08f88df/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"#\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1234.5678"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.125"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234567890.5"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.000456"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.5"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.5"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025 2:05:09 PM"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/31/2024"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "fmt-9a782114/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"@\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["True"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1234.5678"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.125"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234567890.5"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.000456"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.5"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.5"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "fmt-091385be/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025 2:05:09 PM"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/31/2024"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "fmt-091385be/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \">\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["TRUE"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1903-05-18"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1896-08-13"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12-30"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12-30"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"yyyy-mm-dd\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'yyyy-mm-dd'."
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12-30"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1900-01-01"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1903-05-18"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2025-03-07"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2025-03-07"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2024-12-31"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-fe49b5e5/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12-29"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1903-05"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1896-08"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"yyyy-mm\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'yyyy-mm'."
+    },
+    {
+      "id": "yyyy-mm-1e3da327/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1900-01"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1903-05"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2025-03"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2025-03"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2024-12"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-1e3da327/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"yyyy-mm\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["18/05/1903"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["13/08/1896"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["30/12/1899"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["30/12/1899"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"dd/mm/yyyy\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'dd/mm/yyyy'."
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["30/12/1899"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["01/01/1900"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["18/05/1903"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["07/03/2025"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["07/03/2025"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["31/12/2024"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "dd-mm-yyyy-d4c63543/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"dd/mm/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["29/12/1899"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["5/18/1903"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["8/13/1896"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/30/1899"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/30/1899"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"m/d/yyyy\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'm/d/yyyy'."
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/30/1899"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1/1/1900"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["5/18/1903"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3/7/2025"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/31/2024"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "m-d-yyyy-aa31646d/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"m/d/yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12/29/1899"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["May 1903"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Aug 1896"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Dec 1899"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Dec 1899"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"mmm yyyy\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'mmm yyyy'."
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Dec 1899"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Jan 1900"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["May 1903"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Mar 2025"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Mar 2025"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Dec 2024"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "mmm-yyyy-3dd406fa/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"mmm yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Dec 1899"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["May 18, 1903"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["August 13, 1896"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["December 30, 1899"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["December 30, 1899"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"mmmm d, yyyy\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'mmmm d, yyyy'."
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["December 30, 1899"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["January 1, 1900"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["May 18, 1903"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["March 7, 2025"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["March 7, 2025"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["December 31, 2024"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "mmmm-d-yyyy-705d55c8/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"mmmm d, yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["December 29, 1899"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Mon"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Thu"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Sat"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Sat"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"ddd\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'ddd'."
+    },
+    {
+      "id": "ddd-9c969ddf/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Sat"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Mon"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Mon"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Fri"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Fri"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Tue"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "ddd-9c969ddf/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"ddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Fri"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Monday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Thursday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Saturday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Saturday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"dddd\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'dddd'."
+    },
+    {
+      "id": "dddd-01464e16/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Saturday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Monday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Monday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Friday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Friday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Tuesday"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "dddd-01464e16/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"dddd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Friday"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"q\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'q'."
+    },
+    {
+      "id": "q-22ea1c64/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "q-22ea1c64/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"q\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q2 1903"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q3 1896"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q4 1899"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q4 1899"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"\"\"Q\"\"q yyyy\"))",
+      "error": "Input number '1234567890.5' is out of range for format string '\"Q\"q yyyy'."
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q4 1899"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q1 1900"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q2 1903"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q1 2025"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q1 2025"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q4 2024"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "q-q-yyyy-b4b2e5dc/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"\"\"Q\"\"q yyyy\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["Q4 1899"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00:00"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["13:37:38"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["03:00:00"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00:00"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"hh:nn:ss\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'hh:nn:ss'."
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00:39"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00:00"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00:00"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["14:05:09"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00:00"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "hh-nn-ss-125ef39b/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"hh:nn:ss\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["00:00:00"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1:37 PM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3:00 AM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"h:nn AM/PM\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'h:nn AM/PM'."
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 PM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 PM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2:05 PM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "h-nn-am-pm-f25fe518/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"h:nn AM/PM\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["12:00 AM"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1903-05-18 00:00"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1896-08-13 13:37"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12-30 03:00"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12-30 00:00"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"yyyy-mm-dd hh:nn\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'yyyy-mm-dd hh:nn'."
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12-30 00:00"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1900-01-01 12:00"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1903-05-18 12:00"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2025-03-07 00:00"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2025-03-07 14:05"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2024-12-31 00:00"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "yyyy-mm-dd-hh-nn-386ea4e6/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"yyyy-mm-dd hh:nn\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1899-12-29 00:00"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["21"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["33"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["52"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["52"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"ww\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'ww'."
+    },
+    {
+      "id": "ww-1c4f0c6e/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["52"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["21"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["10"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["10"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["53"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "ww-1c4f0c6e/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"ww\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["52"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["138"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["226"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["364"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["364"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"y\"))",
+      "error": "Input number '1234567890.5' is out of range for format string 'y'."
+    },
+    {
+      "id": "y-95cb0bfd/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["364"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["138"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["66"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["66"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["366"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "y-95cb0bfd/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"y\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["363"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-$1,235"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,234,567,891"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$0"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$3"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,235"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-a011edd3/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,723"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,724"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$45,657"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-a011edd3/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-$1"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/int",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234, \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.0"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/neg",
+      "query": "EVALUATE ROW(\"v\", FORMAT(-1234.5678, \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1234.6"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/frac",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.125, \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.1"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/zero",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0, \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/big",
+      "query": "EVALUATE ROW(\"v\", FORMAT(1234567890.5, \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234567890.5"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/small",
+      "query": "EVALUATE ROW(\"v\", FORMAT(0.000456, \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["0.0"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/half",
+      "query": "EVALUATE ROW(\"v\", FORMAT(2.5, \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2.5"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/currency",
+      "query": "EVALUATE ROW(\"v\", FORMAT(CURRENCY(1234.5), \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1234.5"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/blank",
+      "query": "EVALUATE ROW(\"v\", FORMAT(BLANK(), \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [""]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/date",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7), \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723.0"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/datetime",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2025, 3, 7) + TIME(14, 5, 9), \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45723.6"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/dec31",
+      "query": "EVALUATE ROW(\"v\", FORMAT(DATE(2024, 12, 31), \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45657.0"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/text",
+      "query": "EVALUATE ROW(\"v\", FORMAT(\"abc\", \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["abc"]
+      ]
+    },
+    {
+      "id": "0-0-38f6d787/bool",
+      "query": "EVALUATE ROW(\"v\", FORMAT(TRUE(), \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["-1.0"]
+      ]
+    },
+    {
+      "id": "measure/total-sales",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Total Sales], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$894,300.50"]
+      ]
+    },
+    {
+      "id": "measure/total-cost",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Total Cost], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$489,883.85"]
+      ]
+    },
+    {
+      "id": "measure/gross-margin",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Gross Margin], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$404,416.65"]
+      ]
+    },
+    {
+      "id": "measure/margin",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Margin %], \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["45.2%"]
+      ]
+    },
+    {
+      "id": "measure/sales-scaled",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Sales (Scaled)], \"\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["894300.500000003"]
+      ]
+    },
+    {
+      "id": "measure/completed-sales",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Completed Sales], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$811,667.10"]
+      ]
+    },
+    {
+      "id": "measure/shipped-sales",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Shipped Sales], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$894,300.50"]
+      ]
+    },
+    {
+      "id": "measure/sales-all-stores",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Sales All Stores], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$894,300.50"]
+      ]
+    },
+    {
+      "id": "measure/store-share",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Store Share], \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["100.0%"]
+      ]
+    },
+    {
+      "id": "measure/order-count",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Order Count], \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["3,900"]
+      ]
+    },
+    {
+      "id": "measure/units-sold",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Units Sold], \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["6,415"]
+      ]
+    },
+    {
+      "id": "measure/active-customers",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Active Customers], \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["395"]
+      ]
+    },
+    {
+      "id": "measure/avg-order-value",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Avg Order Value], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$229.31"]
+      ]
+    },
+    {
+      "id": "measure/revenue-per-unit",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Revenue per Unit], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$139.41"]
+      ]
+    },
+    {
+      "id": "measure/last-order-date",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Last Order Date], \"yyyy-mm-dd\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["2025-12-31"]
+      ]
+    },
+    {
+      "id": "measure/unknown-product-orders",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Unknown Product Orders], \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4"]
+      ]
+    },
+    {
+      "id": "measure/sales-ytd",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Sales YTD], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$488,272.75"]
+      ]
+    },
+    {
+      "id": "measure/sales-py",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Sales PY], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$406,027.75"]
+      ]
+    },
+    {
+      "id": "measure/sales-yoy",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Sales YoY %], \"+0.0%;-0.0%;0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["+120.3%"]
+      ]
+    },
+    {
+      "id": "measure/sales-prev-month",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Sales Prev Month], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$834,954.65"]
+      ]
+    },
+    {
+      "id": "measure/customer-count",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Customer Count], \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["400"]
+      ]
+    },
+    {
+      "id": "measure/target",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Target], \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$844,000"]
+      ]
+    },
+    {
+      "id": "measure/target-attainment",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Target Attainment %], \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["106.0%"]
+      ]
+    },
+    {
+      "id": "measure/target-stretch",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Target Stretch], \"\\$#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$1,012,800"]
+      ]
+    },
+    {
+      "id": "measure/returns-count",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Returns Count], \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["168"]
+      ]
+    },
+    {
+      "id": "measure/refunds",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Refunds], \"\\$#,0.00\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["$24,088.20"]
+      ]
+    },
+    {
+      "id": "measure/return-rate",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Return Rate], \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["4.3%"]
+      ]
+    },
+    {
+      "id": "measure/sessions",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Sessions], \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,600"]
+      ]
+    },
+    {
+      "id": "measure/converted-sessions",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Converted Sessions], \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["141"]
+      ]
+    },
+    {
+      "id": "measure/conversion-rate",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Conversion Rate], \"0.0%\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["8.8%"]
+      ]
+    },
+    {
+      "id": "measure/avg-pages-per-session",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Avg Pages per Session], \"0.0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["8.2"]
+      ]
+    },
+    {
+      "id": "measure/sessions-all-devices",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Sessions (All Devices)], \"#,0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["1,600"]
+      ]
+    },
+    {
+      "id": "measure/products-never-sold-count",
+      "query": "EVALUATE ROW(\"v\", FORMAT([Products Never Sold Count], \"0\"))",
+      "columns": ["[v]"],
+      "rows": [
+        ["6"]
+      ]
+    }
+  ]
+}

@@ -405,6 +405,31 @@ impl VirtualTable {
         }
         self.subset(&keep)
     }
+
+    /// Gives every case-variant of a text value in a computed column the
+    /// first spelling met, like the engine's case-insensitive string
+    /// dictionaries: Desktop evaluates `{"abc", "ABC"}` to `abc`, `abc`
+    /// (ground truth). Stored columns are already one dictionary per column.
+    pub(crate) fn with_unified_text_case(mut self) -> VirtualTable {
+        let Rows::List(list) = &mut self.rows else {
+            return self;
+        };
+        let mut first: Vec<HashMap<ValueKey, Arc<str>>> = Vec::new();
+        for row in list.iter_mut() {
+            if first.len() < row.values.len() {
+                first.resize_with(row.values.len(), HashMap::new);
+            }
+            for (value, seen) in row.values.iter_mut().zip(first.iter_mut()) {
+                if let Value::String(s) = value {
+                    let canonical = seen.entry(ValueKey::text(s)).or_insert_with(|| s.clone());
+                    if !Arc::ptr_eq(canonical, s) && **canonical != **s {
+                        *s = canonical.clone();
+                    }
+                }
+            }
+        }
+        self
+    }
 }
 
 fn base_columns(data: &TableData) -> Arc<[VColumn]> {

@@ -1,0 +1,484 @@
+{
+  "schemaVersion": 1,
+  "suite": "samples-regional-sales",
+  "title": "Microsoft sample Regional Sales Sample.pbix (MIT): metadata, row counts, column aggregates, small tables and every measure, Desktop's engine vs DashCraft's VertiPaq decoder and DAX engine",
+  "fixture": "sample:Regional Sales Sample.pbix",
+  "requiresTables": [
+    "Accounts",
+    "Industries",
+    "Opportunities",
+    "Owners",
+    "Products",
+    "Opportunity Forecast Adjustment",
+    "Opportunity Calendar",
+    "Contacts",
+    "Territories",
+    "Campaigns",
+    "Calculations"
+  ],
+  "cases": [
+    {
+      "id": "tables",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.TABLES(), \"Name\", [Name], \"DataCategory\", [DataCategory], \"Description\", [Description], \"IsHidden\", [IsHidden], \"CalculationGroupPrecedence\", [CalculationGroupPrecedence])",
+      "metadata": "tables"
+    },
+    {
+      "id": "columns",
+      "query": "EVALUATE SELECTCOLUMNS(FILTER(INFO.VIEW.COLUMNS(), [Type] <> \"RowNumber\"), \"Table\", [Table], \"Name\", [Name], \"DataType\", [DataType], \"IsHidden\", [IsHidden], \"FormatString\", [FormatString], \"SortByColumn\", [SortByColumn], \"SummarizeBy\", [SummarizeBy], \"DataCategory\", [DataCategory], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "metadata": "columns"
+    },
+    {
+      "id": "measures",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.MEASURES(), \"Table\", [Table], \"Name\", [Name], \"IsHidden\", [IsHidden], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "metadata": "measures"
+    },
+    {
+      "id": "measure-formats",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.MEASURES(), \"Name\", [Name], \"FormatString\", [FormatString])",
+      "metadata": "measure-formats"
+    },
+    {
+      "id": "relationships",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.RELATIONSHIPS(), \"FromTable\", [FromTable], \"FromColumn\", [FromColumn], \"FromCardinality\", [FromCardinality], \"ToTable\", [ToTable], \"ToColumn\", [ToColumn], \"ToCardinality\", [ToCardinality], \"IsActive\", [IsActive], \"CrossFilteringBehavior\", [CrossFilteringBehavior], \"SecurityFilteringBehavior\", [SecurityFilteringBehavior])",
+      "metadata": "relationships"
+    },
+    {
+      "id": "rows/accounts",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Accounts'))"
+    },
+    {
+      "id": "column/accounts/account-name-94bcfbc6",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[Account Name]), \"blanks\", COUNTBLANK('Accounts'[Account Name]), \"min\", MIN('Accounts'[Account Name]), \"max\", MAX('Accounts'[Account Name]))"
+    },
+    {
+      "id": "column/accounts/state-or-province-59a5c18b",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[State or Province]), \"blanks\", COUNTBLANK('Accounts'[State or Province]), \"min\", MIN('Accounts'[State or Province]), \"max\", MAX('Accounts'[State or Province]))"
+    },
+    {
+      "id": "column/accounts/country-50b7b98d",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[Country]), \"blanks\", COUNTBLANK('Accounts'[Country]), \"min\", MIN('Accounts'[Country]), \"max\", MAX('Accounts'[Country]))"
+    },
+    {
+      "id": "column/accounts/accountid-c7769d07",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[AccountID]), \"blanks\", COUNTBLANK('Accounts'[AccountID]), \"min\", MIN('Accounts'[AccountID]), \"max\", MAX('Accounts'[AccountID]))"
+    },
+    {
+      "id": "column/accounts/accountseq-c43d1f18",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[AccountSeq]), \"blanks\", COUNTBLANK('Accounts'[AccountSeq]), \"min\", MIN('Accounts'[AccountSeq]), \"max\", MAX('Accounts'[AccountSeq]), \"sum\", SUM('Accounts'[AccountSeq]))"
+    },
+    {
+      "id": "column/accounts/industryseq-563fb40a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[IndustrySeq]), \"blanks\", COUNTBLANK('Accounts'[IndustrySeq]), \"min\", MIN('Accounts'[IndustrySeq]), \"max\", MAX('Accounts'[IndustrySeq]), \"sum\", SUM('Accounts'[IndustrySeq]))"
+    },
+    {
+      "id": "column/accounts/accountownerseq-90bf0df8",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[AccountOwnerSeq]), \"blanks\", COUNTBLANK('Accounts'[AccountOwnerSeq]), \"min\", MIN('Accounts'[AccountOwnerSeq]), \"max\", MAX('Accounts'[AccountOwnerSeq]), \"sum\", SUM('Accounts'[AccountOwnerSeq]))"
+    },
+    {
+      "id": "column/accounts/account-number-470dc200",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[Account Number]), \"blanks\", COUNTBLANK('Accounts'[Account Number]), \"min\", MIN('Accounts'[Account Number]), \"max\", MAX('Accounts'[Account Number]))"
+    },
+    {
+      "id": "column/accounts/territoryseq-049d2cee",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Accounts'[TerritorySeq]), \"blanks\", COUNTBLANK('Accounts'[TerritorySeq]), \"min\", MIN('Accounts'[TerritorySeq]), \"max\", MAX('Accounts'[TerritorySeq]), \"sum\", SUM('Accounts'[TerritorySeq]))"
+    },
+    {
+      "id": "table/accounts",
+      "query": "EVALUATE 'Accounts'"
+    },
+    {
+      "id": "rows/industries",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Industries'))"
+    },
+    {
+      "id": "column/industries/industry-9fd95ed9",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Industries'[Industry]), \"blanks\", COUNTBLANK('Industries'[Industry]), \"min\", MIN('Industries'[Industry]), \"max\", MAX('Industries'[Industry]))"
+    },
+    {
+      "id": "column/industries/industryseq-1f817c28",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Industries'[IndustrySeq]), \"blanks\", COUNTBLANK('Industries'[IndustrySeq]), \"min\", MIN('Industries'[IndustrySeq]), \"max\", MAX('Industries'[IndustrySeq]), \"sum\", SUM('Industries'[IndustrySeq]))"
+    },
+    {
+      "id": "table/industries",
+      "query": "EVALUATE 'Industries'"
+    },
+    {
+      "id": "rows/opportunities",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Opportunities'))"
+    },
+    {
+      "id": "column/opportunities/purchase-process-180baf64",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Purchase Process]), \"blanks\", COUNTBLANK('Opportunities'[Purchase Process]), \"min\", MIN('Opportunities'[Purchase Process]), \"max\", MAX('Opportunities'[Purchase Process]))"
+    },
+    {
+      "id": "column/opportunities/decision-maker-identified-5e4f2f8e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Decision Maker Identified]), \"blanks\", COUNTBLANK('Opportunities'[Decision Maker Identified]))"
+    },
+    {
+      "id": "column/opportunities/status-d249150d",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Status]), \"blanks\", COUNTBLANK('Opportunities'[Status]), \"min\", MIN('Opportunities'[Status]), \"max\", MAX('Opportunities'[Status]))"
+    },
+    {
+      "id": "column/opportunities/sales-stage-811cb4a5",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Sales Stage]), \"blanks\", COUNTBLANK('Opportunities'[Sales Stage]), \"min\", MIN('Opportunities'[Sales Stage]), \"max\", MAX('Opportunities'[Sales Stage]))"
+    },
+    {
+      "id": "column/opportunities/value-0109d310",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Value]), \"blanks\", COUNTBLANK('Opportunities'[Value]), \"min\", MIN('Opportunities'[Value]), \"max\", MAX('Opportunities'[Value]), \"sum\", SUM('Opportunities'[Value]))"
+    },
+    {
+      "id": "column/opportunities/weeks-open-f3dffb00",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Weeks Open]), \"blanks\", COUNTBLANK('Opportunities'[Weeks Open]), \"min\", MIN('Opportunities'[Weeks Open]), \"max\", MAX('Opportunities'[Weeks Open]), \"sum\", SUM('Opportunities'[Weeks Open]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunities/daystoclose-5a1f4b9a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[DaysToClose]), \"blanks\", COUNTBLANK('Opportunities'[DaysToClose]), \"min\", MIN('Opportunities'[DaysToClose]), \"max\", MAX('Opportunities'[DaysToClose]), \"sum\", SUM('Opportunities'[DaysToClose]))"
+    },
+    {
+      "id": "column/opportunities/discount-1d6d3a70",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Discount]), \"blanks\", COUNTBLANK('Opportunities'[Discount]), \"min\", MIN('Opportunities'[Discount]), \"max\", MAX('Opportunities'[Discount]), \"sum\", SUM('Opportunities'[Discount]))"
+    },
+    {
+      "id": "column/opportunities/probability-ba538fe7",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Probability]), \"blanks\", COUNTBLANK('Opportunities'[Probability]), \"min\", MIN('Opportunities'[Probability]), \"max\", MAX('Opportunities'[Probability]), \"sum\", SUM('Opportunities'[Probability]))"
+    },
+    {
+      "id": "column/opportunities/rating-401bd623",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Rating]), \"blanks\", COUNTBLANK('Opportunities'[Rating]), \"min\", MIN('Opportunities'[Rating]), \"max\", MAX('Opportunities'[Rating]))"
+    },
+    {
+      "id": "column/opportunities/days-remaining-in-pipeline-c61ede63",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Days Remaining In Pipeline]), \"blanks\", COUNTBLANK('Opportunities'[Days Remaining In Pipeline]), \"min\", MIN('Opportunities'[Days Remaining In Pipeline]), \"max\", MAX('Opportunities'[Days Remaining In Pipeline]), \"sum\", SUM('Opportunities'[Days Remaining In Pipeline]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunities/probability-raw-a2d79f44",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Probability (raw)]), \"blanks\", COUNTBLANK('Opportunities'[Probability (raw)]), \"min\", MIN('Opportunities'[Probability (raw)]), \"max\", MAX('Opportunities'[Probability (raw)]), \"sum\", SUM('Opportunities'[Probability (raw)]))"
+    },
+    {
+      "id": "column/opportunities/accountseq-9a7409ed",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[AccountSeq]), \"blanks\", COUNTBLANK('Opportunities'[AccountSeq]), \"min\", MIN('Opportunities'[AccountSeq]), \"max\", MAX('Opportunities'[AccountSeq]), \"sum\", SUM('Opportunities'[AccountSeq]))"
+    },
+    {
+      "id": "column/opportunities/opportunityseq-9dab2869",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[OpportunitySeq]), \"blanks\", COUNTBLANK('Opportunities'[OpportunitySeq]), \"min\", MIN('Opportunities'[OpportunitySeq]), \"max\", MAX('Opportunities'[OpportunitySeq]), \"sum\", SUM('Opportunities'[OpportunitySeq]))"
+    },
+    {
+      "id": "column/opportunities/productseq-cceeb3e8",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[ProductSeq]), \"blanks\", COUNTBLANK('Opportunities'[ProductSeq]), \"min\", MIN('Opportunities'[ProductSeq]), \"max\", MAX('Opportunities'[ProductSeq]), \"sum\", SUM('Opportunities'[ProductSeq]))"
+    },
+    {
+      "id": "column/opportunities/systemuserseq-4d706aff",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[SystemUserSeq]), \"blanks\", COUNTBLANK('Opportunities'[SystemUserSeq]), \"min\", MIN('Opportunities'[SystemUserSeq]), \"max\", MAX('Opportunities'[SystemUserSeq]), \"sum\", SUM('Opportunities'[SystemUserSeq]))"
+    },
+    {
+      "id": "column/opportunities/campaignseq-ecd09405",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[CampaignSeq]), \"blanks\", COUNTBLANK('Opportunities'[CampaignSeq]), \"min\", MIN('Opportunities'[CampaignSeq]), \"max\", MAX('Opportunities'[CampaignSeq]), \"sum\", SUM('Opportunities'[CampaignSeq]))"
+    },
+    {
+      "id": "column/opportunities/blank-b35286fb",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Blank]), \"blanks\", COUNTBLANK('Opportunities'[Blank]), \"min\", MIN('Opportunities'[Blank]), \"max\", MAX('Opportunities'[Blank]), \"sum\", SUM('Opportunities'[Blank]))"
+    },
+    {
+      "id": "column/opportunities/datediff-days-f68ffb00",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[DateDiff-Days]), \"blanks\", COUNTBLANK('Opportunities'[DateDiff-Days]), \"min\", MIN('Opportunities'[DateDiff-Days]), \"max\", MAX('Opportunities'[DateDiff-Days]), \"sum\", SUM('Opportunities'[DateDiff-Days]))"
+    },
+    {
+      "id": "column/opportunities/opportunity-created-on-8f337e28",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Opportunity Created On]), \"blanks\", COUNTBLANK('Opportunities'[Opportunity Created On]), \"min\", MIN('Opportunities'[Opportunity Created On]), \"max\", MAX('Opportunities'[Opportunity Created On]))"
+    },
+    {
+      "id": "column/opportunities/closedate-8810e508",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[CloseDate]), \"blanks\", COUNTBLANK('Opportunities'[CloseDate]), \"min\", MIN('Opportunities'[CloseDate]), \"max\", MAX('Opportunities'[CloseDate]))"
+    },
+    {
+      "id": "column/opportunities/days-remaining-in-pipeline-bins-609c92a8",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunities'[Days Remaining In Pipeline (bins)]), \"blanks\", COUNTBLANK('Opportunities'[Days Remaining In Pipeline (bins)]), \"min\", MIN('Opportunities'[Days Remaining In Pipeline (bins)]), \"max\", MAX('Opportunities'[Days Remaining In Pipeline (bins)]), \"sum\", SUM('Opportunities'[Days Remaining In Pipeline (bins)]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "rows/owners",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Owners'))"
+    },
+    {
+      "id": "column/owners/owner-a433aee1",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Owners'[Owner]), \"blanks\", COUNTBLANK('Owners'[Owner]), \"min\", MIN('Owners'[Owner]), \"max\", MAX('Owners'[Owner]))"
+    },
+    {
+      "id": "column/owners/manager-a8a3147f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Owners'[Manager]), \"blanks\", COUNTBLANK('Owners'[Manager]), \"min\", MIN('Owners'[Manager]), \"max\", MAX('Owners'[Manager]))"
+    },
+    {
+      "id": "column/owners/systemuserseq-be24db4c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Owners'[SystemUserSeq]), \"blanks\", COUNTBLANK('Owners'[SystemUserSeq]), \"min\", MIN('Owners'[SystemUserSeq]), \"max\", MAX('Owners'[SystemUserSeq]), \"sum\", SUM('Owners'[SystemUserSeq]))"
+    },
+    {
+      "id": "column/owners/systemuserid-7cae72c4",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Owners'[systemuserid]), \"blanks\", COUNTBLANK('Owners'[systemuserid]), \"min\", MIN('Owners'[systemuserid]), \"max\", MAX('Owners'[systemuserid]))"
+    },
+    {
+      "id": "table/owners",
+      "query": "EVALUATE 'Owners'"
+    },
+    {
+      "id": "rows/products",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Products'))"
+    },
+    {
+      "id": "column/products/product-e3255c0f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Products'[Product]), \"blanks\", COUNTBLANK('Products'[Product]), \"min\", MIN('Products'[Product]), \"max\", MAX('Products'[Product]))"
+    },
+    {
+      "id": "column/products/productseq-3000bed2",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Products'[ProductSeq]), \"blanks\", COUNTBLANK('Products'[ProductSeq]), \"min\", MIN('Products'[ProductSeq]), \"max\", MAX('Products'[ProductSeq]), \"sum\", SUM('Products'[ProductSeq]))"
+    },
+    {
+      "id": "column/products/product-category-80719ca1",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Products'[Product Category]), \"blanks\", COUNTBLANK('Products'[Product Category]), \"min\", MIN('Products'[Product Category]), \"max\", MAX('Products'[Product Category]))"
+    },
+    {
+      "id": "table/products",
+      "query": "EVALUATE 'Products'"
+    },
+    {
+      "id": "rows/opportunity-forecast-adjustment",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Opportunity Forecast Adjustment'))"
+    },
+    {
+      "id": "column/opportunity-forecast-adjustment/forecast-adjustment-7ff58048",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Forecast Adjustment'[Forecast Adjustment]), \"blanks\", COUNTBLANK('Opportunity Forecast Adjustment'[Forecast Adjustment]), \"min\", MIN('Opportunity Forecast Adjustment'[Forecast Adjustment]), \"max\", MAX('Opportunity Forecast Adjustment'[Forecast Adjustment]), \"sum\", SUM('Opportunity Forecast Adjustment'[Forecast Adjustment]))"
+    },
+    {
+      "id": "column/opportunity-forecast-adjustment/blank-e8592464",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Forecast Adjustment'[Blank]), \"blanks\", COUNTBLANK('Opportunity Forecast Adjustment'[Blank]), \"min\", MIN('Opportunity Forecast Adjustment'[Blank]), \"max\", MAX('Opportunity Forecast Adjustment'[Blank]), \"sum\", SUM('Opportunity Forecast Adjustment'[Blank]))"
+    },
+    {
+      "id": "table/opportunity-forecast-adjustment",
+      "query": "EVALUATE 'Opportunity Forecast Adjustment'"
+    },
+    {
+      "id": "rows/opportunity-calendar",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Opportunity Calendar'))"
+    },
+    {
+      "id": "column/opportunity-calendar/date-cc90bf32",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[Date]), \"blanks\", COUNTBLANK('Opportunity Calendar'[Date]), \"min\", MIN('Opportunity Calendar'[Date]), \"max\", MAX('Opportunity Calendar'[Date]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/day-2cd51c9e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[DAY]), \"blanks\", COUNTBLANK('Opportunity Calendar'[DAY]), \"min\", MIN('Opportunity Calendar'[DAY]), \"max\", MAX('Opportunity Calendar'[DAY]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/dayseq-bdda357e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[DaySeq]), \"blanks\", COUNTBLANK('Opportunity Calendar'[DaySeq]), \"min\", MIN('Opportunity Calendar'[DaySeq]), \"max\", MAX('Opportunity Calendar'[DaySeq]), \"sum\", SUM('Opportunity Calendar'[DaySeq]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/year-91ca8329",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[YEAR]), \"blanks\", COUNTBLANK('Opportunity Calendar'[YEAR]), \"min\", MIN('Opportunity Calendar'[YEAR]), \"max\", MAX('Opportunity Calendar'[YEAR]), \"sum\", SUM('Opportunity Calendar'[YEAR]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/month-number-29ef090c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[MONTH NUMBER]), \"blanks\", COUNTBLANK('Opportunity Calendar'[MONTH NUMBER]), \"min\", MIN('Opportunity Calendar'[MONTH NUMBER]), \"max\", MAX('Opportunity Calendar'[MONTH NUMBER]), \"sum\", SUM('Opportunity Calendar'[MONTH NUMBER]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/month-f1eaaad2",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[MONTH]), \"blanks\", COUNTBLANK('Opportunity Calendar'[MONTH]), \"min\", MIN('Opportunity Calendar'[MONTH]), \"max\", MAX('Opportunity Calendar'[MONTH]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/year-month-number-3bc8436e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[YEAR MONTH NUMBER]), \"blanks\", COUNTBLANK('Opportunity Calendar'[YEAR MONTH NUMBER]), \"min\", MIN('Opportunity Calendar'[YEAR MONTH NUMBER]), \"max\", MAX('Opportunity Calendar'[YEAR MONTH NUMBER]), \"sum\", SUM('Opportunity Calendar'[YEAR MONTH NUMBER]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/year-month-5d9db778",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[YEAR MONTH]), \"blanks\", COUNTBLANK('Opportunity Calendar'[YEAR MONTH]), \"min\", MIN('Opportunity Calendar'[YEAR MONTH]), \"max\", MAX('Opportunity Calendar'[YEAR MONTH]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/year-week-49dfc3d7",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[YEAR WEEK]), \"blanks\", COUNTBLANK('Opportunity Calendar'[YEAR WEEK]), \"min\", MIN('Opportunity Calendar'[YEAR WEEK]), \"max\", MAX('Opportunity Calendar'[YEAR WEEK]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/week-59d5cb0a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[WEEK]), \"blanks\", COUNTBLANK('Opportunity Calendar'[WEEK]), \"min\", MIN('Opportunity Calendar'[WEEK]), \"max\", MAX('Opportunity Calendar'[WEEK]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/relative-week-c6c17c65",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE WEEK]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE WEEK]), \"min\", MIN('Opportunity Calendar'[RELATIVE WEEK]), \"max\", MAX('Opportunity Calendar'[RELATIVE WEEK]), \"sum\", SUM('Opportunity Calendar'[RELATIVE WEEK]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/relative-day-4aace1c7",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE DAY]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE DAY]), \"min\", MIN('Opportunity Calendar'[RELATIVE DAY]), \"max\", MAX('Opportunity Calendar'[RELATIVE DAY]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/relative-07-day-period-518121a5",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]), \"min\", MIN('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]), \"max\", MAX('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]), \"sum\", SUM('Opportunity Calendar'[RELATIVE 07 DAY PERIOD]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/relative-30-day-period-e4b16945",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]), \"min\", MIN('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]), \"max\", MAX('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]), \"sum\", SUM('Opportunity Calendar'[RELATIVE 30 DAY PERIOD]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "column/opportunity-calendar/relative-month-bcac2e84",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity Calendar'[RELATIVE MONTH]), \"blanks\", COUNTBLANK('Opportunity Calendar'[RELATIVE MONTH]), \"min\", MIN('Opportunity Calendar'[RELATIVE MONTH]), \"max\", MAX('Opportunity Calendar'[RELATIVE MONTH]), \"sum\", SUM('Opportunity Calendar'[RELATIVE MONTH]))",
+      "volatile": "depends on the clock (Desktop recalculates on open; DashCraft reads the stored values)"
+    },
+    {
+      "id": "rows/contacts",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Contacts'))"
+    },
+    {
+      "id": "column/contacts/contact-7e4d80af",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Contacts'[Contact]), \"blanks\", COUNTBLANK('Contacts'[Contact]), \"min\", MIN('Contacts'[Contact]), \"max\", MAX('Contacts'[Contact]))"
+    },
+    {
+      "id": "column/contacts/job-title-1dc6c481",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Contacts'[Job Title]), \"blanks\", COUNTBLANK('Contacts'[Job Title]), \"min\", MIN('Contacts'[Job Title]), \"max\", MAX('Contacts'[Job Title]))"
+    },
+    {
+      "id": "column/contacts/contactseq-51b58a9e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Contacts'[ContactSeq]), \"blanks\", COUNTBLANK('Contacts'[ContactSeq]), \"min\", MIN('Contacts'[ContactSeq]), \"max\", MAX('Contacts'[ContactSeq]), \"sum\", SUM('Contacts'[ContactSeq]))"
+    },
+    {
+      "id": "column/contacts/accountseq-17271d01",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Contacts'[AccountSeq]), \"blanks\", COUNTBLANK('Contacts'[AccountSeq]), \"min\", MIN('Contacts'[AccountSeq]), \"max\", MAX('Contacts'[AccountSeq]), \"sum\", SUM('Contacts'[AccountSeq]))"
+    },
+    {
+      "id": "table/contacts",
+      "query": "EVALUATE 'Contacts'"
+    },
+    {
+      "id": "rows/territories",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Territories'))"
+    },
+    {
+      "id": "column/territories/region-a037e9cf",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[Region]), \"blanks\", COUNTBLANK('Territories'[Region]), \"min\", MIN('Territories'[Region]), \"max\", MAX('Territories'[Region]))"
+    },
+    {
+      "id": "column/territories/territory-1d362d73",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[Territory]), \"blanks\", COUNTBLANK('Territories'[Territory]), \"min\", MIN('Territories'[Territory]), \"max\", MAX('Territories'[Territory]))"
+    },
+    {
+      "id": "column/territories/country-0a0aea9c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[Country]), \"blanks\", COUNTBLANK('Territories'[Country]), \"min\", MIN('Territories'[Country]), \"max\", MAX('Territories'[Country]))"
+    },
+    {
+      "id": "column/territories/territoryseq-8b015141",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[TerritorySeq]), \"blanks\", COUNTBLANK('Territories'[TerritorySeq]), \"min\", MIN('Territories'[TerritorySeq]), \"max\", MAX('Territories'[TerritorySeq]))"
+    },
+    {
+      "id": "column/territories/state-or-province-11761467",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Territories'[State Or Province]), \"blanks\", COUNTBLANK('Territories'[State Or Province]), \"min\", MIN('Territories'[State Or Province]), \"max\", MAX('Territories'[State Or Province]))"
+    },
+    {
+      "id": "table/territories",
+      "query": "EVALUATE 'Territories'"
+    },
+    {
+      "id": "rows/campaigns",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Campaigns'))"
+    },
+    {
+      "id": "column/campaigns/campaignseq-ce78dd8e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Campaigns'[CampaignSeq]), \"blanks\", COUNTBLANK('Campaigns'[CampaignSeq]), \"min\", MIN('Campaigns'[CampaignSeq]), \"max\", MAX('Campaigns'[CampaignSeq]), \"sum\", SUM('Campaigns'[CampaignSeq]))"
+    },
+    {
+      "id": "column/campaigns/campaign-type-8bfe9a76",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Campaigns'[Campaign Type]), \"blanks\", COUNTBLANK('Campaigns'[Campaign Type]), \"min\", MIN('Campaigns'[Campaign Type]), \"max\", MAX('Campaigns'[Campaign Type]))"
+    },
+    {
+      "id": "column/campaigns/campaign-9ee617ba",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Campaigns'[Campaign]), \"blanks\", COUNTBLANK('Campaigns'[Campaign]), \"min\", MIN('Campaigns'[Campaign]), \"max\", MAX('Campaigns'[Campaign]))"
+    },
+    {
+      "id": "table/campaigns",
+      "query": "EVALUATE 'Campaigns'"
+    },
+    {
+      "id": "rows/calculations",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Calculations'))"
+    },
+    {
+      "id": "column/calculations/value-51a22728",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Value]), \"blanks\", COUNTBLANK('Calculations'[Value]), \"min\", MIN('Calculations'[Value]), \"max\", MAX('Calculations'[Value]), \"sum\", SUM('Calculations'[Value]))"
+    },
+    {
+      "id": "table/calculations",
+      "query": "EVALUATE 'Calculations'"
+    },
+    {
+      "id": "measure/close-48c073b5",
+      "query": "EVALUATE ROW(\"v\", [Close %])"
+    },
+    {
+      "id": "measure/count-of-lost-ead0f7b9",
+      "query": "EVALUATE ROW(\"v\", [Count of Lost])"
+    },
+    {
+      "id": "measure/count-of-won-5bc70611",
+      "query": "EVALUATE ROW(\"v\", [Count of Won])"
+    },
+    {
+      "id": "measure/forecast-adjustment-slicer-alt-text-95a0a4a6",
+      "query": "EVALUATE ROW(\"v\", [Forecast Adjustment Slicer Alt Text])"
+    },
+    {
+      "id": "measure/forecast-b9f1c797",
+      "query": "EVALUATE ROW(\"v\", [Forecast])"
+    },
+    {
+      "id": "measure/forecast-856a00b2",
+      "query": "EVALUATE ROW(\"v\", [Forecast %])"
+    },
+    {
+      "id": "measure/forecast-adjustment-value-f750e9d1",
+      "query": "EVALUATE ROW(\"v\", [Forecast Adjustment Value])"
+    },
+    {
+      "id": "measure/forecast-by-win-loss-ratio-b620b8f3",
+      "query": "EVALUATE ROW(\"v\", [Forecast by Win/Loss Ratio])"
+    },
+    {
+      "id": "measure/opportunity-count-76c380bf",
+      "query": "EVALUATE ROW(\"v\", [Opportunity Count])"
+    },
+    {
+      "id": "measure/opportunity-count-in-pipeline-4948df0d",
+      "query": "EVALUATE ROW(\"v\", [Opportunity Count In Pipeline])"
+    },
+    {
+      "id": "measure/rev-goal-00be0510",
+      "query": "EVALUATE ROW(\"v\", [Rev Goal])"
+    },
+    {
+      "id": "measure/revenue-in-pipeline-ba7ca31a",
+      "query": "EVALUATE ROW(\"v\", [Revenue In Pipeline])"
+    },
+    {
+      "id": "measure/revenue-open-7b90b99c",
+      "query": "EVALUATE ROW(\"v\", [Revenue Open])"
+    },
+    {
+      "id": "measure/revenue-won-51cfd326",
+      "query": "EVALUATE ROW(\"v\", [Revenue Won])"
+    },
+    {
+      "id": "measure/revenue-won-average-deal-size-2e53b0ee",
+      "query": "EVALUATE ROW(\"v\", [Revenue Won Average Deal Size])"
+    }
+  ]
+}

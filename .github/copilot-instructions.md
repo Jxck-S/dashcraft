@@ -13,7 +13,7 @@ notes; if the two disagree, `AGENTS.md` wins (and fix the disagreement).
 | What DashCraft is (library crates are named `pbi-*`), phases and status | [AGENTS.md §1](../AGENTS.md#1-what-this-is), [docs/ROADMAP.md](../docs/ROADMAP.md) |
 | Crates, layers (`cargo xtask layers`), dependency edges, where files live | [AGENTS.md §2](../AGENTS.md#2-layer-map-and-where-things-live) |
 | Golden rules (clean-room, no real or internal report data, private data, credentials, offline, no execution, no panics, registry-first, layers, workspace deps, goldens, perf, determinism) | [AGENTS.md §3](../AGENTS.md#3-golden-rules) |
-| Architecture decisions (ADR-0001 … 0009), crate layers and dependency edges | [AGENTS.md §4](../AGENTS.md#4-architecture-decisions-summary), [docs/adr/](../docs/adr/README.md) |
+| Architecture decisions (ADR-0001 … 0011), crate layers and dependency edges | [AGENTS.md §4](../AGENTS.md#4-architecture-decisions-summary), [docs/adr/](../docs/adr/README.md) |
 | Coding rules (errors, unknown fields, display names, unsupported M/DAX, async) | [AGENTS.md §5](../AGENTS.md#5-coding-rules) |
 | Working next to other agents; disk hygiene | [AGENTS.md §6](../AGENTS.md#6-parallel-agent-protocol) |
 | Validation commands, required test kinds, fixtures and expected values | [AGENTS.md §7](../AGENTS.md#7-build-test-validate) |

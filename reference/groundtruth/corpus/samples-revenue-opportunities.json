@@ -1,0 +1,412 @@
+{
+  "schemaVersion": 1,
+  "suite": "samples-revenue-opportunities",
+  "title": "Microsoft sample Revenue Opportunities.pbix (MIT): metadata, row counts, column aggregates, small tables and every measure, Desktop's engine vs DashCraft's VertiPaq decoder and DAX engine",
+  "fixture": "sample:Revenue Opportunities.pbix",
+  "requiresTables": [
+    "Account",
+    "Fact A",
+    "Fact B",
+    "Opportunity",
+    "Partner",
+    "Product",
+    "Sales stage",
+    "Calculations",
+    "Calendar"
+  ],
+  "cases": [
+    {
+      "id": "tables",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.TABLES(), \"Name\", [Name], \"DataCategory\", [DataCategory], \"Description\", [Description], \"IsHidden\", [IsHidden], \"CalculationGroupPrecedence\", [CalculationGroupPrecedence])",
+      "metadata": "tables"
+    },
+    {
+      "id": "columns",
+      "query": "EVALUATE SELECTCOLUMNS(FILTER(INFO.VIEW.COLUMNS(), [Type] <> \"RowNumber\"), \"Table\", [Table], \"Name\", [Name], \"DataType\", [DataType], \"IsHidden\", [IsHidden], \"FormatString\", [FormatString], \"SortByColumn\", [SortByColumn], \"SummarizeBy\", [SummarizeBy], \"DataCategory\", [DataCategory], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "metadata": "columns"
+    },
+    {
+      "id": "measures",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.MEASURES(), \"Table\", [Table], \"Name\", [Name], \"IsHidden\", [IsHidden], \"DisplayFolder\", [DisplayFolder], \"Description\", [Description], \"Expression\", [Expression])",
+      "metadata": "measures"
+    },
+    {
+      "id": "measure-formats",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.MEASURES(), \"Name\", [Name], \"FormatString\", [FormatString])",
+      "metadata": "measure-formats"
+    },
+    {
+      "id": "relationships",
+      "query": "EVALUATE SELECTCOLUMNS(INFO.VIEW.RELATIONSHIPS(), \"FromTable\", [FromTable], \"FromColumn\", [FromColumn], \"FromCardinality\", [FromCardinality], \"ToTable\", [ToTable], \"ToColumn\", [ToColumn], \"ToCardinality\", [ToCardinality], \"IsActive\", [IsActive], \"CrossFilteringBehavior\", [CrossFilteringBehavior], \"SecurityFilteringBehavior\", [SecurityFilteringBehavior])",
+      "metadata": "relationships"
+    },
+    {
+      "id": "rows/account",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Account'))"
+    },
+    {
+      "id": "column/account/account-5412cb02",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Account'[Account]), \"blanks\", COUNTBLANK('Account'[Account]), \"min\", MIN('Account'[Account]), \"max\", MAX('Account'[Account]))"
+    },
+    {
+      "id": "column/account/region-9eaf1c27",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Account'[Region]), \"blanks\", COUNTBLANK('Account'[Region]), \"min\", MIN('Account'[Region]), \"max\", MAX('Account'[Region]))"
+    },
+    {
+      "id": "column/account/segment-f4a1687e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Account'[Segment]), \"blanks\", COUNTBLANK('Account'[Segment]), \"min\", MIN('Account'[Segment]), \"max\", MAX('Account'[Segment]))"
+    },
+    {
+      "id": "column/account/account-id-41fbed34",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Account'[Account ID]), \"blanks\", COUNTBLANK('Account'[Account ID]), \"min\", MIN('Account'[Account ID]), \"max\", MAX('Account'[Account ID]), \"sum\", SUM('Account'[Account ID]))"
+    },
+    {
+      "id": "column/account/state-e36c23ca",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Account'[State]), \"blanks\", COUNTBLANK('Account'[State]), \"min\", MIN('Account'[State]), \"max\", MAX('Account'[State]))"
+    },
+    {
+      "id": "table/account",
+      "query": "EVALUATE 'Account'"
+    },
+    {
+      "id": "rows/fact-a",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Fact A'))"
+    },
+    {
+      "id": "column/fact-a/estimatedclosedate-1256bbdc",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[EstimatedCloseDate]), \"blanks\", COUNTBLANK('Fact A'[EstimatedCloseDate]), \"min\", MIN('Fact A'[EstimatedCloseDate]), \"max\", MAX('Fact A'[EstimatedCloseDate]))"
+    },
+    {
+      "id": "column/fact-a/opportunity-id-725ea9e1",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Opportunity ID]), \"blanks\", COUNTBLANK('Fact A'[Opportunity ID]), \"min\", MIN('Fact A'[Opportunity ID]), \"max\", MAX('Fact A'[Opportunity ID]), \"sum\", SUM('Fact A'[Opportunity ID]))"
+    },
+    {
+      "id": "column/fact-a/sales-stage-id-38c51bfb",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Sales Stage ID]), \"blanks\", COUNTBLANK('Fact A'[Sales Stage ID]), \"min\", MIN('Fact A'[Sales Stage ID]), \"max\", MAX('Fact A'[Sales Stage ID]), \"sum\", SUM('Fact A'[Sales Stage ID]))"
+    },
+    {
+      "id": "column/fact-a/account-id-1a75cd2f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Account ID]), \"blanks\", COUNTBLANK('Fact A'[Account ID]), \"min\", MIN('Fact A'[Account ID]), \"max\", MAX('Fact A'[Account ID]), \"sum\", SUM('Fact A'[Account ID]))"
+    },
+    {
+      "id": "column/fact-a/partner-id-27cda106",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Partner ID]), \"blanks\", COUNTBLANK('Fact A'[Partner ID]), \"min\", MIN('Fact A'[Partner ID]), \"max\", MAX('Fact A'[Partner ID]), \"sum\", SUM('Fact A'[Partner ID]))"
+    },
+    {
+      "id": "column/fact-a/product-id-1ddb16fd",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Product ID]), \"blanks\", COUNTBLANK('Fact A'[Product ID]), \"min\", MIN('Fact A'[Product ID]), \"max\", MAX('Fact A'[Product ID]), \"sum\", SUM('Fact A'[Product ID]))"
+    },
+    {
+      "id": "column/fact-a/productrevenue-cd39396e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[ProductRevenue]), \"blanks\", COUNTBLANK('Fact A'[ProductRevenue]), \"min\", MIN('Fact A'[ProductRevenue]), \"max\", MAX('Fact A'[ProductRevenue]), \"sum\", SUM('Fact A'[ProductRevenue]))"
+    },
+    {
+      "id": "column/fact-a/factoredproductrevenue-849aaf12",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[FactoredProductRevenue]), \"blanks\", COUNTBLANK('Fact A'[FactoredProductRevenue]), \"min\", MIN('Fact A'[FactoredProductRevenue]), \"max\", MAX('Fact A'[FactoredProductRevenue]), \"sum\", SUM('Fact A'[FactoredProductRevenue]))"
+    },
+    {
+      "id": "column/fact-a/create-date-a03208e0",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Create Date]), \"blanks\", COUNTBLANK('Fact A'[Create Date]), \"min\", MIN('Fact A'[Create Date]), \"max\", MAX('Fact A'[Create Date]), \"sum\", SUM('Fact A'[Create Date]))"
+    },
+    {
+      "id": "column/fact-a/opportunity-days-29dd62e5",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Opportunity Days]), \"blanks\", COUNTBLANK('Fact A'[Opportunity Days]), \"min\", MIN('Fact A'[Opportunity Days]), \"max\", MAX('Fact A'[Opportunity Days]), \"sum\", SUM('Fact A'[Opportunity Days]))"
+    },
+    {
+      "id": "column/fact-a/year-f0cb71c5",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Year]), \"blanks\", COUNTBLANK('Fact A'[Year]), \"min\", MIN('Fact A'[Year]), \"max\", MAX('Fact A'[Year]), \"sum\", SUM('Fact A'[Year]))"
+    },
+    {
+      "id": "column/fact-a/month-number-daa9a8d4",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Month_Number]), \"blanks\", COUNTBLANK('Fact A'[Month_Number]), \"min\", MIN('Fact A'[Month_Number]), \"max\", MAX('Fact A'[Month_Number]), \"sum\", SUM('Fact A'[Month_Number]))"
+    },
+    {
+      "id": "column/fact-a/month-628b916b",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact A'[Month]), \"blanks\", COUNTBLANK('Fact A'[Month]), \"min\", MIN('Fact A'[Month]), \"max\", MAX('Fact A'[Month]))"
+    },
+    {
+      "id": "table/fact-a",
+      "query": "EVALUATE 'Fact A'"
+    },
+    {
+      "id": "rows/fact-b",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Fact B'))"
+    },
+    {
+      "id": "column/fact-b/estimatedclosedate-19d7dffc",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[EstimatedCloseDate]), \"blanks\", COUNTBLANK('Fact B'[EstimatedCloseDate]), \"min\", MIN('Fact B'[EstimatedCloseDate]), \"max\", MAX('Fact B'[EstimatedCloseDate]))"
+    },
+    {
+      "id": "column/fact-b/opportunity-id-0456b7d4",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Opportunity ID]), \"blanks\", COUNTBLANK('Fact B'[Opportunity ID]), \"min\", MIN('Fact B'[Opportunity ID]), \"max\", MAX('Fact B'[Opportunity ID]), \"sum\", SUM('Fact B'[Opportunity ID]))"
+    },
+    {
+      "id": "column/fact-b/sales-stage-id-c58ccfeb",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Sales Stage ID]), \"blanks\", COUNTBLANK('Fact B'[Sales Stage ID]), \"min\", MIN('Fact B'[Sales Stage ID]), \"max\", MAX('Fact B'[Sales Stage ID]), \"sum\", SUM('Fact B'[Sales Stage ID]))"
+    },
+    {
+      "id": "column/fact-b/account-id-f555efa4",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Account ID]), \"blanks\", COUNTBLANK('Fact B'[Account ID]), \"min\", MIN('Fact B'[Account ID]), \"max\", MAX('Fact B'[Account ID]), \"sum\", SUM('Fact B'[Account ID]))"
+    },
+    {
+      "id": "column/fact-b/partner-id-781f6204",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Partner ID]), \"blanks\", COUNTBLANK('Fact B'[Partner ID]), \"min\", MIN('Fact B'[Partner ID]), \"max\", MAX('Fact B'[Partner ID]), \"sum\", SUM('Fact B'[Partner ID]))"
+    },
+    {
+      "id": "column/fact-b/product-id-e4a1a9e0",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Product ID]), \"blanks\", COUNTBLANK('Fact B'[Product ID]), \"min\", MIN('Fact B'[Product ID]), \"max\", MAX('Fact B'[Product ID]), \"sum\", SUM('Fact B'[Product ID]))"
+    },
+    {
+      "id": "column/fact-b/productrevenue-3c315b30",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[ProductRevenue]), \"blanks\", COUNTBLANK('Fact B'[ProductRevenue]), \"min\", MIN('Fact B'[ProductRevenue]), \"max\", MAX('Fact B'[ProductRevenue]), \"sum\", SUM('Fact B'[ProductRevenue]))"
+    },
+    {
+      "id": "column/fact-b/factoredproductrevenue-01b2f85d",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[FactoredProductRevenue]), \"blanks\", COUNTBLANK('Fact B'[FactoredProductRevenue]), \"min\", MIN('Fact B'[FactoredProductRevenue]), \"max\", MAX('Fact B'[FactoredProductRevenue]), \"sum\", SUM('Fact B'[FactoredProductRevenue]))"
+    },
+    {
+      "id": "column/fact-b/create-date-8b38a83b",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Create Date]), \"blanks\", COUNTBLANK('Fact B'[Create Date]), \"min\", MIN('Fact B'[Create Date]), \"max\", MAX('Fact B'[Create Date]), \"sum\", SUM('Fact B'[Create Date]))"
+    },
+    {
+      "id": "column/fact-b/opportunity-days-9f5fc1c6",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Opportunity Days]), \"blanks\", COUNTBLANK('Fact B'[Opportunity Days]), \"min\", MIN('Fact B'[Opportunity Days]), \"max\", MAX('Fact B'[Opportunity Days]), \"sum\", SUM('Fact B'[Opportunity Days]))"
+    },
+    {
+      "id": "column/fact-b/year-48683b62",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Year]), \"blanks\", COUNTBLANK('Fact B'[Year]), \"min\", MIN('Fact B'[Year]), \"max\", MAX('Fact B'[Year]), \"sum\", SUM('Fact B'[Year]))"
+    },
+    {
+      "id": "column/fact-b/month-number-b43ebb6b",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Month_Number]), \"blanks\", COUNTBLANK('Fact B'[Month_Number]), \"min\", MIN('Fact B'[Month_Number]), \"max\", MAX('Fact B'[Month_Number]), \"sum\", SUM('Fact B'[Month_Number]))"
+    },
+    {
+      "id": "column/fact-b/month-0c61dd5e",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Fact B'[Month]), \"blanks\", COUNTBLANK('Fact B'[Month]), \"min\", MIN('Fact B'[Month]), \"max\", MAX('Fact B'[Month]))"
+    },
+    {
+      "id": "table/fact-b",
+      "query": "EVALUATE 'Fact B'"
+    },
+    {
+      "id": "rows/opportunity",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Opportunity'))"
+    },
+    {
+      "id": "column/opportunity/name-3499a677",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity'[Name]), \"blanks\", COUNTBLANK('Opportunity'[Name]), \"min\", MIN('Opportunity'[Name]), \"max\", MAX('Opportunity'[Name]))"
+    },
+    {
+      "id": "column/opportunity/opportunity-id-d680a101",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity'[Opportunity ID]), \"blanks\", COUNTBLANK('Opportunity'[Opportunity ID]), \"min\", MIN('Opportunity'[Opportunity ID]), \"max\", MAX('Opportunity'[Opportunity ID]), \"sum\", SUM('Opportunity'[Opportunity ID]))"
+    },
+    {
+      "id": "column/opportunity/rank-756618f8",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity'[Rank]), \"blanks\", COUNTBLANK('Opportunity'[Rank]), \"min\", MIN('Opportunity'[Rank]), \"max\", MAX('Opportunity'[Rank]), \"sum\", SUM('Opportunity'[Rank]))"
+    },
+    {
+      "id": "column/opportunity/sizeid-25bfd7cb",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity'[SizeID]), \"blanks\", COUNTBLANK('Opportunity'[SizeID]), \"min\", MIN('Opportunity'[SizeID]), \"max\", MAX('Opportunity'[SizeID]), \"sum\", SUM('Opportunity'[SizeID]))"
+    },
+    {
+      "id": "column/opportunity/opportunity-size-6d489658",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Opportunity'[Opportunity Size]), \"blanks\", COUNTBLANK('Opportunity'[Opportunity Size]), \"min\", MIN('Opportunity'[Opportunity Size]), \"max\", MAX('Opportunity'[Opportunity Size]))"
+    },
+    {
+      "id": "table/opportunity",
+      "query": "EVALUATE 'Opportunity'"
+    },
+    {
+      "id": "rows/partner",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Partner'))"
+    },
+    {
+      "id": "column/partner/partner-da44449c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Partner'[Partner]), \"blanks\", COUNTBLANK('Partner'[Partner]), \"min\", MIN('Partner'[Partner]), \"max\", MAX('Partner'[Partner]))"
+    },
+    {
+      "id": "column/partner/partner-id-0b69a686",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Partner'[Partner ID]), \"blanks\", COUNTBLANK('Partner'[Partner ID]), \"min\", MIN('Partner'[Partner ID]), \"max\", MAX('Partner'[Partner ID]), \"sum\", SUM('Partner'[Partner ID]))"
+    },
+    {
+      "id": "column/partner/partner-driven-14adb6df",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Partner'[Partner Driven]), \"blanks\", COUNTBLANK('Partner'[Partner Driven]), \"min\", MIN('Partner'[Partner Driven]), \"max\", MAX('Partner'[Partner Driven]))"
+    },
+    {
+      "id": "table/partner",
+      "query": "EVALUATE 'Partner'"
+    },
+    {
+      "id": "rows/product",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Product'))"
+    },
+    {
+      "id": "column/product/product-code-e3bf00b0",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Product'[Product Code]), \"blanks\", COUNTBLANK('Product'[Product Code]), \"min\", MIN('Product'[Product Code]), \"max\", MAX('Product'[Product Code]))"
+    },
+    {
+      "id": "column/product/product-id-ffcb1e93",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Product'[Product ID]), \"blanks\", COUNTBLANK('Product'[Product ID]), \"min\", MIN('Product'[Product ID]), \"max\", MAX('Product'[Product ID]), \"sum\", SUM('Product'[Product ID]))"
+    },
+    {
+      "id": "table/product",
+      "query": "EVALUATE 'Product'"
+    },
+    {
+      "id": "rows/sales-stage",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Sales stage'))"
+    },
+    {
+      "id": "column/sales-stage/probability-da461412",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Sales stage'[Probability]), \"blanks\", COUNTBLANK('Sales stage'[Probability]), \"min\", MIN('Sales stage'[Probability]), \"max\", MAX('Sales stage'[Probability]), \"sum\", SUM('Sales stage'[Probability]))"
+    },
+    {
+      "id": "column/sales-stage/sales-stage-4d226232",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Sales stage'[Sales Stage]), \"blanks\", COUNTBLANK('Sales stage'[Sales Stage]), \"min\", MIN('Sales stage'[Sales Stage]), \"max\", MAX('Sales stage'[Sales Stage]))"
+    },
+    {
+      "id": "column/sales-stage/sales-stage-id-5b5c5c3b",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Sales stage'[Sales Stage ID]), \"blanks\", COUNTBLANK('Sales stage'[Sales Stage ID]), \"min\", MIN('Sales stage'[Sales Stage ID]), \"max\", MAX('Sales stage'[Sales Stage ID]), \"sum\", SUM('Sales stage'[Sales Stage ID]))"
+    },
+    {
+      "id": "table/sales-stage",
+      "query": "EVALUATE 'Sales stage'"
+    },
+    {
+      "id": "rows/calculations",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Calculations'))"
+    },
+    {
+      "id": "column/calculations/estimatedclosedate-d516c5a8",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[EstimatedCloseDate]), \"blanks\", COUNTBLANK('Calculations'[EstimatedCloseDate]), \"min\", MIN('Calculations'[EstimatedCloseDate]), \"max\", MAX('Calculations'[EstimatedCloseDate]))"
+    },
+    {
+      "id": "column/calculations/opportunity-id-d3eba07c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Opportunity ID]), \"blanks\", COUNTBLANK('Calculations'[Opportunity ID]), \"min\", MIN('Calculations'[Opportunity ID]), \"max\", MAX('Calculations'[Opportunity ID]), \"sum\", SUM('Calculations'[Opportunity ID]))"
+    },
+    {
+      "id": "column/calculations/sales-stage-id-dc5db11a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Sales Stage ID]), \"blanks\", COUNTBLANK('Calculations'[Sales Stage ID]), \"min\", MIN('Calculations'[Sales Stage ID]), \"max\", MAX('Calculations'[Sales Stage ID]), \"sum\", SUM('Calculations'[Sales Stage ID]))"
+    },
+    {
+      "id": "column/calculations/account-id-75a95e84",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Account ID]), \"blanks\", COUNTBLANK('Calculations'[Account ID]), \"min\", MIN('Calculations'[Account ID]), \"max\", MAX('Calculations'[Account ID]), \"sum\", SUM('Calculations'[Account ID]))"
+    },
+    {
+      "id": "column/calculations/partner-id-b7a0d0df",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Partner ID]), \"blanks\", COUNTBLANK('Calculations'[Partner ID]), \"min\", MIN('Calculations'[Partner ID]), \"max\", MAX('Calculations'[Partner ID]), \"sum\", SUM('Calculations'[Partner ID]))"
+    },
+    {
+      "id": "column/calculations/product-id-9b8336d0",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Product ID]), \"blanks\", COUNTBLANK('Calculations'[Product ID]), \"min\", MIN('Calculations'[Product ID]), \"max\", MAX('Calculations'[Product ID]), \"sum\", SUM('Calculations'[Product ID]))"
+    },
+    {
+      "id": "column/calculations/productrevenue-8cdd378f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[ProductRevenue]), \"blanks\", COUNTBLANK('Calculations'[ProductRevenue]), \"min\", MIN('Calculations'[ProductRevenue]), \"max\", MAX('Calculations'[ProductRevenue]), \"sum\", SUM('Calculations'[ProductRevenue]))"
+    },
+    {
+      "id": "column/calculations/factoredproductrevenue-e3146598",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[FactoredProductRevenue]), \"blanks\", COUNTBLANK('Calculations'[FactoredProductRevenue]), \"min\", MIN('Calculations'[FactoredProductRevenue]), \"max\", MAX('Calculations'[FactoredProductRevenue]), \"sum\", SUM('Calculations'[FactoredProductRevenue]))"
+    },
+    {
+      "id": "column/calculations/create-date-6b35d2f6",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Create Date]), \"blanks\", COUNTBLANK('Calculations'[Create Date]), \"min\", MIN('Calculations'[Create Date]), \"max\", MAX('Calculations'[Create Date]))"
+    },
+    {
+      "id": "column/calculations/opportunity-days-1984a89f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Opportunity Days]), \"blanks\", COUNTBLANK('Calculations'[Opportunity Days]), \"min\", MIN('Calculations'[Opportunity Days]), \"max\", MAX('Calculations'[Opportunity Days]), \"sum\", SUM('Calculations'[Opportunity Days]))"
+    },
+    {
+      "id": "column/calculations/year-05696ef6",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Year]), \"blanks\", COUNTBLANK('Calculations'[Year]), \"min\", MIN('Calculations'[Year]), \"max\", MAX('Calculations'[Year]), \"sum\", SUM('Calculations'[Year]))"
+    },
+    {
+      "id": "column/calculations/month-number-dd7d211c",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Month_Number]), \"blanks\", COUNTBLANK('Calculations'[Month_Number]), \"min\", MIN('Calculations'[Month_Number]), \"max\", MAX('Calculations'[Month_Number]), \"sum\", SUM('Calculations'[Month_Number]))"
+    },
+    {
+      "id": "column/calculations/month-b5a01ff1",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Month]), \"blanks\", COUNTBLANK('Calculations'[Month]), \"min\", MIN('Calculations'[Month]), \"max\", MAX('Calculations'[Month]))"
+    },
+    {
+      "id": "column/calculations/date-3fb678d9",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calculations'[Date]), \"blanks\", COUNTBLANK('Calculations'[Date]), \"min\", MIN('Calculations'[Date]), \"max\", MAX('Calculations'[Date]))"
+    },
+    {
+      "id": "table/calculations",
+      "query": "EVALUATE 'Calculations'"
+    },
+    {
+      "id": "measure/avg-opportunity-days-d7764b6d",
+      "query": "EVALUATE ROW(\"v\", [Avg Opportunity Days])"
+    },
+    {
+      "id": "measure/avg-revenue-55e561d9",
+      "query": "EVALUATE ROW(\"v\", [Avg Revenue])"
+    },
+    {
+      "id": "measure/factored-revenue-884f8382",
+      "query": "EVALUATE ROW(\"v\", [Factored Revenue])"
+    },
+    {
+      "id": "measure/opportunity-count-76c380bf",
+      "query": "EVALUATE ROW(\"v\", [Opportunity Count])"
+    },
+    {
+      "id": "measure/revenue-b7d615e7",
+      "query": "EVALUATE ROW(\"v\", [Revenue])"
+    },
+    {
+      "id": "measure/total-opportunity-days-db32dc81",
+      "query": "EVALUATE ROW(\"v\", [Total opportunity days])"
+    },
+    {
+      "id": "rows/calendar",
+      "query": "EVALUATE ROW(\"rows\", COUNTROWS('Calendar'))"
+    },
+    {
+      "id": "column/calendar/date-d1a83110",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Date]), \"blanks\", COUNTBLANK('Calendar'[Date]), \"min\", MIN('Calendar'[Date]), \"max\", MAX('Calendar'[Date]))"
+    },
+    {
+      "id": "column/calendar/year-aca78632",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Year]), \"blanks\", COUNTBLANK('Calendar'[Year]), \"min\", MIN('Calendar'[Year]), \"max\", MAX('Calendar'[Year]), \"sum\", SUM('Calendar'[Year]))"
+    },
+    {
+      "id": "column/calendar/quarter-number-a4c9b04a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Quarter Number]), \"blanks\", COUNTBLANK('Calendar'[Quarter Number]), \"min\", MIN('Calendar'[Quarter Number]), \"max\", MAX('Calendar'[Quarter Number]), \"sum\", SUM('Calendar'[Quarter Number]))"
+    },
+    {
+      "id": "column/calendar/quarter-a87c2e91",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Quarter]), \"blanks\", COUNTBLANK('Calendar'[Quarter]), \"min\", MIN('Calendar'[Quarter]), \"max\", MAX('Calendar'[Quarter]))"
+    },
+    {
+      "id": "column/calendar/year-quarter-b23bf8ab",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Year Quarter]), \"blanks\", COUNTBLANK('Calendar'[Year Quarter]), \"min\", MIN('Calendar'[Year Quarter]), \"max\", MAX('Calendar'[Year Quarter]))"
+    },
+    {
+      "id": "column/calendar/month-number-6aaeb5fe",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Month Number]), \"blanks\", COUNTBLANK('Calendar'[Month Number]), \"min\", MIN('Calendar'[Month Number]), \"max\", MAX('Calendar'[Month Number]), \"sum\", SUM('Calendar'[Month Number]))"
+    },
+    {
+      "id": "column/calendar/month-f4167e13",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Month]), \"blanks\", COUNTBLANK('Calendar'[Month]), \"min\", MIN('Calendar'[Month]), \"max\", MAX('Calendar'[Month]))"
+    },
+    {
+      "id": "column/calendar/year-month-609d586f",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Year Month]), \"blanks\", COUNTBLANK('Calendar'[Year Month]), \"min\", MIN('Calendar'[Year Month]), \"max\", MAX('Calendar'[Year Month]))"
+    },
+    {
+      "id": "column/calendar/year-month-number-562c518a",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Year Month Number]), \"blanks\", COUNTBLANK('Calendar'[Year Month Number]), \"min\", MIN('Calendar'[Year Month Number]), \"max\", MAX('Calendar'[Year Month Number]), \"sum\", SUM('Calendar'[Year Month Number]))"
+    },
+    {
+      "id": "column/calendar/day-of-week-number-6a83945d",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Day of Week Number]), \"blanks\", COUNTBLANK('Calendar'[Day of Week Number]), \"min\", MIN('Calendar'[Day of Week Number]), \"max\", MAX('Calendar'[Day of Week Number]), \"sum\", SUM('Calendar'[Day of Week Number]))"
+    },
+    {
+      "id": "column/calendar/day-of-week-47f677a4",
+      "query": "EVALUATE ROW(\"distinct\", DISTINCTCOUNT('Calendar'[Day of Week]), \"blanks\", COUNTBLANK('Calendar'[Day of Week]), \"min\", MIN('Calendar'[Day of Week]), \"max\", MAX('Calendar'[Day of Week]))"
+    }
+  ]
+}

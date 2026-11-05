@@ -1480,9 +1480,9 @@ DATE_DAX = "\n".join([
 NEVER_SOLD_DAX = "\n".join([
     "VAR SoldProducts =",
     '    SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), "Product ID", Orders[Product ID])',
-    "VAR Catalog =",
+    "VAR AllProducts =",
     '    SELECTCOLUMNS(ALL(Products), "Product ID", Products[Product ID])',
-    "VAR NeverSold = EXCEPT(Catalog, SoldProducts)",
+    "VAR NeverSold = EXCEPT(AllProducts, SoldProducts)",
     "RETURN",
     "    SELECTCOLUMNS(",
     "        FILTER(",
@@ -1716,7 +1716,9 @@ def table_tmdl(t: dict) -> str:
         o.blank()
         o.desc(1, m["desc"])
         o.expr(1, f"measure {tq(m['name'])}", m["dax"])
-        o.line(2, f"formatString: {tmdl_text(m['fmt'])}")
+        # Desktop refuses a measure with both formatString and formatStringDefinition.
+        if not m["fsd"]:
+            o.line(2, f"formatString: {tmdl_text(m['fmt'])}")
         if m["folder"]:
             o.line(2, f"displayFolder: {tmdl_text(m['folder'])}")
         if m["hidden"]:

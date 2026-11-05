@@ -257,6 +257,29 @@ impl Session {
             .await?
     }
 
+    /// [`dax_query`](Self::dax_query) returning the typed result tables
+    /// (DAX values and `Table[Column]` / `[Name]` column names) instead of
+    /// Arrow batches; used where exact DAX types matter (ground-truth
+    /// comparison against Power BI Desktop).
+    ///
+    /// # Errors
+    /// As [`dax_query`](Self::dax_query).
+    pub async fn dax_query_tables(
+        &self,
+        query: &str,
+        filter: &FilterSpec,
+        cancel: CancellationToken,
+    ) -> Result<Vec<pbi_dax::VirtualTable>, SessionError> {
+        let handle = runtime()?;
+        let cancel = cancel.child_token();
+        let _stop_on_drop = cancel.clone().drop_guard();
+        let (ctx, _) = self.eval_context(filter, &cancel)?;
+        let query = query.to_owned();
+        handle
+            .spawn_blocking(move || Ok(ctx.evaluate_query(&query)?))
+            .await?
+    }
+
     /// One page of a table for the grid (sorted / filtered with SQL
     /// expressions; see [`PageRequest`]).
     ///

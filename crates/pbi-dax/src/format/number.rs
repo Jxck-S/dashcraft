@@ -238,6 +238,33 @@ pub fn is_numeric_format(fmt: &str) -> bool {
     bare_chars(fmt).any(|c| matches!(c, '0' | '#'))
 }
 
+/// `fmt` without the commas after a section's decimal point (outside
+/// literals): Desktop's `FORMAT` ignores them, where Excel scales by 1000
+/// per comma.
+#[must_use]
+pub fn without_fraction_scaling(fmt: &str) -> String {
+    let mut out = String::with_capacity(fmt.len());
+    let (mut quoted, mut escaped, mut seen_point) = (false, false, false);
+    for c in fmt.chars() {
+        if escaped {
+            escaped = false;
+        } else if quoted {
+            quoted = c != '"';
+        } else {
+            match c {
+                '"' => quoted = true,
+                '\\' => escaped = true,
+                ';' => seen_point = false,
+                '.' => seen_point = true,
+                ',' if seen_point => continue,
+                _ => {}
+            }
+        }
+        out.push(c);
+    }
+    out
+}
+
 #[derive(Debug, Clone, PartialEq)]
 enum Tok {
     /// Digit placeholder; `true` for `0`.

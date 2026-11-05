@@ -45,7 +45,7 @@ What exists after M0–M5 (`v0.1.0`, `v0.2.0`) and the unreleased work, from [GA
 |---|---|---|
 | File formats | Content detection and safe containers; readers for PBIP (TMDL or `model.bim`, PBIR and PBIR-Legacy), PBIX (report, model, VertiPaq data), PBIT, `.abf`, `.pbi/cache.abf`, Power Pivot, VPAX, RDL outline, mashups, `.pbiviz`/`.mez`/`.pqx` metadata; writers: TMDL (byte-identical), TMSL, PBIR, `save_as_pbip`, `export_pbit`. No PBIX writer, bookmarks and report-level measures only kept | 3.1 |
 | M | Full grammar, lazy evaluator, 336 library names, `AzureStorage.Blobs` offline through the blob map; every other data source unsupported by policy | 3.1 |
-| DAX | Parser, printer, evaluator with filter and row context, context transition, BLANK; 294 functions (271 supported, 23 partial); calculation groups; security functions; no differential testing | 3.3 |
+| DAX | Parser, printer, evaluator with filter and row context, context transition, BLANK; 294 functions (271 supported, 23 partial); calculation groups; security functions; differential tests against Desktop (2,212 recorded queries, ADR-0011) | 3.8 |
 | Engine | Arrow store, DataFusion SQL, one-to-many, one-to-one and limited many-to-many relationships, filter propagation, RLS "View as", calculation groups, one-pass group-by, cancellable refresh | 3.4 |
 | Visuals | Text box, shapes, buttons, cards, KPI, slicers, table, matrix, pie/donut, bar/column variants, line/area/combos, scatter, funnel, gauge, treemap, waterfall; conditional formatting of tables, matrices and chart colors; dynamic format strings. Placeholders for image, maps, ribbon, AI and custom visuals | 2.1 |
 | Interactions | Slicers, cross-filter per `visualInteractions`, tooltips, navigation and clear-all buttons, scrolling, matrix expand; no highlight, drill, drillthrough, bookmarks, synced slicers | 1.6 |
@@ -266,6 +266,10 @@ graph TD
 
 Proposals, numbered from the next free number; each is written (Status, Context, Decision,
 Alternatives considered, Consequences) and accepted before the step in "Needed by" starts.
+The numbers below are provisional: ADR-0010 became "DashCraft everywhere", and the ground-truth
+decision proposed as ADR-0014 was accepted as
+[ADR-0011](adr/0011-desktop-ground-truth.md); the other proposals take the next free numbers when
+they are written.
 **Network exceptions** (ADR-0024, ADR-0025, ADR-0027): the change that accepts one also updates
 the network rules of [AGENTS.md](../AGENTS.md) (golden rules 5 and 9, the layer map), the crate
 graph in [ARCHITECTURE.md](ARCHITECTURE.md) and the network rule in `cargo xtask layers`
@@ -278,7 +282,7 @@ say.
 | ADR-0011 | Save, autosave, recovery and external changes | In-place PBIP save (changed files only, atomic per file, unknown files kept), Save As targets, the conflict policy when files changed on disk (reload, keep mine, compare), autosave journal location (user data folder, never the project) and recovery flow; history is not persisted across sessions | M6.1 (save), M8.1 (recovery) |
 | ADR-0012 | Canonical serialization, output contract and identifiers | Makes the [output contract](#output-contract) binding: per-field categories, the contract and deviation-list files and their cap, how new TMDL objects and PBIR pages and visuals are written, the `$schema` and compatibility-level matrix, an injectable identifier generator (fixed sequences in tests, random in use) | M6.1 |
 | ADR-0013 | Accessibility target and verification | WCAG 2.2 AA as the target; the [checklist](#w5-accessibility) every UI milestone meets; the screen reader and webview engine pairs for smoke tests; the independent audit before 1.0 | M6.1 |
-| ADR-0014 | Ground-truth recordings from Power BI Desktop | The black-box protocol (synthetic inputs only, outputs only, no binaries inspected); what may be committed (values, JSON and text produced from synthetic inputs) and what stays local (images); where recordings live and how they are refreshed per Desktop release | The first ground-truth session (whichever GT-n runs first); every criterion blocked by a GT session waits for it |
+| ADR-0014 → [ADR-0011](adr/0011-desktop-ground-truth.md) (accepted) | Ground-truth recordings from Power BI Desktop | The black-box protocol (synthetic inputs only, outputs only, no binaries inspected); what may be committed (values, JSON and text produced from synthetic inputs) and what stays local (images); where recordings live and how they are refreshed per Desktop release | The first ground-truth session (whichever GT-n runs first); every criterion blocked by a GT session waits for it |
 | ADR-0015 | Local file data sources in M | Generalize `BlobResolver` into a data-source resolver that reads local files through the path policy; per-source permissions and privacy levels; still no network; extends golden rule 5 for local files only | M16.1 |
 | ADR-0016 | Cultures and regional settings | Culture handling in M parsing and formatting, DAX `FORMAT` and typed conversions; model culture versus UI locale versus regional settings; CLDR-derived data and its licence | M16.8 |
 | ADR-0017 | Columnar storage, compression and the local data cache | In-memory encodings (dictionary, value, bit-packing, run-length, segments) under the Arrow-facing API; threading model; memory budgets; a DashCraft-owned cache for PBIP data (format, location, invalidation), never written as `.pbi/cache.abf` | M17.1 |
@@ -297,7 +301,7 @@ say.
 
 ### W1. Testing and ground truth
 
-- **Ground-truth sessions** on a Windows machine with Power BI Desktop, black-box only (ADR-0014),
+- **Ground-truth sessions** on a Windows machine with Power BI Desktop, black-box only ([ADR-0011](adr/0011-desktop-ground-truth.md)),
   synthetic inputs only, screenshots and icons never committed. Each session is scripted so it can
   be repeated for a new Desktop release.
 
@@ -1004,9 +1008,11 @@ render them; differences from Desktop's engine are listed and shrinking.
   `EXPANDALL`, `RANGE`, `ROWS`, `COLUMNS`, `LOOKUP` and related ones) evaluated over a visual's
   result matrix with axes and reset; reports containing visual calculations render them (editor in
   M20.9).
-- [ ] **M13.5 Differential testing against Desktop's engine.** A query corpus (curated plus
-  generated) over the Acme model, results recorded in GT-2 under ADR-0014 and compared in CI with
-  documented tolerances; failures become issues with the query attached.
+- [x] **M13.5 Differential testing against Desktop's engine.** A query corpus (curated plus
+  generated) over the Acme model, results recorded in GT-2 under ADR-0011 and compared in CI with
+  documented tolerances; failures become issues with the query attached. Done 2026-11-05:
+  `crates/pbi-session/tests/groundtruth.rs`, 2,212 cases, deviations in
+  `reference/groundtruth/deviations.json`.
 
 **Crates and layers.** `pbi-dax` (functions, semantics, visual calculations), `pbi-render`
 (visual calculations in queries), `pbi-ops` (no new commands needed; `dax.query` covers them).
@@ -1028,7 +1034,7 @@ commands exercise the new functions.
 **Tests.** Vector tests per function; visual-calculation DataView tests; the differential suite
 (skips cleanly without recordings); fast-path differential tests extended to new shapes.
 
-**Depends on.** none (can start at any time). **Blocked by.** GT-2 (recorded under ADR-0014) for
+**Depends on.** none (can start at any time). **Blocked by.** GT-2 (recorded under ADR-0011) for
 criterion 4. **Size.** L.
 
 **Risks and unknowns.** Semantics of visual-calculation reset and axis rules; numerical
@@ -2197,7 +2203,7 @@ results are checked against Desktop and whose accessibility has been independent
 
 **Scope**
 
-- [ ] **M31.1 Ground-truth sessions.** GT-1 to GT-6 run and recorded under ADR-0014 on the Desktop
+- [ ] **M31.1 Ground-truth sessions.** GT-1 to GT-6 run and recorded under ADR-0011 on the Desktop
   release current at that time, scripts committed for re-runs.
 - [ ] **M31.2 Differential suites green.** DAX (M13.5) and M (GT-5) corpora pass or document each
   deviation.

@@ -731,11 +731,10 @@ fn format(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
         None => "en-US".to_owned(),
     };
     let fmt = (!f.is_blank()).then(|| ops::to_text(&f));
-    ok(text(crate::format::format_value(
-        &v,
-        fmt.as_deref(),
-        &locale,
-    )))
+    match crate::format::try_format_value(&v, fmt.as_deref(), &locale) {
+        Ok(s) => ok(text(s)),
+        Err(e) => Err(DaxError::argument("FORMAT", e.to_string())),
+    }
 }
 
 /// `FIXED(number[, decimals = 2[, no_commas = FALSE]])`.
@@ -802,7 +801,10 @@ fn rept(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     if t.chars().count().saturating_mul(n) > MAX_REPT_CHARS {
         return Err(DaxError::argument("REPT", "the result is too long"));
     }
-    if t.is_empty() || n == 0 {
+    if n == 0 {
+        return ok(text(String::new()));
+    }
+    if t.is_empty() {
         return ok(Value::Blank);
     }
     ok(text(t.repeat(n)))

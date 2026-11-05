@@ -10,8 +10,9 @@
 //! **Blank row.** Many-side rows whose key has no match on the one side
 //! relate to the one side's *blank row* — a virtual row whose columns are all
 //! BLANK. The index models it as `None`; the one-side table "has a blank row"
-//! ([`RelationshipGraph::has_blank_row`]) when any active relationship has
-//! unmatched many-side rows.
+//! ([`RelationshipGraph::has_blank_row`]) when any relationship, active or
+//! inactive, has unmatched many-side rows (Desktop ground truth: BLANK ship
+//! dates on an inactive relationship give the date table a blank row).
 //!
 //! **Many-to-many relationships** (`fromCardinality` and `toCardinality`
 //! both `many`) are *limited* relationships, as in Power BI: they are
@@ -281,6 +282,7 @@ impl RelationshipIndex {
             .iter()
             .map(|v| {
                 one.id_of(&v.key())
+                    .or_else(|| v.cross_type_key().and_then(|k| one.id_of(&k)))
                     .and_then(|id| first_row.get(id as usize).copied())
                     .unwrap_or(NO_ROW)
             })
@@ -895,10 +897,8 @@ impl RelationshipGraph {
         }
 
         let mut blank_rows = HashSet::new();
-        for &i in &active {
-            let (Some(d), Some(index)) =
-                (defs.get(i), states.get(i).and_then(|s| s.index.as_ref()))
-            else {
+        for (d, s) in defs.iter().zip(&states) {
+            let Some(index) = s.index.as_ref().filter(|_| s.is_usable()) else {
                 continue;
             };
             if index.unmatched_count() > 0 {
@@ -1506,6 +1506,46 @@ mod tests {
         assert!(g.has_blank_row("o"));
         assert!(!g.has_blank_row("M"));
         assert!(g.diagnostics().is_empty());
+    }
+
+    #[test]
+    fn text_keys_join_number_keys_across_types() {
+        use arrow::array::{Float64Array, Int64Array};
+        let mut storage = Storage::new();
+        let text = keys(&[Some("155"), Some(" 7 "), Some("x"), None]);
+        storage.load_table("M", text).unwrap();
+        let numbers = RecordBatch::try_from_iter([(
+            "K",
+            Arc::new(Float64Array::from(vec![7.0, 155.0])) as ArrayRef,
+        )])
+        .unwrap();
+        storage.load_table("O", numbers).unwrap();
+        let ints = RecordBatch::try_from_iter([(
+            "K",
+            Arc::new(Int64Array::from(vec![155, 8])) as ArrayRef,
+        )])
+        .unwrap();
+        storage.load_table("N", ints).unwrap();
+        storage
+            .load_table("T", keys(&[Some("8"), Some("155")]))
+            .unwrap();
+        let mut diags = Vec::new();
+        let defs = RelationshipGraph::definitions_from_model(
+            &[
+                Relationship::new("a", ColumnRef::new("M", "K"), ColumnRef::new("O", "K")),
+                Relationship::new("b", ColumnRef::new("N", "K"), ColumnRef::new("T", "K")),
+            ],
+            &mut diags,
+        );
+        let g = RelationshipGraph::build(defs, diags, &storage);
+        let ix = g.index(0).unwrap();
+        assert_eq!(
+            (0..4).map(|r| ix.target(r)).collect::<Vec<_>>(),
+            [Some(1), Some(0), None, None]
+        );
+        let ix = g.index(1).unwrap();
+        assert_eq!(ix.target(0), Some(1));
+        assert_eq!(ix.target(1), Some(0));
     }
 
     #[test]

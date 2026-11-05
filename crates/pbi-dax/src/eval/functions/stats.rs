@@ -163,18 +163,24 @@ fn rank_eq(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     ok(Value::Integer(rank_of(&values, &value, desc, false)))
 }
 
-/// Numeric inputs of a statistic, and whether they were all dates.
+/// Numeric inputs of a statistic, whether they were all dates, and how many
+/// BLANKs were skipped.
 struct Numbers {
     values: Vec<f64>,
     dates: bool,
+    blanks: usize,
 }
 
 fn numbers(f: &str, values: Vec<Value>) -> Result<Numbers> {
     let mut out = Vec::with_capacity(values.len());
     let mut dates = true;
+    let mut blanks = 0;
     for v in values {
         match &v {
-            Value::Blank => continue,
+            Value::Blank => {
+                blanks += 1;
+                continue;
+            }
             Value::Boolean(_) | Value::String(_) => return Err(ops::wrong_type(f, &v)),
             Value::DateTime(_) => {}
             _ => dates = false,
@@ -186,6 +192,7 @@ fn numbers(f: &str, values: Vec<Value>) -> Result<Numbers> {
     Ok(Numbers {
         dates: dates && !out.is_empty(),
         values: out,
+        blanks,
     })
 }
 
@@ -253,12 +260,14 @@ fn k_arg(i: &Interp<'_>, env: &Env, f: &str, args: &[Expr], n: usize) -> Result<
 
 fn median(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("MEDIAN", args, 1, 1)?;
-    ok(percentile(
-        "MEDIAN",
-        inputs(i, env, "MEDIAN", args, false)?,
-        0.5,
-        false,
-    )?)
+    let values = inputs(i, env, "MEDIAN", args, false)?;
+    if values.dates {
+        return Err(DaxError::argument(
+            "MEDIAN",
+            "MEDIAN does not support expressions of type date",
+        ));
+    }
+    ok(percentile("MEDIAN", values, 0.5, false)?)
 }
 
 fn medianx(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
@@ -275,7 +284,17 @@ fn percentile_impl(i: &Interp<'_>, env: &Env, args: &[Expr], f: &str, x: bool, e
     let k_pos = if x { 2 } else { 1 };
     arity(f, args, k_pos + 1, k_pos + 1)?;
     let k = k_arg(i, env, f, args, k_pos)?;
-    ok(percentile(f, inputs(i, env, f, args, x)?, k, exc)?)
+    let mut values = inputs(i, env, f, args, x)?;
+    if x && values.blanks > 0 {
+        // Desktop counts a BLANK expression result as 0 in PERCENTILEX.* (the
+        // column forms skip BLANK): PERCENTILEX.EXC over {1..5, BLANK} at 0.25
+        // is 0.75.
+        values
+            .values
+            .extend(std::iter::repeat_n(0.0, values.blanks));
+        values.dates = false;
+    }
+    ok(percentile(f, values, k, exc)?)
 }
 
 fn percentile_inc(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
@@ -294,11 +313,15 @@ fn percentilex_exc(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     percentile_impl(i, env, args, "PERCENTILEX.EXC", true, true)
 }
 
-/// Variance (`sample`: n - 1 denominator); BLANK for too few values.
+/// Variance (`sample`: n - 1 denominator); BLANK without values. One value
+/// with `sample` is 0/0 = NaN, as in Desktop.
 fn variance(n: &Numbers, sample: bool) -> Option<f64> {
     let count = n.values.len();
-    if count == 0 || (sample && count < 2) {
+    if count == 0 {
         return None;
+    }
+    if sample && count < 2 {
+        return Some(f64::NAN);
     }
     let mean = n.values.iter().sum::<f64>() / count as f64;
     let ss: f64 = n.values.iter().map(|x| (x - mean).powi(2)).sum();

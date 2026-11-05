@@ -1,0 +1,41 @@
+/// functions.rs dates_fx(): every day of 2023 and 2024.
+table Date
+	lineageTag: 087a5843-d674-5da0-8b16-65943b4b5e6f
+
+	column Date
+		dataType: dateTime
+		lineageTag: 7e1c6b08-6c4d-5f52-9125-3f5f3de9a59f
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation SummarizationSetBy = Automatic
+
+	column Year
+		dataType: int64
+		lineageTag: 654c4366-5586-57e6-a547-8fad3d1c9d11
+		summarizeBy: sum
+		sourceColumn: Year
+
+		annotation SummarizationSetBy = Automatic
+
+	column Month
+		dataType: int64
+		lineageTag: 57db7300-2040-5998-b5c8-cc6ba658848c
+		summarizeBy: sum
+		sourceColumn: Month
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Date = m
+		mode: import
+		source =
+				let
+				    Days = List.Dates(#date(2023, 1, 1), 731, #duration(1, 0, 0, 0)),
+				    Source = Table.FromList(Days, Splitter.SplitByNothing(), {"Date"}),
+				    Typed = Table.TransformColumnTypes(Source, {{"Date", type datetime}}),
+				    Year = Table.AddColumn(Typed, "Year", each Date.Year([Date]), Int64.Type),
+				    Month = Table.AddColumn(Year, "Month", each Date.Month([Date]), Int64.Type)
+				in
+				    Month
+
+	annotation PBI_ResultType = Table

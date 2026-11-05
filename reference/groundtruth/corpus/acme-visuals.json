@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "suite": "acme-visuals",
+  "title": "The grouped values behind the asserted Acme Outfitters visuals (expected.json), as DAX",
+  "fixture": "acme",
+  "requiresTables": [
+    "Orders",
+    "Customers",
+    "Products",
+    "Stores",
+    "Targets",
+    "Returns",
+    "Web Sessions",
+    "Date",
+    "Time Calc",
+    "Products Never Sold",
+    "Last Refreshed"
+  ],
+  "cases": [
+    {
+      "id": "overview/product-detail/matrix",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL('Products'[Category], \"IsTotal\"), \"Total Sales\", [Total Sales], \"Units Sold\", [Units Sold], \"Margin %\", [Margin %]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Products'[Category] IN {\"Camping\", \"Hiking\"},\n    'Products'[List Price] >= 50 && 'Products'[List Price] <= 400\n)"
+    },
+    {
+      "id": "overview/product-detail/top10",
+      "query": "EVALUATE CALCULATETABLE(\n    TOPN(10, SUMMARIZECOLUMNS('Products'[Product Name], \"Total Sales\", [Total Sales], \"Units Sold\", [Units Sold], \"Margin %\", [Margin %]), [Total Sales], DESC),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Products'[Category] IN {\"Camping\", \"Hiking\"},\n    'Products'[List Price] >= 50 && 'Products'[List Price] <= 400\n)"
+    },
+    {
+      "id": "overview/executive-summary/kpi-trend",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Date'[Year Month], \"Total Sales\", [Total Sales], \"Target\", [Target]),\n    NOT ('Orders'[Status] IN {\"Cancelled\"}),\n    'Date'[Year] IN {2025}\n)"
+    },
+    {
+      "id": "stores/store-performance/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL('Stores'[Store Name], \"IsTotal\"), \"Total Sales\", [Total Sales], \"Target\", [Target], \"Target Attainment %\", [Target Attainment %], \"Target Stretch\", [Target Stretch]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"},\n    'Stores'[Region] IN {\"West\"},\n    'Date'[Date] >= DATE(2025, 1, 1) && 'Date'[Date] < DATE(2026, 1, 1)\n)"
+    },
+    {
+      "id": "stores/store-detail/stores",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Stores'[Store Name], 'Stores'[Store Manager], 'Stores'[City], \"Total Sales\", [Total Sales]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"},\n    'Stores'[Region] IN {\"East\"}\n)"
+    },
+    {
+      "id": "stores/store-detail/returns",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL('Returns'[Reason], \"IsTotal\"), \"Returns Count\", [Returns Count], \"Refunds\", [Refunds]),\n    'Stores'[Channel] IN {\"Retail\", \"Outlet\"},\n    'Stores'[Region] IN {\"East\"}\n)"
+    },
+    {
+      "id": "online/online-overview/devices",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Web Sessions'[Device], \"Sessions\", [Sessions]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"},\n    NOT ('Customers'[Loyalty Tier] IN {\"Unassigned\"})\n)"
+    },
+    {
+      "id": "online/customer-detail/table",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS('Customers'[Customer Name], \"Total Sales\", [Total Sales]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"},\n    'Customers'[Segment] IN {\"Corporate\"}\n)"
+    },
+    {
+      "id": "online/customer-detail/matrix",
+      "query": "EVALUATE CALCULATETABLE(\n    SUMMARIZECOLUMNS(ROLLUPADDISSUBTOTAL('Customers'[Loyalty Tier], \"IsTotal\"), \"Total Sales\", [Total Sales]),\n    'Stores'[Channel] IN {\"Online\"},\n    'Web Sessions'[Device] IN {\"Mobile\"},\n    'Customers'[Segment] IN {\"Corporate\"}\n)"
+    }
+  ]
+}

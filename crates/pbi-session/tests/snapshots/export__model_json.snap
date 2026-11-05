@@ -211,7 +211,6 @@ expression: "serde_json::to_string_pretty(&json).unwrap()"
         {
           "name": "Sales (Scaled)",
           "expression": "[Total Sales]",
-          "formatString": "\\$#,0.00",
           "description": "Total Sales with a dynamic format string: $1.23M, $45.6K or $789.00.",
           "displayFolder": "Sales",
           "hidden": false
@@ -1268,7 +1267,7 @@ expression: "serde_json::to_string_pretty(&json).unwrap()"
           "kind": "calculated",
           "language": "dax",
           "mode": "import",
-          "expression": "VAR SoldProducts =\n    SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), \"Product ID\", Orders[Product ID])\nVAR Catalog =\n    SELECTCOLUMNS(ALL(Products), \"Product ID\", Products[Product ID])\nVAR NeverSold = EXCEPT(Catalog, SoldProducts)\nRETURN\n    SELECTCOLUMNS(\n        FILTER(\n            ALL(Products),\n            Products[Product ID] IN NeverSold\n                && ISEMPTY(RELATEDTABLE(Orders))\n        ),\n        \"Product ID\", Products[Product ID],\n        \"Product\", Products[Product Name],\n        \"Category\", Products[Category],\n        \"List Price\", Products[List Price]\n    )"
+          "expression": "VAR SoldProducts =\n    SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), \"Product ID\", Orders[Product ID])\nVAR AllProducts =\n    SELECTCOLUMNS(ALL(Products), \"Product ID\", Products[Product ID])\nVAR NeverSold = EXCEPT(AllProducts, SoldProducts)\nRETURN\n    SELECTCOLUMNS(\n        FILTER(\n            ALL(Products),\n            Products[Product ID] IN NeverSold\n                && ISEMPTY(RELATEDTABLE(Orders))\n        ),\n        \"Product ID\", Products[Product ID],\n        \"Product\", Products[Product Name],\n        \"Category\", Products[Category],\n        \"List Price\", Products[List Price]\n    )"
         }
       ],
       "hierarchies": []

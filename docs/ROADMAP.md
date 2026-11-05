@@ -145,12 +145,13 @@ for 1.0.
 
 The items below predate the plan; each is annotated with the plan step that now owns it.
 
-- [ ] `m4-windows-groundtruth` (→ M31.1, ground-truth sessions GT-1 to GT-6): a ground-truth session on a Windows machine with Power BI Desktop (**blocked** until one is available). Black-box only: no decompiling or debugging of Desktop binaries; screenshots and icons are never committed.
+- [ ] `m4-windows-groundtruth` (→ M31.1, ground-truth sessions GT-1 to GT-6): ground-truth sessions on a Windows machine with Power BI Desktop (**unblocked** 2026-11-05: Desktop 2.159; [ADR-0011](adr/0011-desktop-ground-truth.md), [reference/groundtruth](../reference/groundtruth/README.md)). Black-box only: no decompiling or debugging of Desktop binaries; screenshots and icons are never committed.
   - UI Automation dump of the ribbon tabs, groups, buttons, tooltips and positions, to check the Desktop-style shell (→ GT-1, M24.1).
-  - DAX differential testing: random and curated queries over the example model, compared between `pbi-dax` and Desktop's local Analysis Services instance (→ M13.5, GT-2).
-  - More golden images: Desktop-rendered pages of the example's reports and of the visual types that only have synthetic tests (→ GT-3, M31.3).
+  - [x] DAX differential testing: curated and generated queries over the example model, the `functions.rs` cases and three MIT samples, compared between DashCraft and Desktop's local Analysis Services instance: 2,212 cases, 6 ledger entries (→ M13.5, GT-2). Still manual: the queries Desktop's visuals send (Performance analyzer export).
+  - More golden images: Desktop-rendered pages of the example's reports and of the visual types that only have synthetic tests (→ GT-3, M31.3; manual export steps in the ground-truth README).
   - More Desktop-saved fixtures (synthetic content only): a PBIR-Legacy PBIP, a real `.pbi/cache.abf`, a Power Pivot workbook, a DAX Studio VPAX, a Report Builder RDL (→ GT-4, M26.5, M31.4).
   - Desktop-canonical TMDL and PBIR output to validate the writers byte for byte (→ M26.1, GT-4).
+  - [x] Desktop opens DashCraft's PBIP and PBIT output and computes the same values: PBIP 643/643 cases, PBIT 642/643 (Desktop resets one custom date format on template import); two PBIT writer bugs fixed (→ GT-6).
 - [ ] Editing and saving PBIP (→ M6.2–M6.8; editors in M10): the command layer (`pbi-model::command`, undo/redo, change events) and the PBIP writers exist; next are editing commands in the registry (`pbi-ops`: set a measure's expression, rename, move a visual, save), then editors in the UI wired to them, DAX/M-aware rename rewriting (→ M6.7), and Save (→ M6.6).
 - [ ] Highlight interactions (`HighlightFilter` highlighting instead of filtering; highlight values in DataViews) (→ M9.1).
 - [ ] Bookmarks and drillthrough (read `bookmarks/*.json`, apply bookmark state, drillthrough pages and filters); report-page tooltips (→ M9.5, M9.4, M9.3).

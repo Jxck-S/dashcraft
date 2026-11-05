@@ -31,7 +31,6 @@ table Orders
 
 	/// Total Sales with a dynamic format string: $1.23M, $45.6K or $789.00.
 	measure 'Sales (Scaled)' = [Total Sales]
-		formatString: \$#,0.00
 		displayFolder: Sales
 		lineageTag: 170e6979-28bd-5f91-a480-abc280d1d197
 		formatStringDefinition = IF(ABS(SELECTEDMEASURE()) >= 1000000, "\$#,0.00,,\M", IF(ABS(SELECTEDMEASURE()) >= 1000, "\$#,0.0,\K", "\$#,0.00"))

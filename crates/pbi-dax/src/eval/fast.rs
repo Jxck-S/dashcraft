@@ -39,8 +39,8 @@
 //!   blank row of a table that has none, so every filter on that group
 //!   table hides them
 //!   ([`pbi_engine::RelationshipGraph::rows_reachable_from`]);
-//! - `COUNTBLANK`/`DISTINCTCOUNT` only when `F` has no blank row (they
-//!   count it).
+//! - `COUNTBLANK`/`DISTINCTCOUNT` only when `F` has no blank row (kept
+//!   conservative; both now leave the blank row out, like Desktop).
 //!
 //! Combinations without visible rows of `F` aggregate to BLANK on every
 //! accepted aggregation and are dropped by `SUMMARIZECOLUMNS` anyway. Any

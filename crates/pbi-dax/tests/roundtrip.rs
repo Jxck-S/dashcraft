@@ -132,8 +132,8 @@ fn canonical_and_pretty_output() {
     assert_eq!(
         print_expr(&expr),
         "VAR SoldProducts = SELECTCOLUMNS(SUMMARIZE(Orders, Orders[Product ID]), \"Product ID\", \
-         Orders[Product ID]) VAR Catalog = SELECTCOLUMNS(ALL(Products), \"Product ID\", \
-         Products[Product ID]) VAR NeverSold = EXCEPT(Catalog, SoldProducts) RETURN \
+         Orders[Product ID]) VAR AllProducts = SELECTCOLUMNS(ALL(Products), \"Product ID\", \
+         Products[Product ID]) VAR NeverSold = EXCEPT(AllProducts, SoldProducts) RETURN \
          SELECTCOLUMNS(FILTER(ALL(Products), Products[Product ID] IN NeverSold && \
          ISEMPTY(RELATEDTABLE(Orders))), \"Product ID\", Products[Product ID], \"Product\", \
          Products[Product Name], \"Category\", Products[Category], \"List Price\", \
@@ -147,8 +147,9 @@ fn canonical_and_pretty_output() {
         \"Product ID\",
         Orders[Product ID]
     )
-VAR Catalog = SELECTCOLUMNS(ALL(Products), \"Product ID\", Products[Product ID])
-VAR NeverSold = EXCEPT(Catalog, SoldProducts)
+VAR AllProducts =
+    SELECTCOLUMNS(ALL(Products), \"Product ID\", Products[Product ID])
+VAR NeverSold = EXCEPT(AllProducts, SoldProducts)
 RETURN
     SELECTCOLUMNS(
         FILTER(

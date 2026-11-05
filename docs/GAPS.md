@@ -13,6 +13,10 @@ by synthetic tests, Acme render snapshots and expected-value asserts score at mo
 scores the golden images themselves. The previous pass (2026-10-22, after the perf baseline and the
 rename) scored the one-pass group-by, MCP, the AI layer and the app on the registry.
 
+Update **2026-11-05**: Desktop ground truth ([ADR-0011](adr/0011-desktop-ground-truth.md)) re-scored
+the DAX differential-testing and `FORMAT` rows; the other rows keep their scores, now backed by the
+recordings where a suite covers them.
+
 ## How to read it
 
 - **Status**: ✅ done (behaves like Power BI for this capability, within the documented limits) ·
@@ -31,7 +35,7 @@ rename) scored the one-pass group-by, MCP, the AI layer and the app on the regis
 |---|---|---|---|---|
 | 1 | [File formats](#1-file-formats) | 3.1 | 11 / 7 / 7 | Bookmarks, report-level measures, images, `DataMashup` only kept; Fabric remote mode |
 | 2 | [M language and library](#2-m-language-and-library) | 3.1 | 5 / 2 / 3 | Library breadth (349 names), cultures, other data sources |
-| 3 | [DAX](#3-dax) | 3.3 | 4 / 5 / 1 | No differential testing; financial, `INFO.*` and visual-calculation functions; exact auto-exist |
+| 3 | [DAX](#3-dax) | 3.8 | 5 / 5 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; `ALLSELECTED` shadow contexts |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh, drill-down |
 | 5 | [Visuals](#5-visuals) | 2.1 | 15 / 6 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
 | 6 | [Interactions](#6-interactions) | 1.6 | 7 / 2 / 10 | Highlighting, bookmarks, drillthrough, drill-down, synced slicers |
@@ -126,10 +130,10 @@ Source: `crates/pbi-dax`, [FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md) (kept i
 | Filter and row context, context transition, expanded tables, BLANK | ✅ | 4 | `crates/pbi-dax/tests/eval.rs`; the example's acceptance values | Context transition on duplicate rows of keyless tables |
 | `CALCULATE` modifiers, `ALLSELECTED`, `USERELATIONSHIP`/`CROSSFILTER` | 🟡 | 3 | FUNCTIONS.md "Known semantic gaps" | Shadow contexts inside iterations; overrides for `RELATED` and `SUMMARIZE` |
 | `SUMMARIZECOLUMNS` auto-exist, rollups | 🟡 | 3 | approximated (cross product + empty-row removal) | Exact auto-exist |
-| `FORMAT` and format strings | 🟡 | 3 | `format_value`; dynamic format strings per cell (`EvalContext::evaluate_measure_format_strings`, used by visuals); en-US only | Other cultures |
+| `FORMAT` and format strings | 🟡 | 4 | `format_value`; dynamic format strings per cell (`EvalContext::evaluate_measure_format_strings`, used by visuals); 747 `FORMAT` cases equal to Desktop's (ground-truth suite `format`); en-US only | Other cultures |
 | User-defined functions, `DEFINE COLUMN` | 🟡 | 2 | `EXPR` parameters and `DEFINE COLUMN` missing | — |
 | Calculation groups (`SELECTEDMEASURE` & co.) | ✅ | 4 | typed `CalculationGroup`/`CalculationItem`, lossless TMDL and TMSL (`crates/pbi-tmdl/tests/calc_groups.rs`); precedence, selection expressions, sideways recursion, dynamic format strings (`crates/pbi-dax/tests/model_features.rs`, `crates/pbi-session/tests/security.rs`); per-cell format strings in visuals (`crates/pbi-render/tests/conditional_format.rs`) | Hide subtotals of `nonvisual` items; differential tests (blocked: Windows) |
-| Differential testing against Analysis Services | ❌ | 0 | none | Blocked: Windows ground truth (`m4-windows-groundtruth`) |
+| Differential testing against Analysis Services | ✅ | 4 | 2,212 queries recorded from Power BI Desktop 2.159's engine (Acme measures per page and filter, tables, metadata, calculation groups and RLS, `FORMAT`, every `functions.rs` case, three MIT samples) and compared value by value; 6 ledger entries, 1 of them a bug (`crates/pbi-session/tests/groundtruth.rs`, [reference/groundtruth](../reference/groundtruth/README.md), ADR-0011) | The queries Desktop's visuals send (Performance analyzer, manual); fix the `ALLSELECTED` shadow-context ledger entry |
 | Performance (P04: 5 measures over 1M rows) | ✅ | 5 | 26 ms vs 100 ms target (`perf/baseline.json`): `SUMX`/`AVERAGEX`/`MINX`/`MAXX`/`COUNTX`/`COUNTAX` compile simple column arithmetic to columnar loops (was 114 ms) | — |
 
 ## 4. Engine features
