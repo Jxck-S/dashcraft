@@ -5,6 +5,17 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-06
+
+### CI: macOS jobs on `macos-15`
+
+- **What:** `ci.yml` (`rust`, `app`) and `release.yml` (`bundle`, CLI archives) run on `macos-15`
+  instead of `macos-14`; `docs/ci.md` and `docs/packaging.md` follow.
+- **Why:** GitHub retired the macOS 14 runner image on 2026-11-02. Since then the macOS jobs were
+  cancelled before their first step (`The configuration 'macos-14-arm64-us-default' is not
+  supported`), so CI on `main` reported "cancelled" from #19 onwards. Binaries keep rustc's
+  default deployment targets (none is pinned), so the minimum macOS version does not change.
+
 ## 2026-11-05
 
 ### M6 measure create, update and delete, and object dependents
