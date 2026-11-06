@@ -201,7 +201,7 @@ pub async fn summary(entry: &DocEntry) -> DocSummary {
     }
     DocSummary {
         doc_id: entry.id().to_owned(),
-        path: entry.shown_path().to_owned(),
+        path: entry.shown_path(),
         format: doc.source.format.as_str().to_owned(),
         format_label: detection_out(&session.opened().detection).label,
         has_model: session.has_model(),

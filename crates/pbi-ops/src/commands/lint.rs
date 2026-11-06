@@ -149,7 +149,7 @@ impl Command for DocLint {
         let deny: Severity = p.deny.unwrap_or(SeverityParam::Error).into();
         Ok(LintOut {
             schema_version: SCHEMA_VERSION,
-            path: entry.shown_path().to_owned(),
+            path: entry.shown_path(),
             ok: !report.fails(deny) && reader_errors.is_empty(),
             summary: LintSummaryOut {
                 errors: report.summary.errors,

@@ -28,6 +28,12 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
   - A table rename moves its `.tmdl` file; renames are applied to the report JSON (fields, filters, bookmarks), and visual moves patch only the `position` numbers.
   - A project file changed on disk since the open or the last save makes the save fail with the new `conflict` error code (exit code 1), listing the files; `"overwrite": true` saves anyway.
   - The project folder must be inside a write root. PBIX, PBIT and `model.bim` sources have no in-place save. The registry grows from 60 to 61 core commands.
+- M6 Save As: `doc.saveAs` writes the document, edits included, as a new PBIP project from any source (PBIP, PBIX, PBIT, `model.bim`, a semantic model folder) and moves the document there.
+  - Later `doc.save` calls write into the new project; the document is clean and keeps its undo history and object ids.
+  - A PBIX's imported data and a PBIP's `.pbi/cache.abf` are not carried over, and a warning says so; data already loaded stays in memory.
+  - The folder must be inside a write root and empty unless `"overwrite": true`. Report changes to a legacy-layout report (`report.json`, a PBIX `Layout`) are refused.
+  - `convert.pbip` and `convert.pbit` now include unsaved edits (they used to refuse an edited document) and leave the document where it is.
+  - The registry grows from 61 to 62 core commands.
 - **Power BI Desktop ground truth** ([ADR-0011](docs/adr/0011-desktop-ground-truth.md), [reference/groundtruth](reference/groundtruth/README.md)): 2,242 DAX queries (every Acme measure per page and filter, every table, metadata, calculation groups and RLS roles, 747 `FORMAT` cases, every `functions.rs` case on a generated `dax-lab` fixture, three MIT samples) recorded from Desktop 2.159's local engine over ADOMD.NET and compared value by value by `cargo test -p pbi-session --test groundtruth`; differences must be listed in a deviation ledger that only shrinks (1 entry). Recorder and generators in `scripts/groundtruth/`, `cargo xtask groundtruth [--check]` for status, `Session::dax_query_tables` for typed results.
 - Lint rule `LINT018`: a measure with both `formatString` and `formatStringDefinition` (Power BI Desktop refuses to load it).
 - M: `List.Dates`, `List.DateTimes`, `List.DateTimeZones`, `List.Times` and `List.Durations`.

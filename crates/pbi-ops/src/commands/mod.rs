@@ -82,6 +82,7 @@ pub fn catalog() -> Registry {
         .with::<edit::DocumentRedo>()
         .with::<edit::DocumentHistory>()
         .with::<edit::DocumentSave>()
+        .with::<edit::DocumentSaveAs>()
         // lint
         .with::<lint::DocLint>()
         // data

@@ -8,9 +8,9 @@ use std::path::{Path, PathBuf};
 
 use pbi_core::{
     ChangeKind, CoreError, FileChange, OpenOptions, OpenedDocument, ProjectFingerprint, open_path,
-    save_in_place,
+    save_as_project, save_in_place,
 };
-use pbi_model::{Document, Rename};
+use pbi_model::{Document, Rename, SourceFormat};
 use pretty_assertions::assert_eq;
 use serde_json::Value;
 
@@ -433,7 +433,7 @@ fn report_changes_it_cannot_write_are_refused() {
     report.pages[0].display_name = "Renamed page".into();
     let err = save_in_place(&opened, &mut fingerprint, &edited, false).unwrap_err();
     assert!(
-        matches!(&err, CoreError::Save(m) if m.contains("cannot be saved in place")),
+        matches!(&err, CoreError::Save(m) if m.contains("cannot write yet")),
         "{err}"
     );
     assert_eq!(changed(&original, &files(&root)), Vec::<String>::new());
@@ -453,4 +453,229 @@ fn only_pbip_projects_save_in_place() {
     let err =
         save_in_place(&model_only, &mut fingerprint, &model_only.document, false).unwrap_err();
     assert!(matches!(&err, CoreError::Save(_)), "{err}");
+}
+
+#[test]
+fn save_as_writes_the_edited_project_and_later_saves_go_there() {
+    let (dir, root) = project();
+    let original = files(&root);
+    let opened = open(&root);
+    let mut edited = opened.document.clone();
+    edit_measure(
+        &mut edited,
+        "Orders",
+        "Total Cost",
+        "SUMX(Orders, Orders[Line Cost])",
+    );
+    rename(
+        &mut edited,
+        &Rename::Table {
+            old: "Web Sessions".into(),
+            new: "Site Sessions".into(),
+        },
+    );
+    let visual = edited
+        .reports
+        .iter_mut()
+        .flat_map(|r| &mut r.pages)
+        .flat_map(|p| &mut p.visuals)
+        .find(|v| v.name == "f251dbc74c2b67f5305d")
+        .unwrap();
+    visual.position.x = 300.5;
+
+    let out = dir.path().join("saved-as");
+    let outcome = save_as_project(&opened, &edited, &out, false, &OpenOptions::default()).unwrap();
+    assert_eq!(outcome.pbip_file, "AcmeOutfitters.pbip");
+    let written = files(&out);
+    let mut listed = outcome.written.clone();
+    listed.sort();
+    assert_eq!(listed, written.keys().cloned().collect::<Vec<_>>());
+    assert_eq!(
+        outcome.bytes,
+        written.values().map(|b| b.len() as u64).sum::<u64>()
+    );
+    // The source project is untouched; the new one holds the edits.
+    assert_eq!(changed(&original, &files(&root)), Vec::<String>::new());
+    let card = String::from_utf8(written[SESSIONS_CARD].clone()).unwrap();
+    assert!(card.contains("\"Entity\": \"Site Sessions\""), "{card}");
+    assert!(card.contains("\"x\": 300.5"), "{card}");
+    let reopened = open(&out.join("AcmeOutfitters.pbip"));
+    assert_eq!(
+        normalized(&reopened.document.model),
+        normalized(&edited.model)
+    );
+    assert_eq!(
+        normalized(&reopened.document.reports),
+        normalized(&edited.reports)
+    );
+
+    // The new baseline carries the document itself (ids included) with the
+    // new project as its source.
+    let saved = &outcome.saved;
+    assert_eq!(saved.document.model, edited.model);
+    assert_eq!(saved.document.reports, edited.reports);
+    assert_eq!(saved.document.source.format, SourceFormat::Pbip);
+    assert_eq!(
+        saved.container.root_dir().map(Path::to_path_buf),
+        Some(std::fs::canonicalize(&out).unwrap())
+    );
+
+    // A no-op save of the new project writes nothing; the next edit writes
+    // only its file, there.
+    let mut fingerprint = outcome.fingerprint;
+    let noop = save_in_place(saved, &mut fingerprint, &saved.document, false).unwrap();
+    assert!(noop.written.is_empty(), "{:?}", noop.written);
+    assert!(noop.deleted.is_empty(), "{:?}", noop.deleted);
+    let mut next = saved.document.clone();
+    edit_measure(&mut next, "Orders", "Total Cost", "0");
+    let again = save_in_place(saved, &mut fingerprint, &next, false).unwrap();
+    assert_eq!(again.written, [ORDERS_TMDL]);
+    assert_eq!(changed(&original, &files(&root)), Vec::<String>::new());
+
+    // A non-empty folder needs overwrite.
+    let err = save_as_project(&opened, &edited, &out, false, &OpenOptions::default()).unwrap_err();
+    assert!(
+        matches!(&err, CoreError::Save(m) if m.contains("not empty")),
+        "{err}"
+    );
+    save_as_project(&opened, &edited, &out, true, &OpenOptions::default()).unwrap();
+}
+
+/// The committed Microsoft samples (three PBIX, one PBIT).
+fn microsoft_samples() -> Vec<PathBuf> {
+    let dir = example().join("../../samples/microsoft");
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        eprintln!("SKIP: {} missing", dir.display());
+        return Vec::new();
+    };
+    let mut out: Vec<PathBuf> = entries
+        .map(|e| e.unwrap().path())
+        .filter(|p| {
+            p.extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| e.eq_ignore_ascii_case("pbix") || e.eq_ignore_ascii_case("pbit"))
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+/// The model's structure: tables with their columns, measures and
+/// partitions, relationships and roles (extras keep a format-specific
+/// shape, so they are left out).
+fn structure(model: Option<&pbi_model::Model>) -> Value {
+    let Some(model) = model else {
+        return Value::Null;
+    };
+    let tables: Vec<Value> = model
+        .tables
+        .iter()
+        .map(|t| {
+            serde_json::json!({
+                "name": t.name,
+                "columns": t.columns.iter().map(|c| (c.name.clone(), normalized(&c.kind))).collect::<Vec<_>>(),
+                "measures": t.measures.iter().map(|m| (m.name.clone(), m.expression.clone())).collect::<Vec<_>>(),
+                "partitions": t.partitions.len(),
+            })
+        })
+        .collect();
+    serde_json::json!({
+        "tables": tables,
+        "relationships": model.relationships.iter().map(|r| normalized(&(&r.from, &r.to, r.is_active))).collect::<Vec<_>>(),
+        "roles": model.roles.iter().map(|r| r.name.clone()).collect::<Vec<_>>(),
+    })
+}
+
+#[test]
+fn samples_save_as_pbip_with_an_equal_structure() {
+    let samples = microsoft_samples();
+    let dir = tempfile::Builder::new()
+        .prefix("pbi-core-save-as-")
+        .tempdir_in(env!("CARGO_TARGET_TMPDIR"))
+        .unwrap();
+    for (i, sample) in samples.iter().enumerate() {
+        let name = sample.display().to_string();
+        let opened = open(sample);
+        let out = dir.path().join(format!("s{i}"));
+        let outcome = save_as_project(
+            &opened,
+            &opened.document,
+            &out,
+            false,
+            &OpenOptions::default(),
+        )
+        .unwrap_or_else(|e| panic!("{name}: {e}"));
+        let reopened = open(&out.join(&outcome.pbip_file));
+        assert_eq!(
+            reopened.document.source.format,
+            SourceFormat::Pbip,
+            "{name}"
+        );
+        assert_eq!(
+            structure(reopened.document.model.as_ref()),
+            structure(opened.document.model.as_ref()),
+            "{name}"
+        );
+        assert_eq!(
+            reopened.document.reports.len(),
+            opened.document.reports.len(),
+            "{name}"
+        );
+        for (a, b) in reopened
+            .document
+            .reports
+            .iter()
+            .zip(&opened.document.reports)
+        {
+            assert_eq!(normalized(&a.pages), normalized(&b.pages), "{name}");
+            assert_eq!(normalized(&a.filters), normalized(&b.filters), "{name}");
+            assert_eq!(normalized(&a.theme), normalized(&b.theme), "{name}");
+        }
+        // Saving the new project without edits writes nothing.
+        let saved = &outcome.saved;
+        let mut fingerprint = outcome.fingerprint;
+        let before = files(&out);
+        let noop = save_in_place(saved, &mut fingerprint, &saved.document, false)
+            .unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert!(noop.written.is_empty(), "{name}: {:?}", noop.written);
+        assert_eq!(
+            changed(&before, &files(&out)),
+            Vec::<String>::new(),
+            "{name}"
+        );
+    }
+    if example().join("../../samples/microsoft").is_dir() {
+        assert_eq!(samples.len(), 4);
+    }
+}
+
+#[test]
+fn legacy_layout_report_changes_are_refused() {
+    let Some(pbix) = microsoft_samples()
+        .into_iter()
+        .find(|p| p.to_string_lossy().contains("Regional Sales"))
+    else {
+        return;
+    };
+    let opened = open(&pbix);
+    let mut edited = opened.document.clone();
+    let visual = edited
+        .reports
+        .iter_mut()
+        .flat_map(|r| &mut r.pages)
+        .flat_map(|p| &mut p.visuals)
+        .next()
+        .unwrap();
+    visual.position.x += 10.0;
+    let dir = tempfile::Builder::new()
+        .prefix("pbi-core-save-as-")
+        .tempdir_in(env!("CARGO_TARGET_TMPDIR"))
+        .unwrap();
+    let out = dir.path().join("legacy");
+    let err = save_as_project(&opened, &edited, &out, false, &OpenOptions::default()).unwrap_err();
+    assert!(
+        matches!(&err, CoreError::Save(m) if m.contains("legacy layout")),
+        "{err}"
+    );
+    assert!(!out.exists());
 }

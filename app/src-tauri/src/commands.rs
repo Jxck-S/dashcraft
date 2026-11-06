@@ -112,7 +112,7 @@ pub async fn document_views(
 ) -> Result<DocumentViewsDto, AppError> {
     let entry = document(&state, &doc_id)?;
     tauri::async_runtime::spawn_blocking(move || {
-        let info = path_info(entry.path())?;
+        let info = path_info(&entry.path())?;
         let session = entry.session();
         let opened = session.opened();
         let mut summary = mapping::summary(&opened, entry.id(), &info);

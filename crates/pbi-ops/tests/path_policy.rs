@@ -177,6 +177,15 @@ async fn commands_apply_the_policy() {
         .unwrap_err();
     assert_eq!(e.code, OpErrorCode::PathDenied);
     let e = r
+        .try_run(
+            "doc.saveAs",
+            json!({"docId": doc, "outDir": dir.path().join("elsewhere")}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(e.code, OpErrorCode::PathDenied);
+    assert!(!dir.path().join("elsewhere").exists());
+    let e = r
         .try_run("doc.save", json!({"docId": doc}))
         .await
         .unwrap_err();

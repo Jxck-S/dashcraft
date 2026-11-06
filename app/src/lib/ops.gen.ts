@@ -1298,6 +1298,42 @@ export interface DocumentParams {
   docId: string
 }
 
+export interface DocumentSaveAsOut {
+  /** The new project folder. */
+  projectDir: string
+  /** The project's `.pbip` file, relative to `projectDir`. */
+  pbipFile: string
+  /** Files written, relative to `projectDir`. */
+  files: string[]
+  bytes: number
+  /** The format the document had before (`pbix`, `pbit`, `pbip`, …). */
+  previousFormat: string
+  /** The revision saved. */
+  revision: number
+  /** Whether the document has edits after the save (always `false`). */
+  dirty: boolean
+  /**
+   * What the new project does not carry over (imported data, a local
+   * data cache).
+   */
+  warnings: string[]
+}
+
+export interface DocumentSaveAsParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /**
+   * The new project folder (created if missing; must be empty unless
+   * `overwrite`).
+   */
+  outDir: string
+  /**
+   * Write into a non-empty folder (files with the same paths are
+   * replaced, others kept).
+   */
+  overwrite?: boolean
+}
+
 export interface DocumentSaveOut {
   /** The project folder. */
   projectDir: string
@@ -3194,6 +3230,8 @@ export interface OpsCommands {
   'doc.history': { params: DocumentParams; output: DocumentHistoryOut }
   /** Saves the edits into the opened PBIP project, writing only changed files; files changed on disk since the open are a conflict unless overwrite. */
   'doc.save': { params: DocumentSaveParams; output: DocumentSaveOut }
+  /** Saves the document, edits included, as a new PBIP project from any format and continues editing there: later doc.save writes to it; imported data is not carried over. */
+  'doc.saveAs': { params: DocumentSaveAsParams; output: DocumentSaveAsOut }
   /** Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report. */
   'doc.lint': { params: DocLintParams; output: LintOut }
   /** Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status. */
@@ -3248,9 +3286,9 @@ export interface OpsCommands {
   'export.table': { params: ExportTableParams; output: ExportTableOut }
   /** The model documentation as JSON (model doc) or a Markdown data dictionary, inline or to a file; no data needed. */
   'export.model': { params: ExportModelParams; output: ExportModelOut }
-  /** Writes the document as a PBIP project (TMDL + PBIR) into a folder. */
+  /** Writes the document, unsaved edits included, as a PBIP project (TMDL + PBIR) into a folder; the open document keeps its source (doc.saveAs moves it). */
   'convert.pbip': { params: ConvertPbipParams; output: ConvertPbipOut }
-  /** Writes a PBIT template (model schema and one report, no data). */
+  /** Writes a PBIT template (model schema and one report, no data), unsaved edits included. */
   'convert.pbit': { params: ConvertPbitParams; output: ConvertPbitOut }
   /** Parses one people-picker cell (a Python-style list of dicts) into `First Last` names (the "Parse people field" transform). */
   'text.parsePeople': { params: ParsePeopleParams; output: ParsePeopleOut }
@@ -3312,6 +3350,7 @@ export const OPS_META = {
   'doc.redo': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.history': { category: 'edit', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.save': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: true },
+  'doc.saveAs': { category: 'edit', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: true },
   'doc.lint': { category: 'lint', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'data.refresh': { category: 'data', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'data.tables': { category: 'data', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -3423,6 +3462,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     docHistory: (params: DocumentParams, options?: O) => run('doc.history', params, options),
     /** Saves the edits into the opened PBIP project, writing only changed files; files changed on disk since the open are a conflict unless overwrite. */
     docSave: (params: DocumentSaveParams, options?: O) => run('doc.save', params, options),
+    /** Saves the document, edits included, as a new PBIP project from any format and continues editing there: later doc.save writes to it; imported data is not carried over. */
+    docSaveAs: (params: DocumentSaveAsParams, options?: O) => run('doc.saveAs', params, options),
     /** Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report. */
     docLint: (params: DocLintParams, options?: O) => run('doc.lint', params, options),
     /** Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status. */
@@ -3477,9 +3518,9 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     exportTable: (params: ExportTableParams, options?: O) => run('export.table', params, options),
     /** The model documentation as JSON (model doc) or a Markdown data dictionary, inline or to a file; no data needed. */
     exportModel: (params: ExportModelParams, options?: O) => run('export.model', params, options),
-    /** Writes the document as a PBIP project (TMDL + PBIR) into a folder. */
+    /** Writes the document, unsaved edits included, as a PBIP project (TMDL + PBIR) into a folder; the open document keeps its source (doc.saveAs moves it). */
     convertPbip: (params: ConvertPbipParams, options?: O) => run('convert.pbip', params, options),
-    /** Writes a PBIT template (model schema and one report, no data). */
+    /** Writes a PBIT template (model schema and one report, no data), unsaved edits included. */
     convertPbit: (params: ConvertPbitParams, options?: O) => run('convert.pbit', params, options),
     /** Parses one people-picker cell (a Python-style list of dicts) into `First Last` names (the "Parse people field" transform). */
     textParsePeople: (params: ParsePeopleParams, options?: O) => run('text.parsePeople', params, options),

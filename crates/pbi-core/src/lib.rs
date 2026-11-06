@@ -70,4 +70,7 @@ pub use reader::{
     REMOTE_DESCRIPTION, ReportSource, codes, open_bytes, open_path,
 };
 pub use save::{SaveOptions, export_pbit, pbip_files, pbit_bytes, save_as_pbip};
-pub use save_in_place::{ChangeKind, FileChange, ProjectFingerprint, SaveOutcome, save_in_place};
+pub use save_in_place::{
+    ChangeKind, FileChange, ProjectFingerprint, SaveAsOutcome, SaveOutcome, edited_document,
+    save_as_project, save_in_place,
+};

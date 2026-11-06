@@ -20,18 +20,36 @@ use crate::ctx::Ctx;
 use crate::error::OpError;
 use crate::files::{check_output_file, write_bytes, write_file_atomic};
 use crate::resolve;
-use crate::workspace::{DocEntry, Workspace};
+use crate::workspace::Workspace;
 
 /// Largest inline model documentation (bytes); pass `path` beyond.
 pub const MAX_INLINE_DOC_BYTES: usize = 16 * 1024 * 1024;
 
-fn require_clean_document(entry: &DocEntry) -> Result<(), OpError> {
-    if entry.session().is_document_dirty() {
-        return Err(OpError::unsupported(
-            "conversion cannot include unsaved document edits yet; reopen the source or discard the edits before converting",
-        ));
+/// The output folder of a project write, after the path policy: a folder
+/// (created later if missing) that must be empty unless `overwrite`.
+pub(crate) fn check_out_dir(
+    ws: &Workspace,
+    out_dir: &Path,
+    overwrite: bool,
+) -> Result<PathBuf, OpError> {
+    let checked = ws.policy().check_write(out_dir)?;
+    if let Ok(meta) = fs::metadata(&checked) {
+        if !meta.is_dir() {
+            return Err(OpError::invalid_params(format!(
+                "{} exists and is not a folder",
+                out_dir.display()
+            )));
+        }
+        let mut entries = fs::read_dir(&checked)
+            .map_err(|e| OpError::io(format!("cannot read {}: {e}", out_dir.display())))?;
+        if entries.next().is_some() && !overwrite {
+            return Err(OpError::io(format!(
+                "{} is not empty; pass \"overwrite\": true to write into it",
+                out_dir.display()
+            )));
+        }
     }
-    Ok(())
+    Ok(checked)
 }
 
 /// Table export format.
@@ -311,7 +329,7 @@ impl Command for ExportModel {
                 let title = p
                     .title
                     .clone()
-                    .unwrap_or_else(|| default_title(entry.path(), &model));
+                    .unwrap_or_else(|| default_title(&entry.path(), &model));
                 let text = model_to_markdown(
                     &model,
                     &MarkdownOptions {
@@ -389,7 +407,7 @@ impl Command for ConvertPbip {
         CommandMeta {
             id: "convert.pbip",
             title: "Save as PBIP",
-            summary: "Writes the document as a PBIP project (TMDL + PBIR) into a folder.",
+            summary: "Writes the document, unsaved edits included, as a PBIP project (TMDL + PBIR) into a folder; the open document keeps its source (doc.saveAs moves it).",
             category: Category::Convert,
             long_running: true,
             writes_files: true,
@@ -402,26 +420,9 @@ impl Command for ConvertPbip {
     }
 
     async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
-        let out_dir = ws.policy().check_write(&p.out_dir)?;
-        if let Ok(meta) = fs::metadata(&out_dir) {
-            if !meta.is_dir() {
-                return Err(OpError::invalid_params(format!(
-                    "{} exists and is not a folder",
-                    p.out_dir.display()
-                )));
-            }
-            let mut entries = fs::read_dir(&out_dir)
-                .map_err(|e| OpError::io(format!("cannot read {}: {e}", p.out_dir.display())))?;
-            if entries.next().is_some() && !p.overwrite {
-                return Err(OpError::io(format!(
-                    "{} is not empty; pass \"overwrite\": true to write into it",
-                    p.out_dir.display()
-                )));
-            }
-        }
+        let out_dir = check_out_dir(ws, &p.out_dir, p.overwrite)?;
         let entry = doc(ws, &p.doc_id)?;
-        require_clean_document(&entry)?;
-        let opened = entry.session().opened().clone();
+        let opened = entry.session().edited_opened()?;
         let policy = ws.policy().clone();
         let dir = out_dir.clone();
         let (files, bytes) = tokio::task::spawn_blocking(move || {
@@ -501,7 +502,7 @@ impl Command for ConvertPbit {
         CommandMeta {
             id: "convert.pbit",
             title: "Export a PBIT template",
-            summary: "Writes a PBIT template (model schema and one report, no data).",
+            summary: "Writes a PBIT template (model schema and one report, no data), unsaved edits included.",
             category: Category::Convert,
             long_running: true,
             writes_files: true,
@@ -516,8 +517,7 @@ impl Command for ConvertPbit {
     async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
         let out = check_output_file(ws.policy(), &p.out_path, p.overwrite)?;
         let entry = doc(ws, &p.doc_id)?;
-        require_clean_document(&entry)?;
-        let mut opened = (*entry.session().opened()).clone();
+        let mut opened = entry.session().edited_opened()?;
         let names: Vec<String> = opened
             .document
             .reports

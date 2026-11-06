@@ -60,7 +60,7 @@ impl Command for DocInspect {
             expressions: p.include_expressions.unwrap_or(true),
         };
         Ok(inspect_model::build(
-            entry.shown_path(),
+            &entry.shown_path(),
             &entry.session().opened(),
             opts,
         ))

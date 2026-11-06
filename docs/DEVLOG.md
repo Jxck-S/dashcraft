@@ -7,6 +7,35 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 Save As: `doc.saveAs` writes a new PBIP project from any source
+
+- **What:**
+  - `pbi-core::save_as_project` writes the current document (`edited_document`: the last saved
+    state with the edits, renames checked against the reports) with the full PBIP writer into a
+    new folder (`safe_path`, atomic writes, `PartialSave` on a failure part-way), reads it back
+    and makes that the new save baseline with the session's document, so object ids, undo
+    history and later in-place saves all carry on. TMSL shadow properties are stripped from a
+    PBIT or `model.bim` source's model (otherwise a no-op save afterwards would rewrite files).
+  - `pbi-session::Session::save_as` and `edited_opened`; `pbi-ops` adds `doc.saveAs` (write
+    root, empty folder unless `overwrite`, warnings for data not carried over) and moves the
+    workspace entry to the new `.pbip`. `convert.pbip` and `convert.pbit` write the edited
+    document instead of refusing a dirty one.
+- **Why:** M6.6 (ADR-0013): a PBIX, PBIT or `model.bim` could be edited but not saved.
+- **Still open:** `lineageTag` for new objects (ADR-0014), Save As PBIT keeps going through
+  `convert.pbit` (no re-association), object origins keep the old source locations.
+- **Numbers:**
+  - The catalog grows from 61 to 62 core commands.
+  - New tests: `pbi-core` 3 (`save_as_writes_the_edited_project_and_later_saves_go_there`,
+    `samples_save_as_pbip_with_an_equal_structure` on all 4 committed samples,
+    `legacy_layout_report_changes_are_refused`), `pbi-ops` 3 (`save.rs`: the synthetic Mini project and
+    the Revenue Opportunities PBIX; `e2e.rs::save_as_project_keeps_the_expected_values`),
+    and Save As cases added to the model-folder, path-policy, conversion and `Send` tests.
+  - Acceptance criteria 5 (structure of every sample after Save As) and the PBIP half of 6
+    (Acme saved as, refreshed through the blob map: every `expected.json` value) pass.
+  - GT-6 with Desktop 2.159: Acme as a PBIT, edited and saved as a PBIP, opens and refreshes in
+    Desktop and records identically to the edited PBIP saved in place (643 of 643 cases;
+    `reference/groundtruth/README.md`).
+
 ### M6 save: `doc.save` writes edits into the opened PBIP project
 
 - **What:**

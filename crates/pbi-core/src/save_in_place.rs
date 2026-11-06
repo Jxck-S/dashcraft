@@ -29,6 +29,11 @@
 //!
 //! Known gaps: `reportExtensions.json` (report-level measures) keeps the
 //! old names, and DAX in it is not rewritten.
+//!
+//! [`save_as_project`] writes an edited document from any readable source
+//! (PBIP, PBIX, PBIT, `model.bim`, …) as a new PBIP project and reads it
+//! back as the baseline of later in-place saves; [`edited_document`] is the
+//! edited document both saves (and the exports) write.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{self, File};
@@ -45,7 +50,7 @@ use serde_json::{Number, Value};
 use walkdir::WalkDir;
 
 use crate::error::CoreError;
-use crate::reader::{ModelSource, OpenedDocument, ReportSource};
+use crate::reader::{ModelSource, OpenOptions, OpenedDocument, ReportSource};
 use crate::save::{PbipOutput, pbip_output};
 
 /// Most files a fingerprint tracks.
@@ -228,16 +233,7 @@ pub fn save_in_place(
         return Err(CoreError::Conflict { changes });
     }
 
-    let renames = match (&baseline.document.model, &current.model) {
-        (Some(old), Some(new)) => net_renames(old, new),
-        _ => Vec::new(),
-    };
-    let expected = expected_reports(&baseline.document, current, &renames);
-    check_reports(&expected, &current.reports)?;
-    let mut synced = baseline.clone();
-    synced.report_sources = sync_reports(baseline, &expected, &renames)?;
-    synced.document = current.clone();
-
+    let mut synced = edited_document(baseline, current)?;
     let before = pbip_output(baseline)?;
     let after = pbip_output(&synced)?;
     check_layout(&before)?;
@@ -285,6 +281,152 @@ pub fn save_in_place(
         deleted,
         overwritten: changes,
         saved: synced,
+    })
+}
+
+/// `baseline` (a document as opened or last saved) with the model and
+/// reports of `current` (an edited state of `baseline.document`), its PBIR
+/// report sources updated to match: net table, column and measure renames
+/// applied to the report JSON and moved or resized visuals patched. This
+/// is what [`save_in_place`] and [`save_as_project`] write, and what
+/// [`pbip_files`](crate::pbip_files) and [`pbit_bytes`](crate::pbit_bytes)
+/// need to export a document with unsaved edits.
+///
+/// # Errors
+/// [`CoreError::Save`] when the reports have changes that cannot be
+/// written yet: report changes other than renames and visual positions,
+/// or any change to a legacy layout (`report.json`, PBIX `Layout`).
+pub fn edited_document(
+    baseline: &OpenedDocument,
+    current: &Document,
+) -> Result<OpenedDocument, CoreError> {
+    let renames = match (&baseline.document.model, &current.model) {
+        (Some(old), Some(new)) => net_renames(old, new),
+        _ => Vec::new(),
+    };
+    let expected = expected_reports(&baseline.document, current, &renames);
+    check_reports(&expected, &current.reports)?;
+    let mut edited = baseline.clone();
+    edited.report_sources = sync_reports(baseline, &expected, &renames)?;
+    edited.document = current.clone();
+    Ok(edited)
+}
+
+/// The result of [`save_as_project`].
+#[derive(Debug)]
+pub struct SaveAsOutcome {
+    /// Files written, relative to the output folder.
+    pub written: Vec<String>,
+    /// Bytes written.
+    pub bytes: u64,
+    /// The `.pbip` file, relative to the output folder.
+    pub pbip_file: String,
+    /// The new project as read back, carrying the document `current` (its
+    /// ids, model and reports): the baseline of the next in-place save.
+    pub saved: OpenedDocument,
+    /// Fingerprint of the new project.
+    pub fingerprint: ProjectFingerprint,
+}
+
+/// Saves `current` (an edited state of `baseline.document`, from any
+/// readable source) as a new PBIP project in `out_dir` (created if
+/// missing), then reads the project back as the baseline of later
+/// in-place saves ([`save_in_place`]). Each file is written atomically;
+/// data caches and files DashCraft does not produce are not written (a
+/// PBIX's imported data is not carried over).
+///
+/// # Errors
+/// - [`CoreError::Save`] when `out_dir` is not a folder, is not empty and
+///   `overwrite` is not set, or the edits contain report changes that
+///   cannot be written yet ([`edited_document`]); nothing is written;
+/// - [`CoreError::PartialSave`] when a write failed part-way;
+/// - [`CoreError::Io`] or a reader error when the project cannot be read
+///   back.
+pub fn save_as_project(
+    baseline: &OpenedDocument,
+    current: &Document,
+    out_dir: &Path,
+    overwrite: bool,
+    opts: &OpenOptions,
+) -> Result<SaveAsOutcome, CoreError> {
+    let edited = edited_document(baseline, current)?;
+    let out = pbip_output(&edited)?;
+    match fs::metadata(out_dir) {
+        Ok(meta) if !meta.is_dir() => {
+            return Err(CoreError::Save(format!(
+                "{} exists and is not a folder",
+                out_dir.display()
+            )));
+        }
+        Ok(_) => {
+            let mut entries = fs::read_dir(out_dir).map_err(|e| CoreError::io(out_dir, e))?;
+            if !overwrite && entries.next().is_some() {
+                return Err(CoreError::Save(format!(
+                    "{} is not empty (set overwrite to write into it)",
+                    out_dir.display()
+                )));
+            }
+        }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+        Err(e) => return Err(CoreError::io(out_dir, e)),
+    }
+    let pbip_file = out
+        .files
+        .iter()
+        .map(|(path, _)| path)
+        .find(|p| !p.contains('/') && p.to_ascii_lowercase().ends_with(".pbip"))
+        .cloned()
+        .ok_or_else(|| CoreError::Save("the project has no .pbip file".into()))?;
+    fs::create_dir_all(out_dir).map_err(|e| CoreError::io(out_dir, e))?;
+    let mut written = Vec::with_capacity(out.files.len());
+    let mut bytes = 0u64;
+    for (path, data) in &out.files {
+        let result = safe_path(out_dir, path)
+            .and_then(|abs| write_atomic(&abs, data).map_err(|e| (path.clone(), e.to_string())));
+        if let Err((failed, message)) = result {
+            return Err(CoreError::PartialSave {
+                written,
+                deleted: Vec::new(),
+                failed,
+                message,
+            });
+        }
+        written.push(path.clone());
+        bytes = bytes.saturating_add(data.len() as u64);
+    }
+
+    let mut saved = crate::reader::open_path(&out_dir.join(&pbip_file), opts)?;
+    if saved.document.model.is_some() != current.model.is_some()
+        || saved.report_sources.len() != current.reports.len()
+    {
+        return Err(CoreError::Save(format!(
+            "the project written to {} does not read back with the same model and reports",
+            out_dir.display()
+        )));
+    }
+    let mut document = current.clone();
+    document.source = saved.document.source.clone();
+    document.model_status = saved.document.model_status.clone();
+    document.diagnostics = std::mem::take(&mut saved.document.diagnostics);
+    document.extra_parts = std::mem::take(&mut saved.document.extra_parts);
+    // TMSL keeps typed properties in its extras too; the TMDL just written
+    // has them once, as later in-place saves must.
+    if let (Some(model), Some(ModelSource::Tmsl { .. })) =
+        (document.model.as_mut(), &baseline.model_source)
+    {
+        crate::reader::strip_tmsl_shadows(model);
+    }
+    for (report, read) in document.reports.iter_mut().zip(&saved.document.reports) {
+        report.dataset_reference = read.dataset_reference.clone();
+    }
+    saved.document = document;
+    let fingerprint = Project::of(&saved)?.scan()?;
+    Ok(SaveAsOutcome {
+        written,
+        bytes,
+        pbip_file,
+        saved,
+        fingerprint,
     })
 }
 
@@ -397,23 +539,7 @@ impl Project {
     /// The absolute path of `rel`, refusing unsafe paths and symbolic
     /// links anywhere under the project folder.
     fn path(&self, rel: &str) -> Result<PathBuf, (String, String)> {
-        let refuse = |why: &str| (rel.to_owned(), why.to_owned());
-        let rel_path = Path::new(rel);
-        if rel.is_empty()
-            || !rel_path
-                .components()
-                .all(|c| matches!(c, Component::Normal(_)))
-        {
-            return Err(refuse("refusing to write an unsafe path"));
-        }
-        let mut abs = self.root.clone();
-        for c in rel_path.components() {
-            abs.push(c);
-            if fs::symlink_metadata(&abs).is_ok_and(|m| m.file_type().is_symlink()) {
-                return Err(refuse("refusing to write through a symbolic link"));
-            }
-        }
-        Ok(abs)
+        safe_path(&self.root, rel)
     }
 
     /// Deletes `rel` if it exists. Returns whether it did.
@@ -432,6 +558,28 @@ fn same_container(
     b: &Arc<dyn crate::container::Container>,
 ) -> bool {
     std::ptr::addr_eq(Arc::as_ptr(a), Arc::as_ptr(b))
+}
+
+/// The absolute path of `rel` under `root`, refusing unsafe paths and
+/// symbolic links anywhere below `root`. Errors are `(rel, message)`.
+fn safe_path(root: &Path, rel: &str) -> Result<PathBuf, (String, String)> {
+    let refuse = |why: &str| (rel.to_owned(), why.to_owned());
+    let rel_path = Path::new(rel);
+    if rel.is_empty()
+        || !rel_path
+            .components()
+            .all(|c| matches!(c, Component::Normal(_)))
+    {
+        return Err(refuse("refusing to write an unsafe path"));
+    }
+    let mut abs = root.to_path_buf();
+    for c in rel_path.components() {
+        abs.push(c);
+        if fs::symlink_metadata(&abs).is_ok_and(|m| m.file_type().is_symlink()) {
+            return Err(refuse("refusing to write through a symbolic link"));
+        }
+    }
+    Ok(abs)
 }
 
 /// `abs` relative to `root`, `/`-separated (`None` outside `root` or for
@@ -739,7 +887,7 @@ fn check_reports(expected: &[Report], current: &[Report]) -> Result<(), CoreErro
     }
     let refuse = |what: String| {
         Err(CoreError::Save(format!(
-            "{what} has changes that cannot be saved in place yet"
+            "{what} has changes DashCraft cannot write yet"
         )))
     };
     if expected.len() != current.len() {
@@ -795,7 +943,7 @@ fn sync_reports(
             ReportSource::Legacy { .. } => {
                 if before != after {
                     return Err(CoreError::Save(format!(
-                        "report `{}` uses the legacy layout (report.json), which cannot be updated in place yet; save it as a new PBIP project instead",
+                        "report `{}` uses the legacy layout (report.json or a PBIX Layout), which DashCraft cannot update yet: undo the renames that reach its visuals and the visual moves before saving",
                         after.name
                     )));
                 }
