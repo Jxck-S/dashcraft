@@ -1386,8 +1386,9 @@ pub struct CreatedTableColumnOut {
     pub name: String,
     /// `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`.
     pub data_type: String,
-    /// Where the values come from in the expression's result:
-    /// `Products[Category]` or `[Total]`.
+    /// Where the values come from in the expression's result, as Power BI
+    /// Desktop writes it: `Web Sessions[Device]` (the table unquoted) or
+    /// `[Total]`.
     pub source_column: String,
 }
 

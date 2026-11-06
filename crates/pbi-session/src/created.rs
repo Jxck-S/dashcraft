@@ -226,8 +226,10 @@ impl Session {
             };
             out.push(InferredColumn {
                 name: column.name.clone(),
+                // Desktop's form: the result's column name, the table unquoted
+                // (`Web Sessions[Device]`, `[Pages]`).
                 source_column: match &column.table {
-                    Some(t) => dax_column_ref(t, &column.name),
+                    Some(t) => format!("{t}[{}]", column.name.replace(']', "]]")),
                     None => format!("[{}]", column.name.replace(']', "]]")),
                 },
                 data_type,

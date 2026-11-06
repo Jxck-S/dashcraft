@@ -260,6 +260,24 @@ recordings (hierarchies change no value), and DashCraft's results on the edited 
 all: 601 of 601 measures, 26 of 26 calculation-group and RLS cases, 11 of 11 tables and 5 of 5
 metadata cases, with no ledger entry.
 
+**Calculated table create.** In the same way (`s19`), on the example copy run
+`model.table.create` of `Regions` (`VALUES(Stores[Region])`), `'Device Pages'` (`ADDCOLUMNS` over
+`VALUES('Web Sessions'[Device])` with a `CALCULATE(SUM(…))` column and a `DIVIDE` of two measures)
+and `'Store Places'` (`SUMMARIZE(Stores, Stores[Region], Stores[Square Feet])`) over the loaded
+data, then `doc.save`, and copy the three new table files and their `ref table` lines into the
+Desktop copy. Results with Desktop 2.159: Desktop opened and refreshed the project without an
+error. The first run wrote the source column of a spaced table quoted (`'Web Sessions'[Device]`);
+Desktop did not match it to the result's column, replaced the column (moved last, summarize-by
+Default) and the metadata case showed the one difference. Desktop names such a column
+`Web Sessions[Device]`, without quotes; with that form (the second run) Desktop keeps every column
+as written, in order: inferred names and types (string, int64, double), the source columns,
+summarize-by none for text and sum for numbers (`INFO.COLUMNS`). Its rows equal DashCraft's
+(5 regions, 14 store places, 3 devices with the same pages and shares). Desktop's answers on the
+recorded cases equal the committed recordings apart from the two metadata cases that list tables
+and columns (the three new tables), and DashCraft's results on the edited example match all 643:
+601 of 601 measures, 26 of 26 calculation-group and RLS cases, 11 of 11 tables and 5 of 5 metadata
+cases, with no ledger entry.
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.

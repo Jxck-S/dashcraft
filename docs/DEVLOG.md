@@ -17,7 +17,8 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   a created table in the edit's publication when the data is loaded (`compute_created_tables`,
   recorded as a calculated refresh; restored tables keep their data and record). `pbi-ops` adds
   `model.table.create` and the `createTable` edit: random `lineageTag`s, `isNameInferred`,
-  `isDataTypeInferred`, `sourceColumn` from the result (`Stores[Region]`, `[Pages]`), sum for
+  `isDataTypeInferred`, `sourceColumn` from the result as Desktop names it (`Stores[Region]`,
+  `Web Sessions[Device]` unquoted, `[Pages]`), sum for
   numeric columns, a calculated partition named after the table.
 - **Why:** M6.5 core editing commands: calculated table create (a "Still open" item).
 - **Numbers:** 3 new tests (`pbi-model`
@@ -27,6 +28,10 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   computed at once, a calculated column on a created table, eight refusals, undo/redo, a group;
   `save.rs::created_table_saves_and_reopens`: the exact new table file, `ref table` appended to
   `model.tmdl`, reopen and refresh, undo saves the original project). Registry 70 → 71 commands.
+  GT-6 with Desktop 2.159 (s19: `Regions`, `'Device Pages'`, `'Store Places'`): the first run
+  wrote `'Web Sessions'[Device]` quoted and Desktop replaced that column (the one metadata
+  difference, caught by the ground-truth test); with Desktop's unquoted form it keeps every column
+  as written, its rows equal DashCraft's, and DashCraft matches all 643 cases on the edited model.
 
 ### M6 hierarchy create and delete (M6.5)
 

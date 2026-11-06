@@ -609,9 +609,12 @@ names; the columns come from the expression's result over the loaded data
 the source column), the session computes the table in the same publication (`created.rs`; a
 document without loaded data computes it at the next refresh, a restored table gets its kept data
 back), and like Desktop the table and its columns get random `lineageTag`s, `isNameInferred`,
-`isDataTypeInferred`, the result's columns as `sourceColumn` (`Stores[Region]`, `[Pages]`) and sum
+`isDataTypeInferred`, the result's columns as `sourceColumn` (`Stores[Region]`, `Web Sessions[Device]`, `[Pages]`) and sum
 for numeric columns; it is saved as a new table file listed in `model.tmdl`
-(`calculated_table_create_through_the_registry`, `created_table_saves_and_reopens`). Still open:
+(`calculated_table_create_through_the_registry`, `created_table_saves_and_reopens`); Desktop opens and
+refreshes three saved calculated tables keeping every column as written (a spaced table's source
+column unquoted, `Web Sessions[Device]`, as Desktop names it), with the same rows, and answers all
+643 recorded cases on the edited model as DashCraft does (GT-6 s19). Still open:
 the app's change events (M6.8), dependent recalculation after measure edits, data column delete (with M editing), hierarchy and level edits, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the

@@ -912,8 +912,9 @@ export interface CreatedTableColumnOut {
   /** `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`. */
   dataType: string
   /**
-   * Where the values come from in the expression's result:
-   * `Products[Category]` or `[Total]`.
+   * Where the values come from in the expression's result, as Power BI
+   * Desktop writes it: `Web Sessions[Device]` (the table unquoted) or
+   * `[Total]`.
    */
   sourceColumn: string
 }

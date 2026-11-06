@@ -2946,7 +2946,7 @@ async fn calculated_table_create_through_the_registry() {
             (
                 json!("Device"),
                 json!("string"),
-                json!("'Web Sessions'[Device]")
+                json!("Web Sessions[Device]")
             ),
             (json!("Pages"), json!("int64"), json!("[Pages]")),
             (json!("Share"), json!("double"), json!("[Share]")),
