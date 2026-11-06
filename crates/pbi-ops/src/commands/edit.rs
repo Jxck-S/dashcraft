@@ -712,6 +712,7 @@ fn create_measure(
     measure.display_folder = new.display_folder.filter(|s| !s.is_empty());
     measure.description = new.description.filter(|s| !s.is_empty());
     measure.is_hidden = new.is_hidden;
+    measure.lineage_tag = session.new_lineage_tag();
     Ok(CreateMeasure {
         table,
         measure,

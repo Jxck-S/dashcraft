@@ -3,7 +3,8 @@
 //! New objects get a fresh [`ObjectId`] from the document's generator. Undo
 //! removes them again but never rewinds the generator, so an ID handed to a
 //! caller is never reused for another object. Serialized identifiers
-//! (`lineageTag`) are left to the writers (ADR-0014).
+//! (`lineageTag`) come with the object: the session draws them before the
+//! command is built (ADR-0014), so undo and redo keep them.
 
 use super::rename::check_measure_name;
 use super::{Applied, ChangeEvent, Command, CommandError, expect_kind, model, model_mut};

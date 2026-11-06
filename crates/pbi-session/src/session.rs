@@ -21,6 +21,7 @@ use crate::edit::{
     ModelRenames, RenameObject, RenamePreview, preview_rename, rename_results, structure_changed,
 };
 use crate::error::SessionError;
+use crate::identifiers::{IdentifierGenerator, RandomIdentifiers, lineage_tags};
 use crate::options::{SessionLimits, SessionOptions};
 use crate::report::TableRefresh;
 use crate::security::{ActiveView, ViewAs};
@@ -73,6 +74,7 @@ struct Inner {
     resolver: Arc<dyn BlobResolver>,
     blob_map: bool,
     clock: Arc<dyn Clock>,
+    identifiers: Arc<dyn IdentifierGenerator>,
     limits: SessionLimits,
     state: RwLock<State>,
     refresh_lock: tokio::sync::Mutex<()>,
@@ -246,6 +248,9 @@ impl Session {
                 resolver,
                 blob_map,
                 clock: options.clock.unwrap_or_else(|| Arc::new(SystemClock)),
+                identifiers: options
+                    .identifiers
+                    .unwrap_or_else(|| Arc::new(RandomIdentifiers)),
                 limits: options.limits,
                 state: RwLock::new(State {
                     engine,
@@ -303,6 +308,23 @@ impl Session {
     #[must_use]
     pub fn base_model(&self) -> Arc<Model> {
         Arc::new(self.opened().document.model.clone().unwrap_or_default())
+    }
+
+    /// A lineage tag for an object about to be created, from the session's
+    /// [`IdentifierGenerator`] and not in use in the model. `None` when the
+    /// model has none at all (older projects): no tag is introduced there
+    /// (ADR-0014). Put it in the object before building the create command,
+    /// so undo, redo and later saves keep it.
+    #[must_use]
+    pub fn new_lineage_tag(&self) -> Option<String> {
+        let document = self.document();
+        let used = lineage_tags(document.model.as_ref()?);
+        if used.is_empty() {
+            return None;
+        }
+        (0..8)
+            .map(|_| self.inner.identifiers.lineage_tag())
+            .find(|tag| !used.contains(tag.as_str()))
     }
 
     /// `true` if the document has a semantic model.

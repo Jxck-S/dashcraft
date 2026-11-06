@@ -7,6 +7,26 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 lineage tags for new objects (ADR-0014 §5)
+
+- **What:** `pbi-session` gets an injectable `IdentifierGenerator` (`SessionOptions::identifiers`):
+  `RandomIdentifiers` (version 4 GUIDs through `uuid`, already in the tree through DataFusion;
+  now a workspace dependency) by default, `SequentialIdentifiers` for tests.
+  `Session::new_lineage_tag` returns a tag not in use in the model, or none when the model has no
+  lineage tags at all (no format upgrade). `model.measure.create` and the `createMeasure` edit of
+  `doc.applyEdits` put it in the new measure before the command is built, so undo, redo, saves and
+  a reopen keep it.
+- **Why:** M6.6 remainder and ADR-0014 §5: Desktop gives every object a `lineageTag`; DashCraft's
+  new measures had none.
+- **Numbers:** 4 new tests (`pbi-session` unit tests for both generators; `pbi-ops/tests/save.rs`
+  `new_measures_get_lineage_tags_from_the_injected_generator` and
+  `lineage_tags_are_random_and_only_where_the_model_uses_them`); `pbi-ops` and `pbi-session`
+  tests: 165 passed, 0 failed. GT-6 with Desktop 2.159: Desktop reads both generated tags back
+  unchanged (`INFO.MEASURES()`), `acme-measures` 601/601 and `acme-calcgroup-rls` 26/26 identical
+  to the committed recordings, `acme-metadata` differs only by the two added measures.
+- **Still open:** tags for tables, columns, hierarchies and relationships come with their create
+  commands (M6.5).
+
 ### M6 Save As: `doc.saveAs` writes a new PBIP project from any source
 
 - **What:**

@@ -11,9 +11,13 @@ mod common;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 
-use common::{MINI_TOTAL, MS_PBIX, Runner, fixture, mini_pbip, ms_expected, tmp_dir};
+use common::{
+    ACME, MINI_TOTAL, MS_PBIX, PBIP, Runner, copy_dir, fixture, mini_pbip, ms_expected, tmp_dir,
+};
 use pbi_ops::OpErrorCode;
+use pbi_session::{SequentialIdentifiers, SessionOptions};
 use serde_json::{Value, json};
 
 const SALES_TMDL: &str = "Mini.SemanticModel/definition/tables/Sales.tmdl";
@@ -540,4 +544,147 @@ async fn save_as_from_a_pbix_keeps_the_loaded_data() {
         .await;
     assert_eq!(reopened["tables"], json!(tables.len()), "{reopened}");
     assert_eq!(reopened["format"], "pbip");
+}
+
+/// The lineage tag of the measure `name` in the document's model.
+fn measure_tag(r: &Runner, doc: &str, name: &str) -> Option<String> {
+    let document = r.ws.get(doc).unwrap().session().document();
+    document
+        .model
+        .as_ref()
+        .unwrap()
+        .tables
+        .iter()
+        .flat_map(|t| &t.measures)
+        .find(|m| m.name == name)
+        .unwrap_or_else(|| panic!("no measure {name}"))
+        .lineage_tag
+        .clone()
+}
+
+/// New measures get a lineage tag from the session's identifier generator
+/// when the model uses lineage tags (ADR-0014); undo/redo, the save and a
+/// reopen keep it.
+#[tokio::test(flavor = "multi_thread")]
+async fn new_measures_get_lineage_tags_from_the_injected_generator() {
+    const ORDERS_TMDL: &str = "AcmeOutfitters.SemanticModel/definition/tables/Orders.tmdl";
+    const FIRST: &str = "0000acce-0000-4000-8000-000000000001";
+    let Some(acme) = fixture(ACME) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("tags-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let r = Runner::new();
+    r.ws.set_open_hook(Some(Arc::new(|o: &mut SessionOptions| {
+        o.identifiers = Some(Arc::new(SequentialIdentifiers::new(0xacce)));
+    })));
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    r.run(
+        "model.measure.create",
+        json!({"docId": doc, "table": "Orders", "name": "Tag Check", "expression": "COUNTROWS(Orders)"}),
+    )
+    .await;
+    assert_eq!(measure_tag(&r, &doc, "Tag Check").as_deref(), Some(FIRST));
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.redo", json!({"docId": doc})).await;
+    assert_eq!(
+        measure_tag(&r, &doc, "Tag Check").as_deref(),
+        Some(FIRST),
+        "redo keeps the tag"
+    );
+    r.run(
+        "doc.applyEdits",
+        json!({"docId": doc, "edits": [
+            {"type": "createMeasure", "table": "Orders", "name": "Tag Check A", "expression": "1"},
+            {"type": "createMeasure", "table": "Orders", "name": "Tag Check B", "expression": "2"}
+        ]}),
+    )
+    .await;
+    assert_eq!(
+        [
+            measure_tag(&r, &doc, "Tag Check A"),
+            measure_tag(&r, &doc, "Tag Check B")
+        ],
+        [
+            Some("0000acce-0000-4000-8000-000000000002".to_owned()),
+            Some("0000acce-0000-4000-8000-000000000003".to_owned())
+        ]
+    );
+
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(strings(&out["written"]), [ORDERS_TMDL], "{out}");
+    let orders = fs::read_to_string(dir.path().join(ORDERS_TMDL)).unwrap();
+    let at = orders
+        .find("\tmeasure 'Tag Check' = ")
+        .expect("the new measure");
+    let block = &orders[at..];
+    let block = &block[..block[1..]
+        .find("\n\tmeasure ")
+        .map_or(block.len(), |i| i + 1)];
+    assert!(
+        block.contains(&format!("\n\t\tlineageTag: {FIRST}\n")),
+        "{block}"
+    );
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(out["written"], json!([]), "saving again writes nothing");
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    assert_eq!(
+        measure_tag(&fresh, &reopened, "Tag Check").as_deref(),
+        Some(FIRST)
+    );
+}
+
+/// A model without lineage tags gets none (no format upgrade); otherwise the
+/// default generator gives random version 4 GUIDs.
+#[tokio::test(flavor = "multi_thread")]
+async fn lineage_tags_are_random_and_only_where_the_model_uses_them() {
+    let dir = tmp_dir("notags-");
+    let pbip = mini_pbip(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    r.run(
+        "model.measure.create",
+        json!({"docId": doc, "table": "Sales", "name": "Count", "expression": "COUNTROWS(Sales)"}),
+    )
+    .await;
+    assert_eq!(measure_tag(&r, &doc, "Count"), None);
+    r.run("doc.save", json!({"docId": doc})).await;
+    let sales = fs::read_to_string(dir.path().join(SALES_TMDL)).unwrap();
+    assert!(
+        sales.contains("measure Count") && !sales.contains("lineageTag"),
+        "{sales}"
+    );
+
+    let Some(acme) = fixture(PBIP) else {
+        eprintln!("SKIP: {PBIP} missing");
+        return;
+    };
+    let doc = r.open(json!({"path": acme, "autoRefresh": false})).await;
+    let mut tags = Vec::new();
+    for name in ["Tag Check A", "Tag Check B"] {
+        r.run(
+            "model.measure.create",
+            json!({"docId": doc, "table": "Orders", "name": name, "expression": "1"}),
+        )
+        .await;
+        tags.push(measure_tag(&r, &doc, name).unwrap());
+    }
+    assert_ne!(tags[0], tags[1]);
+    for tag in &tags {
+        let groups: Vec<usize> = tag.split('-').map(str::len).collect();
+        assert_eq!(groups, [8, 4, 4, 4, 12], "{tag}");
+        assert!(
+            tag.as_bytes()[14] == b'4'
+                && tag
+                    .chars()
+                    .all(|c| c == '-' || c.is_ascii_digit() || ('a'..='f').contains(&c)),
+            "a lowercase version 4 GUID: {tag}"
+        );
+    }
 }

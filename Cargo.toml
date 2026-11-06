@@ -51,6 +51,8 @@ chrono = { version = "0.4.45", default-features = false, features = ["std", "clo
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 walkdir = "2.5"
+# random lineage tags of new model objects (ADR-0014); already in the tree through DataFusion
+uuid = { version = "1.26", default-features = false, features = ["std", "v4"] }
 # read-only XML DOM (RDL, ABF backup header/log; no DTDs, node limit)
 roxmltree = "0.21.1"
 sha2 = "0.11.1"
