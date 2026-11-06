@@ -2371,3 +2371,191 @@ async fn exports_and_conversions_write_files() {
         "the Stores report"
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn column_and_table_delete_through_the_registry() {
+    let (Some(pbip), Some(map)) = (fixture(PBIP), fixture(BLOB_MAP)) else {
+        eprintln!("SKIP: {PBIP} missing");
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let number = |v: Value| v.as_f64().unwrap_or_else(|| panic!("not a number: {v}"));
+    let locations = |out: &Value| -> Vec<String> {
+        out["dependents"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|d| d["location"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    let fails = |dax: &str| {
+        let query = format!("EVALUATE ROW(\"n\", {dax})");
+        r.try_run("dax.query", json!({"docId": doc, "query": query}))
+    };
+
+    // A dry run lists what uses the column and changes nothing.
+    let dry = r
+        .run(
+            "model.column.delete",
+            json!({"docId": doc, "table": "orders", "column": "line cost", "dryRun": true}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &dry["changed"],
+            &dry["revision"],
+            &dry["dryRun"],
+            &dry["kind"],
+            &dry["table"],
+            &dry["name"],
+            &dry["removed"]
+        ),
+        (
+            &json!(false),
+            &json!(0),
+            &json!(true),
+            &json!("column"),
+            &json!("Orders"),
+            &json!("Line Cost"),
+            &json!([])
+        )
+    );
+    assert!(
+        locations(&dry).contains(&"measure 'Orders'[Total Cost]".to_owned()),
+        "{dry}"
+    );
+
+    // Data columns come from the query: refused, in a dry run too.
+    for dry_run in [true, false] {
+        let quantity =
+            json!({"docId": doc, "table": "Orders", "column": "Quantity", "dryRun": dry_run});
+        assert_eq!(
+            error_code(r.try_run("model.column.delete", quantity).await),
+            OpErrorCode::InvalidParams
+        );
+    }
+    let table_id = json!({"docId": doc, "columnId": dry["objectId"], "table": "Orders"});
+    assert_eq!(
+        error_code(r.try_run("model.column.delete", table_id).await),
+        OpErrorCode::InvalidParams
+    );
+
+    // Deleted, the column cannot be queried; undo brings its values back.
+    let large = "CALCULATE(COUNTROWS(Orders), Orders[Order Size] = \"Large\")";
+    let large_orders = number(scalar(&r, &doc, large).await);
+    assert!(large_orders > 0.0);
+    let deleted = r
+        .run(
+            "model.column.delete",
+            json!({"docId": doc, "table": "Orders", "column": "Order Size"}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &deleted["changed"],
+            &deleted["revision"],
+            &deleted["dryRun"],
+            &deleted["changedObjectIds"]
+        ),
+        (
+            &json!(true),
+            &json!(1),
+            &json!(false),
+            &json!([deleted["objectId"]])
+        )
+    );
+    assert!(fails(large).await.is_err());
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(number(scalar(&r, &doc, large).await), large_orders);
+
+    // A column and the measures that use it go in one undo step.
+    let margin = number(scalar(&r, &doc, "[Gross Margin]").await);
+    let group = r
+        .run(
+            "doc.applyEdits",
+            json!({"docId": doc, "edits": [
+                {"type": "deleteMeasure", "table": "Orders", "measure": "Gross Margin"},
+                {"type": "deleteMeasure", "table": "Orders", "measure": "Total Cost"},
+                {"type": "deleteColumn", "table": "Orders", "column": "Line Cost"}
+            ]}),
+        )
+        .await;
+    assert_eq!(group["changedObjectIds"].as_array().unwrap().len(), 3);
+    assert!(fails("[Gross Margin]").await.is_err());
+    assert!(fails("SUM(Orders[Line Cost])").await.is_err());
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(number(scalar(&r, &doc, "[Gross Margin]").await), margin);
+
+    // A table goes with its relationships and role row filters.
+    let sales = number(scalar(&r, &doc, "[Total Sales]").await);
+    let stores_rows = number(scalar(&r, &doc, "COUNTROWS(Stores)").await);
+    let relationships = r.run("model.relationships", json!({"docId": doc})).await;
+    let count = relationships["relationships"].as_array().unwrap().len();
+    let dry = r
+        .run(
+            "model.table.delete",
+            json!({"docId": doc, "table": "Stores", "dryRun": true}),
+        )
+        .await;
+    assert_eq!(
+        (&dry["changed"], &dry["kind"], &dry["removed"]),
+        (
+            &json!(false),
+            &json!("table"),
+            &json!([
+                "relationship 'Orders'[Store ID] → 'Stores'[Store ID]",
+                "relationship 'Targets'[Region] → 'Stores'[Region]",
+                "row filter of role 'Region West'",
+                "row filter of role 'Store Manager'"
+            ])
+        )
+    );
+    // Its own measures and columns go with it; others' references break.
+    assert!(
+        locations(&dry)
+            .iter()
+            .all(|l| !l.starts_with("measure 'Stores'") && !l.starts_with("column 'Stores'")),
+        "{dry}"
+    );
+    assert!(
+        locations(&dry).iter().any(|l| l.starts_with("visual ")),
+        "{dry}"
+    );
+    let deleted = r
+        .run(
+            "model.table.delete",
+            json!({"docId": doc, "table": "Stores"}),
+        )
+        .await;
+    assert_eq!(
+        (&deleted["changed"], &deleted["revision"]),
+        (&json!(true), &json!(5))
+    );
+    let tables = r.run("model.tables", json!({"docId": doc})).await;
+    assert!(
+        tables["tables"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|t| t["name"] != "Stores"),
+        "{tables}"
+    );
+    let after = r.run("model.relationships", json!({"docId": doc})).await;
+    assert_eq!(after["relationships"].as_array().unwrap().len(), count - 2);
+    assert!(fails("COUNTROWS(Stores)").await.is_err());
+    assert_eq!(number(scalar(&r, &doc, "[Total Sales]").await), sales);
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(
+        number(scalar(&r, &doc, "COUNTROWS(Stores)").await),
+        stores_rows
+    );
+    let smallest_region = "MINX(VALUES(Stores[Region]), CALCULATE([Total Sales]))";
+    assert!(number(scalar(&r, &doc, smallest_region).await) < sales);
+    let restored = r.run("model.relationships", json!({"docId": doc})).await;
+    assert_eq!(restored["relationships"], relationships["relationships"]);
+}

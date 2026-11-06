@@ -23,6 +23,7 @@ use crate::edit::{
 use crate::error::SessionError;
 use crate::identifiers::{IdentifierGenerator, RandomIdentifiers, lineage_tags};
 use crate::options::{SessionLimits, SessionOptions};
+use crate::removed::{DataPlan, RemovedData};
 use crate::report::TableRefresh;
 use crate::security::{ActiveView, ViewAs};
 
@@ -41,7 +42,10 @@ struct ModelEdit {
     /// The new session model (document model plus active derived columns).
     model: Arc<Model>,
     derived: Vec<DerivedEntry>,
-    renames: ModelRenames,
+    /// The per-table refresh results after the edit (renamed, without the
+    /// deleted tables and columns).
+    tables: HashMap<String, TableRefresh>,
+    removed: RemovedData,
 }
 
 /// Mutable state: the published engine, the session model, the derived
@@ -57,6 +61,8 @@ struct State {
     derived: Vec<DerivedEntry>,
     /// Last refresh / load result per table (by case-folded name).
     tables: HashMap<String, TableRefresh>,
+    /// Data of deleted tables and columns, to undo the deletes.
+    removed: RemovedData,
     /// "View as": the restricted engine queries read instead of `engine`.
     view: Option<ActiveView>,
 }
@@ -258,6 +264,7 @@ impl Session {
                     model,
                     derived: Vec::new(),
                     tables: HashMap::new(),
+                    removed: RemovedData::default(),
                     view: None,
                 }),
                 refresh_lock: tokio::sync::Mutex::new(()),
@@ -578,15 +585,20 @@ impl Session {
         let renames = ModelRenames::between(old, new);
         let state = self.read();
         renames.check_derived(&state.derived)?;
+        let mut tables = state.tables.clone();
+        let mut removed = state.removed.clone();
         let engine = if structure_changed(old, new) {
+            let plan = DataPlan::between(old, new, &state.removed, state.engine.storage());
             let mut engine = state.engine.clone();
-            engine
-                .sync_model_with_renames(new, &renames.storage())
+            let detached = engine
+                .sync_model_with_edits(new, plan.edits(&state.removed, renames.storage()))
                 .map_err(|e| {
                     CommandError::Rejected(format!("the loaded data cannot follow this edit: {e}"))
                 })?;
+            removed = plan.apply(&state.removed, detached, &mut tables, &renames);
             Some(engine)
         } else {
+            rename_results(&mut tables, &renames);
             None
         };
         let mut derived = state.derived.clone();
@@ -603,7 +615,8 @@ impl Session {
                 engine,
                 model: Arc::new(model),
                 derived,
-                renames,
+                tables,
+                removed,
             }),
         })
     }
@@ -630,7 +643,8 @@ impl Session {
             }
             state.model = edit.model;
             state.derived = edit.derived;
-            rename_results(&mut state.tables, &edit.renames);
+            state.tables = edit.tables;
+            state.removed = edit.removed;
         }
         state.document_revision = revision;
         *opened = Arc::new(OpenedState {

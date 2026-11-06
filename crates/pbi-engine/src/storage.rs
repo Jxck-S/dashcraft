@@ -458,6 +458,90 @@ impl TableData {
         Ok(out)
     }
 
+    /// A copy without the column at `index`, and that column.
+    fn without_column(&self, index: usize) -> Result<(Self, DetachedColumn)> {
+        let schema = self.batch.schema();
+        let (Some(field), Some(array), Some(encoded)) = (
+            schema.fields().get(index),
+            self.batch.columns().get(index),
+            self.encoded.get(index),
+        ) else {
+            return Err(EngineError::InvalidArgument(format!(
+                "column index {index} out of range for table '{}'",
+                self.name
+            )));
+        };
+        let column = DetachedColumn {
+            index,
+            field: field.as_ref().clone(),
+            array: Arc::clone(array),
+            encoded: encoded.clone(),
+        };
+        let keep = |i: &usize| *i != index;
+        let fields: Vec<Field> = (0..schema.fields().len())
+            .filter(keep)
+            .filter_map(|i| schema.fields().get(i).map(|f| f.as_ref().clone()))
+            .collect();
+        let columns: Vec<ArrayRef> = (0..self.batch.num_columns())
+            .filter(keep)
+            .filter_map(|i| self.batch.columns().get(i).cloned())
+            .collect();
+        let encoded = (0..self.encoded.len())
+            .filter(keep)
+            .filter_map(|i| self.encoded.get(i).cloned())
+            .collect();
+        let out = self.rebuilt(fields, columns, encoded)?;
+        Ok((out, column))
+    }
+
+    /// A copy with a detached column put back at its old position (or last),
+    /// named `name`.
+    fn with_detached(&self, name: &str, column: DetachedColumn) -> Result<Self> {
+        if self.has_column(name) {
+            return Err(EngineError::DuplicateColumn {
+                table: self.name.clone(),
+                column: name.to_owned(),
+            });
+        }
+        if column.array.len() != self.row_count() {
+            return Err(EngineError::RowCountMismatch {
+                table: self.name.clone(),
+                column: name.to_owned(),
+                expected: self.row_count(),
+                actual: column.array.len(),
+            });
+        }
+        let schema = self.batch.schema();
+        let mut fields: Vec<Field> = schema.fields().iter().map(|f| f.as_ref().clone()).collect();
+        let mut columns = self.batch.columns().to_vec();
+        let mut encoded = self.encoded.clone();
+        let at = column.index.min(fields.len());
+        fields.insert(at, column.field.with_name(name));
+        columns.insert(at, column.array);
+        encoded.insert(at, column.encoded);
+        self.rebuilt(fields, columns, encoded)
+    }
+
+    /// A copy with new fields, columns and encodings (same name, row count,
+    /// schema metadata and loaded flag).
+    fn rebuilt(
+        &self,
+        fields: Vec<Field>,
+        columns: Vec<ArrayRef>,
+        encoded: Vec<OnceLock<Arc<EncodedColumn>>>,
+    ) -> Result<Self> {
+        let schema = self.batch.schema();
+        let options = RecordBatchOptions::new().with_row_count(Some(self.row_count()));
+        let batch = RecordBatch::try_new_with_options(
+            Arc::new(Schema::new_with_metadata(fields, schema.metadata().clone())),
+            columns,
+            &options,
+        )?;
+        let mut out = Self::with_flag(self.name.clone(), batch, self.loaded)?;
+        out.encoded = encoded;
+        Ok(out)
+    }
+
     /// A copy under another name (same data and cached encodings).
     fn renamed(&self, name: &str) -> Self {
         Self {
@@ -513,6 +597,52 @@ pub enum StorageRename {
         old: String,
         new: String,
     },
+}
+
+/// A stored table or column, by name ([`Storage::detach`],
+/// [`Storage::attach`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StoredObject {
+    Table(String),
+    Column { table: String, column: String },
+}
+
+/// A table or column taken out of [`Storage`] with its data and cached
+/// encodings ([`Storage::detach`]), to put back unchanged
+/// ([`Storage::attach`]), e.g. when the delete of a model object is undone.
+/// Cloning is cheap (shared arrays).
+#[derive(Debug, Clone)]
+pub struct Detached(DetachedData);
+
+#[derive(Debug, Clone)]
+enum DetachedData {
+    Table { index: usize, data: Arc<TableData> },
+    Column(DetachedColumn),
+}
+
+#[derive(Debug, Clone)]
+struct DetachedColumn {
+    index: usize,
+    field: Field,
+    array: ArrayRef,
+    encoded: OnceLock<Arc<EncodedColumn>>,
+}
+
+impl Detached {
+    /// Rows of the detached table or column.
+    #[must_use]
+    pub fn rows(&self) -> usize {
+        match &self.0 {
+            DetachedData::Table { data, .. } => data.row_count(),
+            DetachedData::Column(c) => c.array.len(),
+        }
+    }
+
+    /// `true` for a table, `false` for a column.
+    #[must_use]
+    pub fn is_table(&self) -> bool {
+        matches!(self.0, DetachedData::Table { .. })
+    }
 }
 
 /// All tables of a model, keyed by case-insensitive name. Cloning is cheap
@@ -656,6 +786,83 @@ impl Storage {
         Ok(())
     }
 
+    /// Takes a table or column out of storage, keeping its data and cached
+    /// encodings; `None` if it is not stored.
+    ///
+    /// # Errors
+    /// Never in practice (an inconsistent column index).
+    pub fn detach(&mut self, object: &StoredObject) -> Result<Option<Detached>> {
+        match object {
+            StoredObject::Table(name) => {
+                let key = name_key(name);
+                let Some(index) = self.tables.get_index_of(&key) else {
+                    return Ok(None);
+                };
+                Ok(self
+                    .tables
+                    .shift_remove(&key)
+                    .map(|data| Detached(DetachedData::Table { index, data })))
+            }
+            StoredObject::Column { table, column } => {
+                let key = name_key(table);
+                let Some(data) = self.tables.get(&key) else {
+                    return Ok(None);
+                };
+                let Some(index) = data.column_index(column) else {
+                    return Ok(None);
+                };
+                let (rest, detached) = data.without_column(index)?;
+                self.tables.insert(key, Arc::new(rest));
+                Ok(Some(Detached(DetachedData::Column(detached))))
+            }
+        }
+    }
+
+    /// Puts a detached table or column back under the name `object` (its
+    /// name now) at its old position, or last when there are fewer tables or
+    /// columns now.
+    ///
+    /// # Errors
+    /// The name is taken, a column's table is not stored or has another row
+    /// count, or `object` and `detached` are not the same kind; nothing
+    /// changes.
+    pub fn attach(&mut self, object: &StoredObject, detached: Detached) -> Result<()> {
+        match (object, detached.0) {
+            (StoredObject::Table(name), DetachedData::Table { index, data }) => {
+                let key = name_key(name);
+                if self.tables.contains_key(&key) {
+                    return Err(EngineError::DuplicateTable(name.clone()));
+                }
+                let data = if data.name == *name {
+                    data
+                } else {
+                    Arc::new(data.renamed(name))
+                };
+                let at = index.min(self.tables.len());
+                self.tables.shift_insert(at, key, data);
+                Ok(())
+            }
+            (StoredObject::Column { table, column }, DetachedData::Column(detached)) => {
+                let key = name_key(table);
+                let data = self
+                    .tables
+                    .get(&key)
+                    .ok_or_else(|| EngineError::TableNotFound(table.clone()))?;
+                let updated = data.with_detached(column, detached)?;
+                self.tables.insert(key, Arc::new(updated));
+                Ok(())
+            }
+            (object, _) => Err(EngineError::InvalidArgument(format!(
+                "cannot attach a detached {} as {object:?}",
+                if object_is_table(object) {
+                    "column"
+                } else {
+                    "table"
+                }
+            ))),
+        }
+    }
+
     pub fn contains(&self, name: &str) -> bool {
         self.tables.contains_key(&name_key(name))
     }
@@ -692,6 +899,10 @@ impl Storage {
     pub fn encoded(&self, table: &str, column: &str) -> Result<Arc<EncodedColumn>> {
         self.table(table)?.encoded(column)
     }
+}
+
+fn object_is_table(object: &StoredObject) -> bool {
+    matches!(object, StoredObject::Table(_))
 }
 
 #[cfg(test)]
@@ -854,6 +1065,63 @@ mod tests {
             s.table("C").unwrap().column_names().collect::<Vec<_>>(),
             ["key", "N"]
         );
+    }
+
+    #[test]
+    fn detach_and_attach_restore_tables_and_columns_in_place() {
+        let mut s = Storage::new();
+        s.load_table("A", batch()).unwrap();
+        s.load_table("B", batch()).unwrap();
+        s.load_table("C", batch()).unwrap();
+        assert_eq!(s.encoded("A", "Key").unwrap().cardinality(), 3);
+        let table = StoredObject::Table("b".into());
+        let column = StoredObject::Column {
+            table: "A".into(),
+            column: "key".into(),
+        };
+        let b = s.detach(&table).unwrap().unwrap();
+        let key = s.detach(&column).unwrap().unwrap();
+        assert!(b.is_table() && !key.is_table());
+        assert_eq!((b.rows(), key.rows()), (4, 4));
+        assert!(s.detach(&table).unwrap().is_none());
+        assert_eq!(s.table_names().collect::<Vec<_>>(), ["A", "C"]);
+        assert_eq!(
+            s.table("A").unwrap().column_names().collect::<Vec<_>>(),
+            ["N"]
+        );
+        assert!(matches!(
+            s.attach(&table, key.clone()),
+            Err(EngineError::InvalidArgument(_))
+        ));
+        s.attach(&StoredObject::Table("B2".into()), b).unwrap();
+        s.attach(&column, key).unwrap();
+        assert_eq!(s.table_names().collect::<Vec<_>>(), ["A", "B2", "C"]);
+        let a = s.table("A").unwrap();
+        assert_eq!(a.column_names().collect::<Vec<_>>(), ["key", "N"]);
+        assert_eq!(a.encoded("Key").unwrap().cardinality(), 3);
+        assert_eq!(s.value_at("A", "Key", 3).unwrap(), Value::from("b"));
+        assert_eq!(s.value_at("B2", "N", 3).unwrap(), Value::Integer(4));
+        let n = s
+            .detach(&StoredObject::Column {
+                table: "C".into(),
+                column: "N".into(),
+            })
+            .unwrap()
+            .unwrap();
+        assert!(matches!(
+            s.attach(&column, n.clone()),
+            Err(EngineError::DuplicateColumn { .. })
+        ));
+        s.restrict_table("A", &crate::rowset::RowSet::from_rows(4, [0, 1]))
+            .unwrap();
+        let other = StoredObject::Column {
+            table: "A".into(),
+            column: "M".into(),
+        };
+        assert!(matches!(
+            s.attach(&other, n),
+            Err(EngineError::RowCountMismatch { .. })
+        ));
     }
 
     #[test]

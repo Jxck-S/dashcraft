@@ -111,7 +111,7 @@ pub mod sql;
 pub mod storage;
 pub mod value;
 
-pub use engine::{Engine, EngineSnapshot};
+pub use engine::{Engine, EngineSnapshot, StorageEdits};
 pub use error::{EngineError, Result};
 pub use filter::{
     ColumnFilter, Filter, FilterContext, FilterKind, Predicate, TableFilter, VisibleRows,
@@ -124,6 +124,6 @@ pub use relationships::{
 pub use rowset::RowSet;
 pub use security::{RoleFilter, SecurityContext, SecurityRole, UserIdentity};
 pub use sql::{PageRequest, ROW_ID_COLUMN, SortSpec};
-pub use storage::{EncodedColumn, Storage, StorageRename, TableData};
+pub use storage::{Detached, EncodedColumn, Storage, StorageRename, StoredObject, TableData};
 pub use tokio_util::sync::CancellationToken;
 pub use value::{Value, ValueKey, ValueType, arrow_type};

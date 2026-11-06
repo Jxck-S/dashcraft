@@ -853,3 +853,103 @@ async fn relationship_updates_save_and_reopen() {
         "undoing the updates saves the original bytes"
     );
 }
+
+/// Deleting a calculated column and a table saves as removed TMDL: the
+/// column's block leaves its table file; the table's file is deleted with
+/// its `ref table` line, relationships and role row filters. A reopen no
+/// longer shows them, and undoing both saves the original project again.
+#[tokio::test(flavor = "multi_thread")]
+async fn column_and_table_deletes_save_and_reopen() {
+    const DEF: &str = "AcmeOutfitters.SemanticModel/definition";
+    let Some(acme) = fixture(ACME) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("deletes-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let before = files(dir.path());
+    let text = |f: &str| String::from_utf8(before[&format!("{DEF}/{f}")].clone()).unwrap();
+    let saved = |f: &str| fs::read_to_string(dir.path().join(DEF).join(f)).unwrap();
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    r.run(
+        "model.column.delete",
+        json!({"docId": doc, "table": "Orders", "column": "Order Size"}),
+    )
+    .await;
+    r.run(
+        "model.table.delete",
+        json!({"docId": doc, "table": "Stores"}),
+    )
+    .await;
+
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    let model_files = [
+        "model.tmdl",
+        "relationships.tmdl",
+        "roles/Region West.tmdl",
+        "roles/Store Manager.tmdl",
+        "tables/Orders.tmdl",
+    ]
+    .map(|f| format!("{DEF}/{f}"));
+    assert_eq!(sorted(&out["written"]), model_files, "{out}");
+    assert_eq!(
+        strings(&out["deleted"]),
+        [format!("{DEF}/tables/Stores.tmdl")],
+        "{out}"
+    );
+    assert!(!dir.path().join(DEF).join("tables/Stores.tmdl").exists());
+    let orders = text("tables/Orders.tmdl");
+    let start = orders.find("\tcolumn 'Order Size'").unwrap();
+    let end = orders.find("\t/// Context transition").unwrap();
+    assert_eq!(
+        saved("tables/Orders.tmdl"),
+        format!("{}{}", &orders[..start], &orders[end..])
+    );
+    assert_eq!(
+        saved("model.tmdl"),
+        text("model.tmdl").replace("ref table Stores\n", "")
+    );
+    let relationships = saved("relationships.tmdl");
+    assert!(!relationships.contains("Stores"), "{relationships}");
+    assert_eq!(relationships.matches("\nrelationship ").count() + 1, 6);
+    for role in ["roles/Region West.tmdl", "roles/Store Manager.tmdl"] {
+        let saved = saved(role);
+        assert!(
+            !saved.contains("tablePermission") && saved.contains("modelPermission: read"),
+            "{saved}"
+        );
+    }
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    let tables = fresh.run("model.tables", json!({"docId": reopened})).await;
+    let names: Vec<&str> = tables["tables"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names.len(), 10);
+    assert!(!names.contains(&"Stores"), "{names:?}");
+    let orders = tables["tables"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["name"] == "Orders")
+        .unwrap();
+    assert!(!orders.to_string().contains("Order Size"), "{orders}");
+    assert!(orders.to_string().contains("Is Returned"), "{orders}");
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.undo", json!({"docId": doc})).await;
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(sorted(&out["written"]).len(), 6, "{out}");
+    assert!(
+        files(dir.path()) == before,
+        "undoing both deletes saves the original project"
+    );
+}

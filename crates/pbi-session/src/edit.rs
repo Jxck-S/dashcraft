@@ -27,7 +27,6 @@ use pbi_model::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::dependents::{Dependent, Dependents};
 use crate::derived::{DerivedColumn, DerivedEntry};
 use crate::report::TableRefresh;
 
@@ -144,7 +143,7 @@ pub fn preview_rename(
         old_name: plan.old.clone(),
         new_name: plan.new.clone(),
         rewrites: rewritten.rewrites,
-        warnings: rewritten.warnings,
+        warnings: rewritten.warnings.into_iter().map(|(_, w)| w).collect(),
     })
 }
 
@@ -163,7 +162,7 @@ struct Plan {
     other_column_named_old: bool,
     /// Measure rename: some table has a column with the old name.
     column_named_old: bool,
-    /// Finding references ([`dax_references`]), not renaming: warnings say
+    /// Finding references ([`dax_scan`]), not renaming: warnings say
     /// what may refer to the object instead of what is not rewritten.
     probe: bool,
 }
@@ -279,14 +278,24 @@ impl Plan {
             if self.kind == RenameKind::Table && table.id != self.table_id {
                 for p in &table.partitions {
                     if let PartitionSource::M { expression } = &p.source {
-                        self.warn_m(&format!("table '{}'", table.name), expression, &mut out);
+                        self.warn_m(
+                            &format!("table '{}'", table.name),
+                            expression,
+                            table.id,
+                            &mut out,
+                        );
                     }
                 }
             }
         }
         if self.kind == RenameKind::Table {
             for e in &model.expressions {
-                self.warn_m(&format!("expression '{}'", e.name), &e.expression, &mut out);
+                self.warn_m(
+                    &format!("expression '{}'", e.name),
+                    &e.expression,
+                    ObjectId::UNASSIGNED,
+                    &mut out,
+                );
             }
         }
         for role in &model.roles {
@@ -377,13 +386,14 @@ impl Plan {
             Err(_) => {
                 if self.probe {
                     out.unparsed.push(DaxText {
+                        owner,
                         location: location.to_owned(),
                         property: property.to_owned(),
                         text: text.clone(),
                     });
                 }
                 if text.to_lowercase().contains(&self.old.to_lowercase()) {
-                    out.warnings.push(if self.probe {
+                    let warning = if self.probe {
                         format!(
                             "{location} {property} does not parse and mentions '{}'; it may refer to it",
                             self.old
@@ -393,7 +403,8 @@ impl Plan {
                             "{location} {property} does not parse; references to '{}' in it were not rewritten",
                             self.old
                         )
-                    });
+                    };
+                    out.warnings.push((owner, warning));
                 }
                 return false;
             }
@@ -403,7 +414,7 @@ impl Plan {
             && let Ok(Some(all)) = rename_references(text, &self.change(true))
             && Some(&all) != rewritten.as_ref()
         {
-            out.warnings.push(if self.probe {
+            let warning = if self.probe {
                 format!(
                     "{location} {property}: unqualified [{}] references may refer to it or to another object",
                     self.old
@@ -413,12 +424,14 @@ impl Plan {
                     "{location} {property}: unqualified [{}] references were not rewritten because they may refer to another object",
                     self.old
                 )
-            });
+            };
+            out.warnings.push((owner, warning));
         }
         let Some(after) = rewritten else {
             return false;
         };
         let before = mem::replace(text, after.clone());
+        out.owners.push(owner);
         out.rewrites.push(DaxRewrite {
             location: location.to_owned(),
             property: property.to_owned(),
@@ -428,22 +441,23 @@ impl Plan {
         true
     }
 
-    fn warn_m(&self, location: &str, expression: &str, out: &mut Rewritten) {
+    fn warn_m(&self, location: &str, expression: &str, owner: ObjectId, out: &mut Rewritten) {
         if m_mentions(expression, &self.old) {
-            out.warnings.push(if self.probe {
+            let warning = if self.probe {
                 format!("the M query of {location} refers to '{}'", self.old)
             } else {
                 format!(
                     "the M query of {location} refers to '{}'; M references are not rewritten yet",
                     self.old
                 )
-            });
+            };
+            out.warnings.push((owner, warning));
         }
     }
 }
 
 /// A DAX expression kept outside the document (a session derived column)
-/// that [`dax_references`] searches too.
+/// that [`dax_scan`] searches too.
 pub(crate) struct ExtraDax<'a> {
     /// The expression's home table.
     pub table: &'a str,
@@ -452,33 +466,11 @@ pub(crate) struct ExtraDax<'a> {
     pub text: &'a str,
 }
 
-/// The DAX expressions of `doc` (and `extra`) that refer to table, column or
-/// measure `object`, plus warnings about references that cannot be confirmed
-/// (expressions that do not parse, ambiguous unqualified references, M
-/// queries naming a table).
-pub(crate) fn dax_references(
-    doc: &Document,
-    object: ObjectId,
-    extra: &[ExtraDax<'_>],
-) -> Result<Dependents, CommandError> {
-    let scan = dax_scan(doc, object, extra)?;
-    let dependents = scan
-        .references
-        .into_iter()
-        .map(|r| Dependent {
-            location: r.location,
-            property: r.property,
-        })
-        .collect();
-    Ok(Dependents {
-        dependents,
-        warnings: scan.warnings,
-    })
-}
-
 /// One DAX expression of the document, where it lives and its text.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct DaxText {
+    /// The expression's home table (`UNASSIGNED` when unknown).
+    pub owner: ObjectId,
     pub location: String,
     pub property: String,
     pub text: String,
@@ -488,13 +480,18 @@ pub(crate) struct DaxText {
 pub(crate) struct DaxScan {
     /// The expressions that refer to the object, with their text.
     pub references: Vec<DaxText>,
-    pub warnings: Vec<String>,
+    /// With the home table of the expression they are about (`UNASSIGNED`
+    /// for M expressions).
+    pub warnings: Vec<(ObjectId, String)>,
     /// Every expression that does not parse.
     pub unparsed: Vec<DaxText>,
 }
 
-/// [`dax_references`] with the expression texts, plus every expression
-/// that does not parse.
+/// The DAX expressions of `doc` (and `extra`) that refer to table, column or
+/// measure `object`, with their texts and home tables; warnings about
+/// references that cannot be confirmed (expressions that do not parse,
+/// ambiguous unqualified references, M queries naming a table); and every
+/// expression that does not parse.
 pub(crate) fn dax_scan(
     doc: &Document,
     object: ObjectId,
@@ -521,7 +518,9 @@ pub(crate) fn dax_scan(
     let references = out
         .rewrites
         .into_iter()
-        .map(|r| DaxText {
+        .zip(out.owners)
+        .map(|(r, owner)| DaxText {
+            owner,
             location: r.location,
             property: r.property,
             text: r.before,
@@ -538,7 +537,10 @@ pub(crate) fn dax_scan(
 struct Rewritten {
     items: Vec<Snapshot>,
     rewrites: Vec<DaxRewrite>,
-    warnings: Vec<String>,
+    /// The home table of each rewrite.
+    owners: Vec<ObjectId>,
+    /// With the home table of the expression they are about.
+    warnings: Vec<(ObjectId, String)>,
     /// Probe only: the expressions that do not parse.
     unparsed: Vec<DaxText>,
 }

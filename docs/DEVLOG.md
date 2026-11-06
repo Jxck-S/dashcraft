@@ -7,6 +7,32 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 calculated column and table delete (M6.5)
+
+- **What:** `pbi-model` gets `DeleteColumn` (calculated columns only; refuses data, calculated
+  table and row-number columns and columns used by a relationship, hierarchy level or sort-by
+  column) and `DeleteTable` (cascades the table's relationships and the roles' table permissions
+  on it), both with exact inverses that restore everything in place with the same ids.
+  `pbi-engine` can detach a stored table or column and attach it again with its data and cached
+  encodings (`Storage::detach`/`attach`, `Engine::sync_model_with_edits`). `pbi-session` takes a
+  deleted object's data out of the engine and keeps it by object id (`removed.rs`), so the object
+  can no longer be queried and undo restores its data without a refresh; refresh results follow;
+  `delete_dependents` leaves out the DAX of a deleted table itself. `pbi-ops` adds
+  `model.column.delete`, `model.table.delete` and the `deleteColumn`/`deleteTable` edits
+  (`dryRun`, dependents, `removed`, warnings).
+- **Why:** M6.5 core editing commands: column and table delete. Before the fix in the session,
+  a deleted column stayed queryable because the engine kept its stored data.
+- **Numbers:** 8 new tests (3 `pbi-model` commands; `pbi-engine` detach/attach; `pbi-session`
+  delete dependents and `robustness.rs::deletes_take_the_data_out_and_undo_puts_it_back`;
+  `e2e.rs::column_and_table_delete_through_the_registry`: refusals, a deleted column fails in
+  DAX and undo gives the same values, a column with its two measures in one group, Stores with
+  its 2 relationships and 2 role filters; `save.rs::column_and_table_deletes_save_and_reopen`:
+  5 files written, `Stores.tmdl` deleted, reopen without them, undo saves the original project
+  byte for byte). Registry 65 → 67 commands.
+- **Still open:** table and column create (type inference, recalculation of the new object only),
+  data column delete with M editing, hierarchy create and delete; Desktop not yet checked on a
+  saved delete (GT-6).
+
 ### M6 relationship update (M6.5) and GT-6 relationship checks
 
 - **What:** `pbi-model` gets `SetRelationshipProperties` (cardinalities, cross-filter and security
