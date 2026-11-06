@@ -32,7 +32,25 @@ Global `-v`/`-q` control the logs on stderr. stdout carries MCP messages only.
 - **No code execution.** Embedded scripts, R/Python visuals, custom visuals (`.pbiviz`) and connectors (`.mez`/`.pqx`) are never executed, only listed. DAX and M are evaluated by DashCraft's own engines.
 - **Bounded resources.** At most 32 open documents per session, a bounded number of concurrent and pending calls (`busy` beyond), 16 MiB per message line, and tool result text capped at 1 MiB.
 - **Session state.** Documents opened with `doc_open` stay open for the life of the process (one workspace per server); `doc_close` frees them. End of input cancels the running calls and exits.
-- **Saving edits.** Edit tools change the document in memory only; `doc_save` writes them into the opened PBIP project, and only when the project folder is inside a `--write-root` (`pathDenied` otherwise). Files changed on disk since the open are a `conflict` unless the agent passes `"overwrite": true`, so an agent cannot silently replace another editor's work.
+- **Saving edits.** Edit tools change the document in memory only; `doc_save` writes them into the opened PBIP project, and only when the project folder is inside a `--write-root` (`pathDenied` otherwise, and nothing is written). `doc_saveAs` writes a new PBIP project, again only inside a write root. Files changed on disk since the open are a `conflict` unless the agent passes `"overwrite": true`, so an agent cannot silently replace another editor's work.
+
+## Editing
+
+The `edit` category holds the document editing tools ([ADR-0012](adr/0012-revisioned-document-state.md)); expose only them and the workspace tools with `--allow edit --allow workspace`, and add `--write-root` so the agent can save:
+
+| Tools | What |
+|---|---|
+| `model_measure_create`, `model_measure_update`, `model_measure_delete`, `model_setMeasureExpression` | Measures (expression, format string, display folder, description) |
+| `model_column_create`, `model_column_delete`, `model_table_create`, `model_table_delete` | Calculated columns and tables (a delete reports its dependants) |
+| `model_relationship_create`, `model_relationship_update`, `model_relationship_delete` | Relationships |
+| `model_hierarchy_create`, `model_hierarchy_delete` | Hierarchies |
+| `model_object_rename`, `model_object_setDescription` | DAX-aware renames (references rewritten) and descriptions |
+| `report_visual_move`, `report_visual_resize` | Visual position and size |
+| `doc_applyEdits` | Several edits as one undo step (all or nothing) |
+| `doc_undo`, `doc_redo`, `doc_history` | History and the dirty flag |
+| `doc_save`, `doc_saveAs` | Write the edits (only inside a write root, see above) |
+
+Every committed edit is logged as a `doc/changed` message (see [Protocol coverage](#protocol-coverage)); a failed or no-op edit changes nothing. [COMMANDS.md](COMMANDS.md#edit) has each tool's parameters.
 
 ## Tools
 
