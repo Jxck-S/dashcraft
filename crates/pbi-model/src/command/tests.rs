@@ -3,7 +3,7 @@ use pretty_assertions::assert_eq;
 use super::*;
 use crate::query::{Condition, FieldExpr};
 use crate::report::Position;
-use crate::semantic::{ColumnKind, ColumnRef, Measure, Relationship};
+use crate::semantic::{Column, ColumnKind, ColumnRef, DataType, Measure, Relationship};
 use crate::test_support::sample_document;
 
 fn table_id(doc: &Document, name: &str) -> ObjectId {
@@ -819,6 +819,86 @@ fn delete_column_refuses_query_columns_and_structural_uses() {
     assert!(reject(&mut doc, "Stores", "Region Rank").contains("the sort order of Stores[Region]"));
 }
 
+#[test]
+fn create_column_round_trips_and_checks() {
+    let mut doc = sample_document();
+    let original = doc.clone();
+    let stores = table_id(&doc, "Stores");
+    let column = |name: &str| Column::calculated(name, DataType::String, "Stores[Region] & \"!\"");
+    let id = CreateColumn::created_id(&doc);
+    let mut history = History::new();
+    let events = history
+        .execute(
+            &mut doc,
+            CreateColumn {
+                table: stores,
+                column: column("Shout"),
+                index: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(events, [ChangeEvent::ObjectAdded { id }]);
+    assert_eq!(history.undo_label(), Some("Create column 'Shout'"));
+    let model = doc.model.as_ref().unwrap();
+    let created = model.tables[0].columns.last().unwrap();
+    assert_eq!(
+        (created.id, created.name.as_str(), created.expression()),
+        (id, "Shout", Some("Stores[Region] & \"!\""))
+    );
+    let after = doc.clone();
+    history.undo(&mut doc).unwrap();
+    assert_same_content(&doc, &original);
+    history.redo(&mut doc).unwrap();
+    assert_eq!(doc, after, "redo restores the column with the same ID");
+
+    let before = doc.clone();
+    let measure = measure_id(&doc, "Stores", "Store Count");
+    let mut refuse = |command: CreateColumn| {
+        let error = command.apply(&mut doc).unwrap_err();
+        assert_eq!(doc, before);
+        error
+    };
+    assert!(matches!(
+        refuse(CreateColumn {
+            table: stores,
+            column: column("region"),
+            index: None
+        }),
+        CommandError::NameConflict { .. }
+    ));
+    assert!(matches!(
+        refuse(CreateColumn {
+            table: stores,
+            column: column("Store Count"),
+            index: None
+        }),
+        CommandError::NameConflict { .. }
+    ));
+    assert_eq!(
+        refuse(CreateColumn {
+            table: stores,
+            column: column(" "),
+            index: None
+        }),
+        CommandError::InvalidName(" ".into())
+    );
+    let CommandError::Rejected(message) = refuse(CreateColumn {
+        table: stores,
+        column: Column::data("Raw", DataType::String),
+        index: None,
+    }) else {
+        panic!("a data column should be rejected");
+    };
+    assert!(message.contains("only calculated columns"), "{message}");
+    assert!(matches!(
+        refuse(CreateColumn {
+            table: measure,
+            column: column("X"),
+            index: None
+        }),
+        CommandError::WrongKind { .. }
+    ));
+}
 #[test]
 fn delete_table_removes_its_relationships_and_role_filters() {
     let mut doc = sample_document();

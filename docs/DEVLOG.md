@@ -7,6 +7,31 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 calculated column create (M6.5)
+
+- **What:** `pbi-model` gets `CreateColumn` (calculated columns only; refuses calculation groups,
+  invalid names and names taken by a column or measure of the table; inverse `DeleteColumn`).
+  `pbi-session` computes a created column at once over the loaded data in the same publication
+  as the edit (`created.rs`; redo re-attaches the kept data instead, a table without rows gets
+  it at the next refresh) and infers a new column's data type from its values
+  (`Session::infer_column_type`). `pbi-ops` adds `model.column.create` and the `createColumn`
+  edit: data type inferred unless `dataType` is given, Desktop's defaults (random `lineageTag`,
+  sum for numeric columns, `SummarizationSetBy` annotation).
+- **Why:** M6.5 core editing commands: column create (the next "Still open" item after deletes).
+- **Numbers:** 3 new tests (`pbi-model` `create_column_round_trips_and_checks`;
+  `e2e.rs::calculated_column_create_through_the_registry`: typed create before a refresh and the
+  refresh computes it, inferred `string` and `int64`, 8 refusals, a blank column with a given
+  type, undo/redo, a group of two dependent columns and a measure, refresh after the group;
+  `save.rs::created_column_saves_and_reopens`: only `Orders.tmdl` written, the exact block
+  before the partition, reopen, undo saves the original project; a document opened with
+  `autoRefresh` loads its data before inferring). Registry 67 → 68 commands. GT-6 with Desktop
+  2.159 (s17: three created columns, types inferred on the example, saved on a Desktop copy):
+  Desktop refreshes the project without an error and lists the same types and summarization,
+  and DashCraft's results on the edited example match Desktop's on all 643 recorded cases,
+  including every row of the new columns in the `Orders` and `Customers` tables.
+- **Still open:** calculated table create, data column delete with M editing, hierarchy create
+  and delete; a created column is refused when its DAX fails on a row (Desktop keeps it with an
+  error).
 ### M6 calculated column and table delete (M6.5)
 
 - **What:** `pbi-model` gets `DeleteColumn` (calculated columns only; refuses data, calculated

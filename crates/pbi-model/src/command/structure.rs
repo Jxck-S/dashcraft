@@ -465,6 +465,84 @@ fn label(r: &Relationship) -> String {
     )
 }
 
+/// Adds a calculated column to a table. Its `id` is ignored: it gets a fresh
+/// one (see [`CreateColumn::created_id`]). Only calculated columns can be
+/// created (data columns come from the table's query) and not on a
+/// calculation group; the name must be valid and differ from the table's
+/// other columns and measures. The caller sets the data type (the session
+/// infers it from the data) and checks the expression.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CreateColumn {
+    pub table: ObjectId,
+    pub column: Column,
+    /// Position among the table's columns; `None` (or past the end) appends.
+    pub index: Option<usize>,
+}
+
+impl CreateColumn {
+    /// The ID the column gets when this command is applied to `doc` now.
+    pub fn created_id(doc: &Document) -> ObjectId {
+        doc.ids.peek()
+    }
+}
+
+impl Command for CreateColumn {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let ObjectPath::Table { table: t } = expect_kind(doc, self.table, ObjectKind::Table)?
+        else {
+            return Err(CommandError::NotFound(self.table));
+        };
+        if !self.column.is_calculated() {
+            return Err(CommandError::Rejected(
+                "only calculated columns can be created: data columns come from the table's query"
+                    .to_owned(),
+            ));
+        }
+        validate_name(&self.column.name)?;
+        let table = model(doc)?
+            .tables
+            .get(t)
+            .ok_or(CommandError::NotFound(self.table))?;
+        if table.calculation_group.is_some() {
+            return Err(CommandError::Rejected(format!(
+                "'{}' is a calculation group: it cannot have calculated columns",
+                table.name
+            )));
+        }
+        if let Some(other) = table.column(&self.column.name) {
+            return Err(CommandError::NameConflict {
+                name: self.column.name.clone(),
+                existing: format!("column '{}'[{}]", table.name, other.name),
+            });
+        }
+        if let Some(other) = table.measure(&self.column.name) {
+            return Err(CommandError::NameConflict {
+                name: self.column.name.clone(),
+                existing: format!("measure '{}'[{}]", table.name, other.name),
+            });
+        }
+        let mut column = self.column.clone();
+        column.id = doc.ids.peek();
+        let id = column.id;
+        let columns = &mut model_mut(doc)?
+            .tables
+            .get_mut(t)
+            .ok_or(CommandError::NotFound(self.table))?
+            .columns;
+        let index = self.index.map_or(columns.len(), |i| i.min(columns.len()));
+        columns.insert(index, column);
+        doc.ids.reserve_through(id);
+        Ok(Applied::new(
+            DeleteColumn { column: id },
+            vec![ChangeEvent::ObjectAdded { id }],
+        ))
+    }
+
+    fn label(&self) -> String {
+        format!("Create column '{}'", self.column.name)
+    }
+}
+
 /// Removes a calculated column. Data columns (they come from the table's
 /// query) and calculated-table columns (they come from the table's
 /// expression) are refused, and so is a column that a relationship, a

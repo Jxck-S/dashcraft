@@ -494,6 +494,24 @@ export interface ChatMessage {
   content: string
 }
 
+/** Result of `model.column.create`. */
+export interface ColumnCreateOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  columnId: number
+  table: string
+  name: string
+  /** `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`. */
+  dataType: string
+  /**
+   * Whether the data type was inferred from the values (no `dataType`
+   * given).
+   */
+  dataTypeInferred: boolean
+}
+
 /** An applied column filter. */
 export interface ColumnFilterOut {
   table: string
@@ -804,6 +822,27 @@ export interface Counts {
   infos: number
 }
 
+export interface CreateColumnParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The column's table. */
+  table: string
+  /** The column name: not a column or measure of `table`. */
+  name: string
+  /** The DAX expression, evaluated per row of `table`. */
+  expression: string
+  /**
+   * The data type; inferred from the values when omitted (after the
+   * automatic first load; required when the table has no rows loaded or
+   * every value is blank).
+   */
+  dataType?: DataTypeParam | null
+  formatString?: string | null
+  displayFolder?: string | null
+  description?: string | null
+  isHidden?: boolean
+}
+
 export interface CreateMeasureParams {
   /** The document id from `doc.open` (`d1`, …). */
   docId: string
@@ -978,6 +1017,9 @@ export interface DataTablesOut {
   /** Data generation. */
   generation: number
 }
+
+/** A column data type. */
+export type DataTypeParam = 'string' | 'int64' | 'double' | 'decimal' | 'dateTime' | 'boolean'
 
 export interface DataflowEntityOut {
   name: string
@@ -1516,6 +1558,16 @@ export type EditOperation = {
   type: 'deleteRelationship'
   relationshipId?: number | null
   name?: string | null
+} | {
+  type: 'createColumn'
+  table: string
+  name: string
+  expression: string
+  dataType?: DataTypeParam | null
+  formatString?: string | null
+  displayFolder?: string | null
+  description?: string | null
+  isHidden?: boolean
 } | {
   type: 'deleteColumn'
   columnId?: number | null
@@ -3450,6 +3502,8 @@ export interface OpsCommands {
   'model.relationship.update': { params: UpdateRelationshipParams; output: RelationshipEditOut }
   /** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. */
   'model.relationship.delete': { params: DeleteRelationshipParams; output: RelationshipEditOut }
+  /** Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given. */
+  'model.column.create': { params: CreateColumnParams; output: ColumnCreateOut }
   /** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. */
   'model.column.delete': { params: DeleteColumnParams; output: ObjectDeleteOut }
   /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
@@ -3585,6 +3639,7 @@ export const OPS_META = {
   'model.relationship.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.relationship.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.relationship.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.column.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.column.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.table.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.dependencies': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -3697,6 +3752,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelRelationshipUpdate: (params: UpdateRelationshipParams, options?: O) => run('model.relationship.update', params, options),
     /** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. */
     modelRelationshipDelete: (params: DeleteRelationshipParams, options?: O) => run('model.relationship.delete', params, options),
+    /** Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given. */
+    modelColumnCreate: (params: CreateColumnParams, options?: O) => run('model.column.create', params, options),
     /** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. */
     modelColumnDelete: (params: DeleteColumnParams, options?: O) => run('model.column.delete', params, options),
     /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */

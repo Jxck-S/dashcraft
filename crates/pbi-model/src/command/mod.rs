@@ -32,8 +32,8 @@ pub use history::{History, HistoryResult};
 pub use rename::{RenameColumn, RenameMeasure, RenameTable};
 pub use snapshot::{ReplaceObjects, Snapshot};
 pub use structure::{
-    CreateMeasure, CreateRelationship, DeleteColumn, DeleteMeasure, DeleteRelationship,
-    DeleteTable, SetRelationshipProperties,
+    CreateColumn, CreateMeasure, CreateRelationship, DeleteColumn, DeleteMeasure,
+    DeleteRelationship, DeleteTable, SetRelationshipProperties,
 };
 
 /// A reversible edit.
