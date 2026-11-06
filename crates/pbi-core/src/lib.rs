@@ -61,6 +61,7 @@ pub mod lint;
 pub mod reader;
 pub mod redact;
 pub mod save;
+pub mod save_in_place;
 
 pub use error::CoreError;
 pub use lint::{Finding, LintOptions, LintReport, LintSummary, lint, lint_document};
@@ -69,3 +70,4 @@ pub use reader::{
     REMOTE_DESCRIPTION, ReportSource, codes, open_bytes, open_path,
 };
 pub use save::{SaveOptions, export_pbit, pbip_files, pbit_bytes, save_as_pbip};
+pub use save_in_place::{ChangeKind, FileChange, ProjectFingerprint, SaveOutcome, save_in_place};

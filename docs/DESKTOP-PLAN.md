@@ -512,8 +512,22 @@ data (storage renames, no refresh), and preview with `dryRun`; acceptance criter
 list their dependents first (`pbi-session::object_dependents`: DAX, relationships, hierarchy
 levels, sort-by columns, role permissions, report, page and visual fields and filters); undo
 restores the measure with its id, and ids are never reused. `model.dependencies` lists the same
-dependents for any table, column or measure. Still open:
-writer sources per revision and save (conversions refuse dirty documents), `doc/changed`
+dependents for any table, column or measure. `doc.save` writes the edits into the opened PBIP
+project (`pbi-core::save_in_place`): it compares the files written for the last saved state with
+those for the current one and writes only the files that differ, each atomically; the TMDL
+writer keeps the source's formatting, `ref` lines and unknown content; renames move a table's
+`.tmdl` file and are applied to the report JSON (`queryRef`, `nativeQueryRef`, filters,
+bookmarks) without re-serializing it; visual moves patch only the `position` numbers. A
+fingerprint of every project file taken at open and after each save turns external changes into
+a `conflict` (with the files) unless `overwrite`; a partial failure lists the written and failed
+files and keeps the document dirty. Acceptance criteria 1 (no-op save of Acme), 2 (one measure's
+lines, undo restores the bytes) and the save part of 7 (edit, save, reopen in a second workspace,
+undo, save the original bytes) pass (`crates/pbi-core/tests/save_in_place.rs`,
+`crates/pbi-ops/tests/save.rs`), and Desktop opens a saved, edited copy of Acme without a
+repair and computes the same 627 measure and calculation-group/RLS values (GT-6,
+`reference/groundtruth/README.md`). Still open:
+`doc.saveAs` (conversions still refuse dirty documents), `lineageTag` generation for new
+objects, `doc/changed`
 notifications, dependent recalculation after measure edits, table, column, hierarchy and
 relationship create and delete, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures

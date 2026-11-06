@@ -35,8 +35,8 @@ pub enum JsonValue {
 pub struct Json(#[specta(type = JsonValue)] pub serde_json::Value);
 
 /// A failed command: a stable code (`invalidParams`, `unknownCommand`, `notFound`,
-/// `noDocument`, `unsupported`, `pathDenied`, `io`, `query`, `cancelled`, `busy`, `internal`),
-/// a message for people and optional structured details (e.g. the valid names).
+/// `noDocument`, `unsupported`, `pathDenied`, `io`, `query`, `cancelled`, `busy`, `internal`,
+/// `conflict`), a message for people and optional structured details (e.g. the valid names).
 #[derive(Debug, Clone, PartialEq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct OpErrorDto {

@@ -32,6 +32,7 @@ Global `-v`/`-q` control the logs on stderr. stdout carries MCP messages only.
 - **No code execution.** Embedded scripts, R/Python visuals, custom visuals (`.pbiviz`) and connectors (`.mez`/`.pqx`) are never executed, only listed. DAX and M are evaluated by DashCraft's own engines.
 - **Bounded resources.** At most 32 open documents per session, a bounded number of concurrent and pending calls (`busy` beyond), 16 MiB per message line, and tool result text capped at 1 MiB.
 - **Session state.** Documents opened with `doc_open` stay open for the life of the process (one workspace per server); `doc_close` frees them. End of input cancels the running calls and exits.
+- **Saving edits.** Edit tools change the document in memory only; `doc_save` writes them into the opened PBIP project, and only when the project folder is inside a `--write-root` (`pathDenied` otherwise). Files changed on disk since the open are a `conflict` unless the agent passes `"overwrite": true`, so an agent cannot silently replace another editor's work.
 
 ## Tools
 

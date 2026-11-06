@@ -7,6 +7,46 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 save: `doc.save` writes edits into the opened PBIP project
+
+- **What:**
+  - `pbi-core::save_in_place` compares the PBIP files written for the last saved state with those
+    for the current document and writes only the files that differ, each through a temporary
+    file and a rename. A `ProjectFingerprint` of every project file (taken at open and after each
+    save) turns files changed on disk into `CoreError::Conflict`; `overwrite` saves anyway. A
+    failure part-way is `CoreError::PartialSave` with the written and failed files.
+  - Renames move a table's `.tmdl` file (case-only renames too) and are applied to the report
+    JSON (`queryRef`, `nativeQueryRef`, filters, bookmarks) by editing the JSON values, not by
+    re-serializing; visual moves patch only the `position` numbers. Report changes it cannot
+    write (and any change to a legacy `report.json` report) refuse the save.
+  - `pbi-session::Session::save` runs it off the async runtime and advances the saved revision
+    only when every write succeeded. `pbi-ops` adds `doc.save` (`overwrite`, write-root check)
+    and the `conflict` error code (JSON-RPC -32008, exit code 1); the app shows it as "Changed on
+    disk".
+  - Two fixes found by the save tests: the source-preserving TMDL writer dropped a single `ref
+    table` line (so a one-table rename could not reach `model.tmdl`), and a column rename left
+    the default aggregation label (`Sum of Amount`) behind, which LINT003 reported.
+- **Why:** M6.6 (ADR-0013, ADR-0014): edits could not leave the process.
+- **Still open:** `doc.saveAs` (PBIP from PBIX, PBIT and `model.bim`; conversions still refuse
+  dirty documents), `lineageTag` generation for new objects, report-level measures
+  (`reportExtensions.json`) in renames, the `PBI_QueryOrder` annotation after a table rename,
+  non-English aggregation labels.
+- **Numbers:**
+  - The catalog grows from 60 to 61 core commands.
+  - New tests: `pbi-core` 8 integration (`tests/save_in_place.rs`, on a copy of Acme Outfitters)
+    and 2 unit, `pbi-ops` 3 end-to-end (`tests/save.rs`) plus a `pathDenied` case, one each in
+    `pbi-tmdl` and `pbi-model`.
+  - Acceptance criteria 1 (a no-op save of Acme writes nothing), 2 (a measure edit changes only
+    its line in `Orders.tmdl`; undo and save restore the bytes) and the save half of 7 (edit,
+    save, reopen in a second workspace, undo, save the original bytes) pass.
+  - Desktop ground truth unchanged: 2,241 of 2,242 equal, 1 ledger entry.
+  - Desktop writer check (GT-6, Desktop 2.159, `reference/groundtruth/README.md`): a batch that
+    renames `Orders[Line Amount]`, updates and creates measures, sets a description and moves a
+    visual, then saves, wrote 3 files; Desktop opened the result without a repair, and its
+    recordings match the committed ones on all 601 measure and 26 calculation-group/RLS cases.
+    The 5 differing metadata and table cases differ only by the edits (same 3,900 Orders rows).
+- **Commits:** `a8d0411` (feature), plus the GT-6 notes.
+
 ### CI: macOS jobs on `macos-15`
 
 - **What:** `ci.yml` (`rust`, `app`) and `release.yml` (`bundle`, CLI archives) run on `macos-15`

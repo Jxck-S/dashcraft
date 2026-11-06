@@ -50,6 +50,33 @@ fn set_if_different(slot: &mut String, value: &str) -> bool {
     }
 }
 
+/// A projection's `nativeQueryRef` after its field is renamed from `old` to
+/// `new`: the bare field name, or for an aggregated column the default
+/// label Power BI gives it (`Sum of Amount` → `Sum of Revenue`). `None` if
+/// the label is something else (a name the author chose) or unchanged.
+#[must_use]
+pub fn renamed_native_query_ref(
+    native: &str,
+    old: &str,
+    new: &str,
+    aggregated: bool,
+) -> Option<String> {
+    let renamed = if aggregated {
+        let split = native.len().checked_sub(old.len())?;
+        let (head, tail) = (native.get(..split)?, native.get(split..)?);
+        if !names_eq(tail, old) || !head.ends_with(" of ") {
+            return None;
+        }
+        format!("{head}{new}")
+    } else {
+        if !names_eq(native, old) {
+            return None;
+        }
+        new.to_owned()
+    };
+    (renamed != native).then_some(renamed)
+}
+
 impl Rename {
     /// Rewrites a field expression. Returns `true` if anything changed.
     pub fn apply_to_field(&self, expr: &mut FieldExpr) -> bool {
@@ -133,17 +160,16 @@ impl Rename {
             if let Some(query_ref) = self.apply_to_query_ref(&p.query_ref) {
                 p.query_ref = query_ref;
             }
-            // nativeQueryRef is the bare field name for un-aggregated fields.
-            let renamed_field = matches!(self, Rename::Column { .. } | Rename::Measure { .. })
-                && !matches!(p.field, FieldExpr::Aggregation { .. });
+            let renames_field = matches!(self, Rename::Column { .. } | Rename::Measure { .. });
+            let aggregated = matches!(p.field, FieldExpr::Aggregation { .. });
             if let (true, Some(native), Some(old), Some(new)) = (
-                renamed_field,
+                renames_field,
                 p.native_query_ref.as_mut(),
                 old_property,
                 p.field.property(),
-            ) && names_eq(native, &old)
+            ) && let Some(renamed) = renamed_native_query_ref(native, &old, new, aggregated)
             {
-                set_if_different(native, new);
+                *native = renamed;
             }
         }
         for s in &mut visual.sort {
@@ -391,6 +417,31 @@ mod tests {
         );
         assert_eq!(c.apply_to_query_ref("Stores.Region2"), None);
         assert_eq!(c.apply_to_query_ref("Ä"), None);
+    }
+
+    #[test]
+    fn native_query_refs_follow_the_field_name() {
+        let native =
+            |n: &str, aggregated| renamed_native_query_ref(n, "Amount", "Revenue", aggregated);
+        assert_eq!(native("amount", false).as_deref(), Some("Revenue"));
+        assert_eq!(
+            native("Sum of Amount", true).as_deref(),
+            Some("Sum of Revenue")
+        );
+        assert_eq!(
+            native("Count of amount", true).as_deref(),
+            Some("Count of Revenue")
+        );
+        // Labels the author chose are kept.
+        assert_eq!(native("Sales", false), None);
+        assert_eq!(native("Total Amount", true), None);
+        assert_eq!(native("Sum of Amount", false), None);
+        assert_eq!(native("Amount", true), None);
+        assert_eq!(native("Ä", true), None);
+        assert_eq!(
+            renamed_native_query_ref("Revenue", "revenue", "Revenue", false),
+            None
+        );
     }
 
     #[test]

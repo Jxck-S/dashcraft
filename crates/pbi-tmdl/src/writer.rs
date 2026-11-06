@@ -46,6 +46,49 @@ pub fn write_model_with(
     database: Option<&Database>,
     options: &WriteOptions,
 ) -> Vec<(String, String)> {
+    write_files(model, database, options, &RefKinds::default())
+}
+
+/// `ref` groups written even for a single object (the canonical output
+/// lists only collections of two or more).
+#[derive(Debug, Default)]
+struct RefKinds(HashSet<&'static str>);
+
+impl RefKinds {
+    /// The kinds that `previous` lists with `ref` lines (top level or under
+    /// `model`), so a preserving write keeps them.
+    fn of(previous: &[TmdlFile]) -> Self {
+        let mut kinds = HashSet::new();
+        let mut add = |node: &crate::cst::Node| {
+            if !node.is_ref() || !node.children.is_empty() {
+                return;
+            }
+            match node.keyword().to_ascii_lowercase().as_str() {
+                "table" => kinds.insert("table"),
+                "role" => kinds.insert("role"),
+                "culture" | "cultureinfo" => kinds.insert("cultureInfo"),
+                "perspective" => kinds.insert("perspective"),
+                _ => false,
+            };
+        };
+        for file in previous {
+            for node in &file.nodes {
+                add(node);
+                if node.keyword().eq_ignore_ascii_case("model") && !node.is_ref() {
+                    node.children.iter().for_each(&mut add);
+                }
+            }
+        }
+        RefKinds(kinds)
+    }
+}
+
+fn write_files(
+    model: &Model,
+    database: Option<&Database>,
+    options: &WriteOptions,
+    ref_kinds: &RefKinds,
+) -> Vec<(String, String)> {
     let nl = match options.line_ending {
         LineEnding::CrLf => "\r\n",
         _ => "\n",
@@ -59,7 +102,7 @@ pub fn write_model_with(
     }
     let extras = ModelExtras::split(&model.extra);
     let mut out = new();
-    out.model_file(model, &extras);
+    out.model_file(model, &extras, ref_kinds);
     files.push(("model.tmdl".to_owned(), out.s));
     if !model.expressions.is_empty() {
         let mut out = new();
@@ -133,21 +176,26 @@ pub fn write_model_preserving(
     database: Option<&Database>,
     previous: &[TmdlFile],
 ) -> Vec<(String, String)> {
-    write_model(model, database)
-        .into_iter()
-        .map(|(path, text)| {
-            let prev = previous
-                .iter()
-                .find(|f| definition_relative(&f.path).eq_ignore_ascii_case(&path));
-            if let Some(prev) = prev
-                && let Ok(cst) = parse_file(&path, &text)
-                && fragment(&cst) == fragment(prev)
-            {
-                return (path, prev.to_string());
-            }
-            (path, text)
-        })
-        .collect()
+    write_files(
+        model,
+        database,
+        &WriteOptions::default(),
+        &RefKinds::of(previous),
+    )
+    .into_iter()
+    .map(|(path, text)| {
+        let prev = previous
+            .iter()
+            .find(|f| definition_relative(&f.path).eq_ignore_ascii_case(&path));
+        if let Some(prev) = prev
+            && let Ok(cst) = parse_file(&path, &text)
+            && fragment(&cst) == fragment(prev)
+        {
+            return (path, prev.to_string());
+        }
+        (path, text)
+    })
+    .collect()
 }
 
 /// `a\b/definition/tables/X.tmdl` → `tables/X.tmdl`.
@@ -515,7 +563,7 @@ impl Out {
         self.annotations(1, &db.annotations);
     }
 
-    fn model_file(&mut self, m: &Model, extras: &ModelExtras<'_>) {
+    fn model_file(&mut self, m: &Model, extras: &ModelExtras<'_>, ref_kinds: &RefKinds) {
         self.description(0, m.description.as_deref());
         self.line(0, &format!("model {}", quote_name(&m.name)));
         self.text(1, "culture", m.culture.as_deref());
@@ -563,7 +611,7 @@ impl Out {
             ),
         ];
         for (kind, names) in groups {
-            if names.len() < 2 {
+            if names.is_empty() || (names.len() < 2 && !ref_kinds.0.contains(kind)) {
                 continue;
             }
             self.blank();
@@ -1051,5 +1099,40 @@ mod tests {
         );
         assert_eq!(definition_relative("definition/model.tmdl"), "model.tmdl");
         assert_eq!(definition_relative("model.tmdl"), "model.tmdl");
+    }
+
+    #[test]
+    fn a_single_ref_line_is_kept_and_follows_a_rename() {
+        let files = [
+            (
+                "definition/model.tmdl",
+                "model Model\n\tculture: en-US\n\nref table Sales\n",
+            ),
+            (
+                "definition/tables/Sales.tmdl",
+                "table Sales\n\n\tcolumn Item\n\t\tdataType: string\n\t\tsourceColumn: Item\n",
+            ),
+        ]
+        .map(|(p, t)| (p.to_owned(), t.to_owned()));
+        let loaded = crate::load_model(&files).unwrap_or_else(|e| panic!("{e}"));
+        let model_tmdl = |model: &Model| {
+            write_model_preserving(model, None, &loaded.files)
+                .into_iter()
+                .find(|(p, _)| p == "model.tmdl")
+                .map(|(_, t)| t)
+                .unwrap_or_default()
+        };
+        assert_eq!(model_tmdl(&loaded.model), files[0].1);
+        let mut renamed = loaded.model.clone();
+        if let Some(t) = renamed.tables.first_mut() {
+            t.name = "Sales Data".into();
+        }
+        assert_eq!(
+            model_tmdl(&renamed),
+            "model Model\n\tculture: en-US\n\nref table 'Sales Data'\n"
+        );
+        // The canonical writer lists only collections of two or more.
+        let canonical = write_model(&renamed, None);
+        assert!(!canonical.iter().any(|(_, t)| t.contains("ref table")));
     }
 }

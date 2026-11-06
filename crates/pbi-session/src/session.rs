@@ -7,7 +7,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use arrow::record_batch::RecordBatch;
-use pbi_core::{ModelSource, OpenedDocument};
+use pbi_core::{FileChange, ModelSource, OpenedDocument, ProjectFingerprint};
 use pbi_engine::{Engine, EngineSnapshot};
 use pbi_m::{BlobResolver, Clock, MapBlobResolver, NoBlobResolver, SystemClock};
 use pbi_model::names::name_key;
@@ -76,6 +76,15 @@ struct Inner {
     limits: SessionLimits,
     state: RwLock<State>,
     refresh_lock: tokio::sync::Mutex<()>,
+    saved: Mutex<SavedState>,
+}
+
+/// The project as last opened or saved: the baseline of the next in-place
+/// save ([`Session::save`]).
+struct SavedState {
+    opened: Arc<OpenedDocument>,
+    /// Fingerprint of the project files (PBIP only).
+    fingerprint: Option<ProjectFingerprint>,
 }
 
 struct OpenedState {
@@ -139,6 +148,21 @@ pub struct DocumentHistory {
     pub redo_label: Option<String>,
 }
 
+/// What [`Session::save`] did.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveReport {
+    /// Files written, relative to the project folder.
+    pub written: Vec<String>,
+    /// Files deleted (e.g. the `.tmdl` file of a renamed table).
+    pub deleted: Vec<String>,
+    /// Files changed on disk by another program that the save overwrote
+    /// or kept (only with `overwrite`).
+    pub overwritten: Vec<FileChange>,
+    /// The revision saved.
+    pub revision: u64,
+}
+
 impl Session {
     /// Opens a file or folder (PBIP, PBIX, PBIT, `.bim`, TMDL, ABF, …) with
     /// [`pbi_core::open_path`]. No data is loaded until
@@ -178,12 +202,20 @@ impl Session {
         let model = Arc::new(opened.document.model.clone().unwrap_or_default());
         let engine = Engine::new(&model);
         let document = Arc::new(opened.document.clone());
+        let fingerprint = (opened.document.source.format == pbi_model::SourceFormat::Pbip)
+            .then(|| ProjectFingerprint::scan(&opened))
+            .and_then(|scan| {
+                scan.map_err(|e| tracing::warn!("cannot fingerprint the project: {e}"))
+                    .ok()
+            });
+        let opened = Arc::new(opened);
         Ok(Session {
             inner: Arc::new(Inner {
-                opened: RwLock::new(Arc::new(OpenedState {
-                    opened: Arc::new(opened),
-                    document,
-                })),
+                saved: Mutex::new(SavedState {
+                    opened: Arc::clone(&opened),
+                    fingerprint,
+                }),
+                opened: RwLock::new(Arc::new(OpenedState { opened, document })),
                 history: Mutex::new(History::new()),
                 resolver,
                 blob_map,
@@ -624,6 +656,74 @@ impl Session {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .mark_saved();
+    }
+
+    /// Saves the current document into the PBIP project it was opened from
+    /// ([`pbi_core::save_in_place`]): only the files that changed are
+    /// written, report references follow renames, and files changed on disk
+    /// by another program since the open or last save are a conflict unless
+    /// `overwrite` is set. On success the revision is marked saved.
+    ///
+    /// # Errors
+    /// [`SessionError::Open`] with [`pbi_core::CoreError::Conflict`] (nothing
+    /// written), [`pbi_core::CoreError::Save`] (not a PBIP project, or
+    /// changes that cannot be saved in place; nothing written),
+    /// [`pbi_core::CoreError::PartialSave`] or an I/O error.
+    pub async fn save(&self, overwrite: bool) -> Result<SaveReport, SessionError> {
+        let handle = crate::refresh::runtime()?;
+        // Edits take the refresh lock: the document cannot change meanwhile.
+        let _refresh = self.inner.refresh_lock.lock().await;
+        let document = self.document();
+        let (baseline, mut fingerprint) = {
+            let saved = self
+                .inner
+                .saved
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            (
+                Arc::clone(&saved.opened),
+                saved.fingerprint.clone().unwrap_or_default(),
+            )
+        };
+        let current = Arc::clone(&document);
+        let (result, fingerprint) = handle
+            .spawn_blocking(move || {
+                let result =
+                    pbi_core::save_in_place(&baseline, &mut fingerprint, &current, overwrite);
+                (result, fingerprint)
+            })
+            .await?;
+        let mut opened = self.write_opened();
+        let mut saved = self
+            .inner
+            .saved
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        // Also after a failed save: it may have written part of the files.
+        saved.fingerprint = Some(fingerprint);
+        let outcome = result?;
+        let mut history = self
+            .inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        history.mark_saved();
+        let report = SaveReport {
+            written: outcome.written,
+            deleted: outcome.deleted,
+            overwritten: outcome.overwritten,
+            revision: history.revision(),
+        };
+        let mut next = (*opened.opened).clone();
+        next.model_source.clone_from(&outcome.saved.model_source);
+        next.report_sources
+            .clone_from(&outcome.saved.report_sources);
+        saved.opened = Arc::new(outcome.saved);
+        *opened = Arc::new(OpenedState {
+            opened: Arc::new(next),
+            document,
+        });
+        Ok(report)
     }
 
     pub(crate) fn refresh_lock(&self) -> &tokio::sync::Mutex<()> {

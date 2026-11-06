@@ -509,8 +509,8 @@ export type ObjectKindDto = "model" | "database" | "table" | "column" | "measure
 
 /**
  *  A failed command: a stable code (`invalidParams`, `unknownCommand`, `notFound`,
- *  `noDocument`, `unsupported`, `pathDenied`, `io`, `query`, `cancelled`, `busy`, `internal`),
- *  a message for people and optional structured details (e.g. the valid names).
+ *  `noDocument`, `unsupported`, `pathDenied`, `io`, `query`, `cancelled`, `busy`, `internal`,
+ *  `conflict`), a message for people and optional structured details (e.g. the valid names).
  */
 export type OpErrorDto = {
 	code: string,

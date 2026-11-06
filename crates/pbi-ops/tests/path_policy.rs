@@ -176,6 +176,15 @@ async fn commands_apply_the_policy() {
         .await
         .unwrap_err();
     assert_eq!(e.code, OpErrorCode::PathDenied);
+    let e = r
+        .try_run("doc.save", json!({"docId": doc}))
+        .await
+        .unwrap_err();
+    assert_eq!(
+        e.code,
+        OpErrorCode::PathDenied,
+        "a project in a read root is not saved"
+    );
     let out = r
         .run(
             "export.model",
