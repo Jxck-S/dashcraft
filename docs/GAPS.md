@@ -17,6 +17,8 @@ Update **2026-11-05**: Desktop ground truth ([ADR-0011](adr/0011-desktop-ground-
 the DAX differential-testing and `FORMAT` rows; the other rows keep their scores, now backed by the
 recordings where a suite covers them.
 
+The first session-backed editing commands add a partial registry-editing capability.
+
 ## How to read it
 
 - **Status**: ✅ done (behaves like Power BI for this capability, within the documented limits) ·
@@ -41,7 +43,7 @@ recordings where a suite covers them.
 | 6 | [Interactions](#6-interactions) | 1.6 | 7 / 2 / 10 | Highlighting, bookmarks, drillthrough, drill-down, synced slicers |
 | 7 | [Rendering fidelity](#7-rendering-fidelity) | 3.2 | 4 / 0 / 2 | No golden images (Power BI exports of the Acme Outfitters pages); DIN font |
 | 8 | [Performance](#8-performance) | 4.9 | 8 / 0 / 1 | No app-open, end-to-end refresh or webview canvas-latency scenarios |
-| 9 | [Command registry, MCP, AI](#9-command-registry-mcp-ai) | 2.7 | 6 / 4 / 2 | Editing commands, CLI subcommands as registry wrappers, parameter fuzzing |
+| 9 | [Command registry, MCP, AI](#9-command-registry-mcp-ai) | 2.8 | 6 / 5 / 1 | Broader editing commands, CLI subcommands as registry wrappers, parameter fuzzing |
 | 10 | [App UX vs Power BI Desktop](#10-app-ux-vs-power-bi-desktop) | 1.4 | 4 / 9 / 10 | Every editing surface: report, modeling, Power Query, Save, undo |
 | 11 | [Platform and packaging](#11-platform-and-packaging) | 2.7 | 7 / 2 / 4 | Signing and notarization, auto-update, ARM64 Windows/Linux |
 | 12 | [Security and fuzzing](#12-security-and-fuzzing) | 3.1 | 7 / 3 / 2 | Legal review (ADR-0003), registry param fuzzing, staged-file scanning in CI |
@@ -262,14 +264,14 @@ Source: `crates/pbi-ops`, [ADR-0007](adr/0007-command-registry.md), [COMMANDS.md
 
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
-| Registry: 47 typed commands (all agent-safe; `security.roles` and `security.viewAs` added) plus 9 opt-in `ai.*` commands (4 agent-safe), JSON Schemas, `Workspace`, `OpError`, cancellation, progress | ✅ | 4 | `crates/pbi-ops/tests/{registry,e2e}.rs`; `dashcraft commands --json` | — |
+| Registry: 60 typed commands (including `model.setMeasureExpression`, `model.measure.create`/`update`/`delete`, `model.dependencies`, `model.object.rename`, `model.object.setDescription`, `report.visual.move`/`resize`, grouped `doc.applyEdits` and history) plus 9 opt-in `ai.*` commands (4 agent-safe), JSON Schemas, `Workspace`, `OpError`, cancellation, progress | ✅ | 4 | `crates/pbi-ops/tests/{registry,e2e}.rs`; `dashcraft commands --json` | — |
 | CLI `commands`, `run`, `run --batch` | ✅ | 4 | `crates/dashcraft-cli/tests/ops.rs` | — |
 | JSON-RPC 2.0 over stdio (`serve --stdio`, `$/cancel`) | ✅ | 4 | `crates/pbi-ops/tests/rpc.rs` | — |
 | Path policy for agents (read/write roots, `..` and symlink escapes) | 🟡 | 3 | `crates/pbi-ops/tests/path_policy.rs`; check-then-use (TOCTOU) | `cap-std` handles (ADR-0007) |
 | MCP server (`dashcraft mcp`) | ✅ | 4 | `crates/pbi-ops/tests/mcp.rs`, `crates/dashcraft-cli/tests/mcp.rs`; protocol revisions 2024-11-05 to 2026-07-28, roots, `--allow`/`--deny`, hints from `CommandMeta` ([MCP.md](MCP.md)) | Tested with scripted clients only; check with real MCP clients |
 | App on the registry | ✅ | 4 | every domain operation through `ops_execute` → `Registry::execute`; `app/src/lib/ops.gen.ts` (core and `ai.*` commands) kept in sync by the `ops_typescript_is_up_to_date` test in `crates/pbi-ai/tests/registry.rs` (generator in `crates/pbi-ai/tests/ops_ts/`); app tests through the mock runtime | App-only views (`document_views`, `object_details`, …) as registry commands where agents need them |
 | CLI subcommands as thin registry wrappers | 🟡 | 1 | `inspect`/`detect` DTOs shared with `pbi-ops` | ADR-0007 CLI migration plan |
-| Editing commands (registry → `Document` commands) | ❌ | 0 | `pbi-model` has `SetMeasureExpression`, `SetDescription`, `SetVisualPosition`, `Rename*`; none exposed | First editing commands + PBIP save |
+| Editing commands (registry → `Document` commands) | 🟡 | 2 | `model.setMeasureExpression`; `model.measure.create`/`update`/`delete` (deletes list dependents across DAX, model structure and report fields, `dryRun`; undo keeps ids, ids never reused); `model.dependencies` (the same list for any table, column or measure); `model.object.rename` (tables, columns, measures; rewrites DAX in measures, format strings, calculated columns and tables, calculation items and role filters; keeps the loaded data; `dryRun` preview); `model.object.setDescription`; `report.visual.move`/`resize`; grouped `doc.applyEdits`, `doc.undo`, `doc.redo`, `doc.history`; DAX query outputs include a captured `documentRevision`; dirty close/convert guards; `crates/pbi-ops/tests/e2e.rs::{model_edit_commands_publish_revisions_and_history, rename_describe_and_move_through_the_registry, measure_create_update_delete_through_the_registry, renaming_line_amount_keeps_the_expected_values}` | Table, column, hierarchy and relationship create/delete, M-aware rename, writer sync and PBIP save, change notifications, dependent recalculation |
 | Fuzzing command parameters ("panic hunt") | 🟡 | 1 | `catch_unwind` guard in `Registry::execute` only | A fuzz/proptest target over every command |
 | AI layer (`pbi-ai`: providers, consent, keychain secrets) | ✅ | 4 | ADR-0008, [AI.md](AI.md): OpenAI-compatible, Azure OpenAI and Ollama providers, per-provider/capability/data-class consent, keychain-only keys, `ai.preview`; `crates/pbi-ai/tests/`; CLI wiring `bedd3c7` (`run`/`serve`/`mcp`, `dashcraft ai login`) | Tested against scripted servers and a demo provider (`DASHCRAFT_AI_MOCK=1`, debug builds), not real providers |
 | AI features (NL → DAX, explain a measure, lint fixes) | 🟡 | 3 | `ai.explainMeasure`, `ai.generateMeasure` (parsed, optionally evaluated locally, never applied); in the app (Explain with AI, Suggest a measure) | Lint-fix suggestions; NL → DAX in the DAX query view |
@@ -283,7 +285,7 @@ Source: [app/README.md](../app/README.md), [desktop-ui-reference.md](../app/docs
 |---|---|---|---|---|
 | Shell: ribbon, view rail, panes, status bar, search, recent files | 🟡 | 3 | desktop-ui-reference.md (editing commands shown disabled) | Enable commands as features land |
 | Report view (reading mode, interactive) | ✅ | 3 | §5–§6; app canvas tests | — |
-| Report editing (add, move, resize, format visuals) | ❌ | 0 | `SetVisualPosition` exists in `pbi-model`, no UI | Editing commands + Format pane editors |
+| Report editing (add, move, resize, format visuals) | 🟡 | 1 | `report.visual.move`/`resize` registry commands (undoable; not visual groups); no UI, no save | Canvas drag handles, add/format commands, PBIR save |
 | Table view (virtualized grid, SQL filter, column statistics) | ✅ | 3 | `data.page`, `data.columnStats` registry commands through `ops_execute` | Statistics of the filtered rows |
 | Model view (diagram) | 🟡 | 2 | read-only; `diagramLayout.json` or auto-layout | Edit relationships, save layouts |
 | Modeling: new measure/column/table, rename, properties | ❌ | 0 | commands exist in `pbi-model`; DAX and M text not rewritten on rename | Wire editors to commands; DAX/M-aware rename |

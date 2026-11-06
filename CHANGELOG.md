@@ -4,7 +4,23 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 
 ## [Unreleased]
 
+### Documentation
+- M6.1 decisions: revisioned document state and transactions (ADR-0012), save conflicts and recovery (ADR-0013), serialization and generated identifiers (ADR-0014), and accessibility verification (ADR-0015). Corrected the Desktop plan's provisional ADR numbering to preserve the accepted naming and ground-truth records.
+
+### Changed
+- `pbi-model::History` stages edits before publishing them, advances a monotonic revision only when document content changes, and reports the changed flag, revision and events. Undoing back to the saved content clears the dirty state.
+- `dax.query`, `dax.evaluateMeasure` and `measures.values` report `documentRevision` captured with the matching model and engine snapshot; DAX result formatting uses that captured model.
+
 ### Added
+- M6 runtime foundation: session-owned revisioned document edits with undo/redo and dirty-state tracking, exposed through `model.setMeasureExpression`, atomic grouped `doc.applyEdits`, and `doc.undo`/`doc.redo`/`doc.history`. Dirty documents now require explicit discard to close; conversions reject unsaved edits until writer synchronization is implemented. `model.measures` now includes stable object IDs.
+- M6 editing commands: `model.object.rename` renames a table, column or measure as one undoable edit. Relationships, hierarchies, sort-by columns and report fields follow, and DAX references are rewritten at token level, keeping formatting and comments. The rewrite covers measures, calculated columns and tables, calculation items, format string expressions, RLS filters and derived columns. The loaded data is kept without a refresh, `dryRun` previews every rewrite, and M references are reported but not rewritten yet. Also added: `model.object.setDescription`, plus `report.visual.move` and `report.visual.resize` (not for visual groups). `doc.applyEdits` gains `renameObject` and `setVisualPosition` edits. The registry grows from 47 to 56 core commands.
+- M6 measure commands: `model.measure.create`, `model.measure.update` and `model.measure.delete`, each one undoable edit.
+  - Create checks that the name is unique across the model and does not clash with a column.
+  - Update patches only the given properties (expression, format string, display folder, description, visibility); an empty text clears one.
+  - Delete lists what referred to the measure first: DAX expressions, report, page and visual fields and filters. `dryRun` only lists them.
+  - DAX that does not parse is kept, with a warning. Undo restores a deleted measure with its id, and ids are never reused.
+  - `doc.applyEdits` gains `createMeasure`, `updateMeasure` and `deleteMeasure` edits.
+- `model.dependencies` lists what refers to a table, column or measure: DAX, relationships, hierarchy levels, sort-by columns, role permissions, and report, page and visual fields and filters. The registry grows from 56 to 60 core commands.
 - **Power BI Desktop ground truth** ([ADR-0011](docs/adr/0011-desktop-ground-truth.md), [reference/groundtruth](reference/groundtruth/README.md)): 2,242 DAX queries (every Acme measure per page and filter, every table, metadata, calculation groups and RLS roles, 747 `FORMAT` cases, every `functions.rs` case on a generated `dax-lab` fixture, three MIT samples) recorded from Desktop 2.159's local engine over ADOMD.NET and compared value by value by `cargo test -p pbi-session --test groundtruth`; differences must be listed in a deviation ledger that only shrinks (1 entry). Recorder and generators in `scripts/groundtruth/`, `cargo xtask groundtruth [--check]` for status, `Session::dax_query_tables` for typed results.
 - Lint rule `LINT018`: a measure with both `formatString` and `formatStringDefinition` (Power BI Desktop refuses to load it).
 - M: `List.Dates`, `List.DateTimes`, `List.DateTimeZones`, `List.Times` and `List.Durations`.

@@ -7,6 +7,106 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-05
 
+### M6 measure create, update and delete, and object dependents
+
+- **What:**
+  - `pbi-model` gains `CreateMeasure`, `DeleteMeasure` (its inverse restores the measure in place
+    with its id) and `SetMeasureProperties` (patches only the given fields). Measure names are
+    checked by one shared `check_measure_name`. Undo never rewinds the id generator, so ids are
+    never reused.
+  - `pbi-session::object_dependents` lists what refers to a table, column or measure: DAX
+    (through the rename planner in probe mode), relationships, hierarchy levels, sort-by
+    columns, role permissions, and report, page and visual fields and filters.
+    `dax_syntax_error` checks an expression.
+  - `pbi-ops` adds `model.measure.create`, `model.measure.update` and `model.measure.delete`
+    (`dryRun` lists the dependents only), plus the `doc.applyEdits` variants `createMeasure`,
+    `updateMeasure` and `deleteMeasure`. DAX that does not parse is kept, with a warning.
+  - `model.dependencies` (read-only, agent-safe) lists the dependents of any table, column or
+    measure.
+- **Why:** M6.5 progress: measure create and delete were the first create/delete gap in
+  [GAPS](GAPS.md).
+- **Still open:** table, column, hierarchy and relationship create and delete; `lineageTag` for
+  new measures (assigned at save, ADR-0014); save; notifications; recalculation.
+- **Numbers:**
+  - The catalog grows from 56 to 60 core commands.
+  - `cargo test -p pbi-ops`: 68 tests, including 10 end-to-end.
+  - `pbi-model`: 63 library tests. `pbi-session`: 43 library tests.
+  - Full workspace gate (branch `feat/m6-editing`): `cargo clippy --all-targets --locked -D
+    warnings` clean; `cargo test --locked`: 1,289 passed, 0 failed, 2 ignored. `Session::document()`
+    now returns an `Arc` snapshot, so pbi-render test helpers and the `perf_render` example hold
+    the snapshot instead of borrowing from it.
+  - Desktop ground truth unchanged: 2,242 recorded queries in 11 corpora, 2,241 equal, 1 in the
+    ledger, 0 new. The edit commands themselves are not compared with Desktop yet (that needs save,
+    M6.6).
+  - The `docs/CLI.md` editing example (create, query, rename dry run, undo, history) runs on the
+    Acme Outfitters example.
+
+### M6 rename, description and visual position commands
+
+- **What:**
+  - `pbi-dax::rename` rewrites table, column and measure references at token level and keeps
+    formatting and comments.
+  - `pbi-engine` renames stored tables and columns without reloading them.
+  - `pbi-model::History` gains checked edits (`CommandError::Rejected`).
+  - `pbi-session::edit` (`RenameObject`, `preview_rename`) rewrites every DAX location of the
+    model and its derived columns. It prepares the new model and engine, then commits both in one
+    step.
+  - Report-only edits (visual moves) keep the engine, the session model and the canvas cache.
+  - `pbi-ops` adds four commands: `model.object.rename` (with `dryRun`),
+    `model.object.setDescription`, `report.visual.move` and `report.visual.resize`. It also adds
+    the `doc.applyEdits` variants `renameObject` and `setVisualPosition`.
+- **Why:** M6.5 and M6.7 progress. Acceptance criterion 4 passes: renaming
+  `Orders[Line Amount]` rewrites every DAX reference, and all values of `expected.json` still hold
+  before and after a refresh.
+- **Still open:**
+  - M references are warned about, not rewritten.
+  - KPI and detail-rows expressions and report-level measures are not rewritten.
+  - Measure edits do not recompute dependent columns.
+  - Visual groups cannot be moved.
+  - There is no save or writer sync yet.
+- **Numbers:**
+  - The catalog grows from 52 to 56 core commands.
+  - `cargo test -p pbi-ops`: 67 tests, including 9 end-to-end.
+  - `pbi-session`: 41 library tests and 12 robustness tests.
+
+### M6 session and registry edit slice
+
+- **What:** `pbi-session` now publishes command, undo and redo changes into its opened document,
+  engine model and session model while preserving active derived columns; `pbi-ops` exposes
+  `model.setMeasureExpression`, atomic grouped `doc.applyEdits` and document history commands.
+  Measure inspection returns stable object IDs, and the generated command catalog is current.
+  DAX query, single-measure and all-measures outputs include the revision captured alongside
+  their engine snapshot and model. Dirty documents require explicit discard to close, and
+  conversion commands refuse unsaved edits while their writer sources remain unsynchronized.
+- **Why:** Establishes the first M6.2/M6.3 runtime path and the first M6.5 editing command. The
+  writer-source revision, remaining edit commands, save path, app UI and change notifications are
+  still open.
+- **Numbers:** `cargo test -p pbi-session` (79 tests), `cargo test -p pbi-ops` (65 tests);
+  registry integration covers edit, no-op, one-step grouped undo/redo and query revision
+  reporting. The catalog now has 52 core commands.
+
+### M6 transactional history foundation
+
+- **What:** `pbi-model::History` now applies commands against a staged document copy, so failed
+  grouped edits cannot publish partial changes. Changed edits, undo and redo advance a monotonic
+  revision; no-ops preserve redo and return `changed: false`; dirty state follows the current
+  content identity. Added status-bearing operation results.
+- **Why:** First runtime increment toward M6.2–M6.3, following the accepted revision and
+  transaction contract in ADR-0012. Registry ownership, a unified session/writer revision and
+  the rest of M6 remain open.
+- **Numbers:** `cargo test -p pbi-model` (58 tests) and crate clippy pass.
+
+### M6.1 architecture decisions
+
+- **What:** Accepted ADR-0012 through ADR-0015 for revisioned document state, save conflicts and
+  recovery, the serialization contract and identifiers, and accessibility verification.
+  Corrected the Desktop plan's provisional ADR numbering so it no longer collides with accepted
+  ADR-0010 (DashCraft naming) and ADR-0011 (Desktop ground truth).
+- **Why:** M6 is the next Roadmap milestone and addresses the 0-scored GAPS rows for registry
+  editing and app editing; M6.1 must settle the state, save and verification contracts before
+  implementation.
+- **Numbers:** Four decision records.
+
 ### Field-parameter composite keys
 
 - **What:** `pbi-model` `Column::group_by_columns()` reads `relatedColumnDetails` (TMDL

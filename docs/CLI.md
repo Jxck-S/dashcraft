@@ -128,6 +128,7 @@ These three expose the **command registry** (`pbi-ops`, [ADR-0007](adr/0007-comm
 - `run --batch FILE` (`-` reads stdin) takes `[{ "id", "params"?, "as"? }]` or `{ "steps": [...], "stopOnError"?: bool }`. A string that is exactly `"${name.path}"` becomes the referenced value of the step named `name` (any JSON type); inside a longer string the value's text is spliced in; `$${` is a literal `${`. The batch stops at the first error unless `--stop-on-error false` (or `"stopOnError": false`); it is not atomic. It prints the JSON array `[{ index, id, as?, ok, result?, error? { code, message, data? } }]` and exits with the code of the first error, else 2 if a result has `"ok": false`.
 - `serve` reads one JSON-RPC 2.0 request per line on stdin and writes one response or notification per line on stdout (logs go to stderr) until end of input, then waits for running requests. Methods are command ids; `progress` notifications report long-running requests; `$/cancel {"id": …}` cancels one. Requests run concurrently (`--max-concurrent`); mutating commands run in arrival order per document. Errors carry the JSON-RPC code and `data.code` (the string code).
 - `serve --read-root DIR` / `--write-root DIR` (repeatable) confine every path the commands read or write to those folders: paths are resolved (relative ones against the first root), symlink and `..` escapes and writes through symlinks are refused (`pathDenied`), and blob maps may only map files inside the read roots. Without roots, paths are unrestricted (as for the other subcommands). `--agent` serves only the agent-safe commands, as an MCP host would.
+- **Editing (M6 preview, in memory only).** The `edit` commands (`model.measure.create` / `update` / `delete`, `model.setMeasureExpression`, `model.object.rename`, `model.object.setDescription`, `report.visual.move` / `resize`, `doc.applyEdits` for an atomic group) change the open document: each is one undoable step (`doc.undo`, `doc.redo`) that raises the document `revision` and marks it dirty (`doc.history`); query results carry the `documentRevision` they were computed on. Renames rewrite DAX and report fields and keep the loaded data; deletes proceed even when something refers to the measure (as in Power BI Desktop) and list it; `dryRun` previews renames and deletes, and `model.dependencies` lists what refers to a table, column or measure. **There is no save yet**: edits live as long as the `run --batch`, `serve` or `mcp` process, `convert.pbip` / `convert.pbit` refuse a document with edits (`unsupported`), and `doc.close` of one needs `"discardChanges": true`.
 
 ```sh
 $ dashcraft run doc.detect -p path=model.pbip --pretty
@@ -140,6 +141,17 @@ $ cat steps.json
 [{"id": "doc.open", "params": {"path": "model.pbip"}, "as": "d"},
  {"id": "report.pages", "params": {"docId": "${d.docId}", "report": "Overview"}}]
 $ dashcraft run --batch steps.json --pretty
+$ cat edits.json   # M6 preview: in memory only, nothing is written to disk
+[{"id": "model.measure.create", "params": {"table": "Orders", "name": "Avg Line",
+   "expression": "DIVIDE([Total Sales], [Order Count])", "formatString": "#,0.00"}},
+ {"id": "dax.query", "params": {"query": "EVALUATE ROW(\"avg\", [Avg Line])"}},
+ {"id": "model.object.rename", "params": {"table": "Orders", "column": "Line Amount",
+   "newName": "Line Total", "dryRun": true}},
+ {"id": "doc.undo"},
+ {"id": "doc.history"}]
+$ dashcraft run --batch edits.json --doc AcmeOutfitters.pbip --blob-map blob-map.json --pretty
+# create: revision 1, dirty; the query runs on documentRevision 1; the dry run lists the
+# 4 DAX rewrites; undo: revision 2, not dirty; history: canRedo true
 $ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"doc.open","params":{"path":"model.pbip"}}' | dashcraft serve
 {"jsonrpc":"2.0","id":1,"result":{"docId":"d1",…}}
 ```
