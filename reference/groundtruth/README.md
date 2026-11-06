@@ -141,6 +141,20 @@ difference. The first PBIT check found two writer bugs, now fixed and covered by
 corrupted or was created by an unrecognized version"), and hierarchy levels without `ordinal`
 ("invalid index '-1'").
 
+**Saved edits (`doc.save`).** Copy `target/groundtruth/acme-desktop/` to
+`target/groundtruth/s10/acme-save/` and run a batch on the copy with `dashcraft run --batch`:
+`doc.open` (`autoRefresh` false), rename `Orders[Line Amount]` to `Line Total`, update
+`Total Cost` to `SUMX(Orders, Orders[Line Cost])`, create `GT Save Check = [Total Sales] -
+[Total Cost]` (format `#,0.00`), set the Orders description, move one visual, then `doc.save`.
+Open the saved project in Desktop and record and compare it as above (into
+`target/groundtruth/s10/recordings`). Results with Desktop 2.159: the save wrote three files
+(`Orders.tmdl`, `Customers.tmdl`, one `visual.json`); Desktop opened the project without a repair
+or error; `acme-measures` (601 cases) and `acme-calcgroup-rls` (26) are identical, so Desktop
+computes the same values through the rewritten DAX; `acme-tables` differs only in the `Orders`
+column header (`Line Total`, same 3,900 rows and values); `acme-metadata` differs only in the edits
+themselves (the renamed column, the two measures and two calculated columns whose DAX referenced
+it, the new `Total Cost` expression, the new measure and its format, the Orders description).
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.

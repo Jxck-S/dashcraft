@@ -40,6 +40,12 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
     its line in `Orders.tmdl`; undo and save restore the bytes) and the save half of 7 (edit,
     save, reopen in a second workspace, undo, save the original bytes) pass.
   - Desktop ground truth unchanged: 2,241 of 2,242 equal, 1 ledger entry.
+  - Desktop writer check (GT-6, Desktop 2.159, `reference/groundtruth/README.md`): a batch that
+    renames `Orders[Line Amount]`, updates and creates measures, sets a description and moves a
+    visual, then saves, wrote 3 files; Desktop opened the result without a repair, and its
+    recordings match the committed ones on all 601 measure and 26 calculation-group/RLS cases.
+    The 5 differing metadata and table cases differ only by the edits (same 3,900 Orders rows).
+- **Commits:** `a8d0411` (feature), plus the GT-6 notes.
 
 ### CI: macOS jobs on `macos-15`
 

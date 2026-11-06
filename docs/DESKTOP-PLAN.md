@@ -523,7 +523,9 @@ a `conflict` (with the files) unless `overwrite`; a partial failure lists the wr
 files and keeps the document dirty. Acceptance criteria 1 (no-op save of Acme), 2 (one measure's
 lines, undo restores the bytes) and the save part of 7 (edit, save, reopen in a second workspace,
 undo, save the original bytes) pass (`crates/pbi-core/tests/save_in_place.rs`,
-`crates/pbi-ops/tests/save.rs`). Still open:
+`crates/pbi-ops/tests/save.rs`), and Desktop opens a saved, edited copy of Acme without a
+repair and computes the same 627 measure and calculation-group/RLS values (GT-6,
+`reference/groundtruth/README.md`). Still open:
 `doc.saveAs` (conversions still refuse dirty documents), `lineageTag` generation for new
 objects, `doc/changed`
 notifications, dependent recalculation after measure edits, table, column, hierarchy and

@@ -295,7 +295,7 @@ Source: [app/README.md](../app/README.md), [desktop-ui-reference.md](../app/docs
 | DAX query view | 🟡 | 3 | editor, run/cancel, results ≤ 1000 rows | IntelliSense, formatter, find/replace |
 | TMDL view | 🟡 | 2 | read-only | Apply |
 | Power Query editor (Transform data) | 🟡 | 1 | read-only queries, parameters, blob map, Load CSV; a PBIT refreshes on open with its saved parameter values (Desktop's "Enter parameters" prompt is missing) | Applied-steps UI, data preview, parameter editing |
-| Save / Save as (PBIP) | 🟡 | 1 | `doc.save` registry command (in-place PBIP save, conflicts, `overwrite`; `crates/pbi-ops/tests/save.rs`); File → Export writes a new PBIP of an unedited document; no Save button | File → Save, Ctrl+S, unsaved marker (M6.8); `doc.saveAs` |
+| Save / Save as (PBIP) | 🟡 | 1 | `doc.save` registry command (in-place PBIP save, conflicts, `overwrite`; `crates/pbi-ops/tests/save.rs`); Desktop opens a saved, edited Acme copy and computes the same values (GT-6, `reference/groundtruth/README.md`); File → Export writes a new PBIP of an unedited document; no Save button | File → Save, Ctrl+S, unsaved marker (M6.8); `doc.saveAs` |
 | Undo / redo | ❌ | 0 | `History` exists; buttons disabled | Wire with the first editing command |
 | Several documents, several models per project | ❌ | 1 | one document; first model only | — |
 | Export from the app (data, PDF, PowerPoint) | 🟡 | 1 | File → Export writes a PBIP project or PBIT template (`convert.pbip`/`convert.pbit`); table data, PDF and PowerPoint: CLI or not at all | `export.table` from the Table view; PDF |
