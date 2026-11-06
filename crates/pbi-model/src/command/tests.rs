@@ -932,6 +932,149 @@ fn invalid_relationships_fail_without_changing_the_document() {
 }
 
 #[test]
+fn set_relationship_properties_round_trips_and_checks() {
+    use crate::semantic::{Cardinality, CrossFilter, SecurityFilteringBehavior};
+    let mut doc = sample_document();
+    let stores = doc.model.as_ref().unwrap().relationships[0].id;
+    let both_ways = SetRelationshipProperties {
+        relationship: stores,
+        to_cardinality: Some(Cardinality::Many),
+        cross_filtering_behavior: Some(CrossFilter::BothDirections),
+        security_filtering_behavior: Some(SecurityFilteringBehavior::BothDirections),
+        is_active: Some(false),
+        ..SetRelationshipProperties::default()
+    };
+    assert_round_trip(&mut doc, both_ways, |doc, events| {
+        let r = &doc.model.as_ref().unwrap().relationships[0];
+        assert_eq!(
+            (
+                &r.from_cardinality,
+                &r.to_cardinality,
+                &r.cross_filtering_behavior,
+                &r.security_filtering_behavior,
+                r.is_active
+            ),
+            (
+                &Cardinality::Many,
+                &Cardinality::Many,
+                &CrossFilter::BothDirections,
+                &SecurityFilteringBehavior::BothDirections,
+                false
+            )
+        );
+        assert_eq!(events, [ChangeEvent::ObjectChanged { id: stores }]);
+    });
+    let mut history = History::new();
+    let same = SetRelationshipProperties {
+        relationship: stores,
+        is_active: Some(true),
+        ..SetRelationshipProperties::default()
+    };
+    assert!(history.execute(&mut doc, same).unwrap().is_empty());
+
+    let rejected = |result: Result<Vec<ChangeEvent>, CommandError>, needle: &str| match result {
+        Err(CommandError::Rejected(message)) => {
+            assert!(message.contains(needle), "{message:?} lacks {needle:?}")
+        }
+        other => panic!("expected a rejection with {needle:?}, got {other:?}"),
+    };
+    let original = doc.clone();
+    let security_only = SetRelationshipProperties {
+        relationship: stores,
+        cross_filtering_behavior: Some(CrossFilter::OneDirection),
+        security_filtering_behavior: Some(SecurityFilteringBehavior::BothDirections),
+        ..SetRelationshipProperties::default()
+    };
+    rejected(
+        history.execute(&mut doc, security_only),
+        "set crossFilteringBehavior to bothDirections too",
+    );
+    let table = table_id(&doc, "Orders");
+    assert!(matches!(
+        history.execute(
+            &mut doc,
+            SetRelationshipProperties {
+                relationship: table,
+                ..SetRelationshipProperties::default()
+            }
+        ),
+        Err(CommandError::WrongKind { .. })
+    ));
+
+    // A second relationship between Orders and Stores can only become
+    // active once the first is not; in one group that is one undo step.
+    let mut names = Relationship::new(
+        "names",
+        ColumnRef::new("Orders", "Order ID"),
+        ColumnRef::new("Stores", "Store Name"),
+    );
+    names.is_active = false;
+    history
+        .execute(
+            &mut doc,
+            CreateRelationship {
+                relationship: names,
+                index: None,
+            },
+        )
+        .unwrap();
+    let names = doc.model.as_ref().unwrap().relationships[1].id;
+    let activate = SetRelationshipProperties {
+        relationship: names,
+        is_active: Some(true),
+        ..SetRelationshipProperties::default()
+    };
+    let before_swap = doc.clone();
+    rejected(
+        history.execute(&mut doc, activate.clone()),
+        "make that one inactive first",
+    );
+    assert_eq!(doc, before_swap);
+    let swap = CommandGroup::new("Swap the active relationship")
+        .with(SetRelationshipProperties {
+            relationship: stores,
+            is_active: Some(false),
+            ..SetRelationshipProperties::default()
+        })
+        .with(activate);
+    history.execute(&mut doc, swap).unwrap();
+    let active: Vec<bool> = doc
+        .model
+        .as_ref()
+        .unwrap()
+        .relationships
+        .iter()
+        .map(|r| r.is_active)
+        .collect();
+    assert_eq!(active, [false, true]);
+    history.undo(&mut doc).unwrap();
+    assert_eq!(doc, before_swap);
+    history.undo(&mut doc).unwrap();
+    assert_same_content(&doc, &original);
+
+    // Undo restores what was there without the checks: here two active
+    // relationships between the same tables, as a file may have them.
+    let mut doc = sample_document();
+    let mut second = Relationship::new(
+        "second",
+        ColumnRef::new("Orders", "Order ID"),
+        ColumnRef::new("Stores", "Store Name"),
+    );
+    second.id = doc.ids.next_id();
+    let second_id = second.id;
+    doc.model.as_mut().unwrap().relationships.push(second);
+    assert_round_trip(
+        &mut doc,
+        SetRelationshipProperties {
+            relationship: second_id,
+            is_active: Some(false),
+            ..SetRelationshipProperties::default()
+        },
+        |doc, _| assert!(!doc.model.as_ref().unwrap().relationships[1].is_active),
+    );
+}
+
+#[test]
 fn set_measure_properties_patches_only_given_fields() {
     let mut doc = sample_document();
     let count = measure_id(&doc, "Stores", "Store Count");

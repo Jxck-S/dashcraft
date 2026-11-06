@@ -1474,6 +1474,15 @@ export type EditOperation = {
   isActive?: boolean | null
   name?: string | null
 } | {
+  type: 'updateRelationship'
+  relationshipId?: number | null
+  name?: string | null
+  fromCardinality?: CardinalityParam | null
+  toCardinality?: CardinalityParam | null
+  crossFilteringBehavior?: CrossFilterParam | null
+  securityFilteringBehavior?: SecurityFilterParam | null
+  isActive?: boolean | null
+} | {
   type: 'deleteRelationship'
   relationshipId?: number | null
   name?: string | null
@@ -2501,7 +2510,10 @@ export interface RefreshOut {
   generation: number
 }
 
-/** Result of `model.relationship.create` and `model.relationship.delete`. */
+/**
+ * Result of `model.relationship.create`, `model.relationship.update` and
+ * `model.relationship.delete`.
+ */
 export interface RelationshipEditOut {
   changed: boolean
   revision: number
@@ -2514,6 +2526,15 @@ export interface RelationshipEditOut {
   from: ColumnParam
   /** The to column (usually the one side). */
   to: ColumnParam
+  /** `many` or `one` (after the edit; before it for a delete). */
+  fromCardinality: string
+  /** `many` or `one`. */
+  toCardinality: string
+  /** `oneDirection`, `bothDirections` or `automatic`. */
+  crossFilteringBehavior: string
+  /** `oneDirection`, `bothDirections` or `none`. */
+  securityFilteringBehavior: string
+  isActive: boolean
   /**
    * `model.relationship.delete` only: the DAX whose `USERELATIONSHIP`
    * or `CROSSFILTER` calls name the relationship.
@@ -2814,6 +2835,9 @@ export interface ScrollOut {
   /** The scrolling area. */
   viewport: RectOut
 }
+
+/** Which way row-level security filters cross a relationship. */
+export type SecurityFilterParam = 'oneDirection' | 'none' | 'bothDirections'
 
 /** A security role of the model. */
 export interface SecurityRoleOut {
@@ -3124,6 +3148,28 @@ export interface UpdateMeasureParams {
   isHidden?: boolean | null
 }
 
+export interface UpdateRelationshipParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The relationship's id from `model.relationships` (instead of `name`). */
+  relationshipId?: number | null
+  /** The relationship's name (case-insensitive). */
+  name?: string | null
+  fromCardinality?: CardinalityParam | null
+  toCardinality?: CardinalityParam | null
+  crossFilteringBehavior?: CrossFilterParam | null
+  /**
+   * How row-level security filters cross it; `bothDirections` needs
+   * `crossFilteringBehavior: bothDirections`.
+   */
+  securityFilteringBehavior?: SecurityFilterParam | null
+  /**
+   * Two tables have at most one active relationship: deactivate the
+   * other one first (both in one `doc.applyEdits` for one undo step).
+   */
+  isActive?: boolean | null
+}
+
 /** Token counts reported by the provider. */
 export interface Usage {
   promptTokens?: number | null
@@ -3330,6 +3376,8 @@ export interface OpsCommands {
   'model.measure.delete': { params: DeleteMeasureParams; output: MeasureEditOut }
   /** Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data. */
   'model.relationship.create': { params: CreateRelationshipParams; output: RelationshipEditOut }
+  /** Changes a relationship's cardinality, cross-filter direction, security filtering or active state as one undoable edit; filters follow it at once. */
+  'model.relationship.update': { params: UpdateRelationshipParams; output: RelationshipEditOut }
   /** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. */
   'model.relationship.delete': { params: DeleteRelationshipParams; output: RelationshipEditOut }
   /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
@@ -3461,6 +3509,7 @@ export const OPS_META = {
   'model.measure.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.measure.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.relationship.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.relationship.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.relationship.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.dependencies': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visual.move': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
@@ -3568,6 +3617,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelMeasureDelete: (params: DeleteMeasureParams, options?: O) => run('model.measure.delete', params, options),
     /** Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data. */
     modelRelationshipCreate: (params: CreateRelationshipParams, options?: O) => run('model.relationship.create', params, options),
+    /** Changes a relationship's cardinality, cross-filter direction, security filtering or active state as one undoable edit; filters follow it at once. */
+    modelRelationshipUpdate: (params: UpdateRelationshipParams, options?: O) => run('model.relationship.update', params, options),
     /** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. */
     modelRelationshipDelete: (params: DeleteRelationshipParams, options?: O) => run('model.relationship.delete', params, options),
     /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */

@@ -177,6 +177,47 @@ wrote into `Orders.tmdl`; `acme-measures` (601) and `acme-calcgroup-rls` (26) ar
 committed recordings, and `acme-metadata` differs only by the two added measures (rows added in
 `measures` and `measure-formats`, none changed or missing).
 
+**Relationship delete and create.** Copy `target/groundtruth/acme-desktop/` to
+`target/groundtruth/s13/acme/`, delete the Store and Ship Date relationships
+(`model.relationship.delete`), create Store again (`model.relationship.create`) and Ship Date
+again, inactive (a `createRelationship` edit of `doc.applyEdits`), then `doc.save`. Results with
+Desktop 2.159: the save wrote only `relationships.tmdl` (two blocks removed, two appended with GUID
+names, the other six blocks byte for byte); Desktop opened and refreshed the project without an
+error; `acme-measures` (601, including `Shipped Sales` through the recreated inactive
+relationship), `acme-calcgroup-rls` (26) and `acme-tables` (11) are identical to the committed
+recordings, and `acme-metadata` differs only in the order of the `relationships` rows (the same
+nine rows).
+
+**Relationship update, checked value by value against DashCraft.** Copy
+`target/groundtruth/acme-desktop/` to `target/groundtruth/s14/acme/` and run a batch with
+`model.relationship.update` (Customers `crossFilteringBehavior` `oneDirection`; Store
+`toCardinality` `many`; Products `crossFilteringBehavior` `bothDirections`) and one
+`doc.applyEdits` with two `updateRelationship` edits (Order Date inactive, Ship Date active), then
+`doc.save`. Run the same batch on a copy of `reference/examples/acme-outfitters/` inside a scratch
+reference root (`target/groundtruth/s14/ref/examples/acme-outfitters/`, next to copies of
+`groundtruth/corpus/` and `deviations.json`); both saves write the same `relationships.tmdl`. Open
+the Desktop copy, record into `target/groundtruth/s14/recordings` as above, copy the recordings to
+`target/groundtruth/s14/ref/groundtruth/recordings/` and run the ground-truth test against the
+edited example:
+
+```powershell
+$env:DASHCRAFT_REFERENCE = (Resolve-Path target/groundtruth/s14/ref).Path
+cargo test -p pbi-session --test groundtruth acme -- --nocapture
+```
+
+Results with Desktop 2.159: Desktop opened and refreshed the edited project without an error. Its
+answers differ from the committed recordings in 196 of 601 `acme-measures` cases (time
+intelligence now follows the ship date), 12 of 26 `acme-calcgroup-rls` cases and the
+`relationships` metadata, and DashCraft's results on the edited example match Desktop's on every
+case: 601 of 601 measures, 26 of 26 calculation-group and RLS cases, 11 of 11 tables and 5 of 5
+metadata cases, with no ledger entry.
+
+**Refused relationship settings.** A relationship with `securityFilteringBehavior:
+bothDirections` and a one-direction cross filter (written by hand into a copy, `s15`) makes
+Desktop 2.159 refuse the project: "cannot have SecurityFilterBehavior set to BothDirections when
+the CrossFilterBehavior is set to OneDirection". `model.relationship.update` refuses the same
+combination (`invalid_params`).
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.

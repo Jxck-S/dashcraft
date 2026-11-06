@@ -6,12 +6,15 @@
 //! (`lineageTag`) come with the object: the session draws them before the
 //! command is built (ADR-0014), so undo and redo keep them.
 
+use super::edit::{changed, swap};
 use super::rename::{check_measure_name, validate_name};
 use super::{Applied, ChangeEvent, Command, CommandError, expect_kind, model, model_mut};
 use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
 use crate::names::{dax_column_ref, names_eq};
-use crate::semantic::{ColumnRef, Measure, Model, Relationship};
+use crate::semantic::{
+    Cardinality, ColumnRef, CrossFilter, Measure, Model, Relationship, SecurityFilteringBehavior,
+};
 
 /// Adds a measure to a table. The measure's `id` is ignored: it gets a fresh
 /// one (see [`Applied::events`] or [`CreateMeasure::created_id`]).
@@ -259,6 +262,118 @@ impl Command for RestoreRelationship {
     }
 }
 
+/// Patches a relationship's properties in one step; `None` leaves a
+/// property unchanged. Its name and columns stay: to join other columns,
+/// delete it and create another.
+///
+/// Checks: a relationship made active is the only active one between its
+/// two tables (deactivate the other first, in the same group for one undo
+/// step), and security filters cross both ways only when filters do
+/// (`securityFilteringBehavior: bothDirections` needs
+/// `crossFilteringBehavior: bothDirections`). Undo and redo restore the
+/// previous state without checks.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SetRelationshipProperties {
+    pub relationship: ObjectId,
+    pub from_cardinality: Option<Cardinality>,
+    pub to_cardinality: Option<Cardinality>,
+    pub cross_filtering_behavior: Option<CrossFilter>,
+    pub security_filtering_behavior: Option<SecurityFilteringBehavior>,
+    pub is_active: Option<bool>,
+}
+
+impl SetRelationshipProperties {
+    fn patch(&self, doc: &mut Document, check: bool) -> Result<Applied, CommandError> {
+        let ObjectPath::Relationship { relationship: i } =
+            expect_kind(doc, self.relationship, ObjectKind::Relationship)?
+        else {
+            return Err(CommandError::NotFound(self.relationship));
+        };
+        let current = model(doc)?
+            .relationships
+            .get(i)
+            .ok_or(CommandError::NotFound(self.relationship))?;
+        let mut next = current.clone();
+        let mut differs = false;
+        let inverse = SetRelationshipProperties {
+            relationship: self.relationship,
+            from_cardinality: swap(
+                &mut next.from_cardinality,
+                &self.from_cardinality,
+                &mut differs,
+            ),
+            to_cardinality: swap(&mut next.to_cardinality, &self.to_cardinality, &mut differs),
+            cross_filtering_behavior: swap(
+                &mut next.cross_filtering_behavior,
+                &self.cross_filtering_behavior,
+                &mut differs,
+            ),
+            security_filtering_behavior: swap(
+                &mut next.security_filtering_behavior,
+                &self.security_filtering_behavior,
+                &mut differs,
+            ),
+            is_active: swap(&mut next.is_active, &self.is_active, &mut differs),
+        };
+        if check {
+            if next.is_active && !current.is_active {
+                check_only_active(
+                    model(doc)?,
+                    &next,
+                    Some(self.relationship),
+                    "make that one inactive first",
+                )?;
+            }
+            let filters_edited = self.cross_filtering_behavior.is_some()
+                || self.security_filtering_behavior.is_some();
+            if filters_edited
+                && next.security_filtering_behavior == SecurityFilteringBehavior::BothDirections
+                && next.cross_filtering_behavior != CrossFilter::BothDirections
+            {
+                return Err(CommandError::Rejected(format!(
+                    "relationship {}: security filters cross both ways only when filters do; set crossFilteringBehavior to bothDirections too",
+                    label(&next)
+                )));
+            }
+        }
+        let slot = model_mut(doc)?
+            .relationships
+            .get_mut(i)
+            .ok_or(CommandError::NotFound(self.relationship))?;
+        *slot = next;
+        Ok(Applied::new(
+            RestoreRelationshipProperties(inverse),
+            changed(self.relationship, differs),
+        ))
+    }
+}
+
+impl Command for SetRelationshipProperties {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        self.patch(doc, true)
+    }
+
+    fn label(&self) -> String {
+        "Edit relationship".to_owned()
+    }
+}
+
+/// Inverse of [`SetRelationshipProperties`]: puts back properties that were
+/// accepted before, without the checks (a model may come with two active
+/// relationships between the same tables; undo restores that as it was).
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RestoreRelationshipProperties(SetRelationshipProperties);
+
+impl Command for RestoreRelationshipProperties {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        self.0.patch(doc, false)
+    }
+
+    fn label(&self) -> String {
+        "Edit relationship".to_owned()
+    }
+}
+
 fn insert_relationship(
     doc: &mut Document,
     relationship: Relationship,
@@ -298,10 +413,6 @@ fn check_relationship(model: &Model, new: &Relationship) -> Result<(), CommandEr
         )));
     }
     let same_ends = |a: &ColumnRef, b: &ColumnRef| a.matches(&b.table, &b.column);
-    let same_tables = |r: &Relationship| {
-        (names_eq(&r.from.table, &new.from.table) && names_eq(&r.to.table, &new.to.table))
-            || (names_eq(&r.from.table, &new.to.table) && names_eq(&r.to.table, &new.from.table))
-    };
     for r in &model.relationships {
         if (same_ends(&r.from, &new.from) && same_ends(&r.to, &new.to))
             || (same_ends(&r.from, &new.to) && same_ends(&r.to, &new.from))
@@ -311,16 +422,38 @@ fn check_relationship(model: &Model, new: &Relationship) -> Result<(), CommandEr
                 label(r)
             )));
         }
-        if new.is_active && r.is_active && same_tables(r) {
-            return Err(CommandError::Rejected(format!(
-                "'{}' and '{}' already have an active relationship ({}); create this one inactive",
-                new.from.table,
-                new.to.table,
-                label(r)
-            )));
-        }
+    }
+    if new.is_active {
+        check_only_active(model, new, None, "create this one inactive")?;
     }
     Ok(())
+}
+
+/// Rejects `r` (assumed active) when another active relationship, other
+/// than `skip`, joins the same two tables.
+fn check_only_active(
+    model: &Model,
+    r: &Relationship,
+    skip: Option<ObjectId>,
+    hint: &str,
+) -> Result<(), CommandError> {
+    let same_tables = |o: &Relationship| {
+        (names_eq(&o.from.table, &r.from.table) && names_eq(&o.to.table, &r.to.table))
+            || (names_eq(&o.from.table, &r.to.table) && names_eq(&o.to.table, &r.from.table))
+    };
+    match model
+        .relationships
+        .iter()
+        .find(|o| Some(o.id) != skip && o.is_active && same_tables(o))
+    {
+        Some(other) => Err(CommandError::Rejected(format!(
+            "'{}' and '{}' already have an active relationship ({}); {hint}",
+            r.from.table,
+            r.to.table,
+            label(other)
+        ))),
+        None => Ok(()),
+    }
 }
 
 fn label(r: &Relationship) -> String {
