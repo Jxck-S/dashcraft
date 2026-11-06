@@ -296,7 +296,7 @@ Jobs:
 |---|---|---|
 | `prepare` | ubuntu-latest | Resolves the version: a pushed tag must match `Cargo.toml` and `app/package.json`; a manual run takes `Cargo.toml` or the `version` input. Extracts the release notes (a stable tag needs a CHANGELOG section; pre-releases fall back to `[Unreleased]`). Regenerates the license inventory and `THIRD_PARTY_LICENSES.txt`. Builds the SBOM zip. |
 | `create-release` | ubuntu-latest | On a manual run, creates the tag. Creates or updates the draft (refuses if the tag's release is already published). Uploads notices, licenses and the SBOM zip. |
-| `bundle` ×6 | macos-14 (arm64, x64), windows-latest (x64), windows-11-arm (arm64), ubuntu-22.04 (x64), ubuntu-22.04-arm (arm64) | `tauri build --ci --target … --bundles …` with the release resources config, optional signing, *Verify bundles*, `.sha256` files, upload |
+| `bundle` ×6 | macos-15 (arm64, x64), windows-latest (x64), windows-11-arm (arm64), ubuntu-22.04 (x64), ubuntu-22.04-arm (arm64) | `tauri build --ci --target … --bundles …` with the release resources config, optional signing, *Verify bundles*, `.sha256` files, upload |
 | `cli` ×6 | same | `cargo build --release -p dashcraft-cli` (`dashcraft`), smoke test (`--version`, `inspect` on the committed Acme Outfitters example PBIP), archive + `.sha256`, upload |
 | `finalize` | ubuntu-latest | `SHA256SUMS.txt` of all assets, optional build-provenance attestation |
 

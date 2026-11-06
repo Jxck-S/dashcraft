@@ -30,7 +30,7 @@ an invalid or unavailable Git revision fails detection rather than silently skip
 | Job | Runs on | What it does |
 |---|---|---|
 | `detect` | ubuntu-latest | Lints `ci.yml`, tests change selection, and selects full Rust validation or frontend-only validation |
-| `rust` | macos-14 (arm64), windows-latest, ubuntu-latest; except known frontend-only changes | `cargo fmt --all --check` (Linux only), default-members guard (Linux only), `cargo xtask layers` (Linux only, [below](#architecture-layers-cargo-xtask-layers)), `cargo clippy --all-targets --locked -- -D warnings`, `cargo nextest run --locked --no-fail-fast`, `cargo test --doc --locked --no-fail-fast` |
+| `rust` | macos-15 (arm64), windows-latest, ubuntu-latest; except known frontend-only changes | `cargo fmt --all --check` (Linux only), default-members guard (Linux only), `cargo xtask layers` (Linux only, [below](#architecture-layers-cargo-xtask-layers)), `cargo clippy --all-targets --locked -- -D warnings`, `cargo nextest run --locked --no-fail-fast`, `cargo test --doc --locked --no-fail-fast` |
 | `perf` | ubuntu-latest; same change selection as `rust` | `cargo xtask perf --quick --no-fail --locked`: release build of the `perf_*` examples, scenarios vs `perf/budgets.toml`. **Informational** (`continue-on-error`): the table goes to the job summary and `target/perf/` is uploaded as the `perf-report` artifact (14 days). See [perf.md](perf.md) |
 | `app` | same 3 OSes, only when `app/package.json` exists | Installs webview libraries on Linux, runs `npm ci`, `npm run check`, and `npm run build` in `app/`, then `cargo clippy -p dashcraft-app --all-targets --locked -- -D warnings`. On Linux it also runs `scripts/license-inventory.py --check` and emits a **warning** (not a failure) when the license inventory in `THIRD_PARTY_NOTICES.md` is stale ([packaging.md](packaging.md#license-inventory-and-sbom)) |
 | `deny` | ubuntu-latest | `cargo deny check advisories` (non-blocking) and `cargo deny check bans licenses sources` (blocking), using `deny.toml` |
@@ -183,7 +183,7 @@ inventory and SBOMs) are in [packaging.md](packaging.md). In short:
 3. `bundle` builds the Tauri app with `npx tauri build --ci --target … --bundles …`,
    verifies it (macOS: codesign, document types, resources; Linux: deb contents, `.desktop`
    file, MIME XML), writes a `.sha256` per file and uploads:
-   - macOS arm64 and x64 `.dmg`. Both are built on `macos-14`; x64 is cross-compiled. These
+   - macOS arm64 and x64 `.dmg`. Both are built on `macos-15`; x64 is cross-compiled. These
      are two thin builds, not a universal binary.
    - Windows x64 `.msi` (WiX) and `-setup.exe` (NSIS). Pre-release versions that WiX
      rejects (non-numeric, such as `-rc.1`) get NSIS only.
