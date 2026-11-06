@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, windows-latest, ubuntu-latest]
+        os: [macos-15, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v7
 
@@ -228,7 +228,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, windows-latest, ubuntu-latest]
+        os: [macos-15, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v7
 
