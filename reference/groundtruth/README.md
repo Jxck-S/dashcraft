@@ -234,6 +234,20 @@ no `Stores`). DashCraft's results on the edited example match Desktop's on every
 measures, 26 of 26 calculation-group and RLS cases, 11 of 11 tables and 5 of 5 metadata cases
 (queries that fail fail in both), with no ledger entry.
 
+**Calculated column create, checked value by value against DashCraft.** In the same way (`s17`),
+run `model.column.create` three times and `doc.save` on the example opened with its blob map, so
+the data types are inferred: `Orders[Margin] = Orders[Line Amount] - Orders[Line Cost]`,
+`Orders[Size Code] = LEFT(Orders[Order Size], 1)` and `Customers[Order Lines] =
+COUNTROWS(RELATEDTABLE(Orders))`. Run the same creates on the Desktop copy with the inferred types
+given as `dataType` (`double`, `string`, `int64`). Results with Desktop 2.159: the save wrote
+`Orders.tmdl` and `Customers.tmdl`; Desktop opened and refreshed the project without an error and
+lists the columns with the same types and summarization (`INFO.VIEW.COLUMNS`: Number and Sum,
+Text and None, Integer and Sum). Compared with the committed recordings, Desktop's answers differ
+in the `columns` metadata case and the `Orders` and `Customers` tables (the new columns), and
+DashCraft's results on the edited example match Desktop's on every case, every row of the new
+columns included: 601 of 601 measures, 26 of 26 calculation-group and RLS cases, 11 of 11 tables
+and 5 of 5 metadata cases, with no ledger entry.
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.

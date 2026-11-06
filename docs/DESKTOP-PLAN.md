@@ -589,7 +589,9 @@ publication as the edit) and infers its data type from the values as Desktop doe
 value is blank). Like Desktop, it gets a random `lineageTag`, numeric columns summarize by sum
 and the rest not, with the `SummarizationSetBy` annotation, and a saved column is written after
 the table's columns (`calculated_column_create_through_the_registry`,
-`created_column_saves_and_reopens`). Still open:
+`created_column_saves_and_reopens`); Desktop refreshes three saved columns with the same types and
+summarization and answers all 643 recorded cases on the edited model, the new columns' rows
+included, as DashCraft does (GT-6 s17). Still open:
 the app's change events (M6.8), dependent recalculation after measure edits, calculated table
 create, data column delete (with M editing), hierarchy create and delete, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures

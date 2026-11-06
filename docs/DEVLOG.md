@@ -23,7 +23,12 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   refresh computes it, inferred `string` and `int64`, 8 refusals, a blank column with a given
   type, undo/redo, a group of two dependent columns and a measure, refresh after the group;
   `save.rs::created_column_saves_and_reopens`: only `Orders.tmdl` written, the exact block
-  before the partition, reopen, undo saves the original project). Registry 67 → 68 commands.
+  before the partition, reopen, undo saves the original project; a document opened with
+  `autoRefresh` loads its data before inferring). Registry 67 → 68 commands. GT-6 with Desktop
+  2.159 (s17: three created columns, types inferred on the example, saved on a Desktop copy):
+  Desktop refreshes the project without an error and lists the same types and summarization,
+  and DashCraft's results on the edited example match Desktop's on all 643 recorded cases,
+  including every row of the new columns in the `Orders` and `Customers` tables.
 - **Still open:** calculated table create, data column delete with M editing, hierarchy create
   and delete; a created column is refused when its DAX fails on a row (Desktop keeps it with an
   error).
