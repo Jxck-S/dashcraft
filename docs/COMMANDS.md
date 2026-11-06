@@ -109,6 +109,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.relationship.create`](#modelrelationshipcreate) | Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data. | M A |
 | [`model.relationship.update`](#modelrelationshipupdate) | Changes a relationship's cardinality, cross-filter direction, security filtering or active state as one undoable edit; filters follow it at once. | M A |
 | [`model.relationship.delete`](#modelrelationshipdelete) | Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. | M A |
+| [`model.column.create`](#modelcolumncreate) | Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given. | M A |
 | [`model.column.delete`](#modelcolumndelete) | Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. | M A |
 | [`model.table.delete`](#modeltabledelete) | Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. | M A |
 | [`model.dependencies`](#modeldependencies) | Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. | A |
@@ -2021,6 +2022,44 @@ Examples:
 
 - What uses a relationship: `{"docId":"d1","relationshipId":7,"dryRun":true}`
 - Delete by name: `{"docId":"d1","name":"d0c1e2f3-a4b5-4c6d-8e7f-000000000001"}`
+
+### `model.column.create`
+
+**Create a calculated column.** Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `table` | string | The column's table. |
+| `name` | string | The column name: not a column or measure of `table`. |
+| `expression` | string | The DAX expression, evaluated per row of `table`. |
+| `dataType` (optional) | `"string"` \| `"int64"` \| `"double"` \| `"decimal"` \| `"dateTime"` \| `"boolean"` \| null | The data type; inferred from the values when omitted (required when the table has no rows loaded or every value is blank). |
+| `formatString` (optional) | string \| null |  |
+| `displayFolder` (optional) | string \| null |  |
+| `description` (optional) | string \| null |  |
+| `isHidden` (optional) | boolean |  |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `columnId` | integer |  |
+| `table` | string |  |
+| `name` | string |  |
+| `dataType` | string | `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`. |
+| `dataTypeInferred` | boolean | Whether the data type was inferred from the values (no `dataType` given). |
+
+Examples:
+
+- Add a calculated column: `{"docId":"d1","table":"Orders","name":"Margin","expression":"Orders[Line Amount] - Orders[Line Cost]","formatString":"#,0.00"}`
 
 ### `model.column.delete`
 

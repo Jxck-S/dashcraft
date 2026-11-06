@@ -6,11 +6,12 @@
 //! `render.visual`: `report`, `page` and the visual's name.
 
 use pbi_model::{
-    Cardinality, ChangeEvent, ColumnRef, CommandGroup, CreateMeasure, CreateRelationship,
-    CrossFilter, DeleteColumn, DeleteMeasure, DeleteRelationship, DeleteTable, HistoryResult,
-    Measure, ObjectId, ObjectPath, Position, Relationship, SecurityFilteringBehavior,
-    SetDescription, SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties,
-    SetVisualPosition, Visual, names_eq,
+    Annotation, Cardinality, ChangeEvent, Column, ColumnRef, CommandGroup, CreateColumn,
+    CreateMeasure, CreateRelationship, CrossFilter, DataType, DeleteColumn, DeleteMeasure,
+    DeleteRelationship, DeleteTable, HistoryResult, Measure, ObjectId, ObjectPath, Position,
+    Relationship, SecurityFilteringBehavior, SetDescription, SetMeasureExpression,
+    SetMeasureProperties, SetRelationshipProperties, SetVisualPosition, SummarizeBy, Visual,
+    names_eq,
 };
 use pbi_session::{
     RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error, preview_rename,
@@ -1101,6 +1102,214 @@ impl Command for ModelMeasureDelete {
         );
         out.dry_run = Some(params.dry_run);
         Ok(out)
+    }
+}
+
+/// A column data type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DataTypeParam {
+    String,
+    Int64,
+    Double,
+    Decimal,
+    DateTime,
+    Boolean,
+}
+
+impl From<DataTypeParam> for DataType {
+    fn from(t: DataTypeParam) -> Self {
+        match t {
+            DataTypeParam::String => DataType::String,
+            DataTypeParam::Int64 => DataType::Int64,
+            DataTypeParam::Double => DataType::Double,
+            DataTypeParam::Decimal => DataType::Decimal,
+            DataTypeParam::DateTime => DataType::DateTime,
+            DataTypeParam::Boolean => DataType::Boolean,
+        }
+    }
+}
+
+/// The properties of a new calculated column.
+#[derive(Debug, Clone)]
+struct NewColumn {
+    table: String,
+    name: String,
+    expression: String,
+    data_type: Option<DataTypeParam>,
+    format_string: Option<String>,
+    display_folder: Option<String>,
+    description: Option<String>,
+    is_hidden: bool,
+}
+
+/// The command that creates `new`, and whether its data type was inferred.
+/// Like Power BI Desktop, numeric columns summarize by sum and the others do
+/// not summarize.
+fn create_column(session: &Session, new: NewColumn) -> Result<(CreateColumn, bool), OpError> {
+    if new.expression.trim().is_empty() {
+        return Err(OpError::invalid_params("the column expression is empty"));
+    }
+    if let Some(err) = dax_syntax_error(&new.expression) {
+        return Err(OpError::invalid_params(format!(
+            "the expression does not parse: {err}"
+        )));
+    }
+    let table = model_object(session, None, Some(&new.table), None, None)?;
+    let (data_type, was_inferred) = match new.data_type {
+        Some(t) => (DataType::from(t), false),
+        None => match session.infer_column_type(&new.table, &new.name, &new.expression)? {
+            Some(t) => (t, true),
+            None => {
+                return Err(OpError::invalid_params(format!(
+                    "the data type of {} cannot be inferred (its table has no rows loaded or every value is blank): give dataType",
+                    pbi_model::names::dax_column_ref(&new.table, &new.name)
+                )));
+            }
+        },
+    };
+    let numeric = data_type.is_numeric();
+    let mut column = Column::calculated(new.name, data_type, new.expression);
+    column.format_string = new.format_string.filter(|s| !s.is_empty());
+    column.display_folder = new.display_folder.filter(|s| !s.is_empty());
+    column.description = new.description.filter(|s| !s.is_empty());
+    column.is_hidden = new.is_hidden;
+    column.lineage_tag = session.new_lineage_tag();
+    column.summarize_by = Some(if numeric {
+        SummarizeBy::Sum
+    } else {
+        SummarizeBy::None
+    });
+    column
+        .annotations
+        .push(Annotation::new("SummarizationSetBy", "Automatic"));
+    Ok((
+        CreateColumn {
+            table,
+            column,
+            index: None,
+        },
+        was_inferred,
+    ))
+}
+
+/// Result of `model.column.create`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ColumnCreateOut {
+    pub changed: bool,
+    pub revision: u64,
+    pub dirty: bool,
+    pub changed_object_ids: Vec<u64>,
+    pub column_id: u64,
+    pub table: String,
+    pub name: String,
+    /// `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`.
+    pub data_type: String,
+    /// Whether the data type was inferred from the values (no `dataType`
+    /// given).
+    pub data_type_inferred: bool,
+}
+
+/// `model.column.create`.
+#[derive(Debug)]
+pub struct ModelColumnCreate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CreateColumnParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The column's table.
+    pub table: String,
+    /// The column name: not a column or measure of `table`.
+    pub name: String,
+    /// The DAX expression, evaluated per row of `table`.
+    pub expression: String,
+    /// The data type; inferred from the values when omitted (required when
+    /// the table has no rows loaded or every value is blank).
+    #[serde(default)]
+    pub data_type: Option<DataTypeParam>,
+    #[serde(default)]
+    pub format_string: Option<String>,
+    #[serde(default)]
+    pub display_folder: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub is_hidden: bool,
+}
+
+impl Command for ModelColumnCreate {
+    type Params = CreateColumnParams;
+    type Output = ColumnCreateOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.column.create",
+            title: "Create a calculated column",
+            summary: "Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[(
+                "Add a calculated column",
+                r##"{"docId": "d1", "table": "Orders", "name": "Margin", "expression": "Orders[Line Amount] - Orders[Line Cost]", "formatString": "#,0.00"}"##,
+            )],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        resolve::require_model(&entry)?;
+        let session = entry.session();
+        let (command, data_type_inferred) = create_column(
+            session,
+            NewColumn {
+                table: params.table,
+                name: params.name,
+                expression: params.expression,
+                data_type: params.data_type,
+                format_string: params.format_string,
+                display_folder: params.display_folder,
+                description: params.description,
+                is_hidden: params.is_hidden,
+            },
+        )?;
+        let data_type = command.column.data_type.as_str().to_owned();
+        let result = session.execute_document_command(command).await?;
+        let id = result
+            .events
+            .iter()
+            .find_map(|e| match e {
+                ChangeEvent::ObjectAdded { id } => Some(*id),
+                _ => None,
+            })
+            .ok_or_else(|| OpError::internal("the new column has no id"))?;
+        let (table, name) = {
+            let document = session.document();
+            match document.locate(id) {
+                Some(ObjectPath::Column { table, column }) => document
+                    .model
+                    .as_ref()
+                    .and_then(|m| m.tables.get(table))
+                    .and_then(|t| Some((t.name.clone(), t.columns.get(column)?.name.clone())))
+                    .unwrap_or_default(),
+                _ => Default::default(),
+            }
+        };
+        let edit = DocumentEditOut::committed(ctx, &entry, &result);
+        Ok(ColumnCreateOut {
+            changed: edit.changed,
+            revision: edit.revision,
+            dirty: edit.dirty,
+            changed_object_ids: edit.changed_object_ids,
+            column_id: id.get(),
+            table,
+            name,
+            data_type,
+            data_type_inferred,
+        })
     }
 }
 
@@ -2198,6 +2407,24 @@ pub enum EditOperation {
         #[serde(default)]
         name: Option<String>,
     },
+    /// Like `model.column.create`. Without `dataType` the type is inferred
+    /// against the document before the group, so the expression cannot use
+    /// objects created earlier in the group.
+    CreateColumn {
+        table: String,
+        name: String,
+        expression: String,
+        #[serde(default)]
+        data_type: Option<DataTypeParam>,
+        #[serde(default)]
+        format_string: Option<String>,
+        #[serde(default)]
+        display_folder: Option<String>,
+        #[serde(default)]
+        description: Option<String>,
+        #[serde(default)]
+        is_hidden: bool,
+    },
     /// Like `model.column.delete` (without `dryRun`).
     DeleteColumn {
         #[serde(default)]
@@ -2396,6 +2623,28 @@ impl Command for DocumentApplyEdits {
                 } => group.with(DeleteRelationship {
                     relationship: relationship_target(session, relationship_id, name.as_deref())?,
                 }),
+                EditOperation::CreateColumn {
+                    table,
+                    name,
+                    expression,
+                    data_type,
+                    format_string,
+                    display_folder,
+                    description,
+                    is_hidden,
+                } => {
+                    let new = NewColumn {
+                        table,
+                        name,
+                        expression,
+                        data_type,
+                        format_string,
+                        display_folder,
+                        description,
+                        is_hidden,
+                    };
+                    group.with(create_column(session, new)?.0)
+                }
                 EditOperation::DeleteColumn {
                     column_id,
                     table,

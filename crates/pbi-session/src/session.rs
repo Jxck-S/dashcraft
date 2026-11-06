@@ -16,6 +16,7 @@ use pbi_model::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::created::compute_created_columns;
 use crate::derived::{Applied, DerivedEntry, synthetic_column};
 use crate::edit::{
     ModelRenames, RenameObject, RenamePreview, preview_rename, rename_results, structure_changed,
@@ -587,7 +588,7 @@ impl Session {
         renames.check_derived(&state.derived)?;
         let mut tables = state.tables.clone();
         let mut removed = state.removed.clone();
-        let engine = if structure_changed(old, new) {
+        let mut engine = if structure_changed(old, new) {
             let plan = DataPlan::between(old, new, &state.removed, state.engine.storage());
             let mut engine = state.engine.clone();
             let detached = engine
@@ -609,6 +610,9 @@ impl Session {
             if let Some(t) = model.table_mut(&entry.info.table) {
                 t.columns.push(synthetic_column(&entry.info, &entry.column));
             }
+        }
+        if let Some(engine) = engine.as_mut() {
+            compute_created_columns(engine, old, new, &model)?;
         }
         Ok(PreparedEdit {
             model: Some(ModelEdit {

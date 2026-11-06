@@ -2559,3 +2559,156 @@ async fn column_and_table_delete_through_the_registry() {
     let restored = r.run("model.relationships", json!({"docId": doc})).await;
     assert_eq!(restored["relationships"], relationships["relationships"]);
 }
+
+#[tokio::test]
+async fn calculated_column_create_through_the_registry() {
+    let (Some(pbip), Some(map)) = (fixture(PBIP), fixture(BLOB_MAP)) else {
+        eprintln!("SKIP: {PBIP} missing");
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let number = |v: Value| v.as_f64().unwrap_or_else(|| panic!("not a number: {v}"));
+    let fails = |dax: &str| {
+        let query = format!("EVALUATE ROW(\"n\", {dax})");
+        r.try_run("dax.query", json!({"docId": doc, "query": query}))
+    };
+    let create = |params: Value| {
+        let mut params = params;
+        params["docId"] = json!(doc);
+        r.try_run("model.column.create", params)
+    };
+
+    // Before a refresh nothing is loaded: the data type must be given, and
+    // the refresh computes the column.
+    let margin = json!({"table": "Orders", "name": "Margin",
+        "expression": "Orders[Line Amount] - Orders[Line Cost]"});
+    assert_eq!(
+        error_code(create(margin.clone()).await),
+        OpErrorCode::InvalidParams
+    );
+    let mut typed = margin.clone();
+    typed["dataType"] = json!("double");
+    let out = create(typed).await.unwrap();
+    assert_eq!(
+        (
+            &out["changed"],
+            &out["revision"],
+            &out["table"],
+            &out["name"],
+            &out["dataType"],
+            &out["dataTypeInferred"],
+            &out["changedObjectIds"]
+        ),
+        (
+            &json!(true),
+            &json!(1),
+            &json!("Orders"),
+            &json!("Margin"),
+            &json!("double"),
+            &json!(false),
+            &json!([out["columnId"]])
+        )
+    );
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let gross = number(scalar(&r, &doc, "[Gross Margin]").await);
+    let summed = number(scalar(&r, &doc, "SUM(Orders[Margin])").await);
+    assert!(
+        (summed - gross).abs() <= gross.abs() * 1e-9,
+        "{summed} {gross}"
+    );
+
+    // Over loaded data the type is inferred and the column computed at once.
+    let size = create(json!({"table": "orders", "name": "Size Code",
+        "expression": "LEFT(Orders[Order Size], 1)"}))
+    .await
+    .unwrap();
+    assert_eq!(
+        (
+            &size["dataType"],
+            &size["dataTypeInferred"],
+            &size["revision"]
+        ),
+        (&json!("string"), &json!(true), &json!(2))
+    );
+    let large = "CALCULATE(COUNTROWS(Orders), Orders[Order Size] = \"Large\")";
+    let l = "CALCULATE(COUNTROWS(Orders), Orders[Size Code] = \"L\")";
+    assert_eq!(scalar(&r, &doc, l).await, scalar(&r, &doc, large).await);
+    let units = create(json!({"table": "Orders", "name": "Double Units",
+        "expression": "Orders[Quantity] * 2"}))
+    .await
+    .unwrap();
+    assert_eq!(units["dataType"], "int64", "{units}");
+
+    // Refusals: names taken by a column or measure, unknown columns, DAX
+    // that does not parse, all-blank values without a type, unknown tables.
+    for (name, expression) in [
+        ("quantity", "1"),
+        ("Total Sales", "1"),
+        ("Bad", "Orders[Nope] + 1"),
+        ("Bad", "1 +"),
+        ("Bad", ""),
+        ("Bad", "BLANK()"),
+    ] {
+        let params = json!({"table": "Orders", "name": name, "expression": expression});
+        assert_eq!(
+            error_code(create(params).await),
+            OpErrorCode::InvalidParams,
+            "{name} = {expression}"
+        );
+    }
+    let nowhere = json!({"table": "Nowhere", "name": "X", "expression": "1"});
+    assert_eq!(error_code(create(nowhere).await), OpErrorCode::NotFound);
+    let blank = json!({"table": "Orders", "name": "Nothing", "expression": "BLANK()",
+        "dataType": "string"});
+    create(blank).await.unwrap();
+    assert_eq!(
+        number(scalar(&r, &doc, "COUNTBLANK(Orders[Nothing])").await),
+        number(scalar(&r, &doc, "COUNTROWS(Orders)").await)
+    );
+
+    // Undo removes the column; redo brings back its values.
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert!(fails("SUM(Orders[Double Units])").await.is_err());
+    r.run("doc.redo", json!({"docId": doc})).await;
+    assert_eq!(
+        number(scalar(&r, &doc, "SUM(Orders[Double Units])").await),
+        2.0 * number(scalar(&r, &doc, "[Units Sold]").await)
+    );
+
+    // In a group, a column can use one created before it when its type is
+    // given, and a measure can use both; one undo step removes all three.
+    let group = r
+        .run(
+            "doc.applyEdits",
+            json!({"docId": doc, "edits": [
+                {"type": "createColumn", "table": "Orders", "name": "Unit Count",
+                 "expression": "Orders[Quantity] + 0"},
+                {"type": "createColumn", "table": "Orders", "name": "Units Plus One",
+                 "expression": "Orders[Unit Count] + 1", "dataType": "int64"},
+                {"type": "createMeasure", "table": "Orders", "name": "Units Plus Rows",
+                 "expression": "SUM(Orders[Units Plus One])"}
+            ]}),
+        )
+        .await;
+    assert_eq!(group["changedObjectIds"].as_array().unwrap().len(), 3);
+    let rows = number(scalar(&r, &doc, "COUNTROWS(Orders)").await);
+    let units = number(scalar(&r, &doc, "[Units Sold]").await);
+    assert_eq!(
+        number(scalar(&r, &doc, "[Units Plus Rows]").await),
+        units + rows
+    );
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    assert_eq!(
+        number(scalar(&r, &doc, "[Units Plus Rows]").await),
+        units + rows
+    );
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert!(fails("SUM(Orders[Unit Count])").await.is_err());
+    assert!(fails("[Units Plus Rows]").await.is_err());
+}

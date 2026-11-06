@@ -953,3 +953,83 @@ async fn column_and_table_deletes_save_and_reopen() {
         "undoing both deletes saves the original project"
     );
 }
+
+#[tokio::test]
+async fn created_column_saves_and_reopens() {
+    const DEF: &str = "AcmeOutfitters.SemanticModel/definition";
+    let Some(acme) = fixture(ACME) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("create-column-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let before = files(dir.path());
+    let text = |f: &str| String::from_utf8(before[&format!("{DEF}/{f}")].clone()).unwrap();
+    let saved = |f: &str| fs::read_to_string(dir.path().join(DEF).join(f)).unwrap();
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    let out = r
+        .run(
+            "model.column.create",
+            json!({"docId": doc, "table": "Orders", "name": "Margin",
+                "expression": "Orders[Line Amount] - Orders[Line Cost]",
+                "dataType": "double", "formatString": "#,0.00", "displayFolder": "Profit"}),
+        )
+        .await;
+    assert_eq!(out["dataTypeInferred"], false, "{out}");
+
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(
+        sorted(&out["written"]),
+        [format!("{DEF}/tables/Orders.tmdl")],
+        "{out}"
+    );
+    // Like Power BI Desktop: after the table's columns, a lineage tag, sum
+    // for a numeric column and the SummarizationSetBy annotation.
+    let orders = saved("tables/Orders.tmdl");
+    let tag = orders
+        .split("column Margin = ")
+        .nth(1)
+        .and_then(|block| block.split("lineageTag: ").nth(1))
+        .and_then(|rest| rest.lines().next())
+        .unwrap();
+    assert_eq!(tag.len(), 36, "{tag}");
+    let block = format!(
+        "\tcolumn Margin = Orders[Line Amount] - Orders[Line Cost]\n\
+         \t\tdataType: double\n\
+         \t\tformatString: #,0.00\n\
+         \t\tdisplayFolder: Profit\n\
+         \t\tlineageTag: {tag}\n\
+         \t\tsummarizeBy: sum\n\
+         \n\
+         \t\tannotation SummarizationSetBy = Automatic\n\
+         \n"
+    );
+    let original = text("tables/Orders.tmdl");
+    let at = original.find("\tpartition Orders").unwrap();
+    assert_eq!(
+        orders,
+        format!("{}{block}{}", &original[..at], &original[at..])
+    );
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    let tables = fresh.run("model.tables", json!({"docId": reopened})).await;
+    let orders = tables["tables"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["name"] == "Orders")
+        .unwrap();
+    assert!(orders.to_string().contains("Margin"), "{orders}");
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.save", json!({"docId": doc})).await;
+    assert!(
+        files(dir.path()) == before,
+        "undoing the create saves the original project"
+    );
+}
