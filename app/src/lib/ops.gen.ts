@@ -1298,6 +1298,35 @@ export interface DocumentParams {
   docId: string
 }
 
+export interface DocumentSaveOut {
+  /** The project folder. */
+  projectDir: string
+  /** Files written, relative to the project folder. */
+  written: string[]
+  /** Files deleted (e.g. the `.tmdl` file of a renamed table). */
+  deleted: string[]
+  /**
+   * Files changed on disk since the open or last save (only with
+   * `overwrite`).
+   */
+  overwritten: FileChangeOut[]
+  /** The revision saved. */
+  revision: number
+  /** Whether the document has edits after the save (always `false`). */
+  dirty: boolean
+}
+
+export interface DocumentSaveParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /**
+   * Save even if project files changed on disk since the open or last
+   * save: files DashCraft writes get the document's version, other
+   * files are kept. Without it such a save fails with `conflict`.
+   */
+  overwrite?: boolean
+}
+
 /** One reversible edit accepted by `doc.applyEdits`. */
 export type EditOperation = {
   type: 'setMeasureExpression'
@@ -1558,6 +1587,16 @@ export interface FieldRefOut {
    * `Sum(Orders[Quantity])`.
    */
   ref: string
+}
+
+/** How a project file changed on disk. */
+export type FileChangeKind = 'added' | 'modified' | 'removed'
+
+/** A project file changed on disk by another program. */
+export interface FileChangeOut {
+  /** Path relative to the project folder. */
+  path: string
+  change: FileChangeKind
 }
 
 export interface FilterOut {
@@ -2012,7 +2051,7 @@ export interface OpError {
  * command contract: it never changes for an existing code; new codes may
  * be added.
  */
-export type OpErrorCode = 'invalidParams' | 'unknownCommand' | 'notFound' | 'noDocument' | 'unsupported' | 'pathDenied' | 'io' | 'query' | 'cancelled' | 'busy' | 'internal'
+export type OpErrorCode = 'invalidParams' | 'unknownCommand' | 'notFound' | 'noDocument' | 'unsupported' | 'pathDenied' | 'io' | 'query' | 'cancelled' | 'busy' | 'internal' | 'conflict'
 
 export interface OriginOut {
   /** File relative to the opened folder/archive. */
@@ -3153,6 +3192,8 @@ export interface OpsCommands {
   'doc.redo': { params: DocumentParams; output: DocumentEditOut }
   /** Returns the document revision, dirty state and undo/redo availability. */
   'doc.history': { params: DocumentParams; output: DocumentHistoryOut }
+  /** Saves the edits into the opened PBIP project, writing only changed files; files changed on disk since the open are a conflict unless overwrite. */
+  'doc.save': { params: DocumentSaveParams; output: DocumentSaveOut }
   /** Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report. */
   'doc.lint': { params: DocLintParams; output: LintOut }
   /** Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status. */
@@ -3270,6 +3311,7 @@ export const OPS_META = {
   'doc.undo': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.redo': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.history': { category: 'edit', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'doc.save': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: true },
   'doc.lint': { category: 'lint', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'data.refresh': { category: 'data', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'data.tables': { category: 'data', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -3379,6 +3421,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     docRedo: (params: DocumentParams, options?: O) => run('doc.redo', params, options),
     /** Returns the document revision, dirty state and undo/redo availability. */
     docHistory: (params: DocumentParams, options?: O) => run('doc.history', params, options),
+    /** Saves the edits into the opened PBIP project, writing only changed files; files changed on disk since the open are a conflict unless overwrite. */
+    docSave: (params: DocumentSaveParams, options?: O) => run('doc.save', params, options),
     /** Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report. */
     docLint: (params: DocLintParams, options?: O) => run('doc.lint', params, options),
     /** Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status. */

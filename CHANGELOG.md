@@ -10,6 +10,8 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 ### Changed
 - `pbi-model::History` stages edits before publishing them, advances a monotonic revision only when document content changes, and reports the changed flag, revision and events. Undoing back to the saved content clears the dirty state.
 - `dax.query`, `dax.evaluateMeasure` and `measures.values` report `documentRevision` captured with the matching model and engine snapshot; DAX result formatting uses that captured model.
+- Renaming a column now also renames the default label of aggregated report fields (`Sum of Amount` → `Sum of Revenue`), so LINT003 no longer reports it after a rename.
+- The source-preserving TMDL writer keeps the source's `ref table` (or other `ref`) lines even when only one object of that kind is left; before, such a line was dropped.
 
 ### Added
 - M6 runtime foundation: session-owned revisioned document edits with undo/redo and dirty-state tracking, exposed through `model.setMeasureExpression`, atomic grouped `doc.applyEdits`, and `doc.undo`/`doc.redo`/`doc.history`. Dirty documents now require explicit discard to close; conversions reject unsaved edits until writer synchronization is implemented. `model.measures` now includes stable object IDs.
@@ -21,6 +23,11 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
   - DAX that does not parse is kept, with a warning. Undo restores a deleted measure with its id, and ids are never reused.
   - `doc.applyEdits` gains `createMeasure`, `updateMeasure` and `deleteMeasure` edits.
 - `model.dependencies` lists what refers to a table, column or measure: DAX, relationships, hierarchy levels, sort-by columns, role permissions, and report, page and visual fields and filters. The registry grows from 56 to 60 core commands.
+- M6 save: `doc.save` writes the edits into the PBIP project the document was opened from ([ADR-0013](docs/adr/0013-save-conflicts-and-recovery.md)).
+  - Only files whose content changed are written, each atomically (temporary file, then rename). Everything else keeps its bytes: unknown properties, formatting, untouched numbers.
+  - A table rename moves its `.tmdl` file; renames are applied to the report JSON (fields, filters, bookmarks), and visual moves patch only the `position` numbers.
+  - A project file changed on disk since the open or the last save makes the save fail with the new `conflict` error code (exit code 1), listing the files; `"overwrite": true` saves anyway.
+  - The project folder must be inside a write root. PBIX, PBIT and `model.bim` sources have no in-place save. The registry grows from 60 to 61 core commands.
 - **Power BI Desktop ground truth** ([ADR-0011](docs/adr/0011-desktop-ground-truth.md), [reference/groundtruth](reference/groundtruth/README.md)): 2,242 DAX queries (every Acme measure per page and filter, every table, metadata, calculation groups and RLS roles, 747 `FORMAT` cases, every `functions.rs` case on a generated `dax-lab` fixture, three MIT samples) recorded from Desktop 2.159's local engine over ADOMD.NET and compared value by value by `cargo test -p pbi-session --test groundtruth`; differences must be listed in a deviation ledger that only shrinks (1 entry). Recorder and generators in `scripts/groundtruth/`, `cargo xtask groundtruth [--check]` for status, `Session::dax_query_tables` for typed results.
 - Lint rule `LINT018`: a measure with both `formatString` and `formatStringDefinition` (Power BI Desktop refuses to load it).
 - M: `List.Dates`, `List.DateTimes`, `List.DateTimeZones`, `List.Times` and `List.Durations`.

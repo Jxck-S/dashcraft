@@ -100,6 +100,9 @@ fn error_meaning(code: OpErrorCode) -> &'static str {
         OpErrorCode::Cancelled => "The command was cancelled",
         OpErrorCode::Busy => "Too many requests in flight or documents open",
         OpErrorCode::Internal => "A bug (a panic or an unexpected failure)",
+        OpErrorCode::Conflict => {
+            "Files changed on disk since the open or last save; nothing was written (`data.conflicts`)"
+        }
     }
 }
 

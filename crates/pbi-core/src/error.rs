@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use crate::container::ContainerError;
 use crate::detect::DetectError;
+use crate::save_in_place::FileChange;
 
 /// Error returned by the readers and writers of this crate.
 #[derive(Debug, thiserror::Error)]
@@ -37,6 +38,25 @@ pub enum CoreError {
     /// The document cannot be written in the requested form.
     #[error("cannot save: {0}")]
     Save(String),
+    /// Files of the project changed on disk since it was opened or last
+    /// saved; nothing was written ([`crate::save_in_place`]).
+    #[error("{} file(s) of the project changed on disk since it was opened or saved", .changes.len())]
+    Conflict {
+        /// The changed files, by path.
+        changes: Vec<FileChange>,
+    },
+    /// A save failed part-way: some files were written or deleted.
+    #[error("the save stopped at {failed}: {message}")]
+    PartialSave {
+        /// Files written before the failure.
+        written: Vec<String>,
+        /// Files deleted before the failure.
+        deleted: Vec<String>,
+        /// The file that failed.
+        failed: String,
+        /// Why.
+        message: String,
+    },
 }
 
 impl CoreError {

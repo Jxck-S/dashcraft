@@ -47,6 +47,8 @@ export function describeOpError(error: OpErrorDto): string {
       return `Cancelled: ${m}`
     case 'busy':
       return `Busy: ${m}`
+    case 'conflict':
+      return `Changed on disk: ${m}`
     case 'unknownCommand':
     case 'internal':
       return `Internal error: ${m}`

@@ -786,6 +786,8 @@ fn session_futures_are_send() {
     assert_send(&removed);
     let cached = session.load_cached_data();
     assert_send(&cached);
+    let save = session.save(false);
+    assert_send(&save);
 }
 
 /// Strings of `table[column]`.

@@ -1594,3 +1594,130 @@ impl Command for DocumentHistory {
         })
     }
 }
+
+/// `doc.save`.
+#[derive(Debug)]
+pub struct DocumentSave;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DocumentSaveParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Save even if project files changed on disk since the open or last
+    /// save: files DashCraft writes get the document's version, other
+    /// files are kept. Without it such a save fails with `conflict`.
+    #[serde(default)]
+    pub overwrite: bool,
+}
+
+/// How a project file changed on disk.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum FileChangeKind {
+    Added,
+    Modified,
+    Removed,
+}
+
+/// A project file changed on disk by another program.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FileChangeOut {
+    /// Path relative to the project folder.
+    pub path: String,
+    pub change: FileChangeKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DocumentSaveOut {
+    /// The project folder.
+    pub project_dir: String,
+    /// Files written, relative to the project folder.
+    pub written: Vec<String>,
+    /// Files deleted (e.g. the `.tmdl` file of a renamed table).
+    pub deleted: Vec<String>,
+    /// Files changed on disk since the open or last save (only with
+    /// `overwrite`).
+    pub overwritten: Vec<FileChangeOut>,
+    /// The revision saved.
+    pub revision: u64,
+    /// Whether the document has edits after the save (always `false`).
+    pub dirty: bool,
+}
+
+impl Command for DocumentSave {
+    type Params = DocumentSaveParams;
+    type Output = DocumentSaveOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "doc.save",
+            title: "Save",
+            summary: "Saves the edits into the opened PBIP project, writing only changed files; files changed on disk since the open are a conflict unless overwrite.",
+            category: Category::Edit,
+            mutates_document: true,
+            writes_files: true,
+            examples: &[
+                ("Save the edits", r#"{"docId": "d1"}"#),
+                (
+                    "Save over external changes",
+                    r#"{"docId": "d1", "overwrite": true}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(
+        ws: &Workspace,
+        params: Self::Params,
+        _ctx: &Ctx,
+    ) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        let session = entry.session();
+        let opened = session.opened();
+        let Some(root) = opened.container.root_dir() else {
+            return Err(OpError::unsupported(
+                "cannot save: only a PBIP project opened from a folder can be saved in place; use convert.pbip to save it as a new project",
+            ));
+        };
+        // Every file written lies under the project folder (the save refuses
+        // other paths and symbolic links).
+        let project_dir = ws.policy().check_write(root)?;
+        let report = session.save(params.overwrite).await?;
+        Ok(DocumentSaveOut {
+            project_dir: shown_dir(&project_dir),
+            written: report.written,
+            deleted: report.deleted,
+            overwritten: report
+                .overwritten
+                .into_iter()
+                .map(|c| FileChangeOut {
+                    path: c.path,
+                    change: match c.change {
+                        pbi_core::ChangeKind::Added => FileChangeKind::Added,
+                        pbi_core::ChangeKind::Modified => FileChangeKind::Modified,
+                        pbi_core::ChangeKind::Removed => FileChangeKind::Removed,
+                    },
+                })
+                .collect(),
+            revision: report.revision,
+            dirty: session.is_document_dirty(),
+        })
+    }
+}
+
+/// An absolute folder as people write it: without the `\\?\` prefix that
+/// canonicalizing adds on Windows.
+fn shown_dir(path: &std::path::Path) -> String {
+    let text = path.to_string_lossy();
+    if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{rest}")
+    } else if let Some(rest) = text.strip_prefix(r"\\?\") {
+        rest.to_owned()
+    } else {
+        text.into_owned()
+    }
+}

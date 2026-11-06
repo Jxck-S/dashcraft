@@ -33,6 +33,7 @@ mod zip;
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::path::Path;
 use std::sync::Arc;
 
 pub use dir::DirContainer;
@@ -121,6 +122,12 @@ pub trait Container: Send + Sync + fmt::Debug {
     /// ignored folders), for diagnostics.
     fn skipped(&self) -> &[SkippedEntry] {
         &[]
+    }
+
+    /// The canonical folder on disk backing this container (`None` for
+    /// archives and in-memory containers). In-place saves write under it.
+    fn root_dir(&self) -> Option<&Path> {
+        None
     }
 
     /// The explicit entry at `path` (case-sensitive).
@@ -251,6 +258,9 @@ impl<C: Container + ?Sized> Container for &C {
     fn skipped(&self) -> &[SkippedEntry] {
         (**self).skipped()
     }
+    fn root_dir(&self) -> Option<&Path> {
+        (**self).root_dir()
+    }
 }
 
 impl<C: Container + ?Sized> Container for Box<C> {
@@ -272,6 +282,9 @@ impl<C: Container + ?Sized> Container for Box<C> {
     fn skipped(&self) -> &[SkippedEntry] {
         (**self).skipped()
     }
+    fn root_dir(&self) -> Option<&Path> {
+        (**self).root_dir()
+    }
 }
 
 impl<C: Container + ?Sized> Container for Arc<C> {
@@ -292,6 +305,9 @@ impl<C: Container + ?Sized> Container for Arc<C> {
     }
     fn skipped(&self) -> &[SkippedEntry] {
         (**self).skipped()
+    }
+    fn root_dir(&self) -> Option<&Path> {
+        (**self).root_dir()
     }
 }
 

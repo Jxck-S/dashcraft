@@ -71,6 +71,7 @@ One JSON-RPC 2.0 message per line on stdin/stdout (logs go to stderr):
 | `cancelled` | -32800 | 1 | The command was cancelled |
 | `busy` | -32007 | 1 | Too many requests in flight or documents open |
 | `internal` | -32603 | 1 | A bug (a panic or an unexpected failure) |
+| `conflict` | -32008 | 1 | Files changed on disk since the open or last save; nothing was written (`data.conflicts`) |
 
 ### Agents (MCP)
 
@@ -111,6 +112,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`doc.undo`](#docundo) | Undoes the latest document edit. | M A |
 | [`doc.redo`](#docredo) | Reapplies the latest undone document edit. | M A |
 | [`doc.history`](#dochistory) | Returns the document revision, dirty state and undo/redo availability. | A |
+| [`doc.save`](#docsave) | Saves the edits into the opened PBIP project, writing only changed files; files changed on disk since the open are a conflict unless overwrite. | M A W |
 | [`doc.lint`](#doclint) | Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report. | A |
 | [`data.refresh`](#datarefresh) | Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status. | M L A |
 | [`data.tables`](#datatables) | Loaded rows, columns and last refresh status of every table, the derived columns and the local data cache. | A |
@@ -2048,3 +2050,32 @@ Result:
 Examples:
 
 - Current edit history: `{"docId":"d1"}`
+
+### `doc.save`
+
+**Save.** Saves the edits into the opened PBIP project, writing only changed files; files changed on disk since the open are a conflict unless overwrite.
+
+_mutates the document, agent-safe, writes files; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `overwrite` (optional) | boolean | Save even if project files changed on disk since the open or last save: files DashCraft writes get the document's version, other files are kept. Without it such a save fails with `conflict`. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `projectDir` | string | The project folder. |
+| `written` | string[] | Files written, relative to the project folder. |
+| `deleted` | string[] | Files deleted (e.g. the `.tmdl` file of a renamed table). |
+| `overwritten` | FileChangeOut[] | Files changed on disk since the open or last save (only with `overwrite`). |
+| `revision` | integer | The revision saved. |
+| `dirty` | boolean | Whether the document has edits after the save (always `false`). |
+
+Examples:
+
+- Save the edits: `{"docId":"d1"}`
+- Save over external changes: `{"docId":"d1","overwrite":true}`

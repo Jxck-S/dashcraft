@@ -191,6 +191,10 @@ impl Container for DirContainer {
         &self.label
     }
 
+    fn root_dir(&self) -> Option<&Path> {
+        Some(&self.root)
+    }
+
     fn entries(&self) -> &[EntryInfo] {
         &self.entries
     }

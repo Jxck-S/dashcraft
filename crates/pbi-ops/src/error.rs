@@ -43,11 +43,15 @@ pub enum OpErrorCode {
     Busy,
     /// A bug: a panic or an unexpected failure.
     Internal,
+    /// Files changed on disk since the document was opened or saved; the
+    /// save wrote nothing (`data.conflicts` lists them). Retry with
+    /// `overwrite`, or close and reopen the document.
+    Conflict,
 }
 
 impl OpErrorCode {
     /// Every code, in declaration order.
-    pub const ALL: [OpErrorCode; 11] = [
+    pub const ALL: [OpErrorCode; 12] = [
         OpErrorCode::InvalidParams,
         OpErrorCode::UnknownCommand,
         OpErrorCode::NotFound,
@@ -59,6 +63,7 @@ impl OpErrorCode {
         OpErrorCode::Cancelled,
         OpErrorCode::Busy,
         OpErrorCode::Internal,
+        OpErrorCode::Conflict,
     ];
 
     /// The stable string code (`invalidParams`, `notFound`, …).
@@ -76,13 +81,14 @@ impl OpErrorCode {
             OpErrorCode::Cancelled => "cancelled",
             OpErrorCode::Busy => "busy",
             OpErrorCode::Internal => "internal",
+            OpErrorCode::Conflict => "conflict",
         }
     }
 
     /// JSON-RPC 2.0 error code: the reserved codes where one fits
     /// (`-32602` invalid params, `-32601` method not found, `-32603`
     /// internal error, `-32800` request cancelled as in LSP), else the
-    /// `-32001…-32007` server-error range.
+    /// `-32001…-32008` server-error range.
     #[must_use]
     pub fn jsonrpc_code(self) -> i64 {
         match self {
@@ -97,6 +103,7 @@ impl OpErrorCode {
             OpErrorCode::Io => -32005,
             OpErrorCode::Query => -32006,
             OpErrorCode::Busy => -32007,
+            OpErrorCode::Conflict => -32008,
         }
     }
 
@@ -229,6 +236,25 @@ impl From<CoreError> for OpError {
                 "not a supported Power BI format ({format}): {hint}"
             )),
             CoreError::Save(message) => OpError::unsupported(format!("cannot save: {message}")),
+            CoreError::Conflict { changes } => {
+                let message = format!(
+                    "{} file(s) of the project changed on disk since it was opened or saved; save with overwrite to replace them, or reopen the document",
+                    changes.len()
+                );
+                OpError::new(OpErrorCode::Conflict, message)
+                    .with_data(serde_json::json!({ "conflicts": changes }))
+            }
+            CoreError::PartialSave {
+                written,
+                deleted,
+                failed,
+                message,
+            } => OpError::io(format!(
+                "the save stopped at {failed}: {message}; save again to finish"
+            ))
+            .with_data(
+                serde_json::json!({ "written": written, "deleted": deleted, "failed": failed }),
+            ),
             other => OpError::internal(other.to_string()),
         }
     }

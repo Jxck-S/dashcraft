@@ -109,7 +109,21 @@ pub fn save_as_pbip(
 /// # Errors
 /// As [`save_as_pbip`], without the I/O errors.
 pub fn pbip_files(doc: &OpenedDocument) -> Result<Vec<(String, Vec<u8>)>, CoreError> {
+    Ok(pbip_output(doc)?.files)
+}
+
+/// The output of [`pbip_files`] with the item folders it chose.
+pub(crate) struct PbipOutput {
+    pub files: Vec<(String, Vec<u8>)>,
+    /// `(source folder, output folder)` of every model and report written
+    /// from a source (the primary model first, then extra models, then
+    /// reports).
+    pub folders: Vec<(String, String)>,
+}
+
+pub(crate) fn pbip_output(doc: &OpenedDocument) -> Result<PbipOutput, CoreError> {
     let mut out = Files::default();
+    let mut folders = Vec::new();
     let project = project_name(doc);
     let pbip_source = doc.document.source.format == SourceFormat::Pbip;
 
@@ -118,6 +132,7 @@ pub fn pbip_files(doc: &OpenedDocument) -> Result<Vec<(String, Vec<u8>)>, CoreEr
     if let (Some(model), Some(source)) = (&doc.document.model, &doc.model_source) {
         let folder = out.unique(model_folder_name(source, &project));
         write_model_folder(&mut out, &folder, model, source)?;
+        folders.push((source.folder().to_owned(), folder.clone()));
         model_folder = Some(folder);
     } else if let Some(model) = &doc.document.model {
         let folder = out.unique(format!("{}.SemanticModel", safe_name(&project)));
@@ -136,6 +151,7 @@ pub fn pbip_files(doc: &OpenedDocument) -> Result<Vec<(String, Vec<u8>)>, CoreEr
     for extra in &doc.extra_models {
         let folder = out.unique(model_folder_name(&extra.source, &project));
         write_model_folder(&mut out, &folder, &extra.model, &extra.source)?;
+        folders.push((extra.source.folder().to_owned(), folder.clone()));
         model_folders.push(folder);
     }
 
@@ -200,6 +216,7 @@ pub fn pbip_files(doc: &OpenedDocument) -> Result<Vec<(String, Vec<u8>)>, CoreEr
                 );
             }
         }
+        folders.push((source.folder().to_owned(), folder.clone()));
         report_folders.push(folder);
     }
 
@@ -237,7 +254,10 @@ pub fn pbip_files(doc: &OpenedDocument) -> Result<Vec<(String, Vec<u8>)>, CoreEr
         ".gitignore".to_owned(),
         gitignore.unwrap_or_else(|| GITIGNORE.as_bytes().to_vec()),
     );
-    Ok(out.files)
+    Ok(PbipOutput {
+        files: out.files,
+        folders,
+    })
 }
 
 /// Writes `doc` as a PBIT template to `out_path`.
