@@ -113,7 +113,9 @@
 //! the document, history and data unchanged. [`Session::rename_object`] /
 //! [`RenameObject`] also rewrite the DAX that refers to the renamed object
 //! (see [`edit`]). [`object_dependents`] / [`Session::object_dependents`]
-//! list what refers to a table, column or measure (see [`dependents`]).
+//! list what refers to a table, column or measure, [`delete_dependents`] /
+//! [`Session::delete_dependents`] what breaks when it is deleted (see
+//! [`dependents`]).
 
 pub mod cache;
 mod csv_load;
@@ -127,13 +129,14 @@ mod identifiers;
 mod options;
 mod query;
 pub mod refresh;
+mod removed;
 mod report;
 pub mod security;
 mod session;
 pub mod transforms;
 
 pub use cache::{CACHE_ENTRY, CacheInfo};
-pub use dependents::{Dependent, Dependents, object_dependents};
+pub use dependents::{Dependent, Dependents, delete_dependents, object_dependents};
 pub use derived::{
     DERIVED_ANNOTATION, DERIVED_KIND_ANNOTATION, DerivedColumn, DerivedColumnInfo, DerivedKind,
     is_derived,

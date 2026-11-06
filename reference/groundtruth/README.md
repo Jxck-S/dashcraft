@@ -218,6 +218,22 @@ Desktop 2.159 refuse the project: "cannot have SecurityFilterBehavior set to Bot
 the CrossFilterBehavior is set to OneDirection". `model.relationship.update` refuses the same
 combination (`invalid_params`).
 
+**Column and table delete, checked value by value against DashCraft.** As for the relationship
+update, copy `target/groundtruth/acme-desktop/` to `target/groundtruth/s16/acme/` and the example
+into a scratch reference root (`target/groundtruth/s16/ref/`), and run the same batch on both:
+`model.column.delete` `Orders[Order Size]`, `model.table.delete` `Stores` (with its two
+relationships and the roles' row filters on it), `doc.save`. Open the Desktop copy and record it
+(the recorder looks for every committed table, Stores included, so pass `-Port`), then run the
+ground-truth test against the edited example as above. Results with Desktop 2.159: the save
+wrote `model.tmdl`, `relationships.tmdl`, `Orders.tmdl` and the role files and deleted
+`Stores.tmdl`; Desktop opened and refreshed the project without an error, with 10 tables.
+Compared with the committed recordings, Desktop's answers differ in 226 of 601 `acme-measures`
+cases (each one now "Cannot find table 'Stores'"), 16 of 26 `acme-calcgroup-rls` cases (the
+roles no longer filter), 3 of 5 metadata cases and 2 of 11 tables (`Orders` without `Order Size`,
+no `Stores`). DashCraft's results on the edited example match Desktop's on every case: 601 of 601
+measures, 26 of 26 calculation-group and RLS cases, 11 of 11 tables and 5 of 5 metadata cases
+(queries that fail fail in both), with no ledger entry.
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.

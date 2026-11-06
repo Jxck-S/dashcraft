@@ -7,9 +7,10 @@
 
 use pbi_model::{
     Cardinality, ChangeEvent, ColumnRef, CommandGroup, CreateMeasure, CreateRelationship,
-    CrossFilter, DeleteMeasure, DeleteRelationship, HistoryResult, Measure, ObjectId, ObjectPath,
-    Position, Relationship, SecurityFilteringBehavior, SetDescription, SetMeasureExpression,
-    SetMeasureProperties, SetRelationshipProperties, SetVisualPosition, Visual, names_eq,
+    CrossFilter, DeleteColumn, DeleteMeasure, DeleteRelationship, DeleteTable, HistoryResult,
+    Measure, ObjectId, ObjectPath, Position, Relationship, SecurityFilteringBehavior,
+    SetDescription, SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties,
+    SetVisualPosition, Visual, names_eq,
 };
 use pbi_session::{
     RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error, preview_rename,
@@ -1103,6 +1104,295 @@ impl Command for ModelMeasureDelete {
     }
 }
 
+/// Result of `model.column.delete` and `model.table.delete`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectDeleteOut {
+    pub changed: bool,
+    pub revision: u64,
+    pub dirty: bool,
+    pub changed_object_ids: Vec<u64>,
+    pub object_id: u64,
+    /// `column` or `table`.
+    pub kind: String,
+    /// The table, or the column's table.
+    pub table: String,
+    pub name: String,
+    pub dry_run: bool,
+    /// What refers to the object and breaks once it is deleted (DAX,
+    /// report fields). A table's own measures, columns and expressions go
+    /// with it and are not listed.
+    pub dependents: Vec<DependentOut>,
+    /// `model.table.delete`: what is deleted with the table (relationships
+    /// that join it, role row filters on it).
+    pub removed: Vec<String>,
+    /// References that cannot be confirmed (DAX that does not parse,
+    /// ambiguous unqualified names, M queries naming a table).
+    pub warnings: Vec<String>,
+}
+
+/// Deletes `id` (a column or table) with `command`, or with `dryRun` checks
+/// the delete on a copy of the document; lists what breaks.
+async fn delete_object(
+    entry: &DocEntry,
+    ctx: &Ctx,
+    id: ObjectId,
+    command: impl pbi_model::Command + Clone + 'static,
+    dry_run: bool,
+) -> Result<ObjectDeleteOut, OpError> {
+    let session = entry.session();
+    let (kind, table, name, removed) = {
+        let document = session.document();
+        let model = document
+            .model
+            .as_ref()
+            .ok_or_else(|| OpError::no_document("the document has no semantic model"))?;
+        let path = document
+            .locate(id)
+            .ok_or_else(|| OpError::not_found(format!("no object with id {}", id.get())))?;
+        match path {
+            ObjectPath::Column { table, column } => {
+                let t = model
+                    .tables
+                    .get(table)
+                    .ok_or_else(|| OpError::not_found(format!("no column with id {}", id.get())))?;
+                let c = t
+                    .columns
+                    .get(column)
+                    .ok_or_else(|| OpError::not_found(format!("no column with id {}", id.get())))?;
+                ("column", t.name.clone(), c.name.clone(), Vec::new())
+            }
+            ObjectPath::Table { table } => {
+                let t = model
+                    .tables
+                    .get(table)
+                    .ok_or_else(|| OpError::not_found(format!("no table with id {}", id.get())))?;
+                let mut removed: Vec<String> = model
+                    .relationships
+                    .iter()
+                    .filter(|r| names_eq(&r.from.table, &t.name) || names_eq(&r.to.table, &t.name))
+                    .map(|r| {
+                        format!(
+                            "relationship '{}'[{}] → '{}'[{}]",
+                            r.from.table, r.from.column, r.to.table, r.to.column
+                        )
+                    })
+                    .collect();
+                for role in &model.roles {
+                    if role
+                        .table_permissions
+                        .iter()
+                        .any(|p| names_eq(&p.table, &t.name))
+                    {
+                        removed.push(format!("row filter of role '{}'", role.name));
+                    }
+                }
+                ("table", t.name.clone(), t.name.clone(), removed)
+            }
+            _ => {
+                return Err(OpError::invalid_params(format!(
+                    "object {} is not a column or table",
+                    id.get()
+                )));
+            }
+        }
+    };
+    let found = session.delete_dependents(id)?;
+    let edit = if dry_run {
+        let mut copy = (*session.document()).clone();
+        pbi_model::Command::apply(&command, &mut copy)?;
+        let history = session.document_history();
+        DocumentEditOut {
+            changed: false,
+            revision: history.revision,
+            dirty: history.dirty,
+            changed_object_ids: Vec::new(),
+        }
+    } else {
+        let result = session.execute_document_command(command).await?;
+        DocumentEditOut::committed(ctx, entry, &result)
+    };
+    Ok(ObjectDeleteOut {
+        changed: edit.changed,
+        revision: edit.revision,
+        dirty: edit.dirty,
+        changed_object_ids: edit.changed_object_ids,
+        object_id: id.get(),
+        kind: kind.to_owned(),
+        table,
+        name,
+        dry_run,
+        dependents: found
+            .dependents
+            .into_iter()
+            .map(|d| DependentOut {
+                location: d.location,
+                property: d.property,
+            })
+            .collect(),
+        removed,
+        warnings: found.warnings,
+    })
+}
+
+/// A column: `columnId`, or `table` and `column`.
+fn column_target(
+    session: &Session,
+    column_id: Option<u64>,
+    table: Option<&str>,
+    column: Option<&str>,
+) -> Result<ObjectId, OpError> {
+    match (column_id, table, column) {
+        (Some(id), None, None) => Ok(ObjectId(id)),
+        (None, Some(table), Some(column)) => {
+            model_object(session, None, Some(table), Some(column), None)
+        }
+        _ => Err(OpError::invalid_params(
+            "name the column: columnId, or table and column",
+        )),
+    }
+}
+
+/// A table: `tableId` or `table`.
+fn table_target(
+    session: &Session,
+    table_id: Option<u64>,
+    table: Option<&str>,
+) -> Result<ObjectId, OpError> {
+    match (table_id, table) {
+        (Some(id), None) => Ok(ObjectId(id)),
+        (None, Some(table)) => model_object(session, None, Some(table), None, None),
+        _ => Err(OpError::invalid_params("name the table: tableId or table")),
+    }
+}
+
+/// `model.column.delete`.
+#[derive(Debug)]
+pub struct ModelColumnDelete;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeleteColumnParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The column's id (instead of `table` and `column`).
+    #[serde(default)]
+    pub column_id: Option<u64>,
+    /// The column's table.
+    #[serde(default)]
+    pub table: Option<String>,
+    /// The column's name.
+    #[serde(default)]
+    pub column: Option<String>,
+    /// Only check the delete and list what refers to the column; the
+    /// document is unchanged.
+    #[serde(default)]
+    pub dry_run: bool,
+}
+
+impl Command for ModelColumnDelete {
+    type Params = DeleteColumnParams;
+    type Output = ObjectDeleteOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.column.delete",
+            title: "Delete a calculated column",
+            summary: "Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[
+                (
+                    "What uses a calculated column",
+                    r#"{"docId": "d1", "table": "Orders", "column": "Line Cost", "dryRun": true}"#,
+                ),
+                ("Delete by id", r#"{"docId": "d1", "columnId": 42}"#),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        resolve::require_model(&entry)?;
+        let id = column_target(
+            entry.session(),
+            params.column_id,
+            params.table.as_deref(),
+            params.column.as_deref(),
+        )?;
+        if !matches!(
+            entry.session().document().locate(id),
+            Some(ObjectPath::Column { .. }) | None
+        ) {
+            return Err(OpError::invalid_params(format!(
+                "object {} is not a column",
+                id.get()
+            )));
+        }
+        delete_object(&entry, ctx, id, DeleteColumn { column: id }, params.dry_run).await
+    }
+}
+
+/// `model.table.delete`.
+#[derive(Debug)]
+pub struct ModelTableDelete;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeleteTableParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The table's id (instead of `table`).
+    #[serde(default)]
+    pub table_id: Option<u64>,
+    /// The table's name.
+    #[serde(default)]
+    pub table: Option<String>,
+    /// Only list what refers to the table and what goes with it; the
+    /// document is unchanged.
+    #[serde(default)]
+    pub dry_run: bool,
+}
+
+impl Command for ModelTableDelete {
+    type Params = DeleteTableParams;
+    type Output = ObjectDeleteOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.table.delete",
+            title: "Delete a table",
+            summary: "Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[
+                (
+                    "What a table delete breaks",
+                    r#"{"docId": "d1", "table": "Stores", "dryRun": true}"#,
+                ),
+                ("Delete by id", r#"{"docId": "d1", "tableId": 3}"#),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        resolve::require_model(&entry)?;
+        let id = table_target(entry.session(), params.table_id, params.table.as_deref())?;
+        if !matches!(
+            entry.session().document().locate(id),
+            Some(ObjectPath::Table { .. }) | None
+        ) {
+            return Err(OpError::invalid_params(format!(
+                "object {} is not a table",
+                id.get()
+            )));
+        }
+        delete_object(&entry, ctx, id, DeleteTable { table: id }, params.dry_run).await
+    }
+}
 /// `model.dependencies`.
 #[derive(Debug)]
 pub struct ModelDependencies;
@@ -1908,6 +2198,22 @@ pub enum EditOperation {
         #[serde(default)]
         name: Option<String>,
     },
+    /// Like `model.column.delete` (without `dryRun`).
+    DeleteColumn {
+        #[serde(default)]
+        column_id: Option<u64>,
+        #[serde(default)]
+        table: Option<String>,
+        #[serde(default)]
+        column: Option<String>,
+    },
+    /// Like `model.table.delete` (without `dryRun`).
+    DeleteTable {
+        #[serde(default)]
+        table_id: Option<u64>,
+        #[serde(default)]
+        table: Option<String>,
+    },
 }
 
 /// `doc.applyEdits`.
@@ -2089,6 +2395,16 @@ impl Command for DocumentApplyEdits {
                     name,
                 } => group.with(DeleteRelationship {
                     relationship: relationship_target(session, relationship_id, name.as_deref())?,
+                }),
+                EditOperation::DeleteColumn {
+                    column_id,
+                    table,
+                    column,
+                } => group.with(DeleteColumn {
+                    column: column_target(session, column_id, table.as_deref(), column.as_deref())?,
+                }),
+                EditOperation::DeleteTable { table_id, table } => group.with(DeleteTable {
+                    table: table_target(session, table_id, table.as_deref())?,
                 }),
             };
         }

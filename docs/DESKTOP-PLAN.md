@@ -51,7 +51,7 @@ What exists after M0–M5 (`v0.1.0`, `v0.2.0`) and the unreleased work, from [GA
 | Interactions | Slicers, cross-filter per `visualInteractions`, tooltips, navigation and clear-all buttons, scrolling, matrix expand; no highlight, drill, drillthrough, bookmarks, synced slicers | 1.6 |
 | Rendering fidelity | Deterministic SVG and PNG with bundled fonts, render snapshots of every Acme page, 39 card values asserted; no golden images | 3.2 |
 | Performance | `cargo xtask perf`, eight scenarios P01–P08, all within target | 4.9 |
-| Registry, MCP, AI | `pbi-ops` with 60 commands including measure create, update and delete, object dependents, measure editing, DAX-aware rename, descriptions, visual move and resize, grouped edits and history, `run`, `serve`, `mcp`; opt-in `pbi-ai` with 9 `ai.*` commands | 2.8 |
+| Registry, MCP, AI | `pbi-ops` with 67 commands including measure create, update and delete, relationship create, update and delete, calculated column and table delete, save and Save As, object dependents, measure editing, DAX-aware rename, descriptions, visual move and resize, grouped edits and history, `run`, `serve`, `mcp`; opt-in `pbi-ai` with 9 `ai.*` commands | 2.8 |
 | App UX | Desktop-style shell: ribbon, view rail, panes, Report (interactive reading), Table, Model (read-only diagram), DAX query, TMDL (read-only) views, View as, opt-in AI; editing commands shown disabled | 1.4 |
 | Platform and packaging | CI on macOS, Windows, Linux; dmg, msi, nsis, AppImage, deb; unsigned; no auto-update | 2.7 |
 | Security and fuzzing | No `unsafe`, caps and zip-slip guards, 14 fuzz targets, `cargo-deny`; legal review of ADR-0003 pending | 3.1 |
@@ -567,9 +567,22 @@ a second active relationship between two tables (deactivate the other one in the
 which Desktop refuses to load. A saved update writes only the changed properties
 (`relationship_update_through_the_registry`, `relationship_updates_save_and_reopen`), and on the
 edited example DashCraft matches Desktop on all 643 recorded cases (GT-6, `s14` in
-[reference/groundtruth](../reference/groundtruth/README.md#writer-checks-gt-6-desktop-opens-dashcrafts-output)). Still open:
-the app's change events (M6.8), dependent recalculation after measure edits, table, column and
-hierarchy create and delete, M references (warned about,
+[reference/groundtruth](../reference/groundtruth/README.md#writer-checks-gt-6-desktop-opens-dashcrafts-output)).
+`model.column.delete` and `model.table.delete` (and the `deleteColumn` and `deleteTable` edits)
+delete calculated columns and any table. Data columns (they come from the query), the columns of
+a calculated table and columns used by a relationship, a hierarchy level or a sort-by column are
+refused; a table goes with its relationships and the roles' row filters on it, and inverses put
+everything back in place with the same ids. The session takes a deleted object's data out of the
+engine (`Engine::sync_model_with_edits`: detached tables and columns) so DAX and SQL no longer
+see it, and keeps it by object id, so undo attaches the same data again without a refresh.
+Deletes list their dependents first (`pbi-session::delete_dependents`: what goes with a deleted
+table is left out) and warn about M queries naming a deleted table; a saved delete removes the
+column's TMDL block, or the table's file, `ref table` line, relationships and role filters, and
+undoing saves the original project (`column_and_table_delete_through_the_registry`,
+`column_and_table_deletes_save_and_reopen`); Desktop opens the saved deletes and answers all 643
+recorded cases on the edited model as DashCraft does (GT-6 s16). Still open:
+the app's change events (M6.8), dependent recalculation after measure edits, table and column
+create, data column delete (with M editing), hierarchy create and delete, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
 app, MCP-category and CLI work.

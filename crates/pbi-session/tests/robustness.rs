@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use arrow::array::AsArray;
 use arrow::datatypes::Int64Type;
 use chrono::TimeZone;
-use pbi_model::{ObjectId, SetMeasureExpression};
+use pbi_model::{DeleteColumn, DeleteTable, ObjectId, SetMeasureExpression};
 use pbi_session::{
     CancellationToken, ColumnFilterSpec, CsvExportOptions, CsvOptions, DerivedColumn, DerivedKind,
     FilterSpec, FixedClock, ModelDocOptions, OFFLINE_HINT, PageRequest, RefreshEvent, RefreshKind,
@@ -291,6 +291,62 @@ async fn renames_rewrite_dax_and_keep_the_loaded_data() {
     session.redo_document_command().await.unwrap();
     assert!(session.model().column("Sales", "Net Amount").is_some());
     assert_eq!(kpis(&session, &FilterSpec::new()).await, before);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn deletes_take_the_data_out_and_undo_puts_it_back() {
+    let session = bim_session(&format!("[{SALES}, {PRODUCTS}]"));
+    session.refresh(RefreshOptions::all()).await.unwrap();
+    let tables = |s: &Session| {
+        s.tables()
+            .into_iter()
+            .map(|t| (t.name, t.rows, t.columns, t.last_refresh))
+            .collect::<Vec<_>>()
+    };
+    let before = tables(&session);
+    let doubled = "SELECT SUM(\"Double\") FROM \"Sales\"";
+    assert!(session.sql(doubled, CancellationToken::new()).await.is_ok());
+
+    let double = object_id(&session, |m| m.column("Sales", "Double").map(|c| c.id));
+    session
+        .execute_document_command(DeleteColumn { column: double })
+        .await
+        .unwrap();
+    assert!(
+        session
+            .sql(doubled, CancellationToken::new())
+            .await
+            .is_err()
+    );
+    let sales = session.table_status("Sales").unwrap();
+    assert!(sales.column("Double").is_none() && sales.column("Bad").is_some());
+    assert_eq!(session.tables()[0].columns + 1, before[0].2);
+
+    let products = object_id(&session, |m| m.table("Products").map(|t| t.id));
+    session
+        .execute_document_command(DeleteTable { table: products })
+        .await
+        .unwrap();
+    assert!(session.table_status("Products").is_none());
+    assert_eq!(session.tables().len(), 1);
+    assert!(
+        session
+            .sql("SELECT * FROM \"Products\"", CancellationToken::new())
+            .await
+            .is_err()
+    );
+
+    session.undo_document_command().await.unwrap();
+    session.undo_document_command().await.unwrap();
+    assert_eq!(tables(&session), before);
+    assert!(session.sql(doubled, CancellationToken::new()).await.is_ok());
+    session.redo_document_command().await.unwrap();
+    assert!(
+        session
+            .sql(doubled, CancellationToken::new())
+            .await
+            .is_err()
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -3,7 +3,7 @@ use pretty_assertions::assert_eq;
 use super::*;
 use crate::query::{Condition, FieldExpr};
 use crate::report::Position;
-use crate::semantic::{ColumnRef, Measure, Relationship};
+use crate::semantic::{ColumnKind, ColumnRef, Measure, Relationship};
 use crate::test_support::sample_document;
 
 fn table_id(doc: &Document, name: &str) -> ObjectId {
@@ -767,6 +767,102 @@ fn delete_measure_round_trips_in_place() {
     ));
 }
 
+#[test]
+fn delete_column_round_trips_in_place() {
+    let mut doc = sample_document();
+    let status = column_id(&doc, "Stores", "Sales Status");
+    assert_round_trip(&mut doc, DeleteColumn { column: status }, |doc, events| {
+        let model = doc.model.as_ref().unwrap();
+        assert!(model.column("Stores", "Sales Status").is_none());
+        assert!(doc.locate(status).is_none());
+        assert_eq!(events, [ChangeEvent::ObjectRemoved { id: status }]);
+    });
+    assert_eq!(doc.model.as_ref().unwrap().tables[0].columns[4].id, status);
+}
+
+#[test]
+fn delete_column_refuses_query_columns_and_structural_uses() {
+    let mut doc = sample_document();
+    let reject = |doc: &mut Document, table: &str, column: &str| {
+        let id = column_id(doc, table, column);
+        let before = doc.clone();
+        let Err(CommandError::Rejected(message)) = DeleteColumn { column: id }.apply(doc) else {
+            panic!("deleting {table}[{column}] should be rejected");
+        };
+        assert_eq!(*doc, before);
+        message
+    };
+    assert!(reject(&mut doc, "Stores", "Store Name").contains("is a data column"));
+    assert!(
+        reject(&mut doc, "Unknown Store Orders", "Order ID")
+            .contains("calculated table's expression")
+    );
+    let measure = measure_id(&doc, "Stores", "Store Count");
+    assert!(matches!(
+        DeleteColumn { column: measure }.apply(&mut doc),
+        Err(CommandError::WrongKind { .. })
+    ));
+
+    // Calculated columns used by the model structure stay until those uses go.
+    for column in &mut doc.model.as_mut().unwrap().tables[0].columns {
+        column.kind = ColumnKind::Calculated {
+            expression: "1".into(),
+        };
+    }
+    assert_eq!(
+        reject(&mut doc, "Stores", "Store ID"),
+        "Stores[Store ID] is used by relationship Orders[Store ID] → Stores[Store ID]; delete or change those first"
+    );
+    assert!(
+        reject(&mut doc, "Stores", "Store Name").contains("level 'Store' of hierarchy 'Geography'")
+    );
+    assert!(reject(&mut doc, "Stores", "Region Rank").contains("the sort order of Stores[Region]"));
+}
+
+#[test]
+fn delete_table_removes_its_relationships_and_role_filters() {
+    let mut doc = sample_document();
+    let stores = table_id(&doc, "Stores");
+    let model = doc.model.as_ref().unwrap();
+    let relationship = model.relationships[0].id;
+    let permission = model.roles[0].table_permissions[0].id;
+    let columns: Vec<ObjectId> = model.tables[0].columns.iter().map(|c| c.id).collect();
+    assert_round_trip(&mut doc, DeleteTable { table: stores }, |doc, events| {
+        let model = doc.model.as_ref().unwrap();
+        assert!(model.table("Stores").is_none());
+        assert!(model.relationships.is_empty());
+        assert!(model.roles[0].table_permissions.is_empty());
+        assert_eq!(model.roles[0].name, "Region West");
+        for id in [stores, relationship, permission].iter().chain(&columns) {
+            assert!(doc.locate(*id).is_none());
+        }
+        assert_eq!(
+            events,
+            [
+                ChangeEvent::ObjectRemoved { id: stores },
+                ChangeEvent::ObjectRemoved { id: relationship },
+                ChangeEvent::ObjectRemoved { id: permission },
+            ]
+        );
+    });
+    assert_eq!(doc.model.as_ref().unwrap().tables[0].id, stores);
+
+    // A table without role filters takes only its relationships along.
+    let orders = table_id(&doc, "Orders");
+    assert_round_trip(&mut doc, DeleteTable { table: orders }, |doc, events| {
+        let model = doc.model.as_ref().unwrap();
+        assert!(model.relationships.is_empty());
+        assert_eq!(model.roles[0].table_permissions.len(), 1);
+        assert_eq!(events.len(), 2);
+    });
+    assert!(matches!(
+        DeleteTable {
+            table: relationship
+        }
+        .apply(&mut doc),
+        Err(CommandError::WrongKind { .. })
+    ));
+}
 #[test]
 fn create_relationship_round_trips_and_never_reuses_ids() {
     let mut doc = sample_document();

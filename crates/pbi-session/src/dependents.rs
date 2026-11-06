@@ -18,7 +18,7 @@ use pbi_model::{
 use serde::{Deserialize, Serialize};
 
 use crate::DerivedKind;
-use crate::edit::{ExtraDax, dax_references, dax_scan};
+use crate::edit::{ExtraDax, dax_scan};
 use crate::session::Session;
 
 /// One object property that refers to the inspected object.
@@ -49,7 +49,19 @@ pub struct Dependents {
 /// `object` is unknown or not a table, column, measure or relationship, or
 /// there is no model.
 pub fn object_dependents(doc: &Document, object: ObjectId) -> Result<Dependents, CommandError> {
-    find(doc, object, &[])
+    find(doc, object, &[], None)
+}
+
+/// What in `doc` breaks when table, column or measure `object` is deleted:
+/// [`object_dependents`] without what goes with it. A table takes its own
+/// DAX (measures, calculated columns, its expression, calculation items,
+/// role filters on it), its relationships and its role table permissions
+/// along; references to its measures elsewhere break too.
+///
+/// # Errors
+/// See [`object_dependents`].
+pub fn delete_dependents(doc: &Document, object: ObjectId) -> Result<Dependents, CommandError> {
+    deleted(doc, object, &[])
 }
 
 impl Session {
@@ -60,26 +72,71 @@ impl Session {
     /// See [`object_dependents`].
     pub fn object_dependents(&self, object: ObjectId) -> Result<Dependents, CommandError> {
         let derived = self.derived_columns();
-        let extra: Vec<ExtraDax<'_>> = derived
-            .iter()
-            .filter(|d| d.kind == DerivedKind::Expression)
-            .filter_map(|d| {
-                Some(ExtraDax {
-                    table: &d.table,
-                    location: format!("derived column '{}'[{}]", d.table, d.name),
-                    property: "expression",
-                    text: d.dax.as_deref()?,
-                })
-            })
-            .collect();
-        find(&self.document(), object, &extra)
+        find(&self.document(), object, &derived_dax(&derived), None)
+    }
+
+    /// [`delete_dependents`] on the current document, including the DAX of
+    /// the session's derived columns.
+    ///
+    /// # Errors
+    /// See [`object_dependents`].
+    pub fn delete_dependents(&self, object: ObjectId) -> Result<Dependents, CommandError> {
+        let derived = self.derived_columns();
+        deleted(&self.document(), object, &derived_dax(&derived))
     }
 }
 
+fn derived_dax(derived: &[crate::DerivedColumnInfo]) -> Vec<ExtraDax<'_>> {
+    derived
+        .iter()
+        .filter(|d| d.kind == DerivedKind::Expression)
+        .filter_map(|d| {
+            Some(ExtraDax {
+                table: &d.table,
+                location: format!("derived column '{}'[{}]", d.table, d.name),
+                property: "expression",
+                text: d.dax.as_deref()?,
+            })
+        })
+        .collect()
+}
+
+fn deleted(
+    doc: &Document,
+    object: ObjectId,
+    extra: &[ExtraDax<'_>],
+) -> Result<Dependents, CommandError> {
+    let Some(ObjectPath::Table { table }) = doc.locate(object) else {
+        return find(doc, object, extra, None);
+    };
+    let model = doc.model.as_ref().ok_or(CommandError::NoModel)?;
+    let t = model
+        .tables
+        .get(table)
+        .ok_or(CommandError::NotFound(object))?;
+    let mut out = Dependents::default();
+    for id in std::iter::once(object).chain(t.measures.iter().map(|m| m.id)) {
+        let found = find(doc, id, extra, Some(object))?;
+        for d in found.dependents {
+            if !out.dependents.contains(&d) {
+                out.dependents.push(d);
+            }
+        }
+        for w in found.warnings {
+            if !out.warnings.contains(&w) {
+                out.warnings.push(w);
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// `deleted_table`: leave out what goes with that table when it is deleted.
 fn find(
     doc: &Document,
     object: ObjectId,
     extra: &[ExtraDax<'_>],
+    deleted_table: Option<ObjectId>,
 ) -> Result<Dependents, CommandError> {
     if let Some(ObjectPath::Relationship { relationship }) = doc.locate(object) {
         let model = doc.model.as_ref().ok_or(CommandError::NoModel)?;
@@ -89,10 +146,29 @@ fn find(
             .ok_or(CommandError::NotFound(object))?;
         return relationship_dependents(doc, model, r, extra);
     }
-    let mut out = dax_references(doc, object, extra)?;
+    let scan = dax_scan(doc, object, extra)?;
+    let mut out = Dependents {
+        dependents: scan
+            .references
+            .into_iter()
+            .filter(|r| deleted_table != Some(r.owner))
+            .map(|r| Dependent {
+                location: r.location,
+                property: r.property,
+            })
+            .collect(),
+        warnings: scan
+            .warnings
+            .into_iter()
+            .filter(|(owner, _)| deleted_table != Some(*owner))
+            .map(|(_, w)| w)
+            .collect(),
+    };
     let model = doc.model.as_ref().ok_or(CommandError::NoModel)?;
     let target = target(model, doc.locate(object), object)?;
-    structure(model, &target, &mut out.dependents);
+    if deleted_table.is_none() {
+        structure(model, &target, &mut out.dependents);
+    }
     let probe = target.probe();
     for report in &doc.reports {
         let in_report = format!("report '{}'", report.name);
@@ -479,6 +555,40 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn delete_dependents_leave_out_what_goes_with_a_table() {
+        let d = doc();
+        let model = d.model.as_ref().unwrap();
+        let orders = model.table("Orders").unwrap().id;
+        // Orders' own measures and its relationship go with it; Stores[Share]
+        // uses its measure [Total Sales] without naming the table.
+        let found = delete_dependents(&d, orders).unwrap();
+        assert_eq!(
+            locations(&found),
+            [
+                (
+                    "visual 'card1' (card) on page 'Overview' of report 'Sales'",
+                    "fields"
+                ),
+                (
+                    "visual 'card2' (card) on page 'Overview' of report 'Sales'",
+                    "fields"
+                ),
+                ("column 'Stores'[Share]", "expression"),
+            ]
+        );
+        assert_eq!(
+            found.warnings,
+            Vec::<String>::new(),
+            "Orders[Broken] goes too"
+        );
+        // Columns and measures: the same as object_dependents.
+        let month = model.column("Orders", "Month").unwrap().id;
+        assert_eq!(
+            delete_dependents(&d, month).unwrap(),
+            object_dependents(&d, month).unwrap()
+        );
+    }
     #[test]
     fn relationship_dependents_are_the_dax_that_names_both_ends() {
         let mut d = doc();

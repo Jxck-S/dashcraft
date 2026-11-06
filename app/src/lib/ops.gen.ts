@@ -1050,6 +1050,22 @@ export interface DaxTableOut {
   truncated: boolean
 }
 
+export interface DeleteColumnParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The column's id (instead of `table` and `column`). */
+  columnId?: number | null
+  /** The column's table. */
+  table?: string | null
+  /** The column's name. */
+  column?: string | null
+  /**
+   * Only check the delete and list what refers to the column; the
+   * document is unchanged.
+   */
+  dryRun?: boolean
+}
+
 export interface DeleteMeasureParams {
   /** The document id from `doc.open` (`d1`, …). */
   docId: string
@@ -1071,6 +1087,20 @@ export interface DeleteRelationshipParams {
   /** The relationship's name (case-insensitive). */
   name?: string | null
   /** Only list what uses the relationship; the document is unchanged. */
+  dryRun?: boolean
+}
+
+export interface DeleteTableParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The table's id (instead of `table`). */
+  tableId?: number | null
+  /** The table's name. */
+  table?: string | null
+  /**
+   * Only list what refers to the table and what goes with it; the
+   * document is unchanged.
+   */
   dryRun?: boolean
 }
 
@@ -1486,6 +1516,15 @@ export type EditOperation = {
   type: 'deleteRelationship'
   relationshipId?: number | null
   name?: string | null
+} | {
+  type: 'deleteColumn'
+  columnId?: number | null
+  table?: string | null
+  column?: string | null
+} | {
+  type: 'deleteTable'
+  tableId?: number | null
+  table?: string | null
 }
 
 /** [`CapabilityLimits`] with the defaults applied. */
@@ -2162,6 +2201,37 @@ export interface MoveVisualParams {
 }
 
 export type NoParams = { [key: string]: never }
+
+/** Result of `model.column.delete` and `model.table.delete`. */
+export interface ObjectDeleteOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  objectId: number
+  /** `column` or `table`. */
+  kind: string
+  /** The table, or the column's table. */
+  table: string
+  name: string
+  dryRun: boolean
+  /**
+   * What refers to the object and breaks once it is deleted (DAX,
+   * report fields). A table's own measures, columns and expressions go
+   * with it and are not listed.
+   */
+  dependents: DependentOut[]
+  /**
+   * `model.table.delete`: what is deleted with the table (relationships
+   * that join it, role row filters on it).
+   */
+  removed: string[]
+  /**
+   * References that cannot be confirmed (DAX that does not parse,
+   * ambiguous unqualified names, M queries naming a table).
+   */
+  warnings: string[]
+}
 
 /**
  * The error of a command: a stable [`code`](OpErrorCode), a user-facing
@@ -3380,6 +3450,10 @@ export interface OpsCommands {
   'model.relationship.update': { params: UpdateRelationshipParams; output: RelationshipEditOut }
   /** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. */
   'model.relationship.delete': { params: DeleteRelationshipParams; output: RelationshipEditOut }
+  /** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. */
+  'model.column.delete': { params: DeleteColumnParams; output: ObjectDeleteOut }
+  /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
+  'model.table.delete': { params: DeleteTableParams; output: ObjectDeleteOut }
   /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
   'model.dependencies': { params: DependenciesParams; output: DependenciesOut }
   /** Moves a visual on its page as one undoable edit (visual groups not yet). */
@@ -3511,6 +3585,8 @@ export const OPS_META = {
   'model.relationship.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.relationship.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.relationship.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.column.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.table.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.dependencies': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visual.move': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visual.resize': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
@@ -3621,6 +3697,10 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelRelationshipUpdate: (params: UpdateRelationshipParams, options?: O) => run('model.relationship.update', params, options),
     /** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. */
     modelRelationshipDelete: (params: DeleteRelationshipParams, options?: O) => run('model.relationship.delete', params, options),
+    /** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. */
+    modelColumnDelete: (params: DeleteColumnParams, options?: O) => run('model.column.delete', params, options),
+    /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
+    modelTableDelete: (params: DeleteTableParams, options?: O) => run('model.table.delete', params, options),
     /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
     modelDependencies: (params: DependenciesParams, options?: O) => run('model.dependencies', params, options),
     /** Moves a visual on its page as one undoable edit (visual groups not yet). */

@@ -18,8 +18,19 @@ use crate::relationships::{RelationshipGraph, RelationshipOverride};
 use crate::rowset::RowSet;
 use crate::security::{SecurityContext, SecurityRole};
 use crate::sql::SqlState;
-use crate::storage::{Storage, StorageRename, TableData};
+use crate::storage::{Detached, Storage, StorageRename, StoredObject, TableData};
 use crate::value::Value;
+
+/// Storage changes that follow a model edit ([`Engine::sync_model_with_edits`]).
+#[derive(Debug, Clone, Default)]
+pub struct StorageEdits {
+    /// Tables and columns to take out, by their names before the renames.
+    pub detach: Vec<StoredObject>,
+    pub renames: Vec<StorageRename>,
+    /// Detached tables and columns to put back, by their names after the
+    /// renames.
+    pub attach: Vec<(StoredObject, Detached)>,
+}
 
 /// Maximum cached `visible` results per snapshot.
 const CACHE_CAPACITY: usize = 4096;
@@ -203,6 +214,36 @@ impl Engine {
         storage.rename(renames)?;
         self.publish_synced(storage, model);
         Ok(())
+    }
+
+    /// Takes `edits.detach` out of storage (by their names before the
+    /// renames), applies `edits.renames`, puts `edits.attach` back (by their
+    /// names after the renames), then re-syncs with `model` like
+    /// [`Engine::sync_model`], as one new snapshot. This is how a deleted
+    /// table or column stops being queryable while its data stays at hand
+    /// to undo the delete. Returns what was detached, in the order of
+    /// `edits.detach` (`None` for what was not stored).
+    ///
+    /// # Errors
+    /// A rename or attach collides with a stored name, or an attached
+    /// column's row count differs from its table's; the engine is
+    /// unchanged.
+    pub fn sync_model_with_edits(
+        &mut self,
+        model: &Model,
+        edits: StorageEdits,
+    ) -> Result<Vec<Option<Detached>>> {
+        let mut storage = self.current.storage.clone();
+        let mut detached = Vec::with_capacity(edits.detach.len());
+        for object in &edits.detach {
+            detached.push(storage.detach(object)?);
+        }
+        storage.rename(&edits.renames)?;
+        for (object, data) in edits.attach {
+            storage.attach(&object, data)?;
+        }
+        self.publish_synced(storage, model);
+        Ok(detached)
     }
 
     fn publish_synced(&mut self, mut storage: Storage, model: &Model) {

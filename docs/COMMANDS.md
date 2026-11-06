@@ -109,6 +109,8 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.relationship.create`](#modelrelationshipcreate) | Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data. | M A |
 | [`model.relationship.update`](#modelrelationshipupdate) | Changes a relationship's cardinality, cross-filter direction, security filtering or active state as one undoable edit; filters follow it at once. | M A |
 | [`model.relationship.delete`](#modelrelationshipdelete) | Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. | M A |
+| [`model.column.delete`](#modelcolumndelete) | Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. | M A |
+| [`model.table.delete`](#modeltabledelete) | Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. | M A |
 | [`model.dependencies`](#modeldependencies) | Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. | A |
 | [`report.visual.move`](#reportvisualmove) | Moves a visual on its page as one undoable edit (visual groups not yet). | M A |
 | [`report.visual.resize`](#reportvisualresize) | Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet). | M A |
@@ -2019,6 +2021,81 @@ Examples:
 
 - What uses a relationship: `{"docId":"d1","relationshipId":7,"dryRun":true}`
 - Delete by name: `{"docId":"d1","name":"d0c1e2f3-a4b5-4c6d-8e7f-000000000001"}`
+
+### `model.column.delete`
+
+**Delete a calculated column.** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `columnId` (optional) | integer \| null | The column's id (instead of `table` and `column`). |
+| `table` (optional) | string \| null | The column's table. |
+| `column` (optional) | string \| null | The column's name. |
+| `dryRun` (optional) | boolean | Only check the delete and list what refers to the column; the document is unchanged. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `objectId` | integer |  |
+| `kind` | string | `column` or `table`. |
+| `table` | string | The table, or the column's table. |
+| `name` | string |  |
+| `dryRun` | boolean |  |
+| `dependents` | DependentOut[] | What refers to the object and breaks once it is deleted (DAX, report fields). A table's own measures, columns and expressions go with it and are not listed. |
+| `removed` | string[] | `model.table.delete`: what is deleted with the table (relationships that join it, role row filters on it). |
+| `warnings` | string[] | References that cannot be confirmed (DAX that does not parse, ambiguous unqualified names, M queries naming a table). |
+
+Examples:
+
+- What uses a calculated column: `{"docId":"d1","table":"Orders","column":"Line Cost","dryRun":true}`
+- Delete by id: `{"docId":"d1","columnId":42}`
+
+### `model.table.delete`
+
+**Delete a table.** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `tableId` (optional) | integer \| null | The table's id (instead of `table`). |
+| `table` (optional) | string \| null | The table's name. |
+| `dryRun` (optional) | boolean | Only list what refers to the table and what goes with it; the document is unchanged. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `objectId` | integer |  |
+| `kind` | string | `column` or `table`. |
+| `table` | string | The table, or the column's table. |
+| `name` | string |  |
+| `dryRun` | boolean |  |
+| `dependents` | DependentOut[] | What refers to the object and breaks once it is deleted (DAX, report fields). A table's own measures, columns and expressions go with it and are not listed. |
+| `removed` | string[] | `model.table.delete`: what is deleted with the table (relationships that join it, role row filters on it). |
+| `warnings` | string[] | References that cannot be confirmed (DAX that does not parse, ambiguous unqualified names, M queries naming a table). |
+
+Examples:
+
+- What a table delete breaks: `{"docId":"d1","table":"Stores","dryRun":true}`
+- Delete by id: `{"docId":"d1","tableId":3}`
 
 ### `report.visual.move`
 
