@@ -1341,3 +1341,107 @@ fn change_events_serialize_for_ipc() {
     let back: ChangeEvent = serde_json::from_value(json).unwrap();
     assert_eq!(back, event);
 }
+
+#[test]
+fn hierarchies_are_created_and_deleted_with_exact_inverses() {
+    use crate::semantic::{Hierarchy, Level};
+    let mut doc = sample_document();
+    let original = doc.clone();
+    let stores = table_id(&doc, "Stores");
+    let level = |name: &str, column: &str| Level {
+        name: name.into(),
+        column: column.into(),
+        ..Level::default()
+    };
+    let hierarchy = |name: &str, levels: Vec<Level>| Hierarchy {
+        name: name.into(),
+        lineage_tag: Some("tag".into()),
+        levels,
+        ..Hierarchy::default()
+    };
+    let id = CreateHierarchy::created_id(&doc);
+    let mut history = History::new();
+    let events = history
+        .execute(
+            &mut doc,
+            CreateHierarchy {
+                table: stores,
+                hierarchy: hierarchy(
+                    "Places",
+                    vec![level("Region", "Region"), level("Store", "Store Name")],
+                ),
+                index: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(events, [ChangeEvent::ObjectAdded { id }]);
+    assert_eq!(history.undo_label(), Some("Create hierarchy 'Places'"));
+    let created = doc.model.as_ref().unwrap().tables[0]
+        .hierarchies
+        .last()
+        .unwrap()
+        .clone();
+    assert_eq!((created.id, created.name.as_str()), (id, "Places"));
+    let levels: Vec<_> = created
+        .levels
+        .iter()
+        .map(|l| (l.id, l.column.as_str()))
+        .collect();
+    assert_eq!(
+        levels,
+        [
+            (ObjectId(id.0 + 1), "Region"),
+            (ObjectId(id.0 + 2), "Store Name")
+        ]
+    );
+    assert!(doc.ids.peek() > ObjectId(id.0 + 2));
+    let after = doc.clone();
+    history.undo(&mut doc).unwrap();
+    assert_same_content(&doc, &original);
+    history.redo(&mut doc).unwrap();
+    assert_eq!(doc, after, "redo restores the hierarchy with the same IDs");
+
+    let before = doc.clone();
+    let mut refuse = |levels: Vec<Level>, name: &str| {
+        let error = CreateHierarchy {
+            table: stores,
+            hierarchy: hierarchy(name, levels),
+            index: None,
+        }
+        .apply(&mut doc)
+        .unwrap_err();
+        assert_eq!(doc, before);
+        error.to_string()
+    };
+    let one = || vec![level("Region", "Region")];
+    for taken in ["region", "geography", "Store Count"] {
+        assert!(refuse(one(), taken).contains("already"), "{taken}");
+    }
+    assert!(refuse(Vec::new(), "H").contains("has no levels"));
+    assert!(refuse(vec![level("X", "Nope")], "H").contains("has no column 'Nope'"));
+    assert!(
+        refuse(vec![level("A", "Region"), level("B", "region")], "H")
+            .contains("use the same column")
+    );
+    assert!(refuse(vec![level("A", "Region"), level("a", "Store Name")], "H").contains("already"));
+
+    // Delete and undo put Geography back exactly.
+    let geography = doc.model.as_ref().unwrap().tables[0].hierarchies[0].id;
+    let before = doc.clone();
+    let events = history
+        .execute(
+            &mut doc,
+            DeleteHierarchy {
+                hierarchy: geography,
+            },
+        )
+        .unwrap();
+    assert_eq!(events, [ChangeEvent::ObjectRemoved { id: geography }]);
+    assert!(doc.locate(geography).is_none());
+    history.undo(&mut doc).unwrap();
+    assert_eq!(doc, before);
+    assert!(matches!(
+        DeleteHierarchy { hierarchy: stores }.apply(&mut doc),
+        Err(CommandError::WrongKind { .. })
+    ));
+}

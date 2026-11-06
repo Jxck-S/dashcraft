@@ -2735,3 +2735,136 @@ async fn calculated_column_create_through_the_registry() {
         .await
     );
 }
+
+#[tokio::test]
+async fn hierarchy_create_and_delete_through_the_registry() {
+    let Some(pbip) = fixture(PBIP) else {
+        eprintln!("SKIP: {PBIP} missing");
+        return;
+    };
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    let with_doc = |params: Value| {
+        let mut params = params;
+        params["docId"] = json!(doc);
+        params
+    };
+    let create = |params: Value| r.try_run("model.hierarchy.create", with_doc(params));
+    let delete = |params: Value| r.try_run("model.hierarchy.delete", with_doc(params));
+
+    let out = create(json!({"table": "stores", "name": "Places",
+        "levels": [{"column": "Region"}, {"column": "store name", "name": "Store"}]}))
+    .await
+    .unwrap();
+    let id = out["hierarchyId"].as_u64().unwrap();
+    assert_eq!(
+        (
+            &out["changed"],
+            &out["revision"],
+            &out["table"],
+            &out["name"],
+            &out["changedObjectIds"]
+        ),
+        (
+            &json!(true),
+            &json!(1),
+            &json!("Stores"),
+            &json!("Places"),
+            &json!([id])
+        ),
+        "{out}"
+    );
+    assert_eq!(out["levelIds"], json!([id + 1, id + 2]), "{out}");
+
+    // Desktop's checks: a free name, levels on different columns of the table.
+    for bad in [
+        json!({"table": "Stores", "name": "Region", "levels": [{"column": "Region"}]}),
+        json!({"table": "Stores", "name": "geography", "levels": [{"column": "Region"}]}),
+        json!({"table": "Stores", "name": "H", "levels": []}),
+        json!({"table": "Stores", "name": "H", "levels": [{"column": "Nope"}]}),
+        json!({"table": "Stores", "name": "H",
+            "levels": [{"column": "Region"}, {"column": "Region", "name": "Again"}]}),
+    ] {
+        assert_eq!(
+            error_code(create(bad.clone()).await),
+            OpErrorCode::InvalidParams,
+            "{bad}"
+        );
+    }
+
+    // A dry run lists the report fields on the hierarchy and changes nothing.
+    let out =
+        delete(json!({"table": "Products", "hierarchy": "product hierarchy", "dryRun": true}))
+            .await
+            .unwrap();
+    assert_eq!(
+        (
+            &out["changed"],
+            &out["kind"],
+            &out["name"],
+            &out["revision"]
+        ),
+        (
+            &json!(false),
+            &json!("hierarchy"),
+            &json!("Product Hierarchy"),
+            &json!(1)
+        ),
+        "{out}"
+    );
+    let dependents = out["dependents"].as_array().unwrap();
+    assert_eq!(dependents.len(), 1, "{out}");
+    let location = dependents[0]["location"].as_str().unwrap();
+    assert!(
+        location.contains("(pivotTable) on page 'Product Detail'"),
+        "{location}"
+    );
+
+    let out = delete(json!({"hierarchyId": id})).await.unwrap();
+    assert_eq!(
+        (&out["changed"], &out["revision"], &out["name"]),
+        (&json!(true), &json!(2), &json!("Places")),
+        "{out}"
+    );
+    assert_eq!(
+        error_code(delete(json!({"hierarchyId": id})).await),
+        OpErrorCode::NotFound
+    );
+    r.run("doc.undo", with_doc(json!({}))).await;
+    let out = delete(json!({"table": "Stores", "hierarchy": "Places", "dryRun": true}))
+        .await
+        .unwrap();
+    assert_eq!(out["objectId"], json!(id), "undo restores the same id");
+    assert_eq!(
+        error_code(delete(json!({"table": "Stores", "column": "Region"})).await),
+        OpErrorCode::InvalidParams
+    );
+
+    // One group: create over a column and delete another hierarchy.
+    let out = r
+        .run(
+            "doc.applyEdits",
+            with_doc(json!({"edits": [
+                {"type": "createHierarchy", "table": "Products", "name": "By Brand",
+                    "levels": [{"column": "Category"}, {"column": "Product Name"}]},
+                {"type": "deleteHierarchy", "table": "Products", "hierarchy": "Product Hierarchy"}
+            ]})),
+        )
+        .await;
+    assert_eq!(out["revision"], json!(4), "{out}");
+    assert_eq!(
+        out["changedObjectIds"].as_array().unwrap().len(),
+        2,
+        "{out}"
+    );
+    r.run("doc.undo", with_doc(json!({}))).await;
+    let out =
+        delete(json!({"table": "Products", "hierarchy": "Product Hierarchy", "dryRun": true}))
+            .await
+            .unwrap();
+    assert_eq!(out["name"], json!("Product Hierarchy"), "{out}");
+    assert_eq!(
+        error_code(delete(json!({"table": "Products", "hierarchy": "By Brand"})).await),
+        OpErrorCode::NotFound
+    );
+}

@@ -80,6 +80,8 @@ pub fn catalog() -> Registry {
         .with::<edit::ModelColumnCreate>()
         .with::<edit::ModelColumnDelete>()
         .with::<edit::ModelTableDelete>()
+        .with::<edit::ModelHierarchyCreate>()
+        .with::<edit::ModelHierarchyDelete>()
         .with::<edit::ModelDependencies>()
         .with::<edit::ReportVisualMove>()
         .with::<edit::ReportVisualResize>()

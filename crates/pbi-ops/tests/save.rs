@@ -1033,3 +1033,90 @@ async fn created_column_saves_and_reopens() {
         "undoing the create saves the original project"
     );
 }
+
+#[tokio::test]
+async fn created_and_deleted_hierarchies_save_and_reopen() {
+    const DEF: &str = "AcmeOutfitters.SemanticModel/definition";
+    let Some(acme) = fixture(ACME) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("hierarchies-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let before = files(dir.path());
+    let text = |f: &str| String::from_utf8(before[&format!("{DEF}/{f}")].clone()).unwrap();
+    let saved = |f: &str| fs::read_to_string(dir.path().join(DEF).join(f)).unwrap();
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    r.run(
+        "doc.applyEdits",
+        json!({"docId": doc, "edits": [
+            {"type": "deleteHierarchy", "table": "Stores", "hierarchy": "Geography"},
+            {"type": "createHierarchy", "table": "Stores", "name": "Places",
+                "levels": [{"column": "Region"}, {"column": "Store Name", "name": "Store"}]}
+        ]}),
+    )
+    .await;
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(
+        sorted(&out["written"]),
+        [format!("{DEF}/tables/Stores.tmdl")],
+        "{out}"
+    );
+    // Like Power BI Desktop: lineage tags on the hierarchy and its levels,
+    // levels in order without ordinals, where Geography was.
+    let stores = saved("tables/Stores.tmdl");
+    let tags: Vec<&str> = stores
+        .split("hierarchy Places")
+        .nth(1)
+        .unwrap()
+        .split("lineageTag: ")
+        .skip(1)
+        .take(3)
+        .map(|rest| rest.lines().next().unwrap())
+        .collect();
+    assert!(tags.iter().all(|t| t.len() == 36), "{tags:?}");
+    let block = format!(
+        "\thierarchy Places\n\
+         \t\tlineageTag: {}\n\
+         \n\
+         \t\tlevel Region\n\
+         \t\t\tlineageTag: {}\n\
+         \t\t\tcolumn: Region\n\
+         \n\
+         \t\tlevel Store\n\
+         \t\t\tlineageTag: {}\n\
+         \t\t\tcolumn: 'Store Name'\n\
+         \n",
+        tags[0], tags[1], tags[2]
+    );
+    let original = text("tables/Stores.tmdl");
+    let (start, end) = (
+        original.find("\thierarchy Geography").unwrap(),
+        original.find("\tpartition Stores").unwrap(),
+    );
+    assert_eq!(
+        stores,
+        format!("{}{block}{}", &original[..start], &original[end..])
+    );
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    let out = fresh
+        .run(
+            "model.hierarchy.delete",
+            json!({"docId": reopened, "table": "Stores", "hierarchy": "Places", "dryRun": true}),
+        )
+        .await;
+    assert_eq!(out["name"], json!("Places"), "{out}");
+    let gone = fresh
+        .try_run(
+            "model.hierarchy.delete",
+            json!({"docId": reopened, "table": "Stores", "hierarchy": "Geography"}),
+        )
+        .await;
+    assert_eq!(gone.unwrap_err().code, OpErrorCode::NotFound);
+}

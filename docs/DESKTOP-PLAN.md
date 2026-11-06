@@ -51,7 +51,7 @@ What exists after M0–M5 (`v0.1.0`, `v0.2.0`) and the unreleased work, from [GA
 | Interactions | Slicers, cross-filter per `visualInteractions`, tooltips, navigation and clear-all buttons, scrolling, matrix expand; no highlight, drill, drillthrough, bookmarks, synced slicers | 1.6 |
 | Rendering fidelity | Deterministic SVG and PNG with bundled fonts, render snapshots of every Acme page, 39 card values asserted; no golden images | 3.2 |
 | Performance | `cargo xtask perf`, eight scenarios P01–P08, all within target | 4.9 |
-| Registry, MCP, AI | `pbi-ops` with 68 commands including measure create, update and delete, relationship create, update and delete, calculated column create and delete, table delete, save and Save As, object dependents, measure editing, DAX-aware rename, descriptions, visual move and resize, grouped edits and history, `run`, `serve`, `mcp`; opt-in `pbi-ai` with 9 `ai.*` commands | 2.8 |
+| Registry, MCP, AI | `pbi-ops` with 70 commands including measure create, update and delete, relationship create, update and delete, calculated column create and delete, table delete, hierarchy create and delete, save and Save As, object dependents, measure editing, DAX-aware rename, descriptions, visual move and resize, grouped edits and history, `run`, `serve`, `mcp`; opt-in `pbi-ai` with 9 `ai.*` commands | 2.8 |
 | App UX | Desktop-style shell: ribbon, view rail, panes, Report (interactive reading), Table, Model (read-only diagram), DAX query, TMDL (read-only) views, View as, opt-in AI; editing commands shown disabled | 1.4 |
 | Platform and packaging | CI on macOS, Windows, Linux; dmg, msi, nsis, AppImage, deb; unsigned; no auto-update | 2.7 |
 | Security and fuzzing | No `unsafe`, caps and zip-slip guards, 14 fuzz targets, `cargo-deny`; legal review of ADR-0003 pending | 3.1 |
@@ -591,9 +591,17 @@ and the rest not, with the `SummarizationSetBy` annotation, and a saved column i
 the table's columns (`calculated_column_create_through_the_registry`,
 `created_column_saves_and_reopens`); Desktop refreshes three saved columns with the same types and
 summarization and answers all 643 recorded cases on the edited model, the new columns' rows
-included, as DashCraft does (GT-6 s17). Still open:
+included, as DashCraft does (GT-6 s17).
+`model.hierarchy.create` and `model.hierarchy.delete` (and the `createHierarchy` and
+`deleteHierarchy` edits): `CreateHierarchy` refuses names taken by a column, measure or hierarchy
+of the table, hierarchies without levels, missing or row-number columns and a column used twice;
+the hierarchy and each level get a random `lineageTag` and are saved in place, levels in order
+without ordinals as Desktop writes them; a delete lists the report fields on the hierarchy's
+levels (`hierarchy_dependents`) and undo restores the same ids
+(`hierarchy_create_and_delete_through_the_registry`,
+`created_and_deleted_hierarchies_save_and_reopen`). Still open:
 the app's change events (M6.8), dependent recalculation after measure edits, calculated table
-create, data column delete (with M editing), hierarchy create and delete, M references (warned about,
+create, data column delete (with M editing), hierarchy and level edits, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
 app, MCP-category and CLI work.

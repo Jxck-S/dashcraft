@@ -13,8 +13,8 @@ use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
 use crate::names::{dax_column_ref, names_eq};
 use crate::semantic::{
-    Cardinality, Column, ColumnKind, ColumnRef, CrossFilter, Measure, Model, Relationship,
-    SecurityFilteringBehavior, Table, TablePermission,
+    Cardinality, Column, ColumnKind, ColumnRef, CrossFilter, Hierarchy, Measure, Model,
+    Relationship, SecurityFilteringBehavior, Table, TablePermission,
 };
 
 /// Adds a measure to a table. The measure's `id` is ignored: it gets a fresh
@@ -827,5 +827,209 @@ impl Command for RestoreTable {
 
     fn label(&self) -> String {
         format!("Restore table '{}'", self.table.name)
+    }
+}
+
+/// Adds a user hierarchy to a table. Its `id` and its levels' ids are
+/// ignored: the hierarchy gets a fresh one (see
+/// [`CreateHierarchy::created_id`]) and its levels the next ones, in order.
+///
+/// Checks: a valid name not used by a column, measure or hierarchy of the
+/// table; at least one level; valid level names, unique within the
+/// hierarchy; each level on a different column of the table. The levels'
+/// order is their position (as in TMDL).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CreateHierarchy {
+    pub table: ObjectId,
+    pub hierarchy: Hierarchy,
+    /// Position among the table's hierarchies; `None` (or past the end)
+    /// appends.
+    pub index: Option<usize>,
+}
+
+impl CreateHierarchy {
+    /// The ID the hierarchy gets when this command is applied to `doc` now.
+    pub fn created_id(doc: &Document) -> ObjectId {
+        doc.ids.peek()
+    }
+}
+
+impl Command for CreateHierarchy {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let ObjectPath::Table { table: t } = expect_kind(doc, self.table, ObjectKind::Table)?
+        else {
+            return Err(CommandError::NotFound(self.table));
+        };
+        let new = &self.hierarchy;
+        validate_name(&new.name)?;
+        let table = model(doc)?
+            .tables
+            .get(t)
+            .ok_or(CommandError::NotFound(self.table))?;
+        let existing = table
+            .column(&new.name)
+            .map(|c| format!("column '{}'[{}]", table.name, c.name))
+            .or_else(|| {
+                table
+                    .measure(&new.name)
+                    .map(|m| format!("measure '{}'[{}]", table.name, m.name))
+            })
+            .or_else(|| {
+                table
+                    .hierarchies
+                    .iter()
+                    .find(|h| names_eq(&h.name, &new.name))
+                    .map(|h| format!("hierarchy '{}' of table '{}'", h.name, table.name))
+            });
+        if let Some(existing) = existing {
+            return Err(CommandError::NameConflict {
+                name: new.name.clone(),
+                existing,
+            });
+        }
+        if new.levels.is_empty() {
+            return Err(CommandError::Rejected(format!(
+                "hierarchy '{}' has no levels",
+                new.name
+            )));
+        }
+        for (i, level) in new.levels.iter().enumerate() {
+            validate_name(&level.name)?;
+            let Some(column) = table.column(&level.column) else {
+                return Err(CommandError::Rejected(format!(
+                    "level '{}': table '{}' has no column '{}'",
+                    level.name, table.name, level.column
+                )));
+            };
+            if column.kind == ColumnKind::RowNumber {
+                return Err(CommandError::Rejected(format!(
+                    "level '{}': the row-number column cannot be a level",
+                    level.name
+                )));
+            }
+            for earlier in new.levels.iter().take(i) {
+                if names_eq(&earlier.name, &level.name) {
+                    return Err(CommandError::NameConflict {
+                        name: level.name.clone(),
+                        existing: format!("level '{}' of hierarchy '{}'", earlier.name, new.name),
+                    });
+                }
+                if names_eq(&earlier.column, &level.column) {
+                    return Err(CommandError::Rejected(format!(
+                        "levels '{}' and '{}' use the same column '{}'",
+                        earlier.name, level.name, level.column
+                    )));
+                }
+            }
+        }
+        let mut hierarchy = new.clone();
+        hierarchy.id = doc.ids.next_id();
+        let id = hierarchy.id;
+        for level in &mut hierarchy.levels {
+            level.id = doc.ids.next_id();
+        }
+        let hierarchies = &mut model_mut(doc)?
+            .tables
+            .get_mut(t)
+            .ok_or(CommandError::NotFound(self.table))?
+            .hierarchies;
+        let index = self
+            .index
+            .map_or(hierarchies.len(), |i| i.min(hierarchies.len()));
+        hierarchies.insert(index, hierarchy);
+        Ok(Applied::new(
+            DeleteHierarchy { hierarchy: id },
+            vec![ChangeEvent::ObjectAdded { id }],
+        ))
+    }
+
+    fn label(&self) -> String {
+        format!("Create hierarchy '{}'", self.hierarchy.name)
+    }
+}
+
+/// Removes a user hierarchy with its levels. Report fields that use it are
+/// left as they are; undo puts it back where it was.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeleteHierarchy {
+    pub hierarchy: ObjectId,
+}
+
+impl Command for DeleteHierarchy {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let ObjectPath::Hierarchy {
+            table: t,
+            hierarchy: h,
+        } = expect_kind(doc, self.hierarchy, ObjectKind::Hierarchy)?
+        else {
+            return Err(CommandError::NotFound(self.hierarchy));
+        };
+        let table = model_mut(doc)?
+            .tables
+            .get_mut(t)
+            .ok_or(CommandError::NotFound(self.hierarchy))?;
+        if h >= table.hierarchies.len() {
+            return Err(CommandError::NotFound(self.hierarchy));
+        }
+        let hierarchy = table.hierarchies.remove(h);
+        Ok(Applied::new(
+            RestoreHierarchy {
+                table: table.id,
+                hierarchy,
+                index: h,
+            },
+            vec![ChangeEvent::ObjectRemoved { id: self.hierarchy }],
+        ))
+    }
+
+    fn label(&self) -> String {
+        "Delete hierarchy".to_owned()
+    }
+}
+
+/// Inverse of [`DeleteHierarchy`]: puts the hierarchy back as it was, IDs
+/// included, without re-validating it.
+#[derive(Debug, Clone, PartialEq)]
+struct RestoreHierarchy {
+    table: ObjectId,
+    hierarchy: Hierarchy,
+    index: usize,
+}
+
+impl Command for RestoreHierarchy {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let ids: Vec<ObjectId> = std::iter::once(self.hierarchy.id)
+            .chain(self.hierarchy.levels.iter().map(|l| l.id))
+            .collect();
+        for &used in &ids {
+            if !used.is_assigned() || doc.locate(used).is_some() {
+                return Err(CommandError::Rejected(format!(
+                    "cannot restore hierarchy '{}': ID {used} is in use",
+                    self.hierarchy.name
+                )));
+            }
+        }
+        let ObjectPath::Table { table: t } = expect_kind(doc, self.table, ObjectKind::Table)?
+        else {
+            return Err(CommandError::NotFound(self.table));
+        };
+        let hierarchies = &mut model_mut(doc)?
+            .tables
+            .get_mut(t)
+            .ok_or(CommandError::NotFound(self.table))?
+            .hierarchies;
+        hierarchies.insert(self.index.min(hierarchies.len()), self.hierarchy.clone());
+        for used in ids {
+            doc.ids.reserve_through(used);
+        }
+        let id = self.hierarchy.id;
+        Ok(Applied::new(
+            DeleteHierarchy { hierarchy: id },
+            vec![ChangeEvent::ObjectAdded { id }],
+        ))
+    }
+
+    fn label(&self) -> String {
+        format!("Restore hierarchy '{}'", self.hierarchy.name)
     }
 }
