@@ -488,9 +488,13 @@ their write roots).
   Ctrl+S, Ctrl+Z, Ctrl+Y; unsaved marker in the title; prompt on close and quit; the formula bar
   edits measure expressions (plain editor; IntelliSense in M7.5); the Properties pane edits
   description, format string and display folder; File, Save and Save as enabled.
-- [ ] **M6.9 Agent editing over MCP.** The `agent_safe` editing set decided in ADR-0012 is exposed
+- [x] **M6.9 Agent editing over MCP.** The `agent_safe` editing set decided in ADR-0012 is exposed
   as MCP tools in a new `edit` category (`--allow edit`), saves only inside write roots,
   [MCP.md](MCP.md) updated. AI-assisted editing is a separate, optional milestone (M28).
+  Done: every edit, history and save command is agent-safe and in the `edit` category; an agent
+  limited to `--allow edit --allow workspace` edits and saves a project under its write root, while
+  saving a project that is only under a read root fails with `pathDenied` and writes nothing
+  (`agents_edit_and_save_only_inside_write_roots`).
 - [ ] **M6.10 CLI as registry wrappers.** `detect`, `inspect` and `lint` become thin wrappers
   over `Registry::execute` with byte-identical output (ADR-0007 migration plan); `dashcraft run`
   gains `--save` for edit batches.
@@ -618,7 +622,7 @@ column unquoted, `Web Sessions[Device]`, as Desktop names it), with the same row
 the app's change events (M6.8), dependent recalculation after measure edits, data column delete (with M editing), hierarchy and level edits, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
-app, MCP-category and CLI work.
+app and CLI work.
 
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,
 invalidation, recalculation), `pbi-core` (save in place, minimal-diff writes, identifier

@@ -7,6 +7,17 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 agent editing over MCP (M6.9)
+
+- **What:** `crates/pbi-ops/tests/mcp.rs::agents_edit_and_save_only_inside_write_roots`: an MCP
+  server limited to `--allow edit --allow workspace` lists the edit, undo and save tools (not
+  `render_page`); an agent edits a project under a read root and one under a write root, saving
+  the first fails with `pathDenied` (bytes unchanged, still dirty) and the second writes only
+  `tables/Sales.tmdl`. `docs/MCP.md` gains an Editing section (the `edit` tools) and the
+  `doc_saveAs` write-root rule; DESKTOP-PLAN M6.9 ticked.
+- **Why:** M6.9 and M6 acceptance 11; the commands were already agent-safe in the `edit` category
+  (ADR-0012), the end-to-end confinement through MCP was untested.
+- **Numbers:** 1 new test; `pbi-ops` MCP tests 10 → 11. No code change.
 ### M6 calculated table create (M6.5)
 
 - **What:** `pbi-model` gets `CreateTable` (calculated tables only: one calculated partition, no

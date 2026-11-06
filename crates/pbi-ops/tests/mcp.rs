@@ -791,3 +791,70 @@ async fn expected_values_through_mcp() {
     );
     c.finish().await;
 }
+
+/// M6 acceptance 11: an agent limited to the editing tools edits and saves a
+/// project inside its write roots; a project only in a read root is not
+/// saved (`pathDenied`) and keeps its bytes.
+#[tokio::test(flavor = "multi_thread")]
+async fn agents_edit_and_save_only_inside_write_roots() {
+    let dir = tmp_dir("pbi-ops-mcp-save-");
+    let (read, write) = (dir.path().join("read"), dir.path().join("write"));
+    std::fs::create_dir_all(&read).unwrap();
+    std::fs::create_dir_all(&write).unwrap();
+    let readonly = mini_pbip(&read);
+    let writable = mini_pbip(&write);
+    let model = |root: &std::path::Path| {
+        std::fs::read(root.join("Mini.SemanticModel/definition/tables/Sales.tmdl")).unwrap()
+    };
+    let before = model(&read);
+    let opts = McpOptions {
+        filter: ToolFilter {
+            allow: vec!["edit".to_owned(), "workspace".to_owned()],
+            deny: Vec::new(),
+        },
+        ..McpOptions::default()
+    };
+    let ws = Workspace::with_policy(PathPolicy::restricted([&read], [&write]).unwrap());
+    let mut c = Client::start(&Registry::default_catalog(), ws, opts);
+    c.initialize("2025-06-18").await;
+    let list = c.request("tools/list", json!({})).await;
+    let names: Vec<&str> = list["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["name"].as_str().unwrap())
+        .collect();
+    for tool in ["doc_open", "model_measure_create", "doc_undo", "doc_save"] {
+        assert!(names.contains(&tool), "{tool} in {names:?}");
+    }
+    assert!(!names.contains(&"render_page"), "{names:?}");
+
+    let edit = |doc: &str| json!({"docId": doc, "table": "Sales", "name": "Twice", "expression": "[Total] * 2"});
+    for (path, doc) in [(&readonly, "d1"), (&writable, "d2")] {
+        let open = c
+            .ok("doc_open", json!({"path": path, "autoRefresh": false}))
+            .await;
+        assert_eq!(open["docId"], doc);
+        c.ok("model_measure_create", edit(doc)).await;
+    }
+    let denied = c.tool("doc_save", json!({"docId": "d1"})).await;
+    assert_eq!(tool_error(&denied)["code"], "pathDenied");
+    assert_eq!(
+        model(&read),
+        before,
+        "nothing written outside the write roots"
+    );
+    let history = c.ok("doc_history", json!({"docId": "d1"})).await;
+    assert_eq!(history["dirty"], true, "{history}");
+
+    let saved = c.ok("doc_save", json!({"docId": "d2"})).await;
+    assert_eq!(
+        saved["written"],
+        json!(["Mini.SemanticModel/definition/tables/Sales.tmdl"]),
+        "{saved}"
+    );
+    assert_eq!(saved["dirty"], false, "{saved}");
+    let text = String::from_utf8(model(&write)).unwrap();
+    assert!(text.contains("measure Twice = [Total] * 2"), "{text}");
+    c.finish().await;
+}
