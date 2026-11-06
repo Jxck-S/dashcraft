@@ -20,7 +20,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use super::{BASE, doc};
+use super::{BASE, doc, loaded_doc};
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::{Ctx, DocChangedEvent, ObjectChange, ObjectChangeKind};
 use crate::error::OpError;
@@ -1226,8 +1226,9 @@ pub struct CreateColumnParams {
     pub name: String,
     /// The DAX expression, evaluated per row of `table`.
     pub expression: String,
-    /// The data type; inferred from the values when omitted (required when
-    /// the table has no rows loaded or every value is blank).
+    /// The data type; inferred from the values when omitted (after the
+    /// automatic first load; required when the table has no rows loaded or
+    /// every value is blank).
     #[serde(default)]
     pub data_type: Option<DataTypeParam>,
     #[serde(default)]
@@ -1260,7 +1261,12 @@ impl Command for ModelColumnCreate {
     }
 
     async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
-        let entry = doc(ws, &params.doc_id)?;
+        // Inferring the type needs the data: the automatic first load.
+        let entry = if params.data_type.is_none() {
+            loaded_doc(ws, &params.doc_id, ctx).await?
+        } else {
+            doc(ws, &params.doc_id)?
+        };
         resolve::require_model(&entry)?;
         let session = entry.session();
         let (command, data_type_inferred) = create_column(
@@ -2478,6 +2484,17 @@ impl Command for DocumentApplyEdits {
 
     async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
+        if params.edits.iter().any(|e| {
+            matches!(
+                e,
+                EditOperation::CreateColumn {
+                    data_type: None,
+                    ..
+                }
+            )
+        }) {
+            entry.ensure_loaded(ctx).await?;
+        }
         let session = entry.session();
         let mut group = CommandGroup::new("Apply document edits");
         for edit in params.edits {

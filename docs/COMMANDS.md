@@ -2037,7 +2037,7 @@ Parameters:
 | `table` | string | The column's table. |
 | `name` | string | The column name: not a column or measure of `table`. |
 | `expression` | string | The DAX expression, evaluated per row of `table`. |
-| `dataType` (optional) | `"string"` \| `"int64"` \| `"double"` \| `"decimal"` \| `"dateTime"` \| `"boolean"` \| null | The data type; inferred from the values when omitted (required when the table has no rows loaded or every value is blank). |
+| `dataType` (optional) | `"string"` \| `"int64"` \| `"double"` \| `"decimal"` \| `"dateTime"` \| `"boolean"` \| null | The data type; inferred from the values when omitted (after the automatic first load; required when the table has no rows loaded or every value is blank). |
 | `formatString` (optional) | string \| null |  |
 | `displayFolder` (optional) | string \| null |  |
 | `description` (optional) | string \| null |  |

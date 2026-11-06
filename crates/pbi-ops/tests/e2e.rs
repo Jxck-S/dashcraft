@@ -2711,4 +2711,27 @@ async fn calculated_column_create_through_the_registry() {
     r.run("doc.undo", json!({"docId": doc})).await;
     assert!(fails("SUM(Orders[Unit Count])").await.is_err());
     assert!(fails("[Units Plus Rows]").await.is_err());
+
+    // Inferring the type loads a document opened with autoRefresh first.
+    let auto = r.open(json!({"path": pbip, "blobMap": map})).await;
+    let out = r
+        .run(
+            "model.column.create",
+            json!({"docId": auto, "table": "Customers", "name": "Order Lines",
+                "expression": "COUNTROWS(RELATEDTABLE(Orders))"}),
+        )
+        .await;
+    assert_eq!(
+        (&out["dataType"], &out["dataTypeInferred"]),
+        (&json!("int64"), &json!(true))
+    );
+    assert_eq!(
+        scalar(&r, &auto, "SUM(Customers[Order Lines])").await,
+        scalar(
+            &r,
+            &auto,
+            "SUMX(Customers, COUNTROWS(RELATEDTABLE(Orders)))"
+        )
+        .await
+    );
 }

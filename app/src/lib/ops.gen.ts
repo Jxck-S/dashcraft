@@ -832,8 +832,9 @@ export interface CreateColumnParams {
   /** The DAX expression, evaluated per row of `table`. */
   expression: string
   /**
-   * The data type; inferred from the values when omitted (required when
-   * the table has no rows loaded or every value is blank).
+   * The data type; inferred from the values when omitted (after the
+   * automatic first load; required when the table has no rows loaded or
+   * every value is blank).
    */
   dataType?: DataTypeParam | null
   formatString?: string | null
