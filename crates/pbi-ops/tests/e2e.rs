@@ -2868,3 +2868,185 @@ async fn hierarchy_create_and_delete_through_the_registry() {
         OpErrorCode::NotFound
     );
 }
+
+#[tokio::test]
+async fn calculated_table_create_through_the_registry() {
+    let (Some(pbip), Some(map)) = (fixture(PBIP), fixture(BLOB_MAP)) else {
+        eprintln!("SKIP: {PBIP} missing");
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let with_doc = |params: Value| {
+        let mut params = params;
+        params["docId"] = json!(doc);
+        params
+    };
+    let create = |params: Value| r.try_run("model.table.create", with_doc(params));
+    let number = |v: Value| v.as_f64().unwrap_or_else(|| panic!("not a number: {v}"));
+
+    // Without data the types come from the columns the result's columns
+    // stem from, and a refresh computes the table; a computed column needs
+    // the data.
+    let out = create(json!({"name": "Regions", "expression": "VALUES(Stores[Region])"}))
+        .await
+        .unwrap();
+    let id = out["tableId"].as_u64().unwrap();
+    assert_eq!(
+        (
+            &out["changed"],
+            &out["revision"],
+            &out["name"],
+            &out["changedObjectIds"]
+        ),
+        (&json!(true), &json!(1), &json!("Regions"), &json!([id])),
+        "{out}"
+    );
+    assert_eq!(
+        out["columns"],
+        json!([{"columnId": id + 1, "name": "Region", "dataType": "string",
+            "sourceColumn": "Stores[Region]"}]),
+        "{out}"
+    );
+    let device_pages = json!({"name": "Device Pages",
+        "expression": "ADDCOLUMNS(VALUES('Web Sessions'[Device]), \"Pages\", CALCULATE(SUM('Web Sessions'[Pages Viewed])), \"Share\", DIVIDE(CALCULATE([Sessions]), [Sessions (All Devices)]))"});
+    assert_eq!(
+        error_code(create(device_pages.clone()).await),
+        OpErrorCode::InvalidParams
+    );
+    let refresh = r.run("data.refresh", with_doc(json!({}))).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let regions = number(scalar(&r, &doc, "COUNTROWS(Regions)").await);
+    assert!(regions > 1.0, "{regions}");
+    assert_eq!(
+        regions,
+        number(scalar(&r, &doc, "COUNTROWS(VALUES(Stores[Region]))").await)
+    );
+
+    // Over loaded data the types come from the values and the table is
+    // computed at once.
+    let out = create(device_pages).await.unwrap();
+    let columns: Vec<_> = out["columns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| {
+            (
+                c["name"].clone(),
+                c["dataType"].clone(),
+                c["sourceColumn"].clone(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        columns,
+        [
+            (
+                json!("Device"),
+                json!("string"),
+                json!("'Web Sessions'[Device]")
+            ),
+            (json!("Pages"), json!("int64"), json!("[Pages]")),
+            (json!("Share"), json!("double"), json!("[Share]")),
+        ],
+        "{out}"
+    );
+    let pages = number(scalar(&r, &doc, "SUM('Device Pages'[Pages])").await);
+    let all = number(scalar(&r, &doc, "SUM('Web Sessions'[Pages Viewed])").await);
+    assert_eq!(pages, all);
+    let share = number(scalar(&r, &doc, "SUM('Device Pages'[Share])").await);
+    assert!((share - 1.0).abs() < 1e-9, "{share}");
+
+    // A calculated column on the new table is computed too.
+    let out = r
+        .run(
+            "model.column.create",
+            with_doc(json!({"table": "Regions", "name": "Length",
+                "expression": "LEN(Regions[Region])"})),
+        )
+        .await;
+    assert_eq!(out["dataType"], json!("int64"), "{out}");
+    assert_eq!(
+        scalar(&r, &doc, "SUM(Regions[Length])").await,
+        scalar(
+            &r,
+            &doc,
+            "SUMX(VALUES(Stores[Region]), LEN(Stores[Region]))"
+        )
+        .await
+    );
+
+    // Refusals: a taken name, a broken or empty expression, a scalar, and
+    // duplicate column names.
+    for bad in [
+        json!({"name": "orders", "expression": "VALUES(Stores[Region])"}),
+        json!({"name": "Regions", "expression": "VALUES(Stores[Region])"}),
+        json!({"name": "T", "expression": "VALUES(Stores[Region]"}),
+        json!({"name": "T", "expression": "  "}),
+        json!({"name": "T", "expression": "1 + 1"}),
+        json!({"name": "T", "expression": "VALUES(Stores[Nope])"}),
+        json!({"name": "T",
+            "expression": "SELECTCOLUMNS(Stores, \"A\", Stores[Region], \"A\", Stores[City])"}),
+        json!({"name": "", "expression": "VALUES(Stores[Region])"}),
+    ] {
+        assert_eq!(
+            error_code(create(bad.clone()).await),
+            OpErrorCode::InvalidParams,
+            "{bad}"
+        );
+    }
+
+    // Undo removes the column, the second table and the first; redo brings
+    // the first back with the same id and computes it again.
+    r.run("doc.undo", with_doc(json!({}))).await;
+    r.run("doc.undo", with_doc(json!({}))).await;
+    r.run("doc.undo", with_doc(json!({}))).await;
+    let gone = r
+        .try_run(
+            "dax.query",
+            with_doc(json!({"query": "EVALUATE ROW(\"n\", COUNTROWS(Regions))"})),
+        )
+        .await;
+    assert!(gone.is_err(), "{gone:?}");
+    r.run("doc.redo", with_doc(json!({}))).await;
+    r.run("doc.redo", with_doc(json!({}))).await;
+    assert_eq!(
+        scalar(&r, &doc, "COUNTROWS(Regions)").await,
+        scalar(&r, &doc, "COUNTROWS(VALUES(Stores[Region]))").await
+    );
+    let out = r
+        .run(
+            "model.table.delete",
+            with_doc(json!({"table": "Regions", "dryRun": true})),
+        )
+        .await;
+    assert_eq!(out["objectId"], json!(id), "redo keeps the id: {out}");
+
+    // One group: a calculated table and the deletion of another.
+    let out = r
+        .run(
+            "doc.applyEdits",
+            with_doc(json!({"edits": [
+                {"type": "createTable", "name": "Segments",
+                    "expression": "DISTINCT(Customers[Segment])"},
+                {"type": "deleteTable", "table": "Device Pages"}
+            ]})),
+        )
+        .await;
+    assert_eq!(
+        out["changedObjectIds"].as_array().unwrap().len(),
+        2,
+        "{out}"
+    );
+    assert_eq!(
+        scalar(&r, &doc, "COUNTROWS(Segments)").await,
+        scalar(&r, &doc, "COUNTROWS(DISTINCT(Customers[Segment]))").await
+    );
+    r.run("doc.undo", with_doc(json!({}))).await;
+    assert_eq!(
+        number(scalar(&r, &doc, "SUM('Device Pages'[Pages])").await),
+        all
+    );
+}

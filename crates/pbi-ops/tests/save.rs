@@ -1120,3 +1120,111 @@ async fn created_and_deleted_hierarchies_save_and_reopen() {
         .await;
     assert_eq!(gone.unwrap_err().code, OpErrorCode::NotFound);
 }
+
+#[tokio::test]
+async fn created_table_saves_and_reopens() {
+    const DEF: &str = "AcmeOutfitters.SemanticModel/definition";
+    let Some(acme) = fixture(ACME) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("create-table-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let before = files(dir.path());
+    let text = |f: &str| String::from_utf8(before[&format!("{DEF}/{f}")].clone()).unwrap();
+    let saved = |f: &str| fs::read_to_string(dir.path().join(DEF).join(f)).unwrap();
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    r.run(
+        "model.table.create",
+        json!({"docId": doc, "name": "Store Places",
+            "expression": "SUMMARIZE(Stores, Stores[Region], Stores[Square Feet])"}),
+    )
+    .await;
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(
+        sorted(&out["written"]),
+        [
+            format!("{DEF}/model.tmdl"),
+            format!("{DEF}/tables/Store Places.tmdl")
+        ],
+        "{out}"
+    );
+    // Like Power BI Desktop: lineage tags, inferred names and types, the
+    // result's columns as source columns, sum for a numeric column, and a
+    // calculated partition named after the table.
+    let table = saved("tables/Store Places.tmdl");
+    let tags: Vec<&str> = table
+        .split("lineageTag: ")
+        .skip(1)
+        .map(|rest| rest.lines().next().unwrap())
+        .collect();
+    assert!(
+        tags.len() == 3 && tags.iter().all(|t| t.len() == 36),
+        "{tags:?}"
+    );
+    assert_eq!(
+        table,
+        format!(
+            "table 'Store Places'\n\
+             \tlineageTag: {}\n\
+             \n\
+             \tcolumn Region\n\
+             \t\tdataType: string\n\
+             \t\tisNameInferred\n\
+             \t\tisDataTypeInferred\n\
+             \t\tlineageTag: {}\n\
+             \t\tsummarizeBy: none\n\
+             \t\tsourceColumn: Stores[Region]\n\
+             \n\
+             \t\tannotation SummarizationSetBy = Automatic\n\
+             \n\
+             \tcolumn 'Square Feet'\n\
+             \t\tdataType: int64\n\
+             \t\tisNameInferred\n\
+             \t\tisDataTypeInferred\n\
+             \t\tlineageTag: {}\n\
+             \t\tsummarizeBy: sum\n\
+             \t\tsourceColumn: Stores[Square Feet]\n\
+             \n\
+             \t\tannotation SummarizationSetBy = Automatic\n\
+             \n\
+             \tpartition 'Store Places' = calculated\n\
+             \t\tmode: import\n\
+             \t\tsource = SUMMARIZE(Stores, Stores[Region], Stores[Square Feet])\n",
+            tags[0], tags[1], tags[2]
+        )
+    );
+    let model = text("model.tmdl");
+    let last = "ref table 'Last Refreshed'\n";
+    let at = model.find(last).unwrap() + last.len();
+    assert_eq!(
+        saved("model.tmdl"),
+        format!("{}ref table 'Store Places'\n{}", &model[..at], &model[at..])
+    );
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(
+            json!({"path": pbip, "blobMap": dir.path().join("blob-map.json"),
+            "source": "query"}),
+        )
+        .await;
+    let q = fresh
+        .run(
+            "dax.query",
+            json!({"docId": reopened, "query": "EVALUATE ROW(\"a\", COUNTROWS('Store Places'), \"b\", COUNTROWS(SUMMARIZE(Stores, Stores[Region], Stores[Square Feet])))"}),
+        )
+        .await;
+    let row = &q["tables"][0]["rows"][0];
+    assert!(row[0].as_i64().unwrap() > 1, "{q}");
+    assert_eq!(row[0], row[1], "{q}");
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.save", json!({"docId": doc})).await;
+    assert!(
+        files(dir.path()) == before,
+        "undoing the create saves the original project"
+    );
+}

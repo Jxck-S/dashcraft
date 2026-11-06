@@ -50,7 +50,7 @@ pub(crate) mod test_support;
 
 pub use command::{
     Applied, ChangeEvent, Command, CommandError, CommandGroup, CreateColumn, CreateHierarchy,
-    CreateMeasure, CreateRelationship, DeleteColumn, DeleteHierarchy, DeleteMeasure,
+    CreateMeasure, CreateRelationship, CreateTable, DeleteColumn, DeleteHierarchy, DeleteMeasure,
     DeleteRelationship, DeleteTable, History, HistoryResult, RenameColumn, RenameMeasure,
     RenameTable, ReplaceObjects, SetDescription, SetMeasureExpression, SetMeasureProperties,
     SetRelationshipProperties, SetVisualPosition, Snapshot,

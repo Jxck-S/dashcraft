@@ -16,7 +16,7 @@ use pbi_model::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::created::compute_created_columns;
+use crate::created::{compute_created_columns, compute_created_tables};
 use crate::derived::{Applied, DerivedEntry, synthetic_column};
 use crate::edit::{
     ModelRenames, RenameObject, RenamePreview, preview_rename, rename_results, structure_changed,
@@ -612,6 +612,7 @@ impl Session {
             }
         }
         if let Some(engine) = engine.as_mut() {
+            compute_created_tables(engine, old, new, &model, &mut tables)?;
             compute_created_columns(engine, old, new, &model)?;
         }
         Ok(PreparedEdit {

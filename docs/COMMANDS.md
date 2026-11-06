@@ -111,6 +111,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.relationship.delete`](#modelrelationshipdelete) | Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. | M A |
 | [`model.column.create`](#modelcolumncreate) | Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given. | M A |
 | [`model.column.delete`](#modelcolumndelete) | Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. | M A |
+| [`model.table.create`](#modeltablecreate) | Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once. | M A |
 | [`model.table.delete`](#modeltabledelete) | Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. | M A |
 | [`model.hierarchy.create`](#modelhierarchycreate) | Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. | M A |
 | [`model.hierarchy.delete`](#modelhierarchydelete) | Deletes a user hierarchy with its levels as one undoable edit and lists the report fields that used it; dryRun only lists them. | M A |
@@ -2100,6 +2101,38 @@ Examples:
 
 - What uses a calculated column: `{"docId":"d1","table":"Orders","column":"Line Cost","dryRun":true}`
 - Delete by id: `{"docId":"d1","columnId":42}`
+
+### `model.table.create`
+
+**Create a calculated table.** Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `name` | string | The table name: not used by another table. |
+| `expression` | string | The DAX table expression; its result's columns become the table's. |
+| `description` (optional) | string \| null |  |
+| `isHidden` (optional) | boolean |  |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `tableId` | integer |  |
+| `name` | string |  |
+| `columns` | CreatedTableColumnOut[] | The columns, in order, with the data types inferred from the values. |
+
+Examples:
+
+- Add a calculated table: `{"docId":"d1","name":"Regions","expression":"VALUES(Stores[Region])"}`
 
 ### `model.table.delete`
 

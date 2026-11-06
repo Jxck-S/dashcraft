@@ -14,7 +14,7 @@ use crate::ids::ObjectId;
 use crate::names::{dax_column_ref, names_eq};
 use crate::semantic::{
     Cardinality, Column, ColumnKind, ColumnRef, CrossFilter, Hierarchy, Measure, Model,
-    Relationship, SecurityFilteringBehavior, Table, TablePermission,
+    Relationship, SecurityFilteringBehavior, Table, TableKind, TablePermission,
 };
 
 /// Adds a measure to a table. The measure's `id` is ignored: it gets a fresh
@@ -827,6 +827,107 @@ impl Command for RestoreTable {
 
     fn label(&self) -> String {
         format!("Restore table '{}'", self.table.name)
+    }
+}
+
+/// Adds a calculated table. Its `id` and its columns' and partition's ids
+/// are ignored: the table gets a fresh one (see [`CreateTable::created_id`])
+/// and its columns, then its partition, the next ones in order.
+///
+/// Only calculated tables can be created (data tables come from a query):
+/// one partition with a DAX source, columns that come from the expression
+/// or are calculated, and no measures or hierarchies (add them with their
+/// own commands). The name must be valid and not used by another table; the
+/// column names valid and unique. The caller computes the columns and their
+/// data types from the expression (the session does).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CreateTable {
+    pub table: Table,
+    /// Position among the model's tables; `None` (or past the end) appends.
+    pub index: Option<usize>,
+}
+
+impl CreateTable {
+    /// The ID the table gets when this command is applied to `doc` now.
+    pub fn created_id(doc: &Document) -> ObjectId {
+        doc.ids.peek()
+    }
+}
+
+impl Command for CreateTable {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let new = &self.table;
+        let calculated = new.partitions.len() == 1
+            && new.calculation_group.is_none()
+            && new.kind() == TableKind::CalculatedTable;
+        if !calculated {
+            return Err(CommandError::Rejected(
+                "only calculated tables can be created: one partition with a DAX expression"
+                    .to_owned(),
+            ));
+        }
+        if !new.measures.is_empty() || !new.hierarchies.is_empty() {
+            return Err(CommandError::Rejected(format!(
+                "table '{}': create its measures and hierarchies after the table",
+                new.name
+            )));
+        }
+        validate_name(&new.name)?;
+        if let Some(other) = model(doc)?.table(&new.name) {
+            return Err(CommandError::NameConflict {
+                name: new.name.clone(),
+                existing: format!("table '{}'", other.name),
+            });
+        }
+        if new.columns.is_empty() {
+            return Err(CommandError::Rejected(format!(
+                "table '{}' has no columns",
+                new.name
+            )));
+        }
+        for (i, column) in new.columns.iter().enumerate() {
+            validate_name(&column.name)?;
+            if !matches!(
+                column.kind,
+                ColumnKind::CalculatedTableColumn { .. } | ColumnKind::Calculated { .. }
+            ) {
+                return Err(CommandError::Rejected(format!(
+                    "column '{}': a calculated table's columns come from its expression or are calculated",
+                    column.name
+                )));
+            }
+            if let Some(earlier) = new
+                .columns
+                .iter()
+                .take(i)
+                .find(|c| names_eq(&c.name, &column.name))
+            {
+                return Err(CommandError::NameConflict {
+                    name: column.name.clone(),
+                    existing: format!("column '{}'[{}]", new.name, earlier.name),
+                });
+            }
+        }
+        let mut table = new.clone();
+        table.id = doc.ids.next_id();
+        let id = table.id;
+        for column in &mut table.columns {
+            column.id = doc.ids.next_id();
+        }
+        for partition in &mut table.partitions {
+            partition.id = doc.ids.next_id();
+        }
+        let tables = &mut model_mut(doc)?.tables;
+        let index = self.index.map_or(tables.len(), |i| i.min(tables.len()));
+        tables.insert(index, table);
+        Ok(Applied::new(
+            DeleteTable { table: id },
+            vec![ChangeEvent::ObjectAdded { id }],
+        ))
+    }
+
+    fn label(&self) -> String {
+        format!("Create table '{}'", self.table.name)
     }
 }
 

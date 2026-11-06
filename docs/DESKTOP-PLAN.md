@@ -51,7 +51,7 @@ What exists after M0–M5 (`v0.1.0`, `v0.2.0`) and the unreleased work, from [GA
 | Interactions | Slicers, cross-filter per `visualInteractions`, tooltips, navigation and clear-all buttons, scrolling, matrix expand; no highlight, drill, drillthrough, bookmarks, synced slicers | 1.6 |
 | Rendering fidelity | Deterministic SVG and PNG with bundled fonts, render snapshots of every Acme page, 39 card values asserted; no golden images | 3.2 |
 | Performance | `cargo xtask perf`, eight scenarios P01–P08, all within target | 4.9 |
-| Registry, MCP, AI | `pbi-ops` with 70 commands including measure create, update and delete, relationship create, update and delete, calculated column create and delete, table delete, hierarchy create and delete, save and Save As, object dependents, measure editing, DAX-aware rename, descriptions, visual move and resize, grouped edits and history, `run`, `serve`, `mcp`; opt-in `pbi-ai` with 9 `ai.*` commands | 2.8 |
+| Registry, MCP, AI | `pbi-ops` with 71 commands including measure create, update and delete, relationship create, update and delete, calculated column create and delete, calculated table create, table delete, hierarchy create and delete, save and Save As, object dependents, measure editing, DAX-aware rename, descriptions, visual move and resize, grouped edits and history, `run`, `serve`, `mcp`; opt-in `pbi-ai` with 9 `ai.*` commands | 2.8 |
 | App UX | Desktop-style shell: ribbon, view rail, panes, Report (interactive reading), Table, Model (read-only diagram), DAX query, TMDL (read-only) views, View as, opt-in AI; editing commands shown disabled | 1.4 |
 | Platform and packaging | CI on macOS, Windows, Linux; dmg, msi, nsis, AppImage, deb; unsigned; no auto-update | 2.7 |
 | Security and fuzzing | No `unsafe`, caps and zip-slip guards, 14 fuzz targets, `cargo-deny`; legal review of ADR-0003 pending | 3.1 |
@@ -601,9 +601,18 @@ levels (`hierarchy_dependents`) and undo restores the same ids
 (`hierarchy_create_and_delete_through_the_registry`,
 `created_and_deleted_hierarchies_save_and_reopen`); Desktop opens and refreshes three saved hierarchies (one on a
 table without any, one with a calculated-column level) with the same levels in order and answers
-all 643 recorded cases on the edited model as DashCraft does (GT-6 s18). Still open:
-the app's change events (M6.8), dependent recalculation after measure edits, calculated table
-create, data column delete (with M editing), hierarchy and level edits, M references (warned about,
+all 643 recorded cases on the edited model as DashCraft does (GT-6 s18).
+`model.table.create` (and the `createTable` edit): `CreateTable` accepts only a calculated table
+(one calculated partition, no measures or hierarchies yet) with a free name and distinct column
+names; the columns come from the expression's result over the loaded data
+(`Session::infer_table_columns`: names as the result gives them, types from the values, else from
+the source column), the session computes the table in the same publication (`created.rs`; a
+document without loaded data computes it at the next refresh, a restored table gets its kept data
+back), and like Desktop the table and its columns get random `lineageTag`s, `isNameInferred`,
+`isDataTypeInferred`, the result's columns as `sourceColumn` (`Stores[Region]`, `[Pages]`) and sum
+for numeric columns; it is saved as a new table file listed in `model.tmdl`
+(`calculated_table_create_through_the_registry`, `created_table_saves_and_reopens`). Still open:
+the app's change events (M6.8), dependent recalculation after measure edits, data column delete (with M editing), hierarchy and level edits, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
 app, MCP-category and CLI work.

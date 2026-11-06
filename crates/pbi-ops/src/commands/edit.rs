@@ -6,12 +6,13 @@
 //! `render.visual`: `report`, `page` and the visual's name.
 
 use pbi_model::{
-    Annotation, Cardinality, ChangeEvent, Column, ColumnRef, CommandGroup, CreateColumn,
-    CreateHierarchy, CreateMeasure, CreateRelationship, CrossFilter, DataType, DeleteColumn,
-    DeleteHierarchy, DeleteMeasure, DeleteRelationship, DeleteTable, Hierarchy, HistoryResult,
-    Level, Measure, ObjectId, ObjectPath, Position, Relationship, SecurityFilteringBehavior,
-    SetDescription, SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties,
-    SetVisualPosition, SummarizeBy, Visual, names_eq,
+    Annotation, Cardinality, ChangeEvent, Column, ColumnKind, ColumnRef, CommandGroup,
+    CreateColumn, CreateHierarchy, CreateMeasure, CreateRelationship, CreateTable, CrossFilter,
+    DataType, DeleteColumn, DeleteHierarchy, DeleteMeasure, DeleteRelationship, DeleteTable,
+    Hierarchy, HistoryResult, Level, Measure, ObjectId, ObjectPath, Partition, PartitionMode,
+    PartitionSource, Position, Relationship, SecurityFilteringBehavior, SetDescription,
+    SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties, SetVisualPosition,
+    SummarizeBy, Table, Visual, names_eq,
 };
 use pbi_session::{
     RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error, preview_rename,
@@ -1315,6 +1316,189 @@ impl Command for ModelColumnCreate {
             name,
             data_type,
             data_type_inferred,
+        })
+    }
+}
+
+/// The properties of a new calculated table.
+#[derive(Debug, Clone)]
+struct NewTable {
+    name: String,
+    expression: String,
+    description: Option<String>,
+    is_hidden: bool,
+}
+
+/// The command that creates `new` with the columns its expression returns
+/// (data types from the values, as Power BI Desktop infers them). Like
+/// Desktop, the table and its columns get a lineage tag and numeric columns
+/// summarize by sum.
+fn create_table(session: &Session, new: NewTable) -> Result<CreateTable, OpError> {
+    if new.expression.trim().is_empty() {
+        return Err(OpError::invalid_params("the table expression is empty"));
+    }
+    if let Some(err) = dax_syntax_error(&new.expression) {
+        return Err(OpError::invalid_params(format!(
+            "the expression does not parse: {err}"
+        )));
+    }
+    let inferred = session.infer_table_columns(&new.name, &new.expression)?;
+    let mut table = Table::new(new.name.clone());
+    table.description = new.description.filter(|s| !s.is_empty());
+    table.is_hidden = new.is_hidden;
+    table.lineage_tag = session.new_lineage_tag();
+    for c in inferred {
+        let numeric = c.data_type.is_numeric();
+        table.columns.push(Column {
+            name: c.name,
+            data_type: c.data_type,
+            is_name_inferred: true,
+            is_data_type_inferred: true,
+            kind: ColumnKind::CalculatedTableColumn {
+                source_column: c.source_column,
+            },
+            lineage_tag: session.new_lineage_tag(),
+            summarize_by: Some(if numeric {
+                SummarizeBy::Sum
+            } else {
+                SummarizeBy::None
+            }),
+            annotations: vec![Annotation::new("SummarizationSetBy", "Automatic")],
+            ..Column::default()
+        });
+    }
+    table.partitions.push(Partition {
+        name: new.name,
+        mode: PartitionMode::Import,
+        source: PartitionSource::Calculated {
+            expression: new.expression,
+        },
+        ..Partition::default()
+    });
+    Ok(CreateTable { table, index: None })
+}
+
+/// A column of a table created by `model.table.create`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedTableColumnOut {
+    pub column_id: u64,
+    pub name: String,
+    /// `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`.
+    pub data_type: String,
+    /// Where the values come from in the expression's result:
+    /// `Products[Category]` or `[Total]`.
+    pub source_column: String,
+}
+
+/// Result of `model.table.create`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TableCreateOut {
+    pub changed: bool,
+    pub revision: u64,
+    pub dirty: bool,
+    pub changed_object_ids: Vec<u64>,
+    pub table_id: u64,
+    pub name: String,
+    /// The columns, in order, with the data types inferred from the values.
+    pub columns: Vec<CreatedTableColumnOut>,
+}
+
+/// `model.table.create`.
+#[derive(Debug)]
+pub struct ModelTableCreate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CreateTableParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The table name: not used by another table.
+    pub name: String,
+    /// The DAX table expression; its result's columns become the table's.
+    pub expression: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub is_hidden: bool,
+}
+
+impl Command for ModelTableCreate {
+    type Params = CreateTableParams;
+    type Output = TableCreateOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.table.create",
+            title: "Create a calculated table",
+            summary: "Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[(
+                "Add a calculated table",
+                r#"{"docId": "d1", "name": "Regions", "expression": "VALUES(Stores[Region])"}"#,
+            )],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        // Inferring the columns needs the data: the automatic first load.
+        let entry = loaded_doc(ws, &params.doc_id, ctx).await?;
+        resolve::require_model(&entry)?;
+        let session = entry.session();
+        let command = create_table(
+            session,
+            NewTable {
+                name: params.name,
+                expression: params.expression,
+                description: params.description,
+                is_hidden: params.is_hidden,
+            },
+        )?;
+        let result = session.execute_document_command(command).await?;
+        let id = result
+            .events
+            .iter()
+            .find_map(|e| match e {
+                ChangeEvent::ObjectAdded { id } => Some(*id),
+                _ => None,
+            })
+            .ok_or_else(|| OpError::internal("the new table has no id"))?;
+        let (name, columns) = {
+            let document = session.document();
+            match document.locate(id) {
+                Some(ObjectPath::Table { table }) => document
+                    .model
+                    .as_ref()
+                    .and_then(|m| m.tables.get(table))
+                    .map(|t| {
+                        let columns = t
+                            .columns
+                            .iter()
+                            .map(|c| CreatedTableColumnOut {
+                                column_id: c.id.get(),
+                                name: c.name.clone(),
+                                data_type: c.data_type.as_str().to_owned(),
+                                source_column: c.source_column().unwrap_or_default().to_owned(),
+                            })
+                            .collect();
+                        (t.name.clone(), columns)
+                    })
+                    .unwrap_or_default(),
+                _ => Default::default(),
+            }
+        };
+        let edit = DocumentEditOut::committed(ctx, &entry, &result);
+        Ok(TableCreateOut {
+            changed: edit.changed,
+            revision: edit.revision,
+            dirty: edit.dirty,
+            changed_object_ids: edit.changed_object_ids,
+            table_id: id.get(),
+            name,
+            columns,
         })
     }
 }
@@ -2727,6 +2911,17 @@ pub enum EditOperation {
         #[serde(default)]
         column: Option<String>,
     },
+    /// Like `model.table.create`. The columns are inferred against the
+    /// document before the group, so the expression cannot use objects
+    /// created earlier in the group.
+    CreateTable {
+        name: String,
+        expression: String,
+        #[serde(default)]
+        description: Option<String>,
+        #[serde(default)]
+        is_hidden: bool,
+    },
     /// Like `model.table.delete` (without `dryRun`).
     DeleteTable {
         #[serde(default)]
@@ -2798,7 +2993,7 @@ impl Command for DocumentApplyEdits {
                 EditOperation::CreateColumn {
                     data_type: None,
                     ..
-                }
+                } | EditOperation::CreateTable { .. }
             )
         }) {
             entry.ensure_loaded(ctx).await?;
@@ -2977,6 +3172,20 @@ impl Command for DocumentApplyEdits {
                 } => group.with(DeleteColumn {
                     column: column_target(session, column_id, table.as_deref(), column.as_deref())?,
                 }),
+                EditOperation::CreateTable {
+                    name,
+                    expression,
+                    description,
+                    is_hidden,
+                } => group.with(create_table(
+                    session,
+                    NewTable {
+                        name,
+                        expression,
+                        description,
+                        is_hidden,
+                    },
+                )?),
                 EditOperation::DeleteTable { table_id, table } => group.with(DeleteTable {
                     table: table_target(session, table_id, table.as_deref())?,
                 }),

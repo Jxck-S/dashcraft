@@ -7,6 +7,27 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 calculated table create (M6.5)
+
+- **What:** `pbi-model` gets `CreateTable` (calculated tables only: one calculated partition, no
+  measures or hierarchies, a free name, distinct valid column names of the calculated kinds; fresh
+  ids for the table, its columns and partition; the inverse is `DeleteTable`, so redo keeps the
+  ids). `pbi-session` infers the columns from the expression's result
+  (`Session::infer_table_columns`: types from the values, else from the source column) and computes
+  a created table in the edit's publication when the data is loaded (`compute_created_tables`,
+  recorded as a calculated refresh; restored tables keep their data and record). `pbi-ops` adds
+  `model.table.create` and the `createTable` edit: random `lineageTag`s, `isNameInferred`,
+  `isDataTypeInferred`, `sourceColumn` from the result (`Stores[Region]`, `[Pages]`), sum for
+  numeric columns, a calculated partition named after the table.
+- **Why:** M6.5 core editing commands: calculated table create (a "Still open" item).
+- **Numbers:** 3 new tests (`pbi-model`
+  `calculated_tables_are_created_with_fresh_ids_and_deleted_by_undo`;
+  `e2e.rs::calculated_table_create_through_the_registry`: typed from the source columns before a
+  refresh and computed by it, an `ADDCOLUMNS` table over `'Web Sessions'` typed from its values and
+  computed at once, a calculated column on a created table, eight refusals, undo/redo, a group;
+  `save.rs::created_table_saves_and_reopens`: the exact new table file, `ref table` appended to
+  `model.tmdl`, reopen and refresh, undo saves the original project). Registry 70 → 71 commands.
+
 ### M6 hierarchy create and delete (M6.5)
 
 - **What:** `pbi-model` gets `CreateHierarchy` and `DeleteHierarchy` (exact inverses that keep

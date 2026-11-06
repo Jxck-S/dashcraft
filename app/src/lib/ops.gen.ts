@@ -894,6 +894,30 @@ export interface CreateRelationshipParams {
   name?: string | null
 }
 
+export interface CreateTableParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The table name: not used by another table. */
+  name: string
+  /** The DAX table expression; its result's columns become the table's. */
+  expression: string
+  description?: string | null
+  isHidden?: boolean
+}
+
+/** A column of a table created by `model.table.create`. */
+export interface CreatedTableColumnOut {
+  columnId: number
+  name: string
+  /** `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`. */
+  dataType: string
+  /**
+   * Where the values come from in the expression's result:
+   * `Products[Category]` or `[Total]`.
+   */
+  sourceColumn: string
+}
+
 /** Which way filters cross a relationship. */
 export type CrossFilterParam = 'oneDirection' | 'bothDirections'
 
@@ -1603,6 +1627,12 @@ export type EditOperation = {
   columnId?: number | null
   table?: string | null
   column?: string | null
+} | {
+  type: 'createTable'
+  name: string
+  expression: string
+  description?: string | null
+  isHidden?: boolean
 } | {
   type: 'deleteTable'
   tableId?: number | null
@@ -3261,6 +3291,18 @@ export interface SuggestionValue {
   error?: string | null
 }
 
+/** Result of `model.table.create`. */
+export interface TableCreateOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  tableId: number
+  name: string
+  /** The columns, in order, with the data types inferred from the values. */
+  columns: CreatedTableColumnOut[]
+}
+
 /** Table export format. */
 export type TableFormat = 'csv' | 'parquet'
 
@@ -3573,6 +3615,8 @@ export interface OpsCommands {
   'model.column.create': { params: CreateColumnParams; output: ColumnCreateOut }
   /** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. */
   'model.column.delete': { params: DeleteColumnParams; output: ObjectDeleteOut }
+  /** Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once. */
+  'model.table.create': { params: CreateTableParams; output: TableCreateOut }
   /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
   'model.table.delete': { params: DeleteTableParams; output: ObjectDeleteOut }
   /** Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. */
@@ -3712,6 +3756,7 @@ export const OPS_META = {
   'model.relationship.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.column.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.column.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.table.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.table.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.hierarchy.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.hierarchy.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
@@ -3829,6 +3874,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelColumnCreate: (params: CreateColumnParams, options?: O) => run('model.column.create', params, options),
     /** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. */
     modelColumnDelete: (params: DeleteColumnParams, options?: O) => run('model.column.delete', params, options),
+    /** Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once. */
+    modelTableCreate: (params: CreateTableParams, options?: O) => run('model.table.create', params, options),
     /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
     modelTableDelete: (params: DeleteTableParams, options?: O) => run('model.table.delete', params, options),
     /** Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. */
