@@ -1058,6 +1058,282 @@ async fn renaming_line_amount_keeps_the_expected_values() {
     );
 }
 
+/// The relationship of `out` (`model.relationships`) between `from` and `to`
+/// (`Table[Column]`).
+fn relationship<'a>(out: &'a Value, from: (&str, &str), to: (&str, &str)) -> &'a Value {
+    out["relationships"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| {
+            (
+                &r["from"]["table"],
+                &r["from"]["column"],
+                &r["to"]["table"],
+                &r["to"]["column"],
+            ) == (&json!(from.0), &json!(from.1), &json!(to.0), &json!(to.1))
+        })
+        .unwrap_or_else(|| panic!("no relationship {from:?} → {to:?}: {out}"))
+}
+
+/// Relationship create and delete on the example: filters follow at once,
+/// undo restores them, and USERELATIONSHIP users are the dependents.
+#[tokio::test(flavor = "multi_thread")]
+async fn relationship_create_and_delete_through_the_registry() {
+    let (Some(pbip), Some(map)) = (fixture(PBIP), fixture(BLOB_MAP)) else {
+        eprintln!("SKIP: {PBIP} missing");
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let number = |v: Value| v.as_f64().unwrap_or_else(|| panic!("not a number: {v}"));
+    let total = number(scalar(&r, &doc, "[Total Sales]").await);
+    // The smallest region's sales: below the total while Stores filters Orders.
+    let smallest_region = "MINX(VALUES(Stores[Region]), CALCULATE([Total Sales]))";
+    let filtered = number(scalar(&r, &doc, smallest_region).await);
+    assert!(filtered < total, "{filtered} vs {total}");
+
+    let all = r.run("model.relationships", json!({"docId": doc})).await;
+    assert_eq!(all["relationships"].as_array().unwrap().len(), 8, "{all}");
+    let stores = relationship(&all, ("Orders", "Store ID"), ("Stores", "Store ID")).clone();
+    let stores_id = stores["relationshipId"].as_u64().unwrap();
+    let shipped = relationship(&all, ("Orders", "Ship Date"), ("Date", "Date"));
+    let shipped_id = shipped["relationshipId"].as_u64().unwrap();
+    assert_eq!(shipped["isActive"], false);
+
+    // The inactive relationship is used by USERELATIONSHIP: its dependent.
+    let dry = r
+        .run(
+            "model.relationship.delete",
+            json!({"docId": doc, "relationshipId": shipped_id, "dryRun": true}),
+        )
+        .await;
+    assert_eq!(
+        (&dry["changed"], &dry["revision"], &dry["dryRun"]),
+        (&json!(false), &json!(0), &json!(true))
+    );
+    assert_eq!(
+        dry["dependents"],
+        json!([{"location": "measure 'Orders'[Shipped Sales]", "property": "expression"}])
+    );
+    let uses = r
+        .run(
+            "model.dependencies",
+            json!({"docId": doc, "objectId": shipped_id}),
+        )
+        .await;
+    assert_eq!(
+        (&uses["kind"], &uses["table"], &uses["dependents"]),
+        (&json!("relationship"), &json!("Orders"), &dry["dependents"])
+    );
+
+    // Delete by name: Stores no longer filters Orders; undo restores it.
+    let deleted = r
+        .run(
+            "model.relationship.delete",
+            json!({"docId": doc, "name": stores["name"].as_str().unwrap().to_uppercase()}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &deleted["changed"],
+            &deleted["revision"],
+            &deleted["relationshipId"],
+            &deleted["dependents"]
+        ),
+        (&json!(true), &json!(1), &json!(stores_id), &json!([]))
+    );
+    assert_eq!(
+        (&deleted["from"], &deleted["to"]),
+        (&stores["from"], &stores["to"])
+    );
+    assert_eq!(number(scalar(&r, &doc, smallest_region).await), total);
+    let after = r.run("model.relationships", json!({"docId": doc})).await;
+    assert_eq!(after["relationships"].as_array().unwrap().len(), 7);
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(number(scalar(&r, &doc, smallest_region).await), filtered);
+    let restored = r.run("model.relationships", json!({"docId": doc})).await;
+    assert_eq!(restored, all, "undo restores it in place with its id");
+
+    // Delete, then create it again (names as typed, case-insensitive): a
+    // new id and a GUID name; the filters follow at once.
+    r.run(
+        "model.relationship.delete",
+        json!({"docId": doc, "relationshipId": stores_id}),
+    )
+    .await;
+    let created = r
+        .run(
+            "model.relationship.create",
+            json!({"docId": doc, "from": {"table": "orders", "column": "store id"}, "to": {"table": "STORES", "column": "Store ID"}}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &created["changed"],
+            &created["revision"],
+            &created["warnings"]
+        ),
+        (&json!(true), &json!(4), &json!([]))
+    );
+    assert_eq!(
+        (&created["from"], &created["to"]),
+        (&stores["from"], &stores["to"])
+    );
+    let created_id = created["relationshipId"].as_u64().unwrap();
+    assert_ne!(created_id, stores_id);
+    assert_eq!(created["changedObjectIds"], json!([created_id]));
+    let name = created["name"].as_str().unwrap();
+    assert_eq!(
+        name.split('-').map(str::len).collect::<Vec<_>>(),
+        [8, 4, 4, 4, 12],
+        "{name}"
+    );
+    assert_eq!(number(scalar(&r, &doc, smallest_region).await), filtered);
+    let now = r.run("model.relationships", json!({"docId": doc})).await;
+    let new = relationship(&now, ("Orders", "Store ID"), ("Stores", "Store ID"));
+    assert_eq!(
+        (
+            &new["relationshipId"],
+            &new["fromCardinality"],
+            &new["toCardinality"],
+            &new["crossFilteringBehavior"],
+            &new["isActive"]
+        ),
+        (
+            &json!(created_id),
+            &json!("many"),
+            &json!("one"),
+            &json!("oneDirection"),
+            &json!(true)
+        )
+    );
+
+    // Invalid relationships change nothing.
+    let create = |params: Value| r.try_run("model.relationship.create", params);
+    let end = |t: &str, c: &str| json!({"table": t, "column": c});
+    for (from, to, active, why) in [
+        (
+            end("Orders", "Order Date"),
+            end("Date", "Date"),
+            true,
+            "same columns",
+        ),
+        (
+            end("Date", "Date"),
+            end("Orders", "Ship Date"),
+            false,
+            "same columns, reversed",
+        ),
+        (
+            end("Orders", "Due Date"),
+            end("Date", "Date"),
+            false,
+            "no such column",
+        ),
+        (
+            end("Orders", "Order ID"),
+            end("Orders", "Store ID"),
+            false,
+            "one table",
+        ),
+        (
+            end("Orders", "Customer ID"),
+            end("Stores", "Store Name"),
+            true,
+            "second active relationship between two tables",
+        ),
+    ] {
+        let params = json!({"docId": doc, "from": from, "to": to, "isActive": active});
+        assert_eq!(
+            error_code(create(params).await),
+            OpErrorCode::InvalidParams,
+            "{why}"
+        );
+    }
+    let taken = json!({"docId": doc, "from": end("Customers", "State"), "to": end("Stores", "State"), "isActive": false, "name": name.to_uppercase()});
+    assert_eq!(error_code(create(taken).await), OpErrorCode::InvalidParams);
+    let delete = |params: Value| r.try_run("model.relationship.delete", params);
+    let unknown = json!({"docId": doc, "relationshipId": 999_999});
+    assert_eq!(error_code(delete(unknown).await), OpErrorCode::NotFound);
+    let not_one = json!({"docId": doc, "relationshipId": created_id, "name": name});
+    assert_eq!(
+        error_code(delete(not_one).await),
+        OpErrorCode::InvalidParams
+    );
+    let orders = r
+        .run(
+            "model.dependencies",
+            json!({"docId": doc, "table": "Orders"}),
+        )
+        .await["objectId"]
+        .clone();
+    let a_table = json!({"docId": doc, "relationshipId": orders});
+    assert_eq!(
+        error_code(delete(a_table).await),
+        OpErrorCode::InvalidParams
+    );
+    assert_eq!(
+        r.run("doc.history", json!({"docId": doc})).await["revision"],
+        4
+    );
+
+    // Several stores share a state: the engine reports duplicate keys on
+    // the one side as a warning, and the relationship is still created.
+    let states = r
+        .run(
+            "model.relationship.create",
+            json!({"docId": doc, "from": end("Customers", "State"), "to": end("Stores", "State"), "isActive": false}),
+        )
+        .await;
+    assert_eq!(states["changed"], true);
+    let warnings = states["warnings"].to_string();
+    assert!(warnings.contains("ENG002"), "{states}");
+
+    // In a group: one undo step; a failing edit applies nothing.
+    let failing = json!({"docId": doc, "edits": [
+        {"type": "deleteRelationship", "relationshipId": created_id},
+        {"type": "deleteRelationship", "name": "nope"}
+    ]});
+    assert_eq!(
+        error_code(r.try_run("doc.applyEdits", failing).await),
+        OpErrorCode::NotFound
+    );
+    let grouped = r
+        .run(
+            "doc.applyEdits",
+            json!({"docId": doc, "edits": [
+                {"type": "deleteRelationship", "relationshipId": created_id},
+                {"type": "createRelationship", "from": end("Orders", "Store ID"), "to": end("Stores", "Store ID"), "crossFilteringBehavior": "bothDirections"}
+            ]}),
+        )
+        .await;
+    assert_eq!(
+        (&grouped["changed"], &grouped["revision"]),
+        (&json!(true), &json!(6))
+    );
+    let now = r.run("model.relationships", json!({"docId": doc})).await;
+    let both = relationship(&now, ("Orders", "Store ID"), ("Stores", "Store ID"));
+    assert_eq!(both["crossFilteringBehavior"], "bothDirections");
+    assert_eq!(number(scalar(&r, &doc, smallest_region).await), filtered);
+
+    // Undo everything: the original relationships and values.
+    for _ in 0..4 {
+        r.run("doc.undo", json!({"docId": doc})).await;
+    }
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(history["dirty"], false);
+    assert_eq!(
+        r.run("model.relationships", json!({"docId": doc})).await,
+        all
+    );
+    assert_eq!(number(scalar(&r, &doc, smallest_region).await), filtered);
+}
+
 /// Acceptance for `doc.saveAs`: the example with a column rename, saved as a new
 /// project, reopened in a fresh workspace and refreshed through the blob map, gives
 /// every expected value.

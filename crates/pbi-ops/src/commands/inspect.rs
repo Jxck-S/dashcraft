@@ -258,7 +258,17 @@ pub struct ModelRelationships;
 #[derive(Debug, Clone, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelRelationshipsOut {
-    pub relationships: Vec<RelationshipOut>,
+    pub relationships: Vec<ModelRelationshipOut>,
+}
+
+/// A relationship with its stable id (for `model.relationship.delete` and
+/// `model.dependencies`).
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelRelationshipOut {
+    pub relationship_id: u64,
+    #[serde(flatten)]
+    pub relationship: RelationshipOut,
 }
 
 impl Command for ModelRelationships {
@@ -269,7 +279,7 @@ impl Command for ModelRelationships {
         CommandMeta {
             id: "model.relationships",
             title: "Model relationships",
-            summary: "Every relationship: from/to columns, cardinalities, cross-filter direction, active flag.",
+            summary: "Every relationship: id, from/to columns, cardinalities, cross-filter direction, active flag.",
             category: Category::Inspect,
             examples: &[("Relationships of d1", r#"{"docId": "d1"}"#)],
             ..BASE
@@ -281,7 +291,15 @@ impl Command for ModelRelationships {
         let model = entry.session().base_model();
         let out = inspect_model::model_out(&model, None, BuildOptions { expressions: false });
         Ok(ModelRelationshipsOut {
-            relationships: out.relationships,
+            relationships: model
+                .relationships
+                .iter()
+                .zip(out.relationships)
+                .map(|(r, relationship)| ModelRelationshipOut {
+                    relationship_id: r.id.get(),
+                    relationship,
+                })
+                .collect(),
         })
     }
 }

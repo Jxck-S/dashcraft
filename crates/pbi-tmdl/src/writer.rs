@@ -18,10 +18,10 @@ use pbi_model::{
     TableKind, TablePermission,
 };
 
-use crate::cst::{MAX_DEPTH, TmdlFile, parse_file};
+use crate::cst::{MAX_DEPTH, Node, TmdlFile, parse_file};
 use crate::expr::{EncodedExpr, encode_expression, quote_name, quote_text};
-use crate::lexer::{LineEnding, is_keyword};
-use crate::load::{COLON_VALUE_KEY, fragment};
+use crate::lexer::{IndentStyle, Line, LineEnding, is_keyword};
+use crate::load::{COLON_VALUE_KEY, Fragment, fragment};
 
 /// Writer options.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -167,7 +167,9 @@ fn write_files(
 /// Like [`write_model`], but files whose content is semantically unchanged
 /// compared with `previous` (the CSTs from [`crate::LoadedModel::files`])
 /// are emitted verbatim, so unedited files stay byte-identical (comments,
-/// quoting and ordering included) and only edited files are re-serialized
+/// quoting and ordering included). In an edited file, each top-level object
+/// whose meaning is unchanged (a relationship, a shared expression, …) keeps
+/// its previous text too, and only the edited objects are re-serialized
 /// canonically. Previous files are matched by their path relative to the
 /// `definition/` folder (`\` and `/` are equivalent, case-insensitive).
 /// Previous files with no counterpart (deleted objects) are not returned.
@@ -187,15 +189,108 @@ pub fn write_model_preserving(
         let prev = previous
             .iter()
             .find(|f| definition_relative(&f.path).eq_ignore_ascii_case(&path));
-        if let Some(prev) = prev
-            && let Ok(cst) = parse_file(&path, &text)
-            && fragment(&cst) == fragment(prev)
-        {
+        let Some(prev) = prev else {
+            return (path, text);
+        };
+        let Ok(cst) = parse_file(&path, &text) else {
+            return (path, text);
+        };
+        let written = fragment(&cst);
+        if written == fragment(prev) {
             return (path, prev.to_string());
         }
+        let text = preserve_blocks(cst, prev, &written).unwrap_or(text);
         (path, text)
     })
     .collect()
+}
+
+/// `cst` (a canonical file that differs from `prev`) with every top-level
+/// node whose meaning is unchanged replaced by its text in `prev`: same
+/// keyword, `ref` and name, and the same fragment on its own. `None` when
+/// nothing is kept, or when the result would not mean `written` (the
+/// fragment of `cst`). Only tab-indented, LF nodes are kept, so the file
+/// stays canonical in layout.
+fn preserve_blocks(mut cst: TmdlFile, prev: &TmdlFile, written: &Fragment) -> Option<String> {
+    if prev.indent != IndentStyle::Tabs {
+        return None;
+    }
+    let alone = |node: &Node| {
+        fragment(&TmdlFile {
+            path: prev.path.clone(),
+            bom: false,
+            indent: IndentStyle::Tabs,
+            nodes: vec![node.clone()],
+            trailing: Vec::new(),
+            diagnostics: Vec::new(),
+        })
+    };
+    let mut used = vec![false; prev.nodes.len()];
+    let mut kept_any = false;
+    for node in &mut cst.nodes {
+        let Some(name) = node.name() else {
+            continue;
+        };
+        let Some(i) = (0..prev.nodes.len()).find(|&i| {
+            let p = &prev.nodes[i];
+            !used[i]
+                && p.is_ref() == node.is_ref()
+                && p.keyword().eq_ignore_ascii_case(node.keyword())
+                && p.name().as_deref() == Some(name.as_str())
+        }) else {
+            continue;
+        };
+        let old = &prev.nodes[i];
+        used[i] = true;
+        if has_crlf(old) || alone(old) != alone(node) {
+            continue;
+        }
+        let mut kept = old.clone();
+        // Separating blank lines as written now; comments and descriptions
+        // as they were.
+        let blank: Vec<Line> = node
+            .leading
+            .iter()
+            .take_while(|l| l.is_blank())
+            .cloned()
+            .collect();
+        kept.leading = blank
+            .into_iter()
+            .chain(kept.leading.into_iter().skip_while(Line::is_blank))
+            .collect();
+        let last = last_line(&mut kept);
+        if last.ending == LineEnding::None {
+            last.ending = LineEnding::Lf;
+        }
+        *node = kept;
+        kept_any = true;
+    }
+    if !kept_any {
+        return None;
+    }
+    let text = cst.to_string();
+    let reparsed = parse_file(&cst.path, &text).ok()?;
+    (fragment(&reparsed) == *written).then_some(text)
+}
+
+fn has_crlf(node: &Node) -> bool {
+    node.leading
+        .iter()
+        .chain([&node.line])
+        .chain(node.block.iter().flat_map(|b| &b.lines))
+        .any(|l| l.ending == LineEnding::CrLf)
+        || node.children.iter().any(has_crlf)
+}
+
+/// The last physical line of `node`.
+fn last_line(node: &mut Node) -> &mut Line {
+    match node.children.last_mut() {
+        Some(child) => last_line(child),
+        None => match node.block.as_mut().and_then(|b| b.lines.last_mut()) {
+            Some(line) => line,
+            None => &mut node.line,
+        },
+    }
 }
 
 /// `a\b/definition/tables/X.tmdl` → `tables/X.tmdl`.
@@ -1134,5 +1229,51 @@ mod tests {
         // The canonical writer lists only collections of two or more.
         let canonical = write_model(&renamed, None);
         assert!(!canonical.iter().any(|(_, t)| t.contains("ref table")));
+    }
+
+    #[test]
+    fn unchanged_objects_of_an_edited_file_keep_their_text() {
+        const KEPT: &str = "// Keys first\nrelationship a\n\tfromCardinality: one\n\ttoCardinality: one\n\tfromColumn: Sales.Id\n\ttoColumn: Items.Id\n";
+        let relationships = |nl: &str| {
+            format!(
+                "{KEPT}\nrelationship 'b'\n\tisActive: false\n\tfromColumn: Sales.Item\n\ttoColumn: Items.Id\n\nrelationship c\n\tfromColumn: Sales.Day\n\ttoColumn: Days.Day"
+            )
+            .replace('\n', nl)
+        };
+        let edited = |nl: &str| {
+            let files = [
+                (
+                    "definition/model.tmdl".to_owned(),
+                    "model Model\n".to_owned(),
+                ),
+                (
+                    "definition/relationships.tmdl".to_owned(),
+                    relationships(nl),
+                ),
+            ];
+            let loaded = crate::load_model(&files).unwrap_or_else(|e| panic!("{e}"));
+            let mut model = loaded.model.clone();
+            model.relationships.remove(1);
+            if let Some(c) = model.relationships.get_mut(1) {
+                c.is_active = false;
+            }
+            write_model_preserving(&model, None, &loaded.files)
+                .into_iter()
+                .find(|(p, _)| p == "relationships.tmdl")
+                .map(|(_, t)| t)
+                .unwrap_or_default()
+        };
+        // `a` keeps its comment and spelled-out default; `c` is rewritten.
+        assert_eq!(
+            edited("\n"),
+            format!(
+                "{KEPT}\nrelationship c\n\tisActive: false\n\tfromColumn: Sales.Day\n\ttoColumn: Days.Day\n"
+            )
+        );
+        // CRLF objects are not mixed into the LF output: all canonical.
+        assert_eq!(
+            edited("\r\n"),
+            "relationship a\n\tfromCardinality: one\n\tfromColumn: Sales.Id\n\ttoColumn: Items.Id\n\nrelationship c\n\tisActive: false\n\tfromColumn: Sales.Day\n\ttoColumn: Days.Day\n"
+        );
     }
 }

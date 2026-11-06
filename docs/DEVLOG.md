@@ -7,6 +7,29 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 relationship create and delete (M6.5)
+
+- **What:** `pbi-model` gets `CreateRelationship` and `DeleteRelationship` (exact inverses; a
+  deleted relationship is restored in place with its id; checks for names, columns, one table,
+  duplicate column pairs and a second active path between two tables). `pbi-session` finds a
+  relationship's dependents (DAX naming both ends in `USERELATIONSHIP`/`CROSSFILTER`; unparsable
+  DAX mentioning both is a warning) and names new relationships with the identifier generator.
+  `pbi-ops` adds `model.relationship.create`/`delete`, the `createRelationship`/
+  `deleteRelationship` edits, relationship ids in `model.relationships` and
+  `model.dependencies`. `pbi-tmdl::write_model_preserving` keeps the text of every unchanged
+  top-level object in an edited file (relationships, expressions, …), checked by a reparse.
+- **Why:** M6.5 core editing commands, the relationship part; the save test showed that the
+  first edit to `relationships.tmdl` rewrote every other relationship canonically (Acme's
+  spelled-out `toCardinality: one` was dropped).
+- **Numbers:** 6 new tests (3 `pbi-model` command tests, 1 `pbi-session` dependents test,
+  `e2e.rs::relationship_create_and_delete_through_the_registry`: Store filtering off and on
+  through delete, undo, recreate and a grouped edit, the Ship Date dependent, 9 refusals, a
+  failing group and the `ENG002` warning; `save.rs::relationship_edits_save_and_reopen`: only
+  `relationships.tmdl` written, GUID name, reopen, undo saves the original bytes; plus a
+  `pbi-tmdl` writer unit test). Registry 62 → 64 commands.
+- **Still open:** relationship update (cardinality, direction, activation), table, column and
+  hierarchy create and delete; a GT-6 Desktop check of a saved relationship edit.
+
 ### M6 `doc/changed` notifications (M6.3, ADR-0012 §5)
 
 - **What:** `pbi-ops` gets `DocChangedEvent` (document, command, revision, dirty flag,

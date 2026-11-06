@@ -482,6 +482,9 @@ export interface CapabilityLimits {
   maxInputChars?: number | null
 }
 
+/** One end of a relationship. */
+export type CardinalityParam = 'one' | 'many'
+
 /** What a command is about; groups the catalog. */
 export type Category = 'meta' | 'workspace' | 'inspect' | 'lint' | 'data' | 'dax' | 'render' | 'canvas' | 'export' | 'convert' | 'transform' | 'edit' | 'ai'
 
@@ -533,6 +536,12 @@ export interface ColumnOut {
   sortByColumn?: string | null
   displayFolder?: string | null
   dataCategory?: string | null
+}
+
+/** A column named by table and column (case-insensitive). */
+export interface ColumnParam {
+  table: string
+  column: string
 }
 
 export interface ColumnParams {
@@ -810,6 +819,31 @@ export interface CreateMeasureParams {
   isHidden?: boolean
 }
 
+export interface CreateRelationshipParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The from column (TOM `fromColumn`, usually the many side). */
+  from: ColumnParam
+  /** The to column (TOM `toColumn`, usually the one side). */
+  to: ColumnParam
+  /** Default `many`. */
+  fromCardinality?: CardinalityParam | null
+  /** Default `one`. */
+  toCardinality?: CardinalityParam | null
+  /** Default `oneDirection`. */
+  crossFilteringBehavior?: CrossFilterParam | null
+  /** Default `true`. Two tables have at most one active relationship. */
+  isActive?: boolean | null
+  /**
+   * Unique among relationships; a new GUID by default, as Power BI
+   * Desktop names them.
+   */
+  name?: string | null
+}
+
+/** Which way filters cross a relationship. */
+export type CrossFilterParam = 'oneDirection' | 'bothDirections'
+
 /** CSV reading options. */
 export interface CsvParams {
   /** Field delimiter, one ASCII character (default `,`). */
@@ -1029,12 +1063,26 @@ export interface DeleteMeasureParams {
   dryRun?: boolean
 }
 
+export interface DeleteRelationshipParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The relationship's id from `model.relationships` (instead of `name`). */
+  relationshipId?: number | null
+  /** The relationship's name (case-insensitive). */
+  name?: string | null
+  /** Only list what uses the relationship; the document is unchanged. */
+  dryRun?: boolean
+}
+
 /** Result of `model.dependencies`. */
 export interface DependenciesOut {
   objectId: number
-  /** `table`, `column` or `measure`. */
+  /** `table`, `column`, `measure` or `relationship`. */
   kind: string
-  /** The table, or the table of the column or measure. */
+  /**
+   * The table, or the table of the column or measure (the from table of
+   * a relationship).
+   */
   table: string
   name: string
   /** The document revision the list was computed on. */
@@ -1055,7 +1103,10 @@ export interface DependenciesOut {
 export interface DependenciesParams {
   /** The document id from `doc.open` (`d1`, …). */
   docId: string
-  /** The object's id (instead of `table`). */
+  /**
+   * The object's id (instead of `table`): also a relationship's id from
+   * `model.relationships`.
+   */
   objectId?: number | null
   /** The table, or the table of `column` / `measure`. */
   table?: string | null
@@ -1413,6 +1464,19 @@ export type EditOperation = {
   measureId?: number | null
   table?: string | null
   measure?: string | null
+} | {
+  type: 'createRelationship'
+  from: ColumnParam
+  to: ColumnParam
+  fromCardinality?: CardinalityParam | null
+  toCardinality?: CardinalityParam | null
+  crossFilteringBehavior?: CrossFilterParam | null
+  isActive?: boolean | null
+  name?: string | null
+} | {
+  type: 'deleteRelationship'
+  relationshipId?: number | null
+  name?: string | null
 }
 
 /** [`CapabilityLimits`] with the defaults applied. */
@@ -2011,8 +2075,30 @@ export interface ModelParams {
   includeExpressions?: boolean | null
 }
 
+/**
+ * A relationship with its stable id (for `model.relationship.delete` and
+ * `model.dependencies`).
+ */
+export interface ModelRelationshipOut {
+  relationshipId: number
+  name: string
+  /** The many side (TOM `fromColumn`). */
+  from: ColumnRefOut
+  /** The one side (TOM `toColumn`). */
+  to: ColumnRefOut
+  /** `many` or `one`. */
+  fromCardinality: string
+  /** `many` or `one`. */
+  toCardinality: string
+  /** `oneDirection`, `bothDirections` or `automatic`. */
+  crossFilteringBehavior: string
+  isActive: boolean
+  /** `oneDirection`, `bothDirections` or `none`. */
+  securityFilteringBehavior: string
+}
+
 export interface ModelRelationshipsOut {
-  relationships: RelationshipOut[]
+  relationships: ModelRelationshipOut[]
 }
 
 export interface ModelSourceOut {
@@ -2413,6 +2499,34 @@ export interface RefreshOut {
   diagnostics: DiagnosticOut[]
   /** The data generation after the run. */
   generation: number
+}
+
+/** Result of `model.relationship.create` and `model.relationship.delete`. */
+export interface RelationshipEditOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  relationshipId: number
+  /** The relationship's name (a GUID unless one was given). */
+  name: string
+  /** The from column (usually the many side). */
+  from: ColumnParam
+  /** The to column (usually the one side). */
+  to: ColumnParam
+  /**
+   * `model.relationship.delete` only: the DAX whose `USERELATIONSHIP`
+   * or `CROSSFILTER` calls name the relationship.
+   */
+  dependents?: DependentOut[] | null
+  /** `model.relationship.delete` only: whether this was a dry run. */
+  dryRun?: boolean | null
+  /**
+   * Problems that do not stop the edit: what the engine finds in the
+   * loaded data (duplicate keys on the one side, differing key types,
+   * ambiguous filter paths), references that cannot be confirmed.
+   */
+  warnings: string[]
 }
 
 export interface RelationshipOut {
@@ -3190,7 +3304,7 @@ export interface OpsCommands {
   'model.tables': { params: ModelParams; output: ModelTablesOut }
   /** Every measure with its table, DAX, format string, description and display folder. */
   'model.measures': { params: ModelMeasuresParams; output: ModelMeasuresOut }
-  /** Every relationship: from/to columns, cardinalities, cross-filter direction, active flag. */
+  /** Every relationship: id, from/to columns, cardinalities, cross-filter direction, active flag. */
   'model.relationships': { params: DocParams; output: ModelRelationshipsOut }
   /** The document's reports: name, dataset reference, theme, page and visual counts, report filters. */
   'report.list': { params: DocParams; output: ReportListOut }
@@ -3214,7 +3328,11 @@ export interface OpsCommands {
   'model.measure.update': { params: UpdateMeasureParams; output: MeasureEditOut }
   /** Deletes a measure as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
   'model.measure.delete': { params: DeleteMeasureParams; output: MeasureEditOut }
-  /** Lists what refers to a table, column or measure: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
+  /** Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data. */
+  'model.relationship.create': { params: CreateRelationshipParams; output: RelationshipEditOut }
+  /** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. */
+  'model.relationship.delete': { params: DeleteRelationshipParams; output: RelationshipEditOut }
+  /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
   'model.dependencies': { params: DependenciesParams; output: DependenciesOut }
   /** Moves a visual on its page as one undoable edit (visual groups not yet). */
   'report.visual.move': { params: MoveVisualParams; output: VisualPositionOut }
@@ -3342,6 +3460,8 @@ export const OPS_META = {
   'model.measure.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.measure.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.measure.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.relationship.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.relationship.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.dependencies': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visual.move': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visual.resize': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
@@ -3422,7 +3542,7 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelTables: (params: ModelParams, options?: O) => run('model.tables', params, options),
     /** Every measure with its table, DAX, format string, description and display folder. */
     modelMeasures: (params: ModelMeasuresParams, options?: O) => run('model.measures', params, options),
-    /** Every relationship: from/to columns, cardinalities, cross-filter direction, active flag. */
+    /** Every relationship: id, from/to columns, cardinalities, cross-filter direction, active flag. */
     modelRelationships: (params: DocParams, options?: O) => run('model.relationships', params, options),
     /** The document's reports: name, dataset reference, theme, page and visual counts, report filters. */
     reportList: (params: DocParams, options?: O) => run('report.list', params, options),
@@ -3446,7 +3566,11 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelMeasureUpdate: (params: UpdateMeasureParams, options?: O) => run('model.measure.update', params, options),
     /** Deletes a measure as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
     modelMeasureDelete: (params: DeleteMeasureParams, options?: O) => run('model.measure.delete', params, options),
-    /** Lists what refers to a table, column or measure: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
+    /** Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data. */
+    modelRelationshipCreate: (params: CreateRelationshipParams, options?: O) => run('model.relationship.create', params, options),
+    /** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. */
+    modelRelationshipDelete: (params: DeleteRelationshipParams, options?: O) => run('model.relationship.delete', params, options),
+    /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
     modelDependencies: (params: DependenciesParams, options?: O) => run('model.dependencies', params, options),
     /** Moves a visual on its page as one undoable edit (visual groups not yet). */
     reportVisualMove: (params: MoveVisualParams, options?: O) => run('report.visual.move', params, options),

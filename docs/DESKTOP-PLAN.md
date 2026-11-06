@@ -545,9 +545,24 @@ and removed object ids, the new path after Save As) through a per-request sink o
 sends it as a `doc/changed` notification before the response and `mcp` as an `info` log message
 (`notifications/message`, `data.event: "doc/changed"`); no-op and failed edits publish nothing
 (`committed_edits_send_doc_changed_before_the_response` in `crates/pbi-ops/tests/rpc.rs`,
-`committed_edits_are_logged_as_doc_changed` in `crates/pbi-ops/tests/mcp.rs`). Still open:
-the app's change events (M6.8), dependent recalculation after measure edits, table, column, hierarchy and
-relationship create and delete, M references (warned about,
+`committed_edits_are_logged_as_doc_changed` in `crates/pbi-ops/tests/mcp.rs`).
+`model.relationship.create` and `model.relationship.delete` (and the `createRelationship` and
+`deleteRelationship` edits of `doc.applyEdits`) add and remove relationships with exact inverses:
+undo restores a deleted relationship in place with its id, ids are never reused, and the engine
+rebuilds its relationship graph in the same step, so filters follow at once. Creation checks the
+columns (names as typed, case-insensitive), different tables, no second relationship on the same
+columns and no second active path between two tables (`invalid_params`), names an unnamed
+relationship with a GUID from the session's identifier generator (ADR-0014) and returns the
+engine's warnings for it (duplicate keys on the one side, `ENG002`). Deletes list the DAX that
+names both ends in `USERELATIONSHIP` or `CROSSFILTER` as dependents first (`dryRun`), and
+`model.dependencies` accepts relationship ids (`model.relationships` now returns them). In a
+saved file, every object whose meaning is unchanged keeps its previous text (comments, quoting,
+spelled-out default values), so deleting and recreating a relationship and undoing both saves the
+original bytes (`relationship_create_and_delete_through_the_registry` in
+`crates/pbi-ops/tests/e2e.rs`, `relationship_edits_save_and_reopen` in
+`crates/pbi-ops/tests/save.rs`). Still open:
+the app's change events (M6.8), dependent recalculation after measure edits, table, column and
+hierarchy create and delete, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
 app, MCP-category and CLI work.

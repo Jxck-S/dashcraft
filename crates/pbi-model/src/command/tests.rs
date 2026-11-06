@@ -3,7 +3,7 @@ use pretty_assertions::assert_eq;
 use super::*;
 use crate::query::{Condition, FieldExpr};
 use crate::report::Position;
-use crate::semantic::Measure;
+use crate::semantic::{ColumnRef, Measure, Relationship};
 use crate::test_support::sample_document;
 
 fn table_id(doc: &Document, name: &str) -> ObjectId {
@@ -765,6 +765,170 @@ fn delete_measure_round_trips_in_place() {
         DeleteMeasure { measure: stores }.apply(&mut doc),
         Err(CommandError::WrongKind { .. })
     ));
+}
+
+#[test]
+fn create_relationship_round_trips_and_never_reuses_ids() {
+    let mut doc = sample_document();
+    let original = doc.clone();
+    let mut relationship = Relationship::new(
+        "r-new",
+        ColumnRef::new("Unknown Store Orders", "Order ID"),
+        ColumnRef::new("Orders", "Order ID"),
+    );
+    relationship.id = ObjectId(424_242); // ignored
+    let id = CreateRelationship::created_id(&doc);
+    let mut history = History::new();
+    let events = history
+        .execute(
+            &mut doc,
+            CreateRelationship {
+                relationship,
+                index: Some(0),
+            },
+        )
+        .unwrap();
+    assert_eq!(events, [ChangeEvent::ObjectAdded { id }]);
+    assert_eq!(
+        history.undo_label(),
+        Some("Create relationship 'Unknown Store Orders'[Order ID] → Orders[Order ID]")
+    );
+    let relationships = &doc.model.as_ref().unwrap().relationships;
+    assert_eq!(
+        (
+            relationships.len(),
+            relationships[0].id,
+            relationships[0].name.as_str()
+        ),
+        (2, id, "r-new")
+    );
+    assert!(matches!(
+        doc.locate(id),
+        Some(ObjectPath::Relationship { relationship: 0 })
+    ));
+    let after = doc.clone();
+
+    assert_eq!(
+        history.undo(&mut doc).unwrap(),
+        [ChangeEvent::ObjectRemoved { id }]
+    );
+    assert_same_content(&doc, &original);
+    history.redo(&mut doc).unwrap();
+    assert_eq!(
+        doc, after,
+        "redo restores the relationship with the same ID"
+    );
+    history.undo(&mut doc).unwrap();
+    assert!(CreateRelationship::created_id(&doc) > id);
+}
+
+#[test]
+fn delete_relationship_round_trips_in_place() {
+    let mut doc = sample_document();
+    let id = doc.model.as_ref().unwrap().relationships[0].id;
+    assert_round_trip(
+        &mut doc,
+        DeleteRelationship { relationship: id },
+        |doc, events| {
+            assert!(doc.model.as_ref().unwrap().relationships.is_empty());
+            assert!(doc.locate(id).is_none());
+            assert_eq!(events, [ChangeEvent::ObjectRemoved { id }]);
+        },
+    );
+    let orders = table_id(&doc, "Orders");
+    assert!(matches!(
+        DeleteRelationship {
+            relationship: orders
+        }
+        .apply(&mut doc),
+        Err(CommandError::WrongKind { .. })
+    ));
+}
+
+#[test]
+fn invalid_relationships_fail_without_changing_the_document() {
+    let mut doc = sample_document();
+    let original = doc.clone();
+    let create = |name: &str, from: (&str, &str), to: (&str, &str), active: bool| {
+        let mut r = Relationship::new(
+            name,
+            ColumnRef::new(from.0, from.1),
+            ColumnRef::new(to.0, to.1),
+        );
+        r.is_active = active;
+        CreateRelationship {
+            relationship: r,
+            index: None,
+        }
+    };
+    let rejected = |result: Result<Vec<ChangeEvent>, CommandError>, needle: &str| match result {
+        Err(CommandError::Rejected(message)) => {
+            assert!(message.contains(needle), "{message:?} lacks {needle:?}")
+        }
+        other => panic!("expected a rejection with {needle:?}, got {other:?}"),
+    };
+    let mut history = History::new();
+    assert!(matches!(
+        history.execute(
+            &mut doc,
+            create(
+                "D0C1E2F3-A4B5-4C6D-8E7F-000000000001",
+                ("Orders", "Order ID"),
+                ("Stores", "Store Name"),
+                false,
+            ),
+        ),
+        Err(CommandError::NameConflict { .. })
+    ));
+    assert_eq!(
+        history
+            .execute(
+                &mut doc,
+                create(" ", ("Orders", "Order ID"), ("Stores", "Store Name"), false)
+            )
+            .unwrap_err(),
+        CommandError::InvalidName(" ".into())
+    );
+    rejected(
+        history.execute(
+            &mut doc,
+            create("r", ("Orders", "Nope"), ("Stores", "Store ID"), false),
+        ),
+        "no column Orders[Nope]",
+    );
+    rejected(
+        history.execute(
+            &mut doc,
+            create("r", ("Orders", "Store ID"), ("orders", "Order ID"), false),
+        ),
+        "two different tables",
+    );
+    // The same two columns, in either direction.
+    rejected(
+        history.execute(
+            &mut doc,
+            create("r", ("Stores", "store id"), ("Orders", "Store ID"), false),
+        ),
+        "already joins these columns",
+    );
+    rejected(
+        history.execute(
+            &mut doc,
+            create("r", ("Orders", "Order ID"), ("Stores", "Store Name"), true),
+        ),
+        "already have an active relationship",
+    );
+    assert_eq!(doc, original);
+    assert_eq!(history.revision(), 0);
+
+    // Inactive is fine.
+    history
+        .execute(
+            &mut doc,
+            create("r", ("Orders", "Order ID"), ("Stores", "Store Name"), false),
+        )
+        .unwrap();
+    assert_eq!(doc.model.as_ref().unwrap().relationships.len(), 2);
 }
 
 #[test]

@@ -94,7 +94,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`doc.inspect`](#docinspect) | The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). | A |
 | [`model.tables`](#modeltables) | Every model table with its columns, measure names, partitions, hierarchies and loaded row count. | A |
 | [`model.measures`](#modelmeasures) | Every measure with its table, DAX, format string, description and display folder. | A |
-| [`model.relationships`](#modelrelationships) | Every relationship: from/to columns, cardinalities, cross-filter direction, active flag. | A |
+| [`model.relationships`](#modelrelationships) | Every relationship: id, from/to columns, cardinalities, cross-filter direction, active flag. | A |
 | [`report.list`](#reportlist) | The document's reports: name, dataset reference, theme, page and visual counts, report filters. | A |
 | [`report.pages`](#reportpages) | The pages of a report: names, size, visibility, visual and filter counts. | A |
 | [`report.visuals`](#reportvisuals) | The visuals of a page: type, title, position, bound fields and visual filters. | A |
@@ -106,7 +106,9 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.measure.create`](#modelmeasurecreate) | Adds a DAX measure to a table as one undoable edit and returns its id. | M A |
 | [`model.measure.update`](#modelmeasureupdate) | Changes a measure's expression, format string, display folder, description or visibility as one undoable edit. | M A |
 | [`model.measure.delete`](#modelmeasuredelete) | Deletes a measure as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. | M A |
-| [`model.dependencies`](#modeldependencies) | Lists what refers to a table, column or measure: DAX, relationships, hierarchies, sort-by columns, roles and report fields. | A |
+| [`model.relationship.create`](#modelrelationshipcreate) | Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data. | M A |
+| [`model.relationship.delete`](#modelrelationshipdelete) | Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. | M A |
+| [`model.dependencies`](#modeldependencies) | Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. | A |
 | [`report.visual.move`](#reportvisualmove) | Moves a visual on its page as one undoable edit (visual groups not yet). | M A |
 | [`report.visual.resize`](#reportvisualresize) | Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet). | M A |
 | [`doc.applyEdits`](#docapplyedits) | Applies a group of document edits atomically as one undoable history step. | M A |
@@ -437,7 +439,7 @@ Examples:
 
 ### `model.relationships`
 
-**Model relationships.** Every relationship: from/to columns, cardinalities, cross-filter direction, active flag.
+**Model relationships.** Every relationship: id, from/to columns, cardinalities, cross-filter direction, active flag.
 
 _agent-safe; since 0.2.0._
 
@@ -451,7 +453,7 @@ Result:
 
 | Field | Type | Description |
 |---|---|---|
-| `relationships` | RelationshipOut[] |  |
+| `relationships` | ModelRelationshipOut[] |  |
 
 Examples:
 
@@ -584,7 +586,7 @@ Examples:
 
 ### `model.dependencies`
 
-**Object dependents.** Lists what refers to a table, column or measure: DAX, relationships, hierarchies, sort-by columns, roles and report fields.
+**Object dependents.** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields.
 
 _agent-safe; since 0.2.0._
 
@@ -593,7 +595,7 @@ Parameters:
 | Field | Type | Description |
 |---|---|---|
 | `docId` | string | The document id from `doc.open` (`d1`, …). |
-| `objectId` (optional) | integer \| null | The object's id (instead of `table`). |
+| `objectId` (optional) | integer \| null | The object's id (instead of `table`): also a relationship's id from `model.relationships`. |
 | `table` (optional) | string \| null | The table, or the table of `column` / `measure`. |
 | `column` (optional) | string \| null | A column of `table`. |
 | `measure` (optional) | string \| null | A measure of `table`. |
@@ -603,8 +605,8 @@ Result:
 | Field | Type | Description |
 |---|---|---|
 | `objectId` | integer |  |
-| `kind` | string | `table`, `column` or `measure`. |
-| `table` | string | The table, or the table of the column or measure. |
+| `kind` | string | `table`, `column`, `measure` or `relationship`. |
+| `table` | string | The table, or the table of the column or measure (the from table of a relationship). |
 | `name` | string |  |
 | `revision` | integer | The document revision the list was computed on. |
 | `dependents` | DependentOut[] | What refers to the object: DAX expressions, relationships, hierarchy levels, sort-by columns, role permissions, report, page and visual fields and filters. |
@@ -1885,6 +1887,82 @@ Examples:
 
 - What uses a measure: `{"docId":"d1","table":"Orders","measure":"Total Sales","dryRun":true}`
 - Delete by id: `{"docId":"d1","measureId":42}`
+
+### `model.relationship.create`
+
+**Create a relationship.** Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `from` | ColumnParam | The from column (TOM `fromColumn`, usually the many side). |
+| `to` | ColumnParam | The to column (TOM `toColumn`, usually the one side). |
+| `fromCardinality` (optional) | `"one"` \| `"many"` \| null | Default `many`. |
+| `toCardinality` (optional) | `"one"` \| `"many"` \| null | Default `one`. |
+| `crossFilteringBehavior` (optional) | `"oneDirection"` \| `"bothDirections"` \| null | Default `oneDirection`. |
+| `isActive` (optional) | boolean \| null | Default `true`. Two tables have at most one active relationship. |
+| `name` (optional) | string \| null | Unique among relationships; a new GUID by default, as Power BI Desktop names them. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `relationshipId` | integer |  |
+| `name` | string | The relationship's name (a GUID unless one was given). |
+| `from` | ColumnParam | The from column (usually the many side). |
+| `to` | ColumnParam | The to column (usually the one side). |
+| `dependents`? | DependentOut[] \| null | `model.relationship.delete` only: the DAX whose `USERELATIONSHIP` or `CROSSFILTER` calls name the relationship. |
+| `dryRun`? | boolean \| null | `model.relationship.delete` only: whether this was a dry run. |
+| `warnings` | string[] | Problems that do not stop the edit: what the engine finds in the loaded data (duplicate keys on the one side, differing key types, ambiguous filter paths), references that cannot be confirmed. |
+
+Examples:
+
+- Many-to-one, single direction: `{"docId":"d1","from":{"table":"Orders","column":"Store ID"},"to":{"table":"Stores","column":"Store ID"}}`
+- Inactive, both directions: `{"docId":"d1","from":{"table":"Orders","column":"Ship Date"},"to":{"table":"Date","column":"Date"},"crossFilteringBehavior":"bothDirections","isActive":false}`
+
+### `model.relationship.delete`
+
+**Delete a relationship.** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `relationshipId` (optional) | integer \| null | The relationship's id from `model.relationships` (instead of `name`). |
+| `name` (optional) | string \| null | The relationship's name (case-insensitive). |
+| `dryRun` (optional) | boolean | Only list what uses the relationship; the document is unchanged. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `relationshipId` | integer |  |
+| `name` | string | The relationship's name (a GUID unless one was given). |
+| `from` | ColumnParam | The from column (usually the many side). |
+| `to` | ColumnParam | The to column (usually the one side). |
+| `dependents`? | DependentOut[] \| null | `model.relationship.delete` only: the DAX whose `USERELATIONSHIP` or `CROSSFILTER` calls name the relationship. |
+| `dryRun`? | boolean \| null | `model.relationship.delete` only: whether this was a dry run. |
+| `warnings` | string[] | Problems that do not stop the edit: what the engine finds in the loaded data (duplicate keys on the one side, differing key types, ambiguous filter paths), references that cannot be confirmed. |
+
+Examples:
+
+- What uses a relationship: `{"docId":"d1","relationshipId":7,"dryRun":true}`
+- Delete by name: `{"docId":"d1","name":"d0c1e2f3-a4b5-4c6d-8e7f-000000000001"}`
 
 ### `report.visual.move`
 
