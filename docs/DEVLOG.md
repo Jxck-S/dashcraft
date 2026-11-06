@@ -7,6 +7,31 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 relationship update (M6.5) and GT-6 relationship checks
+
+- **What:** `pbi-model` gets `SetRelationshipProperties` (cardinalities, cross-filter and security
+  filter directions, active flag; patches only the given properties, exact unchecked inverse) and
+  shares the "one active path between two tables" check with creation. `pbi-ops` adds
+  `model.relationship.update` and the `updateRelationship` edit; relationship edit results gain
+  the relationship's properties. No session change: any relationship change already rebuilds the
+  engine's relationship graph.
+- **Why:** M6.5 core editing commands, the last relationship part; GT-6 had not yet checked a
+  saved relationship edit in Desktop.
+- **Numbers:** 3 new tests (`pbi-model` round trip and refusals;
+  `e2e.rs::relationship_update_through_the_registry`: Customers one-direction changes a
+  cross-filtered count, activation refused alone and accepted as a swap in one group, which gives
+  `Shipped Sales` through the active Ship Date, 4 refusals, undo restores everything;
+  `save.rs::relationship_updates_save_and_reopen`: only `relationships.tmdl`, only the changed
+  properties written, reopen equal, undo saves the original bytes). Registry 64 → 65 commands.
+  GT-6 with Desktop 2.159 ([reference/groundtruth](../reference/groundtruth/README.md#writer-checks-gt-6-desktop-opens-dashcrafts-output)):
+  delete and recreate (s13) identical on 642 of 643 recorded cases, the last one the same
+  relationship rows in another order; four updates (s14) change 196 of 601 measure cases in Desktop, and
+  DashCraft's results on the edited example match Desktop's on all 643 cases; security filtering
+  in both directions with a one-direction cross filter (s15) is refused by Desktop with the rule
+  DashCraft applies.
+- **Still open:** table, column and hierarchy create and delete; a committed edited-model ground
+  truth suite (s14 ran from a scratch reference root).
+
 ### M6 relationship create and delete (M6.5)
 
 - **What:** `pbi-model` gets `CreateRelationship` and `DeleteRelationship` (exact inverses; a

@@ -560,7 +560,14 @@ saved file, every object whose meaning is unchanged keeps its previous text (com
 spelled-out default values), so deleting and recreating a relationship and undoing both saves the
 original bytes (`relationship_create_and_delete_through_the_registry` in
 `crates/pbi-ops/tests/e2e.rs`, `relationship_edits_save_and_reopen` in
-`crates/pbi-ops/tests/save.rs`). Still open:
+`crates/pbi-ops/tests/save.rs`). `model.relationship.update` (and the `updateRelationship` edit)
+changes cardinalities, cross-filter and security filter directions and the active flag; it refuses
+a second active relationship between two tables (deactivate the other one in the same
+`doc.applyEdits`) and security filtering in both directions with a one-direction cross filter,
+which Desktop refuses to load. A saved update writes only the changed properties
+(`relationship_update_through_the_registry`, `relationship_updates_save_and_reopen`), and on the
+edited example DashCraft matches Desktop on all 643 recorded cases (GT-6, `s14` in
+[reference/groundtruth](../reference/groundtruth/README.md#writer-checks-gt-6-desktop-opens-dashcrafts-output)). Still open:
 the app's change events (M6.8), dependent recalculation after measure edits, table, column and
 hierarchy create and delete, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
@@ -577,7 +584,8 @@ generator), `pbi-tmdl` and `pbi-pbir` (writers for created objects), `pbi-dax` a
 `doc.redo`, `doc.history`, `doc.applyEdits`, `model.measure.create`, `model.measure.update`,
 `model.measure.delete`, `model.table.create`, `model.table.delete`, `model.column.create`,
 `model.column.delete`, `model.hierarchy.create`, `model.hierarchy.delete`,
-`model.relationship.create`, `model.relationship.delete`, `model.object.rename`,
+`model.relationship.create`, `model.relationship.update`, `model.relationship.delete`,
+`model.object.rename`,
 `model.object.setDescription`, `model.dependencies`, `report.visual.move`, `report.visual.resize`.
 
 **Writers.** In-place PBIP save with per-file change tracking; TMDL emission of new objects per

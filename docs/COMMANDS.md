@@ -107,6 +107,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.measure.update`](#modelmeasureupdate) | Changes a measure's expression, format string, display folder, description or visibility as one undoable edit. | M A |
 | [`model.measure.delete`](#modelmeasuredelete) | Deletes a measure as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. | M A |
 | [`model.relationship.create`](#modelrelationshipcreate) | Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data. | M A |
+| [`model.relationship.update`](#modelrelationshipupdate) | Changes a relationship's cardinality, cross-filter direction, security filtering or active state as one undoable edit; filters follow it at once. | M A |
 | [`model.relationship.delete`](#modelrelationshipdelete) | Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. | M A |
 | [`model.dependencies`](#modeldependencies) | Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. | A |
 | [`report.visual.move`](#reportvisualmove) | Moves a visual on its page as one undoable edit (visual groups not yet). | M A |
@@ -1919,6 +1920,11 @@ Result:
 | `name` | string | The relationship's name (a GUID unless one was given). |
 | `from` | ColumnParam | The from column (usually the many side). |
 | `to` | ColumnParam | The to column (usually the one side). |
+| `fromCardinality` | string | `many` or `one` (after the edit; before it for a delete). |
+| `toCardinality` | string | `many` or `one`. |
+| `crossFilteringBehavior` | string | `oneDirection`, `bothDirections` or `automatic`. |
+| `securityFilteringBehavior` | string | `oneDirection`, `bothDirections` or `none`. |
+| `isActive` | boolean |  |
 | `dependents`? | DependentOut[] \| null | `model.relationship.delete` only: the DAX whose `USERELATIONSHIP` or `CROSSFILTER` calls name the relationship. |
 | `dryRun`? | boolean \| null | `model.relationship.delete` only: whether this was a dry run. |
 | `warnings` | string[] | Problems that do not stop the edit: what the engine finds in the loaded data (duplicate keys on the one side, differing key types, ambiguous filter paths), references that cannot be confirmed. |
@@ -1927,6 +1933,51 @@ Examples:
 
 - Many-to-one, single direction: `{"docId":"d1","from":{"table":"Orders","column":"Store ID"},"to":{"table":"Stores","column":"Store ID"}}`
 - Inactive, both directions: `{"docId":"d1","from":{"table":"Orders","column":"Ship Date"},"to":{"table":"Date","column":"Date"},"crossFilteringBehavior":"bothDirections","isActive":false}`
+
+### `model.relationship.update`
+
+**Update a relationship.** Changes a relationship's cardinality, cross-filter direction, security filtering or active state as one undoable edit; filters follow it at once.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `relationshipId` (optional) | integer \| null | The relationship's id from `model.relationships` (instead of `name`). |
+| `name` (optional) | string \| null | The relationship's name (case-insensitive). |
+| `fromCardinality` (optional) | `"one"` \| `"many"` \| null |  |
+| `toCardinality` (optional) | `"one"` \| `"many"` \| null |  |
+| `crossFilteringBehavior` (optional) | `"oneDirection"` \| `"bothDirections"` \| null |  |
+| `securityFilteringBehavior` (optional) | `"oneDirection"` \| `"none"` \| `"bothDirections"` \| null | How row-level security filters cross it; `bothDirections` needs `crossFilteringBehavior: bothDirections`. |
+| `isActive` (optional) | boolean \| null | Two tables have at most one active relationship: deactivate the other one first (both in one `doc.applyEdits` for one undo step). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `relationshipId` | integer |  |
+| `name` | string | The relationship's name (a GUID unless one was given). |
+| `from` | ColumnParam | The from column (usually the many side). |
+| `to` | ColumnParam | The to column (usually the one side). |
+| `fromCardinality` | string | `many` or `one` (after the edit; before it for a delete). |
+| `toCardinality` | string | `many` or `one`. |
+| `crossFilteringBehavior` | string | `oneDirection`, `bothDirections` or `automatic`. |
+| `securityFilteringBehavior` | string | `oneDirection`, `bothDirections` or `none`. |
+| `isActive` | boolean |  |
+| `dependents`? | DependentOut[] \| null | `model.relationship.delete` only: the DAX whose `USERELATIONSHIP` or `CROSSFILTER` calls name the relationship. |
+| `dryRun`? | boolean \| null | `model.relationship.delete` only: whether this was a dry run. |
+| `warnings` | string[] | Problems that do not stop the edit: what the engine finds in the loaded data (duplicate keys on the one side, differing key types, ambiguous filter paths), references that cannot be confirmed. |
+
+Examples:
+
+- Filter both ways: `{"docId":"d1","relationshipId":7,"crossFilteringBehavior":"bothDirections"}`
+- Deactivate: `{"docId":"d1","name":"d0c1e2f3-a4b5-4c6d-8e7f-000000000001","isActive":false}`
 
 ### `model.relationship.delete`
 
@@ -1955,6 +2006,11 @@ Result:
 | `name` | string | The relationship's name (a GUID unless one was given). |
 | `from` | ColumnParam | The from column (usually the many side). |
 | `to` | ColumnParam | The to column (usually the one side). |
+| `fromCardinality` | string | `many` or `one` (after the edit; before it for a delete). |
+| `toCardinality` | string | `many` or `one`. |
+| `crossFilteringBehavior` | string | `oneDirection`, `bothDirections` or `automatic`. |
+| `securityFilteringBehavior` | string | `oneDirection`, `bothDirections` or `none`. |
+| `isActive` | boolean |  |
 | `dependents`? | DependentOut[] \| null | `model.relationship.delete` only: the DAX whose `USERELATIONSHIP` or `CROSSFILTER` calls name the relationship. |
 | `dryRun`? | boolean \| null | `model.relationship.delete` only: whether this was a dry run. |
 | `warnings` | string[] | Problems that do not stop the edit: what the engine finds in the loaded data (duplicate keys on the one side, differing key types, ambiguous filter paths), references that cannot be confirmed. |

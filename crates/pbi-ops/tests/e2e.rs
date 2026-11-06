@@ -1334,6 +1334,170 @@ async fn relationship_create_and_delete_through_the_registry() {
     assert_eq!(number(scalar(&r, &doc, smallest_region).await), filtered);
 }
 
+/// Relationship update on the example: cross-filter direction, the active
+/// relationship and cardinality change what the engine computes at once.
+#[tokio::test(flavor = "multi_thread")]
+async fn relationship_update_through_the_registry() {
+    let (Some(pbip), Some(map)) = (fixture(PBIP), fixture(BLOB_MAP)) else {
+        eprintln!("SKIP: {PBIP} missing");
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let number = |v: Value| v.as_f64().unwrap_or_else(|| panic!("not a number: {v}"));
+    let all = r.run("model.relationships", json!({"docId": doc})).await;
+    let customers = relationship(
+        &all,
+        ("Orders", "Customer ID"),
+        ("Customers", "Customer ID"),
+    );
+    let customers_id = customers["relationshipId"].as_u64().unwrap();
+    assert_eq!(customers["crossFilteringBehavior"], "bothDirections");
+    let order_date = relationship(&all, ("Orders", "Order Date"), ("Date", "Date"));
+    let order_date_name = order_date["name"].as_str().unwrap().to_owned();
+    let ship_date = relationship(&all, ("Orders", "Ship Date"), ("Date", "Date"));
+    let ship_date_id = ship_date["relationshipId"].as_u64().unwrap();
+    let stores = relationship(&all, ("Orders", "Store ID"), ("Stores", "Store ID"));
+    let stores_id = stores["relationshipId"].as_u64().unwrap();
+
+    // Orders filters Customers both ways: a product's buyers are fewer than
+    // all customers. One direction: every product sees every customer.
+    let customers_all = number(scalar(&r, &doc, "COUNTROWS(Customers)").await);
+    let fewest_buyers = "MINX(VALUES(Products[Product ID]), CALCULATE(COUNTROWS(Customers)))";
+    let buyers = number(scalar(&r, &doc, fewest_buyers).await);
+    assert!(buyers < customers_all, "{buyers} vs {customers_all}");
+    let one_way = r
+        .run(
+            "model.relationship.update",
+            json!({"docId": doc, "relationshipId": customers_id, "crossFilteringBehavior": "oneDirection"}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &one_way["changed"],
+            &one_way["revision"],
+            &one_way["changedObjectIds"],
+            &one_way["crossFilteringBehavior"],
+            &one_way["warnings"]
+        ),
+        (
+            &json!(true),
+            &json!(1),
+            &json!([customers_id]),
+            &json!("oneDirection"),
+            &json!([])
+        )
+    );
+    assert_eq!(number(scalar(&r, &doc, fewest_buyers).await), customers_all);
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(number(scalar(&r, &doc, fewest_buyers).await), buyers);
+
+    // Ship Date cannot be active next to Order Date; swapped in one group,
+    // dates filter Orders by ship date, as USERELATIONSHIP did.
+    let by_date = |m: &str| format!("SUMX(VALUES('Date'[Date]), CALCULATE({m}))");
+    let ordered = number(scalar(&r, &doc, &by_date("[Total Sales]")).await);
+    let shipped = number(scalar(&r, &doc, &by_date("[Shipped Sales]")).await);
+    assert!(shipped < ordered, "{shipped} vs {ordered}");
+    let activate = json!({"docId": doc, "relationshipId": ship_date_id, "isActive": true});
+    assert_eq!(
+        error_code(r.try_run("model.relationship.update", activate).await),
+        OpErrorCode::InvalidParams
+    );
+    let swapped = r
+        .run(
+            "doc.applyEdits",
+            json!({"docId": doc, "edits": [
+                {"type": "updateRelationship", "name": order_date_name, "isActive": false},
+                {"type": "updateRelationship", "relationshipId": ship_date_id, "isActive": true}
+            ]}),
+        )
+        .await;
+    assert_eq!(
+        (&swapped["changed"], &swapped["revision"]),
+        (&json!(true), &json!(3))
+    );
+    assert_eq!(
+        number(scalar(&r, &doc, &by_date("[Total Sales]")).await),
+        shipped
+    );
+
+    // Many-to-many: the same values here (Store ID is unique in Stores).
+    let smallest_region = "MINX(VALUES(Stores[Region]), CALCULATE([Total Sales]))";
+    let filtered = number(scalar(&r, &doc, smallest_region).await);
+    let many = r
+        .run(
+            "model.relationship.update",
+            json!({"docId": doc, "relationshipId": stores_id, "toCardinality": "many"}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &many["revision"],
+            &many["fromCardinality"],
+            &many["toCardinality"]
+        ),
+        (&json!(4), &json!("many"), &json!("many"))
+    );
+    assert_eq!(number(scalar(&r, &doc, smallest_region).await), filtered);
+
+    // Invalid updates change nothing.
+    let update = |params: Value| r.try_run("model.relationship.update", params);
+    let security = json!({"docId": doc, "relationshipId": stores_id, "securityFilteringBehavior": "bothDirections"});
+    assert_eq!(
+        error_code(update(security).await),
+        OpErrorCode::InvalidParams
+    );
+    let nothing = json!({"docId": doc, "relationshipId": stores_id});
+    assert_eq!(
+        error_code(update(nothing).await),
+        OpErrorCode::InvalidParams
+    );
+    let unknown = json!({"docId": doc, "name": "nope", "isActive": false});
+    assert_eq!(error_code(update(unknown).await), OpErrorCode::NotFound);
+    let wrong =
+        json!({"docId": doc, "relationshipId": stores_id, "crossFilteringBehavior": "automatic"});
+    assert_eq!(error_code(update(wrong).await), OpErrorCode::InvalidParams);
+    assert_eq!(
+        r.run("doc.history", json!({"docId": doc})).await["revision"],
+        4
+    );
+
+    // Both ways, with security filters both ways too, in one edit.
+    let secure = r
+        .run(
+            "model.relationship.update",
+            json!({"docId": doc, "relationshipId": stores_id, "crossFilteringBehavior": "bothDirections", "securityFilteringBehavior": "bothDirections"}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &secure["crossFilteringBehavior"],
+            &secure["securityFilteringBehavior"]
+        ),
+        (&json!("bothDirections"), &json!("bothDirections"))
+    );
+
+    // Undo everything: the original relationships and values.
+    for _ in 0..3 {
+        r.run("doc.undo", json!({"docId": doc})).await;
+    }
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(history["dirty"], false);
+    assert_eq!(
+        r.run("model.relationships", json!({"docId": doc})).await,
+        all
+    );
+    assert_eq!(
+        number(scalar(&r, &doc, &by_date("[Total Sales]")).await),
+        ordered
+    );
+    assert_eq!(number(scalar(&r, &doc, fewest_buyers).await), buyers);
+}
+
 /// Acceptance for `doc.saveAs`: the example with a column rename, saved as a new
 /// project, reopened in a fresh workspace and refreshed through the blob map, gives
 /// every expected value.

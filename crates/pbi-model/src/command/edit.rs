@@ -8,7 +8,7 @@ use crate::ids::ObjectId;
 use crate::report::Position;
 use crate::semantic::{Model, Table};
 
-fn changed(id: ObjectId, differs: bool) -> Vec<ChangeEvent> {
+pub(super) fn changed(id: ObjectId, differs: bool) -> Vec<ChangeEvent> {
     if differs {
         vec![ChangeEvent::ObjectChanged { id }]
     } else {
@@ -63,7 +63,11 @@ pub struct SetMeasureProperties {
     pub is_hidden: Option<bool>,
 }
 
-fn swap<T: PartialEq + Clone>(slot: &mut T, new: &Option<T>, differs: &mut bool) -> Option<T> {
+pub(super) fn swap<T: PartialEq + Clone>(
+    slot: &mut T,
+    new: &Option<T>,
+    differs: &mut bool,
+) -> Option<T> {
     let new = new.as_ref()?;
     *differs |= slot != new;
     Some(mem::replace(slot, new.clone()))

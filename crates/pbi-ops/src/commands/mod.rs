@@ -75,6 +75,7 @@ pub fn catalog() -> Registry {
         .with::<edit::ModelMeasureUpdate>()
         .with::<edit::ModelMeasureDelete>()
         .with::<edit::ModelRelationshipCreate>()
+        .with::<edit::ModelRelationshipUpdate>()
         .with::<edit::ModelRelationshipDelete>()
         .with::<edit::ModelDependencies>()
         .with::<edit::ReportVisualMove>()

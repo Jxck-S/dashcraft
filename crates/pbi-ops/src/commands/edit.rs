@@ -8,8 +8,8 @@
 use pbi_model::{
     Cardinality, ChangeEvent, ColumnRef, CommandGroup, CreateMeasure, CreateRelationship,
     CrossFilter, DeleteMeasure, DeleteRelationship, HistoryResult, Measure, ObjectId, ObjectPath,
-    Position, Relationship, SetDescription, SetMeasureExpression, SetMeasureProperties,
-    SetVisualPosition, Visual, names_eq,
+    Position, Relationship, SecurityFilteringBehavior, SetDescription, SetMeasureExpression,
+    SetMeasureProperties, SetRelationshipProperties, SetVisualPosition, Visual, names_eq,
 };
 use pbi_session::{
     RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error, preview_rename,
@@ -1286,6 +1286,26 @@ impl From<CrossFilterParam> for CrossFilter {
     }
 }
 
+/// Which way row-level security filters cross a relationship.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum SecurityFilterParam {
+    OneDirection,
+    /// Needs `crossFilteringBehavior: bothDirections`.
+    BothDirections,
+    None,
+}
+
+impl From<SecurityFilterParam> for SecurityFilteringBehavior {
+    fn from(c: SecurityFilterParam) -> Self {
+        match c {
+            SecurityFilterParam::OneDirection => SecurityFilteringBehavior::OneDirection,
+            SecurityFilterParam::BothDirections => SecurityFilteringBehavior::BothDirections,
+            SecurityFilterParam::None => SecurityFilteringBehavior::None,
+        }
+    }
+}
+
 /// The properties of a new relationship.
 #[derive(Debug, Clone)]
 struct NewRelationship {
@@ -1373,7 +1393,8 @@ fn relationship_target(
     }
 }
 
-/// Result of `model.relationship.create` and `model.relationship.delete`.
+/// Result of `model.relationship.create`, `model.relationship.update` and
+/// `model.relationship.delete`.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RelationshipEditOut {
@@ -1388,6 +1409,15 @@ pub struct RelationshipEditOut {
     pub from: ColumnParam,
     /// The to column (usually the one side).
     pub to: ColumnParam,
+    /// `many` or `one` (after the edit; before it for a delete).
+    pub from_cardinality: String,
+    /// `many` or `one`.
+    pub to_cardinality: String,
+    /// `oneDirection`, `bothDirections` or `automatic`.
+    pub cross_filtering_behavior: String,
+    /// `oneDirection`, `bothDirections` or `none`.
+    pub security_filtering_behavior: String,
+    pub is_active: bool,
     /// `model.relationship.delete` only: the DAX whose `USERELATIONSHIP`
     /// or `CROSSFILTER` calls name the relationship.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1416,6 +1446,11 @@ impl RelationshipEditOut {
             name: r.name.clone(),
             from: end(&r.from),
             to: end(&r.to),
+            from_cardinality: r.from_cardinality.as_str().to_owned(),
+            to_cardinality: r.to_cardinality.as_str().to_owned(),
+            cross_filtering_behavior: r.cross_filtering_behavior.as_str().to_owned(),
+            security_filtering_behavior: r.security_filtering_behavior.as_str().to_owned(),
+            is_active: r.is_active,
             dependents: None,
             dry_run: None,
             warnings,
@@ -1523,18 +1558,58 @@ impl Command for ModelRelationshipCreate {
             .ok_or_else(|| OpError::internal("the new relationship has no id"))?;
         let relationship = find_relationship(session, id)
             .ok_or_else(|| OpError::internal("the new relationship is missing"))?;
-        let warnings = session
-            .diagnostics()
-            .into_iter()
-            .filter(|d| d.object == Some(id))
-            .map(|d| format!("{}: {}", d.code, d.message))
-            .collect();
         Ok(RelationshipEditOut::new(
             DocumentEditOut::committed(ctx, &entry, &result),
             &relationship,
-            warnings,
+            relationship_warnings(session, id),
         ))
     }
+}
+
+/// What the engine reports about relationship `id` in the loaded data.
+fn relationship_warnings(session: &Session, id: ObjectId) -> Vec<String> {
+    session
+        .diagnostics()
+        .into_iter()
+        .filter(|d| d.object == Some(id))
+        .map(|d| format!("{}: {}", d.code, d.message))
+        .collect()
+}
+
+/// The property changes of `model.relationship.update` and
+/// `updateRelationship`.
+#[derive(Debug, Clone, Default)]
+struct RelationshipChanges {
+    from_cardinality: Option<CardinalityParam>,
+    to_cardinality: Option<CardinalityParam>,
+    cross_filtering_behavior: Option<CrossFilterParam>,
+    security_filtering_behavior: Option<SecurityFilterParam>,
+    is_active: Option<bool>,
+}
+
+fn update_relationship(
+    relationship: ObjectId,
+    changes: RelationshipChanges,
+) -> Result<SetRelationshipProperties, OpError> {
+    let command = SetRelationshipProperties {
+        relationship,
+        from_cardinality: changes.from_cardinality.map(Into::into),
+        to_cardinality: changes.to_cardinality.map(Into::into),
+        cross_filtering_behavior: changes.cross_filtering_behavior.map(Into::into),
+        security_filtering_behavior: changes.security_filtering_behavior.map(Into::into),
+        is_active: changes.is_active,
+    };
+    if command
+        == (SetRelationshipProperties {
+            relationship,
+            ..SetRelationshipProperties::default()
+        })
+    {
+        return Err(OpError::invalid_params(
+            "give at least one of fromCardinality, toCardinality, crossFilteringBehavior, securityFilteringBehavior, isActive",
+        ));
+    }
+    Ok(command)
 }
 
 /// `model.relationship.delete`.
@@ -1617,6 +1692,91 @@ impl Command for ModelRelationshipDelete {
         );
         out.dry_run = Some(params.dry_run);
         Ok(out)
+    }
+}
+
+/// `model.relationship.update`.
+#[derive(Debug)]
+pub struct ModelRelationshipUpdate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpdateRelationshipParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The relationship's id from `model.relationships` (instead of `name`).
+    #[serde(default)]
+    pub relationship_id: Option<u64>,
+    /// The relationship's name (case-insensitive).
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub from_cardinality: Option<CardinalityParam>,
+    #[serde(default)]
+    pub to_cardinality: Option<CardinalityParam>,
+    #[serde(default)]
+    pub cross_filtering_behavior: Option<CrossFilterParam>,
+    /// How row-level security filters cross it; `bothDirections` needs
+    /// `crossFilteringBehavior: bothDirections`.
+    #[serde(default)]
+    pub security_filtering_behavior: Option<SecurityFilterParam>,
+    /// Two tables have at most one active relationship: deactivate the
+    /// other one first (both in one `doc.applyEdits` for one undo step).
+    #[serde(default)]
+    pub is_active: Option<bool>,
+}
+
+impl UpdateRelationshipParams {
+    fn changes(&self) -> RelationshipChanges {
+        RelationshipChanges {
+            from_cardinality: self.from_cardinality,
+            to_cardinality: self.to_cardinality,
+            cross_filtering_behavior: self.cross_filtering_behavior,
+            security_filtering_behavior: self.security_filtering_behavior,
+            is_active: self.is_active,
+        }
+    }
+}
+
+impl Command for ModelRelationshipUpdate {
+    type Params = UpdateRelationshipParams;
+    type Output = RelationshipEditOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.relationship.update",
+            title: "Update a relationship",
+            summary: "Changes a relationship's cardinality, cross-filter direction, security filtering or active state as one undoable edit; filters follow it at once.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[
+                (
+                    "Filter both ways",
+                    r#"{"docId": "d1", "relationshipId": 7, "crossFilteringBehavior": "bothDirections"}"#,
+                ),
+                (
+                    "Deactivate",
+                    r#"{"docId": "d1", "name": "d0c1e2f3-a4b5-4c6d-8e7f-000000000001", "isActive": false}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        resolve::require_model(&entry)?;
+        let session = entry.session();
+        let id = relationship_target(session, params.relationship_id, params.name.as_deref())?;
+        let command = update_relationship(id, params.changes())?;
+        let result = session.execute_document_command(command).await?;
+        let relationship = find_relationship(session, id)
+            .ok_or_else(|| OpError::internal("the relationship is missing"))?;
+        Ok(RelationshipEditOut::new(
+            DocumentEditOut::committed(ctx, &entry, &result),
+            &relationship,
+            relationship_warnings(session, id),
+        ))
     }
 }
 
@@ -1723,6 +1883,23 @@ pub enum EditOperation {
         is_active: Option<bool>,
         #[serde(default)]
         name: Option<String>,
+    },
+    /// Like `model.relationship.update`.
+    UpdateRelationship {
+        #[serde(default)]
+        relationship_id: Option<u64>,
+        #[serde(default)]
+        name: Option<String>,
+        #[serde(default)]
+        from_cardinality: Option<CardinalityParam>,
+        #[serde(default)]
+        to_cardinality: Option<CardinalityParam>,
+        #[serde(default)]
+        cross_filtering_behavior: Option<CrossFilterParam>,
+        #[serde(default)]
+        security_filtering_behavior: Option<SecurityFilterParam>,
+        #[serde(default)]
+        is_active: Option<bool>,
     },
     /// Like `model.relationship.delete` (without `dryRun`).
     DeleteRelationship {
@@ -1888,6 +2065,25 @@ impl Command for DocumentApplyEdits {
                         name,
                     },
                 )),
+                EditOperation::UpdateRelationship {
+                    relationship_id,
+                    name,
+                    from_cardinality,
+                    to_cardinality,
+                    cross_filtering_behavior,
+                    security_filtering_behavior,
+                    is_active,
+                } => {
+                    let id = relationship_target(session, relationship_id, name.as_deref())?;
+                    let changes = RelationshipChanges {
+                        from_cardinality,
+                        to_cardinality,
+                        cross_filtering_behavior,
+                        security_filtering_behavior,
+                        is_active,
+                    };
+                    group.with(update_relationship(id, changes)?)
+                }
                 EditOperation::DeleteRelationship {
                     relationship_id,
                     name,

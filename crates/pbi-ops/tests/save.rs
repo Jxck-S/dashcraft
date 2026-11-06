@@ -768,3 +768,88 @@ async fn relationship_edits_save_and_reopen() {
         "undoing both edits saves the original bytes"
     );
 }
+
+/// Relationship updates save into `relationships.tmdl` only: changed
+/// properties are written (a default one is left out), untouched
+/// relationships keep their text, a reopen shows the same relationships, and
+/// undoing saves the original bytes again.
+#[tokio::test(flavor = "multi_thread")]
+async fn relationship_updates_save_and_reopen() {
+    const RELATIONSHIPS_TMDL: &str = "AcmeOutfitters.SemanticModel/definition/relationships.tmdl";
+    const CUSTOMERS: &str = "c79d4066-724d-5669-b57b-f6bf11da6f40";
+    const STORES: &str = "d4926a14-f8ee-5523-be56-0dd865b87eee";
+    const ORDER_DATE: &str = "5fd8dd36-8b63-5abf-b8b9-50b8de54f509";
+    const SHIP_DATE: &str = "976ded3b-d763-50ba-be93-faf5d31cd63c";
+    let Some(acme) = fixture(ACME) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("relationship-updates-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let original = fs::read(dir.path().join(RELATIONSHIPS_TMDL)).unwrap();
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    r.run(
+        "model.relationship.update",
+        json!({"docId": doc, "name": CUSTOMERS, "crossFilteringBehavior": "oneDirection"}),
+    )
+    .await;
+    r.run(
+        "doc.applyEdits",
+        json!({"docId": doc, "edits": [
+            {"type": "updateRelationship", "name": ORDER_DATE, "isActive": false},
+            {"type": "updateRelationship", "name": SHIP_DATE, "isActive": true}
+        ]}),
+    )
+    .await;
+    r.run(
+        "model.relationship.update",
+        json!({"docId": doc, "name": STORES, "toCardinality": "many", "crossFilteringBehavior": "bothDirections", "securityFilteringBehavior": "bothDirections"}),
+    )
+    .await;
+    let edited = r.run("model.relationships", json!({"docId": doc})).await;
+
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(strings(&out["written"]), [RELATIONSHIPS_TMDL], "{out}");
+    let saved = fs::read_to_string(dir.path().join(RELATIONSHIPS_TMDL)).unwrap();
+    for block in [
+        format!(
+            "relationship {CUSTOMERS}\n\tfromColumn: Orders.'Customer ID'\n\ttoColumn: Customers.'Customer ID'\n\n"
+        ),
+        format!(
+            "relationship {STORES}\n\tcrossFilteringBehavior: bothDirections\n\ttoCardinality: many\n\tsecurityFilteringBehavior: bothDirections\n\tfromColumn: Orders.'Store ID'\n\ttoColumn: Stores.'Store ID'\n\n"
+        ),
+        format!(
+            "relationship {ORDER_DATE}\n\tisActive: false\n\tfromColumn: Orders.'Order Date'\n\ttoColumn: Date.Date\n\n"
+        ),
+        format!(
+            "relationship {SHIP_DATE}\n\tfromColumn: Orders.'Ship Date'\n\ttoColumn: Date.Date\n\n"
+        ),
+        "\tfromCardinality: one\n\ttoCardinality: one\n".to_owned(),
+    ] {
+        assert!(saved.contains(&block), "{block:?} missing from {saved}");
+    }
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    assert_eq!(
+        fresh
+            .run("model.relationships", json!({"docId": reopened}))
+            .await,
+        edited
+    );
+
+    for _ in 0..3 {
+        r.run("doc.undo", json!({"docId": doc})).await;
+    }
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(strings(&out["written"]), [RELATIONSHIPS_TMDL], "{out}");
+    assert_eq!(
+        fs::read(dir.path().join(RELATIONSHIPS_TMDL)).unwrap(),
+        original,
+        "undoing the updates saves the original bytes"
+    );
+}
