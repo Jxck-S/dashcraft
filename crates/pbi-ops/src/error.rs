@@ -266,6 +266,24 @@ impl From<SessionError> for OpError {
     }
 }
 
+impl From<pbi_model::CommandError> for OpError {
+    fn from(error: pbi_model::CommandError) -> Self {
+        use pbi_model::CommandError;
+        match error {
+            CommandError::NotFound(_) => Self::not_found(error.to_string()),
+            CommandError::NoModel => Self::no_document(error.to_string()),
+            CommandError::NothingToUndo | CommandError::NothingToRedo => {
+                Self::invalid_params(error.to_string())
+            }
+            CommandError::WrongKind { .. }
+            | CommandError::InvalidName(_)
+            | CommandError::NameConflict { .. }
+            | CommandError::Unsupported { .. }
+            | CommandError::Rejected(_) => Self::invalid_params(error.to_string()),
+        }
+    }
+}
+
 impl From<ExportError> for OpError {
     fn from(e: ExportError) -> Self {
         match e {

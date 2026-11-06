@@ -457,6 +457,62 @@ impl TableData {
         out.encoded = encoded;
         Ok(out)
     }
+
+    /// A copy under another name (same data and cached encodings).
+    fn renamed(&self, name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            batch: self.batch.clone(),
+            column_index: self.column_index.clone(),
+            encoded: self.encoded.clone(),
+            loaded: self.loaded,
+        }
+    }
+
+    /// A copy with columns renamed simultaneously (`(old, new)` pairs; a
+    /// swap works). Missing columns are ignored; data, order and cached
+    /// encodings are kept.
+    fn with_renamed_columns(&self, renames: &[(&str, &str)]) -> Result<Self> {
+        let schema = self.batch.schema();
+        let mut fields: Vec<Field> = schema.fields().iter().map(|f| f.as_ref().clone()).collect();
+        let mut changed = false;
+        for (old, new) in renames {
+            let Some(field) = self.column_index(old).and_then(|i| fields.get_mut(i)) else {
+                continue;
+            };
+            if field.name() != new {
+                *field = field.clone().with_name(*new);
+                changed = true;
+            }
+        }
+        if !changed {
+            return Ok(self.renamed(&self.name));
+        }
+        let options = RecordBatchOptions::new().with_row_count(Some(self.row_count()));
+        let batch = RecordBatch::try_new_with_options(
+            Arc::new(Schema::new_with_metadata(fields, schema.metadata().clone())),
+            self.batch.columns().to_vec(),
+            &options,
+        )?;
+        let mut out = Self::with_flag(self.name.clone(), batch, self.loaded)?;
+        out.encoded = self.encoded.clone();
+        Ok(out)
+    }
+}
+
+/// A table or column rename applied to stored data ([`Storage::rename`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StorageRename {
+    Table {
+        old: String,
+        new: String,
+    },
+    /// `table` is the table's name after the table renames of the batch.
+    Column {
+        table: String,
+        old: String,
+        new: String,
+    },
 }
 
 /// All tables of a model, keyed by case-insensitive name. Cloning is cheap
@@ -558,6 +614,46 @@ impl Storage {
     /// Removes a table.
     pub fn remove_table(&mut self, name: &str) -> Option<Arc<TableData>> {
         self.tables.shift_remove(&name_key(name))
+    }
+
+    /// Renames tables, then columns, keeping data, table order and cached
+    /// encodings. Renames within a batch are simultaneous (swapping two names
+    /// works); renames of tables or columns that are not stored are ignored.
+    ///
+    /// # Errors
+    /// A new name collides with another table or column; nothing changes.
+    pub fn rename(&mut self, renames: &[StorageRename]) -> Result<()> {
+        let mut table_renames: HashMap<String, &str> = HashMap::new();
+        let mut column_renames: IndexMap<String, Vec<(&str, &str)>> = IndexMap::new();
+        for rename in renames {
+            match rename {
+                StorageRename::Table { old, new } => {
+                    table_renames.insert(name_key(old), new);
+                }
+                StorageRename::Column { table, old, new } => column_renames
+                    .entry(name_key(table))
+                    .or_default()
+                    .push((old, new)),
+            }
+        }
+        let mut tables = IndexMap::with_capacity(self.tables.len());
+        for (key, data) in &self.tables {
+            let (key, data) = match table_renames.get(key) {
+                Some(new) => (name_key(new), Arc::new(data.renamed(new))),
+                None => (key.clone(), Arc::clone(data)),
+            };
+            let name = data.name.clone();
+            if tables.insert(key, data).is_some() {
+                return Err(EngineError::DuplicateTable(name));
+            }
+        }
+        for (key, columns) in column_renames {
+            if let Some(data) = tables.get_mut(&key) {
+                *data = Arc::new(data.with_renamed_columns(&columns)?);
+            }
+        }
+        self.tables = tables;
+        Ok(())
     }
 
     pub fn contains(&self, name: &str) -> bool {
@@ -709,5 +805,81 @@ mod tests {
             Err(EngineError::DuplicateColumn { .. })
         ));
         assert!(s.replace_table("T", batch()).is_err());
+    }
+
+    #[test]
+    fn rename_keeps_data_order_and_supports_swaps() {
+        let mut s = Storage::new();
+        s.load_table("A", batch()).unwrap();
+        s.load_table("B", batch()).unwrap();
+        s.load_table("C", batch()).unwrap();
+        s.rename(&[
+            StorageRename::Table {
+                old: "a".into(),
+                new: "B".into(),
+            },
+            StorageRename::Table {
+                old: "B".into(),
+                new: "A".into(),
+            },
+            StorageRename::Column {
+                table: "b".into(),
+                old: "Key".into(),
+                new: "N".into(),
+            },
+            StorageRename::Column {
+                table: "B".into(),
+                old: "n".into(),
+                new: "Key".into(),
+            },
+            StorageRename::Column {
+                table: "C".into(),
+                old: "Key".into(),
+                new: "key".into(),
+            },
+            StorageRename::Table {
+                old: "Missing".into(),
+                new: "Other".into(),
+            },
+        ])
+        .unwrap();
+        assert_eq!(s.table_names().collect::<Vec<_>>(), ["B", "A", "C"]);
+        let b = s.table("B").unwrap();
+        assert!(b.is_loaded());
+        assert_eq!(b.column_names().collect::<Vec<_>>(), ["N", "Key"]);
+        assert_eq!(s.value_at("B", "N", 0).unwrap(), Value::from("a"));
+        assert_eq!(s.value_at("B", "Key", 3).unwrap(), Value::Integer(4));
+        assert_eq!(s.encoded("B", "N").unwrap().cardinality(), 3);
+        assert_eq!(
+            s.table("C").unwrap().column_names().collect::<Vec<_>>(),
+            ["key", "N"]
+        );
+    }
+
+    #[test]
+    fn rename_collisions_are_rejected_without_changes() {
+        let mut s = Storage::new();
+        s.load_table("A", batch()).unwrap();
+        s.load_table("B", batch()).unwrap();
+        let err = s
+            .rename(&[StorageRename::Table {
+                old: "A".into(),
+                new: "b".into(),
+            }])
+            .unwrap_err();
+        assert!(matches!(err, EngineError::DuplicateTable(_)));
+        let err = s
+            .rename(&[StorageRename::Column {
+                table: "A".into(),
+                old: "Key".into(),
+                new: "n".into(),
+            }])
+            .unwrap_err();
+        assert!(matches!(err, EngineError::DuplicateColumn { .. }));
+        assert_eq!(s.table_names().collect::<Vec<_>>(), ["A", "B"]);
+        assert_eq!(
+            s.table("A").unwrap().column_names().collect::<Vec<_>>(),
+            ["Key", "N"]
+        );
     }
 }

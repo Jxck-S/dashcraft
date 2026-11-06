@@ -136,7 +136,8 @@ impl Command for DocLint {
             opts.min_severity = min.into();
         }
         let session = entry.session().clone();
-        let report = tokio::task::spawn_blocking(move || lint(session.opened(), &opts)).await?;
+        let opened = session.opened();
+        let report = tokio::task::spawn_blocking(move || lint(&opened, &opts)).await?;
         let reader_errors: Vec<DiagnosticOut> = entry
             .session()
             .document()

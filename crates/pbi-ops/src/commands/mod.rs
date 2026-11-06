@@ -5,6 +5,7 @@
 pub mod canvas;
 pub mod data;
 pub mod dax;
+pub mod edit;
 pub mod export;
 pub mod inspect;
 pub mod lint;
@@ -66,6 +67,20 @@ pub fn catalog() -> Registry {
         .with::<inspect::ReportVisuals>()
         .with::<inspect::ReportFilters>()
         .with::<security::SecurityRoles>()
+        // edit
+        .with::<edit::ModelSetMeasureExpression>()
+        .with::<edit::ModelObjectRename>()
+        .with::<edit::ModelObjectSetDescription>()
+        .with::<edit::ModelMeasureCreate>()
+        .with::<edit::ModelMeasureUpdate>()
+        .with::<edit::ModelMeasureDelete>()
+        .with::<edit::ModelDependencies>()
+        .with::<edit::ReportVisualMove>()
+        .with::<edit::ReportVisualResize>()
+        .with::<edit::DocumentApplyEdits>()
+        .with::<edit::DocumentUndo>()
+        .with::<edit::DocumentRedo>()
+        .with::<edit::DocumentHistory>()
         // lint
         .with::<lint::DocLint>()
         // data

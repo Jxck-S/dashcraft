@@ -16,6 +16,9 @@ pub enum EngineError {
     #[error("duplicate column '{column}' in table '{table}' (names are case-insensitive)")]
     DuplicateColumn { table: String, column: String },
 
+    #[error("duplicate table '{0}' (names are case-insensitive)")]
+    DuplicateTable(String),
+
     #[error("column '{table}'[{column}] has {actual} rows, expected {expected}")]
     RowCountMismatch {
         table: String,

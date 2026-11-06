@@ -103,7 +103,7 @@ fn kpi_cards_match_expected_on_every_page() {
     };
     let mut checked = 0;
     for short in ACME_REPORTS {
-        let report = report(session, short);
+        let report = &report(session, short);
         for entry in expected_report(expected, short)["pages"]
             .as_array()
             .unwrap()
@@ -214,7 +214,7 @@ fn tables_matrices_and_charts_match_expected() {
     };
     let mut checked = 0;
     for short in ACME_REPORTS {
-        let report = report(session, short);
+        let report = &report(session, short);
         for entry in expected_report(expected, short)["pages"]
             .as_array()
             .unwrap()
@@ -397,7 +397,7 @@ fn saved_slicer_selections_are_read() {
     let (Some(session), Some(expected)) = (acme(), acme_expected()) else {
         return;
     };
-    let overview = report(session, "Overview");
+    let overview = &report(session, "Overview");
     let summary = page(overview, "Executive Summary");
     let year = visual_id(expected, "Overview", "Executive Summary", "year");
     let state = saved(summary);
@@ -418,7 +418,7 @@ fn saved_slicer_selections_are_read() {
     assert_eq!(selected, ["2025"]);
 
     // Online Overview: an inverted selection ("all but Unassigned").
-    let online = report(session, "Online");
+    let online = &report(session, "Online");
     let overview_page = page(online, "Online Overview");
     let tier = visual_id(expected, "Online", "Online Overview", "tier");
     let sel = saved(overview_page)
@@ -447,7 +447,7 @@ fn slicer_and_cross_filter_interactions() {
     };
     let id = |key: &str| visual_id(expected, "Overview", "Executive Summary", key);
     let (kpis, scaled, region) = (id("kpis"), id("scaled"), "578558f36aded7690edd");
-    let report = report(session, "Overview");
+    let report = &report(session, "Overview");
     let summary = page(report, "Executive Summary");
     let base = saved(summary);
     let env = QueryEnv::from_session(session);
@@ -547,7 +547,7 @@ fn report_filter_on_an_unrelated_table_only_filters_its_table() {
         return;
     };
     let want = &expected["unrelatedReportFilter"];
-    let online = report(session, "Online");
+    let online = &report(session, "Online");
     assert_eq!(online.name, want["report"].as_str().unwrap());
     let overview = page(online, "Online Overview");
     let env = QueryEnv::from_session(session);

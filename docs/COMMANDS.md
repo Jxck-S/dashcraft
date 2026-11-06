@@ -87,7 +87,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`commands.batch`](#commandsbatch) | Runs ordered steps on the shared workspace; strings like "${d.docId}" reference earlier results named with "as". | A |
 | [`doc.detect`](#docdetect) | Content-based format detection of a file or folder (signals, models, reports) without reading it fully. | A |
 | [`doc.open`](#docopen) | Opens a Power BI file or folder into the workspace (no data loaded yet) and returns its docId and summary. | A |
-| [`doc.close`](#docclose) | Closes an open document and frees its data (running canvas renders are cancelled). | M A |
+| [`doc.close`](#docclose) | Closes an open document and frees its data; unsaved edits require explicit discardChanges. | M A |
 | [`doc.list`](#doclist) | The open documents of the workspace with their summaries. | A |
 | [`doc.inspect`](#docinspect) | The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). | A |
 | [`model.tables`](#modeltables) | Every model table with its columns, measure names, partitions, hierarchies and loaded row count. | A |
@@ -98,6 +98,19 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`report.visuals`](#reportvisuals) | The visuals of a page: type, title, position, bound fields and visual filters. | A |
 | [`report.filters`](#reportfilters) | A report's filters (plus a page's) translated to column filters, with the ones that cannot be applied (Top N, relative date…). | A |
 | [`security.roles`](#securityroles) | The model's row-level security roles (permission, DAX table filters, members, dynamic or not) and the current "View as" state. | A |
+| [`model.setMeasureExpression`](#modelsetmeasureexpression) | Replaces a measure's DAX expression as one undoable document edit. | M A |
+| [`model.object.rename`](#modelobjectrename) | Renames a table, column or measure as one undoable edit; references, report fields and DAX follow and the loaded data is kept. dryRun previews it. | M A |
+| [`model.object.setDescription`](#modelobjectsetdescription) | Sets or clears the description of a table, column, measure or other model object as one undoable edit. | M A |
+| [`model.measure.create`](#modelmeasurecreate) | Adds a DAX measure to a table as one undoable edit and returns its id. | M A |
+| [`model.measure.update`](#modelmeasureupdate) | Changes a measure's expression, format string, display folder, description or visibility as one undoable edit. | M A |
+| [`model.measure.delete`](#modelmeasuredelete) | Deletes a measure as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. | M A |
+| [`model.dependencies`](#modeldependencies) | Lists what refers to a table, column or measure: DAX, relationships, hierarchies, sort-by columns, roles and report fields. | A |
+| [`report.visual.move`](#reportvisualmove) | Moves a visual on its page as one undoable edit (visual groups not yet). | M A |
+| [`report.visual.resize`](#reportvisualresize) | Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet). | M A |
+| [`doc.applyEdits`](#docapplyedits) | Applies a group of document edits atomically as one undoable history step. | M A |
+| [`doc.undo`](#docundo) | Undoes the latest document edit. | M A |
+| [`doc.redo`](#docredo) | Reapplies the latest undone document edit. | M A |
+| [`doc.history`](#dochistory) | Returns the document revision, dirty state and undo/redo availability. | A |
 | [`doc.lint`](#doclint) | Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report. | A |
 | [`data.refresh`](#datarefresh) | Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status. | M L A |
 | [`data.tables`](#datatables) | Loaded rows, columns and last refresh status of every table, the derived columns and the local data cache. | A |
@@ -143,7 +156,7 @@ Parameters:
 | Field | Type | Description |
 |---|---|---|
 | `schemas` (optional) | boolean | Include each command's parameter and result JSON Schemas. |
-| `category` (optional) | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"ai"` \| null | Only this category. |
+| `category` (optional) | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` \| null | Only this category. |
 | `agentSafe` (optional) | boolean | Only the commands offered to agents. |
 
 Result:
@@ -177,7 +190,7 @@ Result:
 | `id` | string | Stable dotted id (`doc.open`); the JSON-RPC method name. |
 | `title` | string |  |
 | `summary` | string | One line: what it does and returns. |
-| `category` | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"ai"` | What a command is about; groups the catalog. |
+| `category` | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` | What a command is about; groups the catalog. |
 | `mutatesDocument` | boolean | Changes the in-memory state of an open document (ordered per document). |
 | `longRunning` | boolean | Reports progress and can take a while. |
 | `agentSafe` | boolean | Offered to AI agents (MCP) by default. |
@@ -291,7 +304,7 @@ Examples:
 
 ### `doc.close`
 
-**Close a document.** Closes an open document and frees its data (running canvas renders are cancelled).
+**Close a document.** Closes an open document and frees its data; unsaved edits require explicit discardChanges.
 
 _mutates the document, agent-safe; since 0.2.0._
 
@@ -299,7 +312,8 @@ Parameters:
 
 | Field | Type | Description |
 |---|---|---|
-| `docId` | string | The document id returned by `doc.open` (`d1`, …). |
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `discardChanges` (optional) | boolean | Explicitly discard unsaved in-memory edits. |
 
 Result:
 
@@ -563,6 +577,39 @@ Result:
 Examples:
 
 - Roles of d1: `{"docId":"d1"}`
+
+### `model.dependencies`
+
+**Object dependents.** Lists what refers to a table, column or measure: DAX, relationships, hierarchies, sort-by columns, roles and report fields.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `objectId` (optional) | integer \| null | The object's id (instead of `table`). |
+| `table` (optional) | string \| null | The table, or the table of `column` / `measure`. |
+| `column` (optional) | string \| null | A column of `table`. |
+| `measure` (optional) | string \| null | A measure of `table`. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `objectId` | integer |  |
+| `kind` | string | `table`, `column` or `measure`. |
+| `table` | string | The table, or the table of the column or measure. |
+| `name` | string |  |
+| `revision` | integer | The document revision the list was computed on. |
+| `dependents` | DependentOut[] | What refers to the object: DAX expressions, relationships, hierarchy levels, sort-by columns, role permissions, report, page and visual fields and filters. |
+| `warnings` | string[] | References that cannot be confirmed (DAX that does not parse, ambiguous unqualified names, M queries naming a table). |
+
+Examples:
+
+- What uses a measure: `{"docId":"d1","table":"Orders","measure":"Total Sales"}`
+- What uses a column: `{"docId":"d1","table":"Orders","column":"Line Amount"}`
 
 ## Lint
 
@@ -873,6 +920,7 @@ Result:
 
 | Field | Type | Description |
 |---|---|---|
+| `documentRevision` | integer | Semantic document revision captured with the query engine snapshot. |
 | `tables` | DaxTableOut[] | One table per `EVALUATE`. |
 | `durationMs` | integer |  |
 
@@ -901,6 +949,7 @@ Result:
 
 | Field | Type | Description |
 |---|---|---|
+| `documentRevision` | integer | Semantic document revision captured with the query engine snapshot. |
 | `measure` | MeasureValueOut | The value of one measure. |
 | `filters` | FilterSpecOut | The filters applied, and those that could not be. |
 
@@ -928,6 +977,7 @@ Result:
 
 | Field | Type | Description |
 |---|---|---|
+| `documentRevision` | integer | Semantic document revision captured with the query engine snapshot. |
 | `ok` | boolean | Every measure evaluated without error. |
 | `report`? | string \| null | Report name. |
 | `page`? | string \| null | Page display name. |
@@ -1617,3 +1667,384 @@ Result:
 Examples:
 
 - Account managers: `{"docId":"d1","table":"Customers","column":"Account Managers","limit":20}`
+
+## Edit
+
+### `model.setMeasureExpression`
+
+**Edit a measure expression.** Replaces a measure's DAX expression as one undoable document edit.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `measureId` | integer | Stable measure id returned by `model.measures`. |
+| `expression` | string | The replacement DAX expression. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+
+Examples:
+
+- Update a measure: `{"docId":"d1","measureId":42,"expression":"SUM(Orders[Amount])"}`
+
+### `model.object.rename`
+
+**Rename a table, column or measure.** Renames a table, column or measure as one undoable edit; references, report fields and DAX follow and the loaded data is kept. dryRun previews it.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `objectId` (optional) | integer \| null | The object's id (instead of `table`). |
+| `table` (optional) | string \| null | The table, or the table of `column` / `measure`. |
+| `column` (optional) | string \| null | A column of `table`. |
+| `measure` (optional) | string \| null | A measure of `table`. |
+| `newName` | string | The new name. |
+| `dryRun` (optional) | boolean | Only report what the rename would rewrite; the document is unchanged. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `objectId` | integer | The renamed object's id. |
+| `kind` | string | `table`, `column` or `measure`. |
+| `table` | string | The renamed table's old name, or the table of the column or measure. |
+| `oldName` | string |  |
+| `newName` | string |  |
+| `dryRun` | boolean |  |
+| `rewrites` | DaxRewriteOut[] | DAX expressions rewritten (or, with `dryRun`, to be rewritten). |
+| `warnings` | string[] | References left as they are that may need a manual fix (M queries, expressions that do not parse, ambiguous unqualified names). |
+
+Examples:
+
+- Rename a column: `{"docId":"d1","table":"Orders","column":"Line Amount","newName":"Line Total"}`
+- Preview a table rename: `{"docId":"d1","table":"Orders","newName":"Sales Orders","dryRun":true}`
+
+### `model.object.setDescription`
+
+**Set an object's description.** Sets or clears the description of a table, column, measure or other model object as one undoable edit.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `objectId` (optional) | integer \| null | The object's id (instead of `table`): any model object with a description (tables, columns, measures, hierarchies, roles, …). |
+| `table` (optional) | string \| null | The table, or the table of `column` / `measure`. |
+| `column` (optional) | string \| null | A column of `table`. |
+| `measure` (optional) | string \| null | A measure of `table`. |
+| `text` (optional) | string \| null | The description; absent, `null` or empty clears it. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+
+Examples:
+
+- Describe a measure: `{"docId":"d1","table":"Orders","measure":"Total Sales","text":"Sum of line amounts"}`
+- Clear a description: `{"docId":"d1","objectId":42}`
+
+### `model.measure.create`
+
+**Create a measure.** Adds a DAX measure to a table as one undoable edit and returns its id.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `table` | string | The measure's home table. |
+| `name` | string | The measure name: unique across the model and not a column of `table`. |
+| `expression` | string | The DAX expression. |
+| `formatString` (optional) | string \| null |  |
+| `displayFolder` (optional) | string \| null |  |
+| `description` (optional) | string \| null |  |
+| `isHidden` (optional) | boolean |  |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `measureId` | integer |  |
+| `table` | string | The measure's table. |
+| `name` | string | The measure's name. |
+| `dependents`? | DependentOut[] \| null | `model.measure.delete` only: what refers to the measure (and breaks once it is deleted). |
+| `dryRun`? | boolean \| null | `model.measure.delete` only: whether this was a dry run. |
+| `warnings` | string[] | Problems that do not stop the edit (DAX that does not parse, references that cannot be confirmed). |
+
+Examples:
+
+- Add a measure: `{"docId":"d1","table":"Orders","name":"Order Count","expression":"COUNTROWS(Orders)","formatString":"#,0"}`
+
+### `model.measure.update`
+
+**Update a measure.** Changes a measure's expression, format string, display folder, description or visibility as one undoable edit.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `measureId` (optional) | integer \| null | The measure's id (instead of `table` and `measure`). |
+| `table` (optional) | string \| null | The measure's table. |
+| `measure` (optional) | string \| null | The measure's name. |
+| `expression` (optional) | string \| null | The new DAX expression. |
+| `formatString` (optional) | string \| null | The static format string; empty clears it. |
+| `displayFolder` (optional) | string \| null | The display folder; empty clears it. |
+| `description` (optional) | string \| null | The description; empty clears it. |
+| `isHidden` (optional) | boolean \| null |  |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `measureId` | integer |  |
+| `table` | string | The measure's table. |
+| `name` | string | The measure's name. |
+| `dependents`? | DependentOut[] \| null | `model.measure.delete` only: what refers to the measure (and breaks once it is deleted). |
+| `dryRun`? | boolean \| null | `model.measure.delete` only: whether this was a dry run. |
+| `warnings` | string[] | Problems that do not stop the edit (DAX that does not parse, references that cannot be confirmed). |
+
+Examples:
+
+- New expression and format: `{"docId":"d1","table":"Orders","measure":"Total Sales","expression":"SUM(Orders[Line Amount])","formatString":"$#,0"}`
+- Hide a measure: `{"docId":"d1","measureId":42,"isHidden":true}`
+
+### `model.measure.delete`
+
+**Delete a measure.** Deletes a measure as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `measureId` (optional) | integer \| null | The measure's id (instead of `table` and `measure`). |
+| `table` (optional) | string \| null | The measure's table. |
+| `measure` (optional) | string \| null | The measure's name. |
+| `dryRun` (optional) | boolean | Only list what refers to the measure; the document is unchanged. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `measureId` | integer |  |
+| `table` | string | The measure's table. |
+| `name` | string | The measure's name. |
+| `dependents`? | DependentOut[] \| null | `model.measure.delete` only: what refers to the measure (and breaks once it is deleted). |
+| `dryRun`? | boolean \| null | `model.measure.delete` only: whether this was a dry run. |
+| `warnings` | string[] | Problems that do not stop the edit (DAX that does not parse, references that cannot be confirmed). |
+
+Examples:
+
+- What uses a measure: `{"docId":"d1","table":"Orders","measure":"Total Sales","dryRun":true}`
+- Delete by id: `{"docId":"d1","measureId":42}`
+
+### `report.visual.move`
+
+**Move a visual.** Moves a visual on its page as one undoable edit (visual groups not yet).
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` | string | The visual's name (see `report.visuals`). |
+| `x` (optional) | number \| null | New left edge (page units, as in `report.visuals`); unchanged when absent. |
+| `y` (optional) | number \| null | New top edge; unchanged when absent. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `visual` | string | The visual's name. |
+| `position` | PositionOut | The visual's position after the edit (page units, as in `report.visuals`). |
+
+Examples:
+
+- Move a visual: `{"docId":"d1","page":"1","visual":"f7a9c9413fef68532313","x":40,"y":120}`
+
+### `report.visual.resize`
+
+**Resize a visual.** Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet).
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` | string | The visual's name (see `report.visuals`). |
+| `width` (optional) | number \| null | New width (page units, > 0); unchanged when absent. |
+| `height` (optional) | number \| null | New height (> 0); unchanged when absent. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `visual` | string | The visual's name. |
+| `position` | PositionOut | The visual's position after the edit (page units, as in `report.visuals`). |
+
+Examples:
+
+- Resize a visual: `{"docId":"d1","page":"1","visual":"f7a9c9413fef68532313","width":320,"height":180}`
+
+### `doc.applyEdits`
+
+**Apply document edits.** Applies a group of document edits atomically as one undoable history step.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `edits` | EditOperation[] | Edits applied atomically and undone as one history step. Names are resolved against the document before the first edit. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+
+Examples:
+
+- Update a measure and its description: `{"docId":"d1","edits":[{"type":"setMeasureExpression","measureId":42,"expression":"SUM(Orders[Amount])"},{"type":"setDescription","objectId":42,"text":"Total amount"}]}`
+
+### `doc.undo`
+
+**Undo document edit.** Undoes the latest document edit.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+
+Examples:
+
+- Undo the latest edit: `{"docId":"d1"}`
+
+### `doc.redo`
+
+**Redo document edit.** Reapplies the latest undone document edit.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+
+Examples:
+
+- Redo the latest undone edit: `{"docId":"d1"}`
+
+### `doc.history`
+
+**Document edit history.** Returns the document revision, dirty state and undo/redo availability.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `canUndo` | boolean |  |
+| `canRedo` | boolean |  |
+| `undoLabel`? | string \| null |  |
+| `redoLabel`? | string \| null |  |
+
+Examples:
+
+- Current edit history: `{"docId":"d1"}`

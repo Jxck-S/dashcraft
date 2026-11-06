@@ -3,6 +3,7 @@ use pretty_assertions::assert_eq;
 use super::*;
 use crate::query::{Condition, FieldExpr};
 use crate::report::Position;
+use crate::semantic::Measure;
 use crate::test_support::sample_document;
 
 fn table_id(doc: &Document, name: &str) -> ObjectId {
@@ -332,11 +333,13 @@ fn invalid_renames_fail_without_changing_the_document() {
             |e| matches!(e, CommandError::NotFound(_)),
         ),
     ];
+    let revision = history.revision();
     for (command, expected) in cases {
         let label = command.label();
         let err = history.execute_boxed(&mut doc, command).unwrap_err();
         assert!(expected(&err), "{label}: unexpected error {err}");
         assert_eq!(doc, original);
+        assert_eq!(history.revision(), revision);
     }
     assert!(!history.can_undo());
     assert!(!history.is_dirty());
@@ -442,11 +445,20 @@ fn history_tracks_dirty_state_and_labels() {
     assert_eq!(history.undo_label(), Some("Move visual"));
     history.mark_saved();
     assert!(!history.is_dirty());
+    let saved_revision = history.revision();
 
     history.undo(&mut doc).unwrap();
+    assert!(history.revision() > saved_revision);
     assert!(history.is_dirty());
     assert_eq!(history.redo_label(), Some("Move visual"));
+    let undo_revision = history.revision();
     history.redo(&mut doc).unwrap();
+    assert!(history.revision() > undo_revision);
+    assert!(!history.is_dirty());
+
+    history.execute(&mut doc, move_to(2.0)).unwrap();
+    assert!(history.is_dirty());
+    history.undo(&mut doc).unwrap();
     assert!(!history.is_dirty());
 
     // Branching after an undo drops the redo stack; the saved state is gone.
@@ -462,6 +474,102 @@ fn history_tracks_dirty_state_and_labels() {
     assert!(!history.can_undo());
     history.mark_saved();
     assert!(!history.is_dirty());
+}
+
+#[test]
+fn history_no_op_does_not_advance_revision_or_clear_redo() {
+    let mut doc = sample_document();
+    let slicer = doc.reports[0].pages[0].visuals[0].id;
+    let original_position = doc.reports[0].pages[0].visuals[0].position.clone();
+    let move_to = |position| SetVisualPosition {
+        visual: slicer,
+        position,
+    };
+    let mut history = History::new();
+
+    let result = history
+        .execute_with_status(
+            &mut doc,
+            move_to(Position {
+                x: 10.0,
+                ..original_position.clone()
+            }),
+        )
+        .unwrap();
+    assert!(result.changed);
+    assert_eq!(result.revision, history.revision());
+    let changed_revision = history.revision();
+    let result = history.undo_with_status(&mut doc).unwrap();
+    assert!(result.changed);
+    assert_eq!(result.revision, history.revision());
+    let undone_revision = history.revision();
+    assert!(undone_revision > changed_revision);
+
+    let result = history
+        .execute_with_status(&mut doc, move_to(original_position))
+        .unwrap();
+    assert!(!result.changed);
+    assert!(result.events.is_empty());
+    assert_eq!(result.revision, undone_revision);
+    assert_eq!(history.revision(), undone_revision);
+    assert!(history.can_redo());
+}
+
+#[test]
+fn history_checks_can_refuse_edits_undo_and_redo() {
+    let mut doc = sample_document();
+    let slicer = doc.reports[0].pages[0].visuals[0].id;
+    let move_to = |x: f64| -> Box<dyn Command> {
+        Box::new(SetVisualPosition {
+            visual: slicer,
+            position: Position {
+                x,
+                ..Position::default()
+            },
+        })
+    };
+    let refuse =
+        |_: &Document| -> Result<(), CommandError> { Err(CommandError::Rejected("no".to_owned())) };
+    let original = doc.clone();
+    let mut history = History::new();
+
+    let err = history
+        .execute_boxed_checked(&mut doc, move_to(5.0), refuse)
+        .unwrap_err();
+    assert_eq!(err, CommandError::Rejected("no".to_owned()));
+    assert_eq!(doc, original);
+    assert_eq!(history.revision(), 0);
+    assert!(!history.can_undo());
+
+    let (result, seen) = history
+        .execute_boxed_checked(&mut doc, move_to(5.0), |next| {
+            Ok(next.reports[0].pages[0].visuals[0].position.x)
+        })
+        .unwrap();
+    assert!(result.changed);
+    assert_eq!(seen, Some(5.0));
+    let edited = doc.clone();
+
+    assert!(history.undo_checked(&mut doc, refuse).is_err());
+    assert_eq!(doc, edited);
+    assert!(history.can_undo());
+    assert_eq!(history.revision(), 1);
+    history.undo_checked(&mut doc, |_| Ok(())).unwrap();
+    assert_eq!(doc, original);
+
+    assert!(history.redo_checked(&mut doc, refuse).is_err());
+    assert_eq!(doc, original);
+    assert!(history.can_redo());
+    let (result, _) = history.redo_checked(&mut doc, |_| Ok(())).unwrap();
+    assert!(result.changed);
+    assert_eq!(doc, edited);
+
+    // A no-op skips the check.
+    let (result, seen) = history
+        .execute_boxed_checked(&mut doc, move_to(5.0), refuse)
+        .unwrap();
+    assert!(!result.changed);
+    assert_eq!(seen, None);
 }
 
 #[test]
@@ -514,6 +622,7 @@ fn command_group_is_atomic() {
         Err(CommandError::NameConflict { .. })
     ));
     assert_eq!(doc, original);
+    assert_eq!(history.revision(), 0);
 
     let group = CommandGroup::new("Edit and rename")
         .with(SetMeasureExpression {
@@ -533,6 +642,186 @@ fn command_group_is_atomic() {
     assert_eq!(doc, original);
     history.redo(&mut doc).unwrap();
     assert_eq!(doc, after);
+}
+
+/// Documents equal except for the ID generator, which undo never rewinds.
+fn assert_same_content(actual: &Document, expected: &Document) {
+    let mut actual = actual.clone();
+    actual.ids = expected.ids.clone();
+    assert_eq!(actual, *expected);
+}
+
+#[test]
+fn create_measure_round_trips_and_never_reuses_ids() {
+    let mut doc = sample_document();
+    let original = doc.clone();
+    let orders = table_id(&doc, "Orders");
+    let mut measure = Measure::new("Order Count", "COUNTROWS(Orders)");
+    measure.format_string = Some("#,0".into());
+    measure.id = ObjectId(424_242); // ignored: creates always get a fresh ID
+    let id = CreateMeasure::created_id(&doc);
+    let mut history = History::new();
+    let events = history
+        .execute(
+            &mut doc,
+            CreateMeasure {
+                table: orders,
+                measure,
+                index: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(events, [ChangeEvent::ObjectAdded { id }]);
+    assert_eq!(history.undo_label(), Some("Create measure 'Order Count'"));
+    let created = doc
+        .model
+        .as_ref()
+        .unwrap()
+        .measure("Orders", "Order Count")
+        .unwrap();
+    assert_eq!(
+        (created.id, created.format_string.as_deref()),
+        (id, Some("#,0"))
+    );
+    assert!(matches!(doc.locate(id), Some(ObjectPath::Measure { .. })));
+    let after = doc.clone();
+
+    let events = history.undo(&mut doc).unwrap();
+    assert_eq!(events, [ChangeEvent::ObjectRemoved { id }]);
+    assert_same_content(&doc, &original);
+    assert!(doc.locate(id).is_none());
+    assert!(!history.is_dirty());
+    history.redo(&mut doc).unwrap();
+    assert_eq!(doc, after, "redo restores the measure with the same ID");
+
+    history.undo(&mut doc).unwrap();
+    let stores = table_id(&doc, "Stores");
+    let next = CreateMeasure::created_id(&doc);
+    assert!(next > id, "IDs are never reused after undo");
+    history
+        .execute(
+            &mut doc,
+            CreateMeasure {
+                table: stores,
+                measure: Measure::new("First", "1"),
+                index: Some(0),
+            },
+        )
+        .unwrap();
+    let measures = &doc.model.as_ref().unwrap().tables[0].measures;
+    assert_eq!((measures[0].name.as_str(), measures[0].id), ("First", next));
+    assert!(!history.can_redo());
+}
+
+#[test]
+fn invalid_creates_fail_without_changing_the_document() {
+    let mut doc = sample_document();
+    let original = doc.clone();
+    let stores = table_id(&doc, "Stores");
+    let orders = table_id(&doc, "Orders");
+    let create = |table, name: &str| CreateMeasure {
+        table,
+        measure: Measure::new(name, "1"),
+        index: None,
+    };
+    let mut history = History::new();
+    // Measure names are unique across the model, case-insensitively.
+    assert!(matches!(
+        history.execute(&mut doc, create(orders, "store count")),
+        Err(CommandError::NameConflict { .. })
+    ));
+    // ... and differ from the table's columns.
+    assert!(matches!(
+        history.execute(&mut doc, create(stores, "Region")),
+        Err(CommandError::NameConflict { .. })
+    ));
+    assert_eq!(
+        history.execute(&mut doc, create(stores, " ")).unwrap_err(),
+        CommandError::InvalidName(" ".into())
+    );
+    let measure = measure_id(&doc, "Stores", "Store Count");
+    assert!(matches!(
+        history.execute(&mut doc, create(measure, "X")),
+        Err(CommandError::WrongKind { .. })
+    ));
+    assert_eq!(doc, original);
+    assert_eq!(history.revision(), 0);
+}
+
+#[test]
+fn delete_measure_round_trips_in_place() {
+    let mut doc = sample_document();
+    let count = measure_id(&doc, "Stores", "Store Count");
+    assert_round_trip(&mut doc, DeleteMeasure { measure: count }, |doc, events| {
+        let model = doc.model.as_ref().unwrap();
+        assert!(model.measure("Stores", "Store Count").is_none());
+        assert_eq!(model.tables[0].measures[0].name, "Active Stores");
+        assert!(doc.locate(count).is_none());
+        assert_eq!(events, [ChangeEvent::ObjectRemoved { id: count }]);
+    });
+    assert_eq!(doc.model.as_ref().unwrap().tables[0].measures[0].id, count);
+    let stores = table_id(&doc, "Stores");
+    assert!(matches!(
+        DeleteMeasure { measure: stores }.apply(&mut doc),
+        Err(CommandError::WrongKind { .. })
+    ));
+}
+
+#[test]
+fn set_measure_properties_patches_only_given_fields() {
+    let mut doc = sample_document();
+    let count = measure_id(&doc, "Stores", "Store Count");
+    assert_round_trip(
+        &mut doc,
+        SetMeasureProperties {
+            measure: count,
+            expression: Some("COUNTROWS(Stores)".into()),
+            format_string: Some(None),
+            display_folder: Some(Some("KPIs".into())),
+            is_hidden: Some(true),
+            ..SetMeasureProperties::default()
+        },
+        |doc, events| {
+            let m = doc.model.as_ref().unwrap().measure("Stores", "Store Count");
+            let m = m.unwrap();
+            assert_eq!(m.expression, "COUNTROWS(Stores)");
+            assert_eq!(m.format_string, None);
+            assert_eq!(m.display_folder.as_deref(), Some("KPIs"));
+            assert!(m.is_hidden);
+            assert_eq!(m.description.as_deref(), Some("Distinct count of stores."));
+            assert_eq!(events, [ChangeEvent::ObjectChanged { id: count }]);
+        },
+    );
+
+    let mut history = History::new();
+    let unchanged = SetMeasureProperties {
+        measure: count,
+        format_string: Some(Some("0".into())),
+        ..SetMeasureProperties::default()
+    };
+    assert!(
+        !history
+            .execute_with_status(&mut doc, unchanged)
+            .unwrap()
+            .changed
+    );
+
+    let active = measure_id(&doc, "Stores", "Active Stores");
+    let measures = &mut doc.model.as_mut().unwrap().tables[0].measures;
+    measures[1].extra.insert(
+        "formatStringDefinition".into(),
+        crate::props::PropValue::Expression("\"0.0\"".into()),
+    );
+    let original = doc.clone();
+    let err = SetMeasureProperties {
+        measure: active,
+        format_string: Some(Some("0".into())),
+        ..SetMeasureProperties::default()
+    }
+    .apply(&mut doc)
+    .unwrap_err();
+    assert!(matches!(err, CommandError::Rejected(m) if m.contains("dynamic format string")));
+    assert_eq!(doc, original);
 }
 
 #[test]

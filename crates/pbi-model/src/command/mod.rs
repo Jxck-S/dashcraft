@@ -6,7 +6,9 @@
 //!   document untouched.
 //! - The inverse must restore the *exact* prior state (tests compare whole
 //!   documents with `==`). Structural edits that touch many objects can use
-//!   [`ReplaceObjects`], whose inverse swaps the previous values back.
+//!   [`ReplaceObjects`], whose inverse swaps the previous values back. The one
+//!   exception is the ID generator (`Document::ids`): undoing a create never
+//!   rewinds it, so an [`ObjectId`] is never reused for another object.
 //! - Address objects by [`ObjectId`], never by index or name, so commands
 //!   stay valid across renames and reorders.
 //! - Report what changed as [`ChangeEvent`]s so a UI can refresh.
@@ -15,6 +17,7 @@ mod edit;
 mod history;
 mod rename;
 mod snapshot;
+mod structure;
 
 use std::fmt;
 
@@ -24,10 +27,11 @@ use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
 use crate::semantic::Model;
 
-pub use edit::{SetDescription, SetMeasureExpression, SetVisualPosition};
-pub use history::History;
+pub use edit::{SetDescription, SetMeasureExpression, SetMeasureProperties, SetVisualPosition};
+pub use history::{History, HistoryResult};
 pub use rename::{RenameColumn, RenameMeasure, RenameTable};
 pub use snapshot::{ReplaceObjects, Snapshot};
+pub use structure::{CreateMeasure, DeleteMeasure};
 
 /// A reversible edit.
 pub trait Command: fmt::Debug + Send {
@@ -113,6 +117,9 @@ pub enum CommandError {
     NothingToUndo,
     #[error("nothing to redo")]
     NothingToRedo,
+    /// A check outside the document (e.g. the loaded data) refused the edit.
+    #[error("{0}")]
+    Rejected(String),
 }
 
 /// Several commands applied as one undo step. If one fails, the ones

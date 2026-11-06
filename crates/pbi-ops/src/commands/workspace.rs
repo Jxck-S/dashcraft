@@ -11,7 +11,7 @@ use pbi_session::{Clock, FixedClock, RefreshSource, Session, SessionOptions};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::{BASE, DocParams, doc};
+use super::{BASE, doc};
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
 use crate::detect_model::{DetectOut, detect_out};
@@ -316,6 +316,16 @@ impl Command for DocOpen {
 pub struct DocClose;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DocCloseParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Explicitly discard unsaved in-memory edits.
+    #[serde(default)]
+    pub discard_changes: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DocCloseOut {
     /// The document id.
@@ -324,14 +334,14 @@ pub struct DocCloseOut {
 }
 
 impl Command for DocClose {
-    type Params = DocParams;
+    type Params = DocCloseParams;
     type Output = DocCloseOut;
 
     fn meta() -> CommandMeta {
         CommandMeta {
             id: "doc.close",
             title: "Close a document",
-            summary: "Closes an open document and frees its data (running canvas renders are cancelled).",
+            summary: "Closes an open document and frees its data; unsaved edits require explicit discardChanges.",
             category: Category::Workspace,
             mutates_document: true,
             examples: &[("Close d1", r#"{"docId": "d1"}"#)],
@@ -340,7 +350,12 @@ impl Command for DocClose {
     }
 
     async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
-        doc(ws, &p.doc_id)?;
+        let entry = doc(ws, &p.doc_id)?;
+        if entry.session().is_document_dirty() && !p.discard_changes {
+            return Err(OpError::unsupported(
+                "document has unsaved edits; pass \"discardChanges\": true to close and discard them",
+            ));
+        }
         let closed = ws.remove(&p.doc_id).is_some();
         Ok(DocCloseOut {
             doc_id: p.doc_id,

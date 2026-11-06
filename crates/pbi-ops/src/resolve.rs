@@ -69,11 +69,12 @@ pub fn report_index(session: &Session, name: Option<&str>) -> Result<usize, OpEr
 ///
 /// # Errors
 /// `notFound`.
-pub fn report_at(session: &Session, index: usize) -> Result<&Report, OpError> {
+pub fn report_at(session: &Session, index: usize) -> Result<Report, OpError> {
     session
         .document()
         .reports
         .get(index)
+        .cloned()
         .ok_or_else(|| OpError::not_found(format!("no report #{}", index + 1)))
 }
 

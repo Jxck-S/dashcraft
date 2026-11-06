@@ -372,7 +372,8 @@ async fn render(
     let scale = scale_of(req.format, req.scale)?;
     let session = entry.session().clone();
     let ri = resolve::report_index(&session, req.report.as_deref())?;
-    let pi = resolve::page_index(resolve::report_at(&session, ri)?, req.page.as_deref())?;
+    let report = resolve::report_at(&session, ri)?;
+    let pi = resolve::page_index(&report, req.page.as_deref())?;
     let (state, slicers) = {
         let report = resolve::report_at(&session, ri)?;
         let page = report
@@ -411,7 +412,7 @@ async fn render(
             },
             ..PageRenderOptions::default()
         };
-        let mut rendered = render_report_page(&env, report, page, &theme, &state, &opts);
+        let mut rendered = render_report_page(&env, &report, page, &theme, &state, &opts);
         if cancel.is_cancelled() {
             return Err(OpError::cancelled());
         }

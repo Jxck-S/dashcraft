@@ -4,27 +4,51 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::path::Path;
-use std::sync::{Arc, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Arc, Mutex, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use arrow::record_batch::RecordBatch;
 use pbi_core::{ModelSource, OpenedDocument};
 use pbi_engine::{Engine, EngineSnapshot};
 use pbi_m::{BlobResolver, Clock, MapBlobResolver, NoBlobResolver, SystemClock};
 use pbi_model::names::name_key;
-use pbi_model::{Diagnostic, Document, Model, TableKind};
+use pbi_model::{
+    Command, CommandError, Diagnostic, Document, History, HistoryResult, Model, ObjectId, TableKind,
+};
 use serde::{Deserialize, Serialize};
 
-use crate::derived::{Applied, DerivedEntry};
+use crate::derived::{Applied, DerivedEntry, synthetic_column};
+use crate::edit::{
+    ModelRenames, RenameObject, RenamePreview, preview_rename, rename_results, structure_changed,
+};
 use crate::error::SessionError;
 use crate::options::{SessionLimits, SessionOptions};
 use crate::report::TableRefresh;
 use crate::security::{ActiveView, ViewAs};
+
+/// An edit ready to publish (see [`Session::execute_document_command`]).
+struct PreparedEdit {
+    /// `None` when the semantic model did not change (report-only edits
+    /// keep the engine, the session model and the query caches).
+    model: Option<ModelEdit>,
+}
+
+/// The session state that follows a changed semantic model.
+struct ModelEdit {
+    /// The re-synced engine, if tables, columns, relationships or roles
+    /// changed.
+    engine: Option<Engine>,
+    /// The new session model (document model plus active derived columns).
+    model: Arc<Model>,
+    derived: Vec<DerivedEntry>,
+    renames: ModelRenames,
+}
 
 /// Mutable state: the published engine, the session model, the derived
 /// columns and the last result per table.
 #[derive(Debug)]
 struct State {
     engine: Engine,
+    document_revision: u64,
     /// The document model plus the synthetic entries of the active derived
     /// columns.
     model: Arc<Model>,
@@ -44,15 +68,19 @@ impl State {
 }
 
 struct Inner {
-    opened: OpenedDocument,
-    /// The document model (never contains derived columns).
-    base_model: Arc<Model>,
+    opened: RwLock<Arc<OpenedState>>,
+    history: Mutex<History>,
     resolver: Arc<dyn BlobResolver>,
     blob_map: bool,
     clock: Arc<dyn Clock>,
     limits: SessionLimits,
     state: RwLock<State>,
     refresh_lock: tokio::sync::Mutex<()>,
+}
+
+struct OpenedState {
+    opened: Arc<OpenedDocument>,
+    document: Arc<Document>,
 }
 
 /// An opened Power BI document with its data engine: the façade used by
@@ -69,9 +97,9 @@ pub struct Session {
 impl fmt::Debug for Session {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Session")
-            .field("source", &self.inner.opened.document.source.path)
-            .field("model", &self.inner.base_model.name)
-            .field("tables", &self.inner.base_model.tables.len())
+            .field("source", &self.opened().document.source.path)
+            .field("model", &self.base_model().name)
+            .field("tables", &self.base_model().tables.len())
             .field("blob_map", &self.inner.blob_map)
             .finish_non_exhaustive()
     }
@@ -97,6 +125,18 @@ pub struct TableInfo {
     /// Result of the last refresh or manual load of this table.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_refresh: Option<TableRefresh>,
+}
+
+/// One consistent snapshot of the document's revision and edit history.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DocumentHistory {
+    pub revision: u64,
+    pub dirty: bool,
+    pub can_undo: bool,
+    pub can_redo: bool,
+    pub undo_label: Option<String>,
+    pub redo_label: Option<String>,
 }
 
 impl Session {
@@ -137,16 +177,21 @@ impl Session {
             };
         let model = Arc::new(opened.document.model.clone().unwrap_or_default());
         let engine = Engine::new(&model);
+        let document = Arc::new(opened.document.clone());
         Ok(Session {
             inner: Arc::new(Inner {
-                opened,
-                base_model: Arc::clone(&model),
+                opened: RwLock::new(Arc::new(OpenedState {
+                    opened: Arc::new(opened),
+                    document,
+                })),
+                history: Mutex::new(History::new()),
                 resolver,
                 blob_map,
                 clock: options.clock.unwrap_or_else(|| Arc::new(SystemClock)),
                 limits: options.limits,
                 state: RwLock::new(State {
                     engine,
+                    document_revision: 0,
                     model,
                     derived: Vec::new(),
                     tables: HashMap::new(),
@@ -159,14 +204,28 @@ impl Session {
 
     /// The opened document (model, reports, diagnostics, source info).
     #[must_use]
-    pub fn document(&self) -> &Document {
-        &self.inner.opened.document
+    pub fn document(&self) -> Arc<Document> {
+        Arc::clone(
+            &self
+                .inner
+                .opened
+                .read()
+                .unwrap_or_else(PoisonError::into_inner)
+                .document,
+        )
     }
 
     /// Everything the reader returned (detection, container, sources).
     #[must_use]
-    pub fn opened(&self) -> &OpenedDocument {
-        &self.inner.opened
+    pub fn opened(&self) -> Arc<OpenedDocument> {
+        Arc::clone(
+            &self
+                .inner
+                .opened
+                .read()
+                .unwrap_or_else(PoisonError::into_inner)
+                .opened,
+        )
     }
 
     /// The session's semantic model (empty if the document has none): the
@@ -184,23 +243,20 @@ impl Session {
     /// without session derived columns.
     #[must_use]
     pub fn base_model(&self) -> Arc<Model> {
-        Arc::clone(&self.inner.base_model)
+        Arc::new(self.opened().document.model.clone().unwrap_or_default())
     }
 
     /// `true` if the document has a semantic model.
     #[must_use]
     pub fn has_model(&self) -> bool {
-        self.inner.opened.document.model.is_some()
+        self.opened().document.model.is_some()
     }
 
     /// `true` if the data comes from embedded VertiPaq storage (PBIX, ABF)
     /// rather than M partitions.
     #[must_use]
     pub fn is_pbix(&self) -> bool {
-        matches!(
-            self.inner.opened.model_source,
-            Some(ModelSource::Abf { .. })
-        )
+        matches!(self.opened().model_source, Some(ModelSource::Abf { .. }))
     }
 
     /// `true` if a blob map or custom resolver is configured.
@@ -212,8 +268,7 @@ impl Session {
     /// The model culture (`en-US` when unset); used to format values.
     #[must_use]
     pub fn culture(&self) -> String {
-        self.inner
-            .base_model
+        self.base_model()
             .culture
             .clone()
             .filter(|c| !c.trim().is_empty())
@@ -244,10 +299,10 @@ impl Session {
     /// Every model table with its loaded row count and last refresh result.
     #[must_use]
     pub fn tables(&self) -> Vec<TableInfo> {
+        let base_model = self.base_model();
         let state = self.read();
         let snapshot = state.query_engine().snapshot();
-        self.inner
-            .base_model
+        base_model
             .tables
             .iter()
             .map(|t| {
@@ -275,7 +330,7 @@ impl Session {
     /// a failed "View as").
     #[must_use]
     pub fn diagnostics(&self) -> Vec<Diagnostic> {
-        let mut out = self.inner.opened.document.diagnostics.clone();
+        let mut out = self.opened().document.diagnostics.clone();
         let state = self.read();
         out.extend(state.engine.snapshot().diagnostics());
         out.extend(state.view.as_ref().and_then(ActiveView::diagnostic));
@@ -298,6 +353,279 @@ impl Session {
             .unwrap_or_else(PoisonError::into_inner)
     }
 
+    fn write_opened(&self) -> std::sync::RwLockWriteGuard<'_, Arc<OpenedState>> {
+        self.inner
+            .opened
+            .write()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Applies a document command transactionally to the current revision.
+    ///
+    /// The edit is prepared on copies first (renamed tables and columns keep
+    /// their loaded data, derived columns follow, the engine re-syncs only
+    /// when tables, columns, relationships or roles changed) and published
+    /// only if that succeeds.
+    ///
+    /// # Errors
+    /// The command's validation error, or
+    /// [`CommandError::Rejected`](pbi_model::CommandError::Rejected) when the
+    /// loaded data cannot follow the edit (e.g. a rename onto the name of a
+    /// derived column); the open document, data, history and revision are
+    /// then unchanged.
+    pub async fn execute_document_command(
+        &self,
+        command: impl Command + 'static,
+    ) -> Result<HistoryResult, CommandError> {
+        let _refresh = self.inner.refresh_lock.lock().await;
+        self.edit_locked(|history, document, check| {
+            history.execute_boxed_checked(document, Box::new(command), check)
+        })
+    }
+
+    /// Renames a table, column or measure and rewrites the DAX that refers
+    /// to it ([`RenameObject`]) as one undo step. Also returns what was
+    /// rewritten and what was left (see [`preview_rename`]).
+    ///
+    /// # Errors
+    /// See [`execute_document_command`](Self::execute_document_command).
+    pub async fn rename_object(
+        &self,
+        object: ObjectId,
+        new_name: &str,
+    ) -> Result<(HistoryResult, RenamePreview), CommandError> {
+        let _refresh = self.inner.refresh_lock.lock().await;
+        let preview = preview_rename(&self.document(), object, new_name)?;
+        let command = RenameObject {
+            object,
+            new_name: new_name.to_owned(),
+        };
+        let result = self.edit_locked(|history, document, check| {
+            history.execute_boxed_checked(document, Box::new(command), check)
+        })?;
+        Ok((result, preview))
+    }
+
+    /// Undoes the most recent document edit.
+    ///
+    /// # Errors
+    /// [`CommandError::NothingToUndo`](pbi_model::CommandError::NothingToUndo),
+    /// or see [`execute_document_command`](Self::execute_document_command).
+    pub async fn undo_document_command(&self) -> Result<HistoryResult, CommandError> {
+        let _refresh = self.inner.refresh_lock.lock().await;
+        self.edit_locked(|history, document, check| history.undo_checked(document, check))
+    }
+
+    /// Redoes the most recently undone document edit.
+    ///
+    /// # Errors
+    /// [`CommandError::NothingToRedo`](pbi_model::CommandError::NothingToRedo),
+    /// or see [`execute_document_command`](Self::execute_document_command).
+    pub async fn redo_document_command(&self) -> Result<HistoryResult, CommandError> {
+        let _refresh = self.inner.refresh_lock.lock().await;
+        self.edit_locked(|history, document, check| history.redo_checked(document, check))
+    }
+
+    /// Runs one history step (with the refresh lock held) and publishes its
+    /// result: `step` gets the history, a copy of the current document and
+    /// the check that prepares the publication.
+    fn edit_locked(
+        &self,
+        step: impl FnOnce(
+            &mut History,
+            &mut Document,
+            &dyn Fn(&Document) -> Result<PreparedEdit, CommandError>,
+        ) -> Result<(HistoryResult, Option<PreparedEdit>), CommandError>,
+    ) -> Result<HistoryResult, CommandError> {
+        let (result, rebuild_view) = {
+            let mut opened = self.write_opened();
+            let current = Arc::clone(&opened.document);
+            let mut document = current.as_ref().clone();
+            let mut history = self
+                .inner
+                .history
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            let check = |next: &Document| self.prepare_edit(&current, next);
+            let (result, prepared) = step(&mut history, &mut document, &check)?;
+            let rebuild_view =
+                prepared.map(|p| self.publish_edit(&mut opened, document, result.revision, p));
+            (result, rebuild_view)
+        };
+        if let Some(force) = rebuild_view {
+            self.rebuild_view(force);
+        }
+        Ok(result)
+    }
+
+    /// Prepares publishing the edited document `next` in place of
+    /// `current`, without changing anything.
+    fn prepare_edit(
+        &self,
+        current: &Document,
+        next: &Document,
+    ) -> Result<PreparedEdit, CommandError> {
+        let empty = Model::default();
+        let old = current.model.as_ref().unwrap_or(&empty);
+        let new = next.model.as_ref().unwrap_or(&empty);
+        if old == new {
+            return Ok(PreparedEdit { model: None });
+        }
+        let renames = ModelRenames::between(old, new);
+        let state = self.read();
+        renames.check_derived(&state.derived)?;
+        let engine = if structure_changed(old, new) {
+            let mut engine = state.engine.clone();
+            engine
+                .sync_model_with_renames(new, &renames.storage())
+                .map_err(|e| {
+                    CommandError::Rejected(format!("the loaded data cannot follow this edit: {e}"))
+                })?;
+            Some(engine)
+        } else {
+            None
+        };
+        let mut derived = state.derived.clone();
+        drop(state);
+        renames.apply_to_derived(&mut derived, new);
+        let mut model = new.clone();
+        for entry in derived.iter().filter(|e| e.info.active) {
+            if let Some(t) = model.table_mut(&entry.info.table) {
+                t.columns.push(synthetic_column(&entry.info, &entry.column));
+            }
+        }
+        Ok(PreparedEdit {
+            model: Some(ModelEdit {
+                engine,
+                model: Arc::new(model),
+                derived,
+                renames,
+            }),
+        })
+    }
+
+    /// Publishes a prepared edit. Returns whether the active view must be
+    /// rebuilt even if the engine did not change (the model did: role
+    /// filters may use any of it).
+    fn publish_edit(
+        &self,
+        opened: &mut Arc<OpenedState>,
+        document: Document,
+        revision: u64,
+        prepared: PreparedEdit,
+    ) -> bool {
+        let mut next_opened = (*opened.opened).clone();
+        next_opened.document = document;
+        let next_opened = Arc::new(next_opened);
+        let document = Arc::new(next_opened.document.clone());
+        let mut state = self.write();
+        let model_changed = prepared.model.is_some();
+        if let Some(edit) = prepared.model {
+            if let Some(engine) = edit.engine {
+                state.engine = engine;
+            }
+            state.model = edit.model;
+            state.derived = edit.derived;
+            rename_results(&mut state.tables, &edit.renames);
+        }
+        state.document_revision = revision;
+        *opened = Arc::new(OpenedState {
+            opened: next_opened,
+            document,
+        });
+        model_changed
+    }
+
+    /// Current semantic revision.
+    #[must_use]
+    pub fn document_revision(&self) -> u64 {
+        self.inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .revision()
+    }
+
+    /// Returns revision, dirty state and undo/redo availability under one
+    /// history lock.
+    #[must_use]
+    pub fn document_history(&self) -> DocumentHistory {
+        let history = self
+            .inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        DocumentHistory {
+            revision: history.revision(),
+            dirty: history.is_dirty(),
+            can_undo: history.can_undo(),
+            can_redo: history.can_redo(),
+            undo_label: history.undo_label().map(str::to_owned),
+            redo_label: history.redo_label().map(str::to_owned),
+        }
+    }
+
+    /// Whether a document command can currently be undone.
+    #[must_use]
+    pub fn can_undo_document_command(&self) -> bool {
+        self.inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .can_undo()
+    }
+
+    /// Whether a document command can currently be redone.
+    #[must_use]
+    pub fn can_redo_document_command(&self) -> bool {
+        self.inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .can_redo()
+    }
+
+    /// Label of the next undo operation, if any.
+    #[must_use]
+    pub fn undo_document_label(&self) -> Option<String> {
+        self.inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .undo_label()
+            .map(str::to_owned)
+    }
+
+    /// Label of the next redo operation, if any.
+    #[must_use]
+    pub fn redo_document_label(&self) -> Option<String> {
+        self.inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .redo_label()
+            .map(str::to_owned)
+    }
+
+    /// Whether the current semantic document differs from its last save.
+    #[must_use]
+    pub fn is_document_dirty(&self) -> bool {
+        self.inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .is_dirty()
+    }
+
+    /// Marks the current semantic revision as saved.
+    pub fn mark_document_saved(&self) {
+        self.inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .mark_saved();
+    }
+
     pub(crate) fn refresh_lock(&self) -> &tokio::sync::Mutex<()> {
         &self.inner.refresh_lock
     }
@@ -314,11 +642,13 @@ impl Session {
         self.inner.limits
     }
 
-    /// The engine snapshot queries read ("View as" applied) and the session
-    /// model, read together.
-    pub(crate) fn snapshot_and_model(&self) -> (Arc<EngineSnapshot>, Arc<Model>) {
+    pub(crate) fn snapshot_model_and_revision(&self) -> (Arc<EngineSnapshot>, Arc<Model>, u64) {
         let state = self.read();
-        (state.query_engine().snapshot(), Arc::clone(&state.model))
+        (
+            state.query_engine().snapshot(),
+            Arc::clone(&state.model),
+            state.document_revision,
+        )
     }
 
     /// The unrestricted snapshot and the session model (refresh, derived
@@ -350,10 +680,16 @@ impl Session {
     /// it changed). Until then queries keep reading the previous restricted
     /// engine, never the unrestricted one.
     fn resecure(&self) {
+        self.rebuild_view(false);
+    }
+
+    /// [`resecure`](Self::resecure); with `force` also when the engine did
+    /// not change (after a model edit: role filters may use any of it).
+    fn rebuild_view(&self, force: bool) {
         let (base, model, view) = {
             let state = self.read();
             match &state.view {
-                Some(v) if v.base_generation != state.engine.generation() => (
+                Some(v) if force || v.base_generation != state.engine.generation() => (
                     state.engine.clone(),
                     Arc::clone(&state.model),
                     v.view.clone(),
@@ -420,13 +756,15 @@ impl Session {
         table: &str,
     ) -> (Result<RecordBatch, String>, Vec<Diagnostic>) {
         let mut diagnostics = Vec::new();
-        let result = match &self.inner.opened.model_source {
+        let opened = self.opened();
+        let model = self.base_model();
+        let result = match &opened.model_source {
             Some(ModelSource::Abf {
                 archive, storage, ..
             }) => pbi_vertipaq::decode_table_with_diagnostics(
                 archive,
                 storage,
-                &self.inner.base_model,
+                &model,
                 table,
                 &self.inner.limits.decode,
                 &mut diagnostics,

@@ -121,7 +121,8 @@ impl CacheData {
 
 /// The cache entry of the document's model in its container.
 fn cache_location(session: &Session) -> Option<(Arc<dyn Container>, String)> {
-    let (container, folder) = match &session.opened().model_source {
+    let opened = session.opened();
+    let (container, folder) = match &opened.model_source {
         Some(ModelSource::Tmdl {
             container, folder, ..
         })

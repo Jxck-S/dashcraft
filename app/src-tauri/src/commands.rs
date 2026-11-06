@@ -115,15 +115,15 @@ pub async fn document_views(
         let info = path_info(entry.path())?;
         let session = entry.session();
         let opened = session.opened();
-        let mut summary = mapping::summary(opened, entry.id(), &info);
+        let mut summary = mapping::summary(&opened, entry.id(), &info);
         summary.cache = session.cache_info().map(cache_info);
         summary.on_open = open_load(session, &summary);
         Ok(DocumentViewsDto {
             summary,
-            tree: mapping::model_tree(opened),
-            reports: mapping::report_outline(opened),
-            diagnostics: mapping::diagnostics(opened),
-            detection: mapping::detection(opened),
+            tree: mapping::model_tree(&opened),
+            reports: mapping::report_outline(&opened),
+            diagnostics: mapping::diagnostics(&opened),
+            detection: mapping::detection(&opened),
         })
     })
     .await
@@ -140,7 +140,7 @@ pub async fn object_details(
     state: State<'_, AppState>,
 ) -> Result<ObjectDetailsDto, AppError> {
     let entry = document(&state, &doc_id)?;
-    mapping::object_details(entry.session().opened(), ObjectId(u64::from(id)))
+    mapping::object_details(&entry.session().opened(), ObjectId(u64::from(id)))
         .ok_or_else(|| AppError::UnknownObject(format!("no object #{id} in the open document")))
 }
 
@@ -161,7 +161,7 @@ pub async fn tmdl_view(
                 "the document has no local semantic model (remote or missing)".to_owned(),
             )
         })?;
-        Ok(views::tmdl_view(opened, model))
+        Ok(views::tmdl_view(&opened, model))
     })
     .await
     .map_err(worker_failed)?

@@ -29,8 +29,8 @@ use harness::{Args, Outcome, ms_since, sample};
 use pbi_core::ReportSource;
 use pbi_engine::{Engine, Value};
 use pbi_model::{
-    AggregationFunction, Column, DataType, FieldExpr, Measure, Model, Page, Position, Projection,
-    Report, Table, Visual,
+    AggregationFunction, Column, DataType, Document, FieldExpr, Measure, Model, Page, Position,
+    Projection, Report, Table, Visual,
 };
 use pbi_render::query::{InteractionState, QueryEnv, QueryLimits};
 use pbi_render::svg::{SvgOptions, to_svg};
@@ -108,7 +108,8 @@ fn acme_page_without_data(args: &Args) -> Result<Outcome, String> {
     }
     let session = Session::open(&pbip, SessionOptions::default()).map_err(|e| e.to_string())?;
     let env = QueryEnv::from_session(&session);
-    let (report, theme) = report_and_theme(&session, "Acme Outfitters - Overview")?;
+    let doc = session.document();
+    let (report, theme) = report_and_theme(&session, &doc, "Acme Outfitters - Overview")?;
     let page = report.pages.first().ok_or("the report has no pages")?;
     let state = InteractionState::from_page(page).0;
     let opts = PageRenderOptions::default();
@@ -177,7 +178,8 @@ fn acme_table_scroll_step(args: &Args) -> Result<Outcome, String> {
     rt.block_on(session.refresh(RefreshOptions::all()))
         .map_err(|e| e.to_string())?;
     let env = QueryEnv::from_session(&session);
-    let (report, theme) = report_and_theme(&session, "Acme Outfitters - Online")?;
+    let doc = session.document();
+    let (report, theme) = report_and_theme(&session, &doc, "Acme Outfitters - Online")?;
     let page = report
         .pages
         .iter()
@@ -199,12 +201,12 @@ fn acme_table_scroll_step(args: &Args) -> Result<Outcome, String> {
     Ok(out.with("rows", rows).with("visuals", page.visuals.len()))
 }
 
-/// The report named `name` and its theme.
+/// The report named `name` in `doc` (the session's document snapshot) and its theme.
 fn report_and_theme<'a>(
-    session: &'a Session,
+    session: &Session,
+    doc: &'a Document,
     name: &str,
 ) -> Result<(&'a Report, ThemeResolver), String> {
-    let doc = session.document();
     let index = doc
         .reports
         .iter()

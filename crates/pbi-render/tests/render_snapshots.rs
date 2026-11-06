@@ -176,10 +176,11 @@ fn online_customer_detail() {
 #[test]
 fn every_page_has_a_snapshot() {
     let Some(session) = acme() else { return };
+    let doc = session.document();
     let mut pages: Vec<String> = ACME_REPORTS
         .iter()
         .flat_map(|short| {
-            let report = &session.document().reports[report_index(session, short)];
+            let report = &doc.reports[report_index(session, short)];
             report
                 .pages
                 .iter()

@@ -259,12 +259,13 @@ async fn selection_filters(session: &Session, selection: &str) -> Vec<ColumnFilt
 }
 
 /// The report of `expected.json` entry `report`.
-fn find_report<'a>(session: &'a Session, name: &str) -> &'a Report {
+fn find_report(session: &Session, name: &str) -> Report {
     session
         .document()
         .reports
         .iter()
         .find(|r| r.name == name || r.name.contains(name))
+        .cloned()
         .unwrap_or_else(|| panic!("no report {name}"))
 }
 
@@ -494,7 +495,7 @@ async fn pbip_refresh_matches_expected_rows_and_measures() {
         checks.measure(format!("unfiltered [{name}]"), want, &unfiltered[name]);
     }
     for (report_name, entry) in exp["measures"]["byReport"].as_object().unwrap() {
-        let filter = filters_from_report(find_report(&session, report_name));
+        let filter = filters_from_report(&find_report(&session, report_name));
         assert!(filter.unsupported.is_empty(), "{filter:?}");
         let described: Vec<String> = filter.filters.iter().map(describe).collect();
         let want: Vec<&str> = entry["reportFilters"]
@@ -594,7 +595,7 @@ async fn report_pages_match_expected_cards_and_visuals() {
     for report_exp in exp["reports"].as_array().unwrap() {
         let report_name = report_exp["report"].as_str().unwrap();
         let report = find_report(&session, report_name);
-        let report_filter = filters_from_report(report);
+        let report_filter = filters_from_report(&report);
         assert!(report_filter.unsupported.is_empty(), "{report_filter:?}");
         for page_exp in report_exp["pages"].as_array().unwrap() {
             let page_name = page_exp["page"].as_str().unwrap();
@@ -755,7 +756,7 @@ async fn calculation_group_and_unrelated_filter_match_expected() {
 
     // 'Time Calc' items over [Total Sales] for one month of the Overview report.
     let group = &exp["calculationGroup"];
-    let overview = filters_from_report(find_report(&session, "Acme Outfitters - Overview"));
+    let overview = filters_from_report(&find_report(&session, "Acme Outfitters - Overview"));
     let month = with(
         overview,
         ColumnFilterSpec::include("Date", "Year Month", [group["month"].clone()]),
@@ -781,8 +782,10 @@ async fn calculation_group_and_unrelated_filter_match_expected() {
     // A report filter on Web Sessions, which has no relationship: it changes
     // the session measures only.
     let unrelated = &exp["unrelatedReportFilter"];
-    let with_filters =
-        filters_from_report(find_report(&session, unrelated["report"].as_str().unwrap()));
+    let with_filters = filters_from_report(&find_report(
+        &session,
+        unrelated["report"].as_str().unwrap(),
+    ));
     let mut without_device = with_filters.clone();
     without_device
         .filters
