@@ -458,7 +458,7 @@ their write roots).
   revision; writer sources (TMDL CST, typed PBIR files, metadata parts) belong to a revision;
   engine snapshots (including the "View as" engine) are derived from a revision and its change
   set; queries capture one revision and report it.
-- [ ] **M6.3 Transactions and history.** Each `DocEntry` owns a `History`; every editing command
+- [x] **M6.3 Transactions and history.** Each `DocEntry` owns a `History`; every editing command
   is a transaction on a working copy that commits one new revision or nothing; `doc.applyEdits`
   groups edits into one transaction and one undo step; undo and redo are transactions; no-op edits
   return `changed: false` without a revision, history entry or dirty flag; results carry the
@@ -539,8 +539,14 @@ saved as, reopened and refreshed through the blob map, gives every value of `exp
 saved as a PBIP with the same edits and records it identically to the edited PBIP (GT-6). New
 measures get a `lineageTag` from the session's identifier generator (random GUIDs, a fixed
 sequence in tests; ADR-0014) when the model already uses lineage tags, and Desktop reads the
-saved tags back unchanged (GT-6). Still open: `doc/changed`
-notifications, dependent recalculation after measure edits, table, column, hierarchy and
+saved tags back unchanged (GT-6). Every committed edit, undo, redo and dirty-clearing save
+publishes a `DocChangedEvent` (document, command, revision, dirty flag, added, changed, renamed
+and removed object ids, the new path after Save As) through a per-request sink on `Ctx`: `serve`
+sends it as a `doc/changed` notification before the response and `mcp` as an `info` log message
+(`notifications/message`, `data.event: "doc/changed"`); no-op and failed edits publish nothing
+(`committed_edits_send_doc_changed_before_the_response` in `crates/pbi-ops/tests/rpc.rs`,
+`committed_edits_are_logged_as_doc_changed` in `crates/pbi-ops/tests/mcp.rs`). Still open:
+the app's change events (M6.8), dependent recalculation after measure edits, table, column, hierarchy and
 relationship create and delete, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the

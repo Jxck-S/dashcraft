@@ -28,6 +28,19 @@
 //!   answers with `cancelled`.
 //! - **Progress** of requests with an `id` is sent as `progress`
 //!   notifications (best effort: dropped when the client does not read).
+//! - **Document changes.** Every committed edit, undo or redo (and a save
+//!   that clears the dirty flag or moves the document) is announced with a
+//!   `doc/changed` notification carrying a [`DocChangedEvent`]: the
+//!   `docId`, the `command`, the new `revision`, `dirty`, the `changes`
+//!   (`objectId`, `kind`: `added`/`changed`/`renamed`/`removed`, names of
+//!   renames) and, after Save As, the new `path`. It is sent before the
+//!   response of the request that made the change (also for requests
+//!   without an `id`), in commit order per document; failed and no-op
+//!   edits send none.
+//!
+//!   ```text
+//!   ← {"jsonrpc":"2.0","method":"doc/changed","params":{"docId":"d1","command":"model.measure.create","revision":1,"dirty":true,"changes":[{"objectId":57,"kind":"added"}]}}
+//!   ```
 //! - At end of input the server waits for the running requests, writes
 //!   their responses and returns.
 
@@ -40,7 +53,7 @@ use tokio::sync::{Semaphore, mpsc, oneshot};
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
-use crate::ctx::{CallerKind, Ctx};
+use crate::ctx::{CallerKind, Ctx, DocChangedEvent};
 use crate::error::OpError;
 use crate::registry::Registry;
 use crate::workspace::{Workspace, lock};
@@ -433,13 +446,17 @@ async fn run_request(
         // Cancelled while queued: the next request still waits for ours.
         return Err(OpError::cancelled());
     }
+    let changes: Arc<Mutex<Vec<DocChangedEvent>>> = Arc::default();
     let result = async {
         let _permit = tokio::select! {
             permit = shared.permits.acquire() => permit
                 .map_err(|_| OpError::internal("the server is shutting down"))?,
             () = token.cancelled() => return Err(OpError::cancelled()),
         };
-        let mut ctx = Ctx::new(shared.caller).with_cancel(token.clone());
+        let collected = Arc::clone(&changes);
+        let mut ctx = Ctx::new(shared.caller)
+            .with_cancel(token.clone())
+            .with_doc_changed(move |event| lock(&collected).push(event));
         if let Some(id) = id.cloned() {
             let outbox = shared.outbox.clone();
             ctx = ctx.with_progress(move |event| {
@@ -457,6 +474,14 @@ async fn run_request(
             .await
     }
     .await;
+    // Committed changes are announced even when a later step failed, in
+    // commit order (before the next mutation of the document runs) and
+    // before the response.
+    let committed = std::mem::take(&mut *lock(&changes));
+    for event in committed {
+        let note = json!({ "jsonrpc": "2.0", "method": "doc/changed", "params": event });
+        let _ = shared.outbox.send(note.to_string()).await;
+    }
     drop(turn);
     result
 }

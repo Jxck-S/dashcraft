@@ -53,6 +53,7 @@ One JSON-RPC 2.0 message per line on stdin/stdout (logs go to stderr):
 - Methods are command ids; `params` is an object (absent = `{}`).
 - Requests run concurrently (bounded); commands that mutate a document run one at a time per `docId`, in arrival order. Responses may arrive out of order: match them by `id`.
 - Notifications (no `id`) run without a response. `$/cancel {"id": …}` cancels a running or queued request. Long-running requests send `progress` notifications (best effort).
+- Every committed edit sends `{"method":"doc/changed","params":{"docId","command","revision","dirty","changes":[{"objectId","kind":"added|changed|renamed|removed","oldName"?,"newName"?}],"path"?}}` before its response: one per command, also per `commands.batch` step and for notifications. A save that clears the dirty flag sends one with no changes (`doc.saveAs` adds the new `path`); no-op and failed edits send none.
 - Errors: `{ "code": <JSON-RPC integer>, "message", "data": { "code": "<string code>", "details"? } }`. Malformed lines get `-32700` (parse error) or `-32600` (invalid request).
 - `--read-root DIR` / `--write-root DIR` restrict the files commands may read and write (agents); without them paths are unrestricted.
 

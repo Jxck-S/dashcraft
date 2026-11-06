@@ -29,7 +29,9 @@
 //!   `tools/call`, `notifications/cancelled` (cancels the call's
 //!   `CancellationToken`; no response follows), `notifications/progress`
 //!   for calls with `_meta.progressToken`, `logging/setLevel` and
-//!   `notifications/message`. Stateless 2026-07-28 clients are served too:
+//!   `notifications/message` (committed document edits, undos, redos and
+//!   saves at level `info`, `data.event` = `doc/changed`, see
+//!   [`DocChangedEvent`](crate::DocChangedEvent)). Stateless 2026-07-28 clients are served too:
 //!   `server/discover`, the per-request `_meta` protocol version
 //!   (`-32022` for unknown versions), `resultType`, `ttlMs`/`cacheScope`.
 //!

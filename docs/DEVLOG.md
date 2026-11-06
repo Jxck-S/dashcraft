@@ -7,6 +7,25 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 `doc/changed` notifications (M6.3, ADR-0012 §5)
+
+- **What:** `pbi-ops` gets `DocChangedEvent` (document, command, revision, dirty flag,
+  `ObjectChange`s of kind added, changed, renamed or removed, the new path after Save As) and a
+  per-request sink on `Ctx` (`with_doc_changed`), inherited by `commands.batch` steps. Every
+  committed edit command, `doc.undo`/`doc.redo`, a save that clears the dirty flag and
+  `doc.saveAs` publish one; no-op, failed and dry-run edits publish none. `serve` sends them as
+  `doc/changed` notifications through the response outbox before the response (also for
+  requests without an id); `mcp` sends them as `notifications/message` at level `info` with
+  `data.event: "doc/changed"` (MCP has no document-change notification, and custom methods
+  break strict clients), subject to the client's log level.
+- **Why:** the last open part of M6.3; editors, agents and the app (M6.8) need to know what an
+  edit changed without polling `doc.history`.
+- **Numbers:** 2 new tests (`rpc.rs::committed_edits_send_doc_changed_before_the_response`:
+  create, no-op, failure, rename, a batch with a failing step, an undo notification, two saves;
+  `mcp.rs::committed_edits_are_logged_as_doc_changed`); `pbi-ops` tests 78 passed, 0 failed.
+  M6.3 is ticked.
+- **Still open:** the app's `ops_execute` adapter does not forward the events yet (M6.8).
+
 ### M6 lineage tags for new objects (ADR-0014 §5)
 
 - **What:** `pbi-session` gets an injectable `IdentifierGenerator` (`SessionOptions::identifiers`):

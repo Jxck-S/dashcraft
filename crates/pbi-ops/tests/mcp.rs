@@ -634,6 +634,68 @@ async fn progress_tokens_get_progress_notifications() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn committed_edits_are_logged_as_doc_changed() {
+    let dir = tmp_dir("pbi-ops-mcp-changed-");
+    let pbip = mini_pbip(dir.path());
+    let mut c = Client::in_root(dir.path());
+    c.initialize("2025-06-18").await;
+    c.ok("doc_open", json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    c.request("logging/setLevel", json!({"level": "info"}))
+        .await;
+    let changes = |notes: &[Value]| -> Vec<Value> {
+        notes
+            .iter()
+            .filter(|n| {
+                n["method"] == "notifications/message"
+                    && n["params"]["data"]["event"] == "doc/changed"
+            })
+            .map(|n| {
+                assert_eq!(n["params"]["level"], "info");
+                n["params"]["data"].clone()
+            })
+            .collect()
+    };
+
+    c.notes.clear();
+    let created = c
+        .ok(
+            "model_measure_create",
+            json!({"docId": "d1", "table": "Sales", "name": "Twice", "expression": "[Total] * 2"}),
+        )
+        .await;
+    assert_eq!(
+        changes(&c.notes),
+        [json!({
+            "event": "doc/changed",
+            "docId": "d1",
+            "command": "model.measure.create",
+            "revision": 1,
+            "dirty": true,
+            "changes": [{"objectId": created["measureId"], "kind": "added"}],
+        })]
+    );
+
+    c.notes.clear();
+    let same = c
+        .ok(
+            "model_measure_update",
+            json!({"docId": "d1", "measureId": created["measureId"], "expression": "[Total] * 2"}),
+        )
+        .await;
+    assert_eq!(same["changed"], false);
+    assert!(changes(&c.notes).is_empty(), "a no-op is not logged");
+
+    // Below the client's log level nothing is sent.
+    c.request("logging/setLevel", json!({"level": "warning"}))
+        .await;
+    c.notes.clear();
+    c.ok("doc_undo", json!({"docId": "d1"})).await;
+    assert!(changes(&c.notes).is_empty());
+    c.finish().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn png_renders_are_image_content_and_large_text_is_cut() {
     let dir = tmp_dir("pbi-ops-mcp-render-");
     let pbip = mini_pbip(dir.path());

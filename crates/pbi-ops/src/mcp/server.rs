@@ -19,7 +19,7 @@ use super::protocol::{
     supported_versions,
 };
 use super::tools::{ToolCatalog, ToolFilter, ToolNames};
-use crate::ctx::{CallerKind, Ctx};
+use crate::ctx::{CallerKind, Ctx, DocChangedEvent};
 use crate::error::{OpError, OpErrorCode};
 use crate::registry::Registry;
 use crate::rpc::{DocQueue, Line, read_line, spawn_writer};
@@ -604,6 +604,7 @@ fn start_call(
     let shared = Arc::clone(shared);
     tasks.spawn(async move {
         let meter = Arc::new(Mutex::new(ProgressMeter::default()));
+        let changes: Arc<Mutex<Vec<DocChangedEvent>>> = Arc::default();
         let started = Instant::now();
         let result = async {
             if !turn.wait(&token).await {
@@ -614,7 +615,10 @@ fn start_call(
                     .map_err(|_| OpError::internal("the server is shutting down"))?,
                 () = token.cancelled() => return Err(OpError::cancelled()),
             };
-            let mut ctx = Ctx::new(CallerKind::Agent).with_cancel(token.clone());
+            let collected = Arc::clone(&changes);
+            let mut ctx = Ctx::new(CallerKind::Agent)
+                .with_cancel(token.clone())
+                .with_doc_changed(move |event| lock(&collected).push(event));
             if let Some(progress_token) = progress_token {
                 let outbox = shared.outbox.clone();
                 let meter = Arc::clone(&meter);
@@ -645,6 +649,17 @@ fn start_call(
                 .await
         }
         .await;
+        // Committed document changes, as `info` log messages (MCP has no
+        // document-change notification), before the next mutation of the
+        // document and before the response.
+        let committed = std::mem::take(&mut *lock(&changes));
+        for event in committed {
+            let mut data = serde_json::to_value(&event).unwrap_or_else(|_| json!({}));
+            if let Value::Object(map) = &mut data {
+                map.insert("event".into(), "doc/changed".into());
+            }
+            shared.log(era, LogLevel::Info, data);
+        }
         drop(turn);
         lock(&meter).close();
         lock(&shared.inflight).remove(&key);

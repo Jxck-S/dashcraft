@@ -19,11 +19,11 @@ use serde_json::json;
 
 use super::{BASE, doc};
 use crate::command::{Category, Command, CommandMeta};
-use crate::ctx::Ctx;
+use crate::ctx::{Ctx, DocChangedEvent, ObjectChange, ObjectChangeKind};
 use crate::error::OpError;
 use crate::inspect_model::PositionOut;
 use crate::resolve;
-use crate::workspace::Workspace;
+use crate::workspace::{DocEntry, Workspace};
 
 /// `model.setMeasureExpression`.
 #[derive(Debug)]
@@ -51,13 +51,46 @@ pub struct DocumentEditOut {
 }
 
 impl DocumentEditOut {
-    fn new(session: &Session, result: &HistoryResult) -> Self {
-        Self {
+    /// The outcome of `result` on `entry`'s document; reports the change to
+    /// `ctx` when the edit committed one (ADR-0012: failed and no-op edits
+    /// report nothing).
+    fn committed(ctx: &Ctx, entry: &DocEntry, result: &HistoryResult) -> Self {
+        let out = Self {
             changed: result.changed,
             revision: result.revision,
-            dirty: session.is_document_dirty(),
+            dirty: entry.session().is_document_dirty(),
             changed_object_ids: result.events.iter().map(|event| event.id().get()).collect(),
+        };
+        if result.changed {
+            ctx.doc_changed(DocChangedEvent {
+                doc_id: entry.id().to_owned(),
+                command: ctx.command().unwrap_or_default().to_owned(),
+                revision: out.revision,
+                dirty: out.dirty,
+                changes: result.events.iter().map(object_change).collect(),
+                path: None,
+            });
         }
+        out
+    }
+}
+
+fn object_change(event: &ChangeEvent) -> ObjectChange {
+    let (kind, old_name, new_name) = match event {
+        ChangeEvent::ObjectAdded { .. } => (ObjectChangeKind::Added, None, None),
+        ChangeEvent::ObjectChanged { .. } => (ObjectChangeKind::Changed, None, None),
+        ChangeEvent::ObjectRenamed { old, new, .. } => (
+            ObjectChangeKind::Renamed,
+            Some(old.clone()),
+            Some(new.clone()),
+        ),
+        ChangeEvent::ObjectRemoved { .. } => (ObjectChangeKind::Removed, None, None),
+    };
+    ObjectChange {
+        object_id: event.id().get(),
+        kind,
+        old_name,
+        new_name,
     }
 }
 
@@ -80,11 +113,7 @@ impl Command for ModelSetMeasureExpression {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         resolve::require_model(&entry)?;
         let result = entry
@@ -94,7 +123,7 @@ impl Command for ModelSetMeasureExpression {
                 expression: params.expression,
             })
             .await?;
-        Ok(DocumentEditOut::new(entry.session(), &result))
+        Ok(DocumentEditOut::committed(ctx, &entry, &result))
     }
 }
 
@@ -280,11 +309,7 @@ impl Command for ModelObjectRename {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         resolve::require_model(&entry)?;
         let session = entry.session();
@@ -310,7 +335,7 @@ impl Command for ModelObjectRename {
         Ok(rename_out(
             object,
             preview,
-            DocumentEditOut::new(session, &result),
+            DocumentEditOut::committed(ctx, &entry, &result),
             false,
         ))
     }
@@ -365,11 +390,7 @@ impl Command for ModelObjectSetDescription {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         resolve::require_model(&entry)?;
         let session = entry.session();
@@ -384,7 +405,7 @@ impl Command for ModelObjectSetDescription {
         let result = session
             .execute_document_command(SetDescription { id, text })
             .await?;
-        Ok(DocumentEditOut::new(session, &result))
+        Ok(DocumentEditOut::committed(ctx, &entry, &result))
     }
 }
 
@@ -484,12 +505,11 @@ pub struct VisualPositionOut {
 
 async fn set_visual_position(
     ws: &Workspace,
+    ctx: &Ctx,
     doc_id: &str,
     target: (Option<&str>, Option<&str>, &str),
-    x: Option<f64>,
-    y: Option<f64>,
-    width: Option<f64>,
-    height: Option<f64>,
+    (x, y): (Option<f64>, Option<f64>),
+    (width, height): (Option<f64>, Option<f64>),
 ) -> Result<VisualPositionOut, OpError> {
     let entry = doc(ws, doc_id)?;
     let session = entry.session();
@@ -502,7 +522,7 @@ async fn set_visual_position(
             position: position.clone(),
         })
         .await?;
-    let edit = DocumentEditOut::new(session, &result);
+    let edit = DocumentEditOut::committed(ctx, &entry, &result);
     Ok(VisualPositionOut {
         changed: edit.changed,
         revision: edit.revision,
@@ -557,23 +577,18 @@ impl Command for ReportVisualMove {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         set_visual_position(
             ws,
+            ctx,
             &params.doc_id,
             (
                 params.report.as_deref(),
                 params.page.as_deref(),
                 &params.visual,
             ),
-            params.x,
-            params.y,
-            None,
-            None,
+            (params.x, params.y),
+            (None, None),
         )
         .await
     }
@@ -623,23 +638,18 @@ impl Command for ReportVisualResize {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         set_visual_position(
             ws,
+            ctx,
             &params.doc_id,
             (
                 params.report.as_deref(),
                 params.page.as_deref(),
                 &params.visual,
             ),
-            None,
-            None,
-            params.width,
-            params.height,
+            (None, None),
+            (params.width, params.height),
         )
         .await
     }
@@ -863,11 +873,7 @@ impl Command for ModelMeasureCreate {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         resolve::require_model(&entry)?;
         let session = entry.session();
@@ -893,7 +899,7 @@ impl Command for ModelMeasureCreate {
             .ok_or_else(|| OpError::internal("the new measure has no id"))?;
         let names = measure_names(session, id).unwrap_or_default();
         Ok(MeasureEditOut::new(
-            DocumentEditOut::new(session, &result),
+            DocumentEditOut::committed(ctx, &entry, &result),
             id,
             names,
             warnings,
@@ -972,11 +978,7 @@ impl Command for ModelMeasureUpdate {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         resolve::require_model(&entry)?;
         let session = entry.session();
@@ -991,7 +993,7 @@ impl Command for ModelMeasureUpdate {
         let result = session.execute_document_command(command).await?;
         let names = measure_names(session, id).unwrap_or_default();
         Ok(MeasureEditOut::new(
-            DocumentEditOut::new(session, &result),
+            DocumentEditOut::committed(ctx, &entry, &result),
             id,
             names,
             warnings,
@@ -1044,11 +1046,7 @@ impl Command for ModelMeasureDelete {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         resolve::require_model(&entry)?;
         let session = entry.session();
@@ -1086,7 +1084,7 @@ impl Command for ModelMeasureDelete {
             let result = session
                 .execute_document_command(DeleteMeasure { measure: id })
                 .await?;
-            DocumentEditOut::new(session, &result)
+            DocumentEditOut::committed(ctx, &entry, &result)
         };
         let mut out = MeasureEditOut::new(edit, id, names, found.warnings);
         out.dependents = Some(
@@ -1363,11 +1361,7 @@ impl Command for DocumentApplyEdits {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         let session = entry.session();
         let mut group = CommandGroup::new("Apply document edits");
@@ -1472,7 +1466,7 @@ impl Command for DocumentApplyEdits {
             };
         }
         let result = session.execute_document_command(group).await?;
-        Ok(DocumentEditOut::new(session, &result))
+        Ok(DocumentEditOut::committed(ctx, &entry, &result))
     }
 }
 
@@ -1503,14 +1497,10 @@ impl Command for DocumentUndo {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         let result = entry.session().undo_document_command().await?;
-        Ok(DocumentEditOut::new(entry.session(), &result))
+        Ok(DocumentEditOut::committed(ctx, &entry, &result))
     }
 }
 
@@ -1534,14 +1524,10 @@ impl Command for DocumentRedo {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         let result = entry.session().redo_document_command().await?;
-        Ok(DocumentEditOut::new(entry.session(), &result))
+        Ok(DocumentEditOut::committed(ctx, &entry, &result))
     }
 }
 
@@ -1671,11 +1657,7 @@ impl Command for DocumentSave {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let entry = doc(ws, &params.doc_id)?;
         let session = entry.session();
         let opened = session.opened();
@@ -1691,6 +1673,7 @@ impl Command for DocumentSave {
         // Every file written lies under the project folder (the save refuses
         // other paths and symbolic links).
         let project_dir = ws.policy().check_write(root)?;
+        let was_dirty = session.is_document_dirty();
         let report = session.save(params.overwrite).await.map_err(|e| {
             let mut e = OpError::from(e);
             if e.message.ends_with("save it as a new PBIP project instead") {
@@ -1698,6 +1681,17 @@ impl Command for DocumentSave {
             }
             e
         })?;
+        let dirty = session.is_document_dirty();
+        if was_dirty && !dirty {
+            ctx.doc_changed(DocChangedEvent {
+                doc_id: entry.id().to_owned(),
+                command: ctx.command().unwrap_or_default().to_owned(),
+                revision: report.revision,
+                dirty,
+                changes: Vec::new(),
+                path: None,
+            });
+        }
         Ok(DocumentSaveOut {
             project_dir: shown_dir(&project_dir),
             written: report.written,
@@ -1715,7 +1709,7 @@ impl Command for DocumentSave {
                 })
                 .collect(),
             revision: report.revision,
-            dirty: session.is_document_dirty(),
+            dirty,
         })
     }
 }
@@ -1786,11 +1780,7 @@ impl Command for DocumentSaveAs {
         }
     }
 
-    async fn run(
-        ws: &Workspace,
-        params: Self::Params,
-        _ctx: &Ctx,
-    ) -> Result<Self::Output, OpError> {
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let out_dir = super::export::check_out_dir(ws, &params.out_dir, params.overwrite)?;
         let entry = doc(ws, &params.doc_id)?;
         let session = entry.session();
@@ -1820,6 +1810,15 @@ impl Command for DocumentSaveAs {
                 .to_string_lossy()
                 .into_owned(),
         );
+        let dirty = session.is_document_dirty();
+        ctx.doc_changed(DocChangedEvent {
+            doc_id: entry.id().to_owned(),
+            command: ctx.command().unwrap_or_default().to_owned(),
+            revision: report.revision,
+            dirty,
+            changes: Vec::new(),
+            path: Some(entry.shown_path()),
+        });
         Ok(DocumentSaveAsOut {
             project_dir: shown_dir(&project_dir),
             pbip_file: report.pbip_file,
@@ -1827,7 +1826,7 @@ impl Command for DocumentSaveAs {
             bytes: report.bytes,
             previous_format: report.previous_format.as_str().to_owned(),
             revision: report.revision,
-            dirty: session.is_document_dirty(),
+            dirty,
             warnings,
         })
     }
