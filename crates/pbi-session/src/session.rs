@@ -327,6 +327,29 @@ impl Session {
             .find(|tag| !used.contains(tag.as_str()))
     }
 
+    /// A name for a relationship about to be created: a GUID from the
+    /// session's [`IdentifierGenerator`], as Power BI Desktop names them,
+    /// not in use by another relationship.
+    #[must_use]
+    pub fn new_relationship_name(&self) -> String {
+        let document = self.document();
+        let taken = |name: &str| {
+            document.model.as_ref().is_some_and(|m| {
+                m.relationships
+                    .iter()
+                    .any(|r| pbi_model::names_eq(&r.name, name))
+            })
+        };
+        let mut name = self.inner.identifiers.lineage_tag();
+        for _ in 0..8 {
+            if !taken(&name) {
+                break;
+            }
+            name = self.inner.identifiers.lineage_tag();
+        }
+        name
+    }
+
     /// `true` if the document has a semantic model.
     #[must_use]
     pub fn has_model(&self) -> bool {

@@ -688,3 +688,83 @@ async fn lineage_tags_are_random_and_only_where_the_model_uses_them() {
         );
     }
 }
+
+/// Relationship create and delete save into `relationships.tmdl` only: a new
+/// relationship is named by the session's identifier generator, a reopen
+/// shows it, and undoing both edits saves the original bytes again.
+#[tokio::test(flavor = "multi_thread")]
+async fn relationship_edits_save_and_reopen() {
+    const RELATIONSHIPS_TMDL: &str = "AcmeOutfitters.SemanticModel/definition/relationships.tmdl";
+    const FIRST: &str = "0000acce-0000-4000-8000-000000000001";
+    const STORES: &str = "d4926a14-f8ee-5523-be56-0dd865b87eee";
+    let Some(acme) = fixture(ACME) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("relationships-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let original = fs::read(dir.path().join(RELATIONSHIPS_TMDL)).unwrap();
+    let r = Runner::new();
+    r.ws.set_open_hook(Some(Arc::new(|o: &mut SessionOptions| {
+        o.identifiers = Some(Arc::new(SequentialIdentifiers::new(0xacce)));
+    })));
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    r.run(
+        "model.relationship.delete",
+        json!({"docId": doc, "name": STORES}),
+    )
+    .await;
+    let created = r
+        .run(
+            "model.relationship.create",
+            json!({"docId": doc, "from": {"table": "Orders", "column": "Store ID"}, "to": {"table": "Stores", "column": "Store ID"}}),
+        )
+        .await;
+    assert_eq!(created["name"], FIRST, "{created}");
+
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(strings(&out["written"]), [RELATIONSHIPS_TMDL], "{out}");
+    let saved = fs::read_to_string(dir.path().join(RELATIONSHIPS_TMDL)).unwrap();
+    assert!(!saved.contains(STORES), "{saved}");
+    assert!(
+        saved.contains(&format!(
+            "relationship {FIRST}\n\tfromColumn: Orders.'Store ID'\n\ttoColumn: Stores.'Store ID'\n"
+        )),
+        "{saved}"
+    );
+    assert_eq!(saved.matches("\nrelationship ").count() + 1, 8, "{saved}");
+    assert!(
+        saved.contains("\tfromCardinality: one\n\ttoCardinality: one\n"),
+        "untouched relationships keep their text: {saved}"
+    );
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    let relationships = fresh
+        .run("model.relationships", json!({"docId": reopened}))
+        .await;
+    let names: Vec<&str> = relationships["relationships"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names.len(), 8);
+    assert!(
+        names.contains(&FIRST) && !names.contains(&STORES),
+        "{names:?}"
+    );
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.undo", json!({"docId": doc})).await;
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(strings(&out["written"]), [RELATIONSHIPS_TMDL], "{out}");
+    assert_eq!(
+        fs::read(dir.path().join(RELATIONSHIPS_TMDL)).unwrap(),
+        original,
+        "undoing both edits saves the original bytes"
+    );
+}

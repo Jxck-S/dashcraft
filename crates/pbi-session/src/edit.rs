@@ -375,6 +375,13 @@ impl Plan {
         let rewritten = match rename_references(text, &self.change(bare)) {
             Ok(rewritten) => rewritten,
             Err(_) => {
+                if self.probe {
+                    out.unparsed.push(DaxText {
+                        location: location.to_owned(),
+                        property: property.to_owned(),
+                        text: text.clone(),
+                    });
+                }
                 if text.to_lowercase().contains(&self.old.to_lowercase()) {
                     out.warnings.push(if self.probe {
                         format!(
@@ -454,6 +461,45 @@ pub(crate) fn dax_references(
     object: ObjectId,
     extra: &[ExtraDax<'_>],
 ) -> Result<Dependents, CommandError> {
+    let scan = dax_scan(doc, object, extra)?;
+    let dependents = scan
+        .references
+        .into_iter()
+        .map(|r| Dependent {
+            location: r.location,
+            property: r.property,
+        })
+        .collect();
+    Ok(Dependents {
+        dependents,
+        warnings: scan.warnings,
+    })
+}
+
+/// One DAX expression of the document, where it lives and its text.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct DaxText {
+    pub location: String,
+    pub property: String,
+    pub text: String,
+}
+
+/// What [`dax_scan`] finds.
+pub(crate) struct DaxScan {
+    /// The expressions that refer to the object, with their text.
+    pub references: Vec<DaxText>,
+    pub warnings: Vec<String>,
+    /// Every expression that does not parse.
+    pub unparsed: Vec<DaxText>,
+}
+
+/// [`dax_references`] with the expression texts, plus every expression
+/// that does not parse.
+pub(crate) fn dax_scan(
+    doc: &Document,
+    object: ObjectId,
+    extra: &[ExtraDax<'_>],
+) -> Result<DaxScan, CommandError> {
     // Any name other than the old one: a reference shows up as a rewrite.
     const PROBE: &str = "\u{e000}";
     let mut plan = Plan::new(doc, object, PROBE).map_err(|err| match err {
@@ -472,17 +518,19 @@ pub(crate) fn dax_references(
             plan.text(&mut text, owner, &e.location, e.property, &mut out);
         }
     }
-    let dependents = out
+    let references = out
         .rewrites
         .into_iter()
-        .map(|r| Dependent {
+        .map(|r| DaxText {
             location: r.location,
             property: r.property,
+            text: r.before,
         })
         .collect();
-    Ok(Dependents {
-        dependents,
+    Ok(DaxScan {
+        references,
         warnings: out.warnings,
+        unparsed: out.unparsed,
     })
 }
 
@@ -491,6 +539,8 @@ struct Rewritten {
     items: Vec<Snapshot>,
     rewrites: Vec<DaxRewrite>,
     warnings: Vec<String>,
+    /// Probe only: the expressions that do not parse.
+    unparsed: Vec<DaxText>,
 }
 
 /// The text of a DAX expression kept in an untyped property.

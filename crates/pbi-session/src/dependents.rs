@@ -1,21 +1,24 @@
-//! What refers to a table, column or measure.
+//! What refers to a table, column, measure or relationship.
 //!
 //! [`object_dependents`] lists the places that would break if the object
 //! were deleted: DAX expressions (measures, dynamic format strings,
 //! calculated columns and tables, calculation items, role filters), model
 //! structure (relationship ends, hierarchy levels, sort-by columns, role
 //! table permissions) and report fields (visual projections, sorts, filters
-//! and formatting, page and report filters).
+//! and formatting, page and report filters). For a relationship, the
+//! dependents are the DAX expressions whose `USERELATIONSHIP` or
+//! `CROSSFILTER` calls name both of its columns.
 //! [`Session::object_dependents`] adds the session's derived DAX columns.
 //! References that cannot be confirmed are reported as warnings.
 
 use pbi_model::{
-    ColumnKind, CommandError, Document, Model, ObjectId, ObjectPath, Rename, Visual, names_eq,
+    ColumnKind, ColumnRef, CommandError, Document, Model, ObjectId, ObjectPath, Relationship,
+    Rename, Visual, names_eq,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::DerivedKind;
-use crate::edit::{ExtraDax, dax_references};
+use crate::edit::{ExtraDax, dax_references, dax_scan};
 use crate::session::Session;
 
 /// One object property that refers to the inspected object.
@@ -39,12 +42,12 @@ pub struct Dependents {
     pub warnings: Vec<String>,
 }
 
-/// What in `doc` refers to table, column or measure `object` (see the
-/// [module docs](self)).
+/// What in `doc` refers to table, column, measure or relationship `object`
+/// (see the [module docs](self)).
 ///
 /// # Errors
-/// `object` is unknown or not a table, column or measure, or there is no
-/// model.
+/// `object` is unknown or not a table, column, measure or relationship, or
+/// there is no model.
 pub fn object_dependents(doc: &Document, object: ObjectId) -> Result<Dependents, CommandError> {
     find(doc, object, &[])
 }
@@ -78,6 +81,14 @@ fn find(
     object: ObjectId,
     extra: &[ExtraDax<'_>],
 ) -> Result<Dependents, CommandError> {
+    if let Some(ObjectPath::Relationship { relationship }) = doc.locate(object) {
+        let model = doc.model.as_ref().ok_or(CommandError::NoModel)?;
+        let r = model
+            .relationships
+            .get(relationship)
+            .ok_or(CommandError::NotFound(object))?;
+        return relationship_dependents(doc, model, r, extra);
+    }
     let mut out = dax_references(doc, object, extra)?;
     let model = doc.model.as_ref().ok_or(CommandError::NoModel)?;
     let target = target(model, doc.locate(object), object)?;
@@ -227,6 +238,64 @@ fn structure(model: &Model, target: &Target, out: &mut Vec<Dependent>) {
             );
         }
     }
+}
+
+/// The DAX that names both ends of relationship `r` in a `USERELATIONSHIP`
+/// or `CROSSFILTER` call: the expressions that change or fail when it is
+/// deleted. Report fields and other structure never name a relationship.
+fn relationship_dependents(
+    doc: &Document,
+    model: &Model,
+    r: &Relationship,
+    extra: &[ExtraDax<'_>],
+) -> Result<Dependents, CommandError> {
+    let mut out = Dependents::default();
+    // Without the from column no expression can name both ends.
+    let Some(from) = model.column(&r.from.table, &r.from.column) else {
+        return Ok(out);
+    };
+    let scan = dax_scan(doc, from.id, extra)?;
+    for found in &scan.references {
+        if pbi_dax::parse_expression(&found.text).is_ok_and(|e| names_relationship(&e, r)) {
+            push(&mut out.dependents, &found.location, &found.property);
+        }
+    }
+    let lower = |s: &str| s.to_lowercase();
+    for u in &scan.unparsed {
+        let text = lower(&u.text);
+        let uses = text.contains("userelationship") || text.contains("crossfilter");
+        if uses && text.contains(&lower(&r.from.column)) && text.contains(&lower(&r.to.column)) {
+            out.warnings.push(format!(
+                "{} {} does not parse and mentions both columns; it may use the relationship",
+                u.location, u.property
+            ));
+        }
+    }
+    Ok(out)
+}
+
+/// Whether `expr` calls `USERELATIONSHIP` or `CROSSFILTER` on the two
+/// columns of `r`, in either order.
+fn names_relationship(expr: &pbi_dax::Expr, r: &Relationship) -> bool {
+    let column = |e: &pbi_dax::Expr, end: &ColumnRef| match &e.kind {
+        pbi_dax::ExprKind::ColumnRef {
+            table: Some(table),
+            column,
+        } => names_eq(table, &end.table) && names_eq(column, &end.column),
+        _ => false,
+    };
+    let mut found = false;
+    pbi_dax::for_each_expr(expr, |e| {
+        if let pbi_dax::ExprKind::Call { name, args, .. } = &e.kind
+            && (name == "USERELATIONSHIP" || name == "CROSSFILTER")
+            && let [a, b, ..] = args.as_slice()
+            && ((column(a, &r.from) && column(b, &r.to))
+                || (column(a, &r.to) && column(b, &r.from)))
+        {
+            found = true;
+        }
+    });
+    found
 }
 
 fn visual_label(visual: &Visual) -> String {
@@ -408,5 +477,53 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[test]
+    fn relationship_dependents_are_the_dax_that_names_both_ends() {
+        let mut d = doc();
+        let model = d.model.as_mut().unwrap();
+        model.tables[0].measures.extend([
+            Measure::new(
+                "Via",
+                "CALCULATE ( [Total Sales], USERELATIONSHIP ( Stores[Store ID], 'Orders'[store id] ) )",
+            ),
+            Measure::new(
+                "Both",
+                "CALCULATE ( [Total Sales], CROSSFILTER ( Orders[Store ID], Stores[Store ID], BOTH ) )",
+            ),
+            // Names both columns but not in a relationship function.
+            Measure::new(
+                "Count",
+                "COUNTROWS ( Orders ) + DISTINCTCOUNT ( Stores[Store ID] ) + MAX ( Orders[Store ID] )",
+            ),
+            Measure::new(
+                "Other",
+                "CALCULATE ( 1, USERELATIONSHIP ( Orders[Month No], Stores[Store ID] ) )",
+            ),
+            Measure::new(
+                "Typo",
+                "CALCULATE ( 1, USERELATIONSHIP ( Orders[Store ID], Stores[Store ID] )",
+            ),
+        ]);
+        d.assign_ids();
+        let relationship = d.model.as_ref().unwrap().relationships[0].id;
+        let found = object_dependents(&d, relationship).unwrap();
+        assert_eq!(
+            locations(&found),
+            [
+                ("measure 'Orders'[Via]", "expression"),
+                ("measure 'Orders'[Both]", "expression"),
+            ]
+        );
+        assert_eq!(found.warnings.len(), 1, "{found:#?}");
+        assert!(found.warnings[0].starts_with("measure 'Orders'[Typo] expression does not parse"));
+
+        // A relationship whose column is gone has no DAX dependents.
+        d.model.as_mut().unwrap().relationships[0].from.column = "Gone".into();
+        assert_eq!(
+            object_dependents(&d, relationship).unwrap(),
+            Dependents::default()
+        );
     }
 }

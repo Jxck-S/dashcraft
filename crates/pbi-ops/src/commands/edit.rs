@@ -6,9 +6,10 @@
 //! `render.visual`: `report`, `page` and the visual's name.
 
 use pbi_model::{
-    ChangeEvent, CommandGroup, CreateMeasure, DeleteMeasure, HistoryResult, Measure, ObjectId,
-    ObjectPath, Position, SetDescription, SetMeasureExpression, SetMeasureProperties,
-    SetVisualPosition, Visual,
+    Cardinality, ChangeEvent, ColumnRef, CommandGroup, CreateMeasure, CreateRelationship,
+    CrossFilter, DeleteMeasure, DeleteRelationship, HistoryResult, Measure, ObjectId, ObjectPath,
+    Position, Relationship, SetDescription, SetMeasureExpression, SetMeasureProperties,
+    SetVisualPosition, Visual, names_eq,
 };
 use pbi_session::{
     RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error, preview_rename,
@@ -1111,7 +1112,8 @@ pub struct ModelDependencies;
 pub struct DependenciesParams {
     /// The document id from `doc.open` (`d1`, …).
     pub doc_id: String,
-    /// The object's id (instead of `table`).
+    /// The object's id (instead of `table`): also a relationship's id from
+    /// `model.relationships`.
     #[serde(default)]
     pub object_id: Option<u64>,
     /// The table, or the table of `column` / `measure`.
@@ -1130,9 +1132,10 @@ pub struct DependenciesParams {
 #[serde(rename_all = "camelCase")]
 pub struct DependenciesOut {
     pub object_id: u64,
-    /// `table`, `column` or `measure`.
+    /// `table`, `column`, `measure` or `relationship`.
     pub kind: String,
-    /// The table, or the table of the column or measure.
+    /// The table, or the table of the column or measure (the from table of
+    /// a relationship).
     pub table: String,
     pub name: String,
     /// The document revision the list was computed on.
@@ -1154,7 +1157,7 @@ impl Command for ModelDependencies {
         CommandMeta {
             id: "model.dependencies",
             title: "Object dependents",
-            summary: "Lists what refers to a table, column or measure: DAX, relationships, hierarchies, sort-by columns, roles and report fields.",
+            summary: "Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields.",
             category: Category::Inspect,
             examples: &[
                 (
@@ -1207,11 +1210,15 @@ impl Command for ModelDependencies {
                     let m = t.measures.get(measure)?;
                     Some(("measure", t.name.clone(), m.name.clone()))
                 }),
+                ObjectPath::Relationship { relationship } => model
+                    .relationships
+                    .get(relationship)
+                    .map(|r| ("relationship", r.from.table.clone(), r.name.clone())),
                 _ => None,
             };
             names.ok_or_else(|| {
                 OpError::invalid_params(format!(
-                    "object {} is not a table, column or measure",
+                    "object {} is not a table, column, measure or relationship",
                     id.get()
                 ))
             })?
@@ -1234,6 +1241,382 @@ impl Command for ModelDependencies {
                 .collect(),
             warnings: found.warnings,
         })
+    }
+}
+
+/// A column named by table and column (case-insensitive).
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ColumnParam {
+    pub table: String,
+    pub column: String,
+}
+
+/// One end of a relationship.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum CardinalityParam {
+    One,
+    Many,
+}
+
+impl From<CardinalityParam> for Cardinality {
+    fn from(c: CardinalityParam) -> Self {
+        match c {
+            CardinalityParam::One => Cardinality::One,
+            CardinalityParam::Many => Cardinality::Many,
+        }
+    }
+}
+
+/// Which way filters cross a relationship.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum CrossFilterParam {
+    OneDirection,
+    BothDirections,
+}
+
+impl From<CrossFilterParam> for CrossFilter {
+    fn from(c: CrossFilterParam) -> Self {
+        match c {
+            CrossFilterParam::OneDirection => CrossFilter::OneDirection,
+            CrossFilterParam::BothDirections => CrossFilter::BothDirections,
+        }
+    }
+}
+
+/// The properties of a new relationship.
+#[derive(Debug, Clone)]
+struct NewRelationship {
+    from: ColumnParam,
+    to: ColumnParam,
+    from_cardinality: Option<CardinalityParam>,
+    to_cardinality: Option<CardinalityParam>,
+    cross_filtering_behavior: Option<CrossFilterParam>,
+    is_active: Option<bool>,
+    name: Option<String>,
+}
+
+/// The model's spelling of `c` (as given when there is no such column: the
+/// model command rejects it).
+fn column_ref(session: &Session, c: &ColumnParam) -> ColumnRef {
+    let document = session.document();
+    document
+        .model
+        .as_ref()
+        .and_then(|m| {
+            let t = m.table(&c.table)?;
+            Some(ColumnRef::new(&t.name, &t.column(&c.column)?.name))
+        })
+        .unwrap_or_else(|| ColumnRef::new(&c.table, &c.column))
+}
+
+fn create_relationship(session: &Session, new: NewRelationship) -> CreateRelationship {
+    let name = new
+        .name
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| session.new_relationship_name());
+    let mut relationship = Relationship::new(
+        name,
+        column_ref(session, &new.from),
+        column_ref(session, &new.to),
+    );
+    relationship.from_cardinality = new
+        .from_cardinality
+        .unwrap_or(CardinalityParam::Many)
+        .into();
+    relationship.to_cardinality = new.to_cardinality.unwrap_or(CardinalityParam::One).into();
+    relationship.cross_filtering_behavior = new
+        .cross_filtering_behavior
+        .unwrap_or(CrossFilterParam::OneDirection)
+        .into();
+    relationship.is_active = new.is_active.unwrap_or(true);
+    CreateRelationship {
+        relationship,
+        index: None,
+    }
+}
+
+/// The relationship named by `relationshipId` or by `name`.
+fn relationship_target(
+    session: &Session,
+    relationship_id: Option<u64>,
+    name: Option<&str>,
+) -> Result<ObjectId, OpError> {
+    let document = session.document();
+    let model = document
+        .model
+        .as_ref()
+        .ok_or_else(|| OpError::no_document("the document has no semantic model"))?;
+    match (relationship_id, name) {
+        (Some(id), None) => match document.locate(ObjectId(id)) {
+            Some(ObjectPath::Relationship { .. }) => Ok(ObjectId(id)),
+            Some(_) => Err(OpError::invalid_params(format!(
+                "object {id} is not a relationship"
+            ))),
+            None => Err(OpError::not_found(format!("no object with id {id}"))),
+        },
+        (None, Some(name)) => model
+            .relationships
+            .iter()
+            .find(|r| names_eq(&r.name, name))
+            .map(|r| r.id)
+            .ok_or_else(|| {
+                OpError::not_found(format!("no relationship named '{name}'")).with_data(json!({
+                    "relationships": model.relationships.iter().map(|r| r.name.as_str()).collect::<Vec<_>>()
+                }))
+            }),
+        _ => Err(OpError::invalid_params(
+            "name the relationship: relationshipId or name",
+        )),
+    }
+}
+
+/// Result of `model.relationship.create` and `model.relationship.delete`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RelationshipEditOut {
+    pub changed: bool,
+    pub revision: u64,
+    pub dirty: bool,
+    pub changed_object_ids: Vec<u64>,
+    pub relationship_id: u64,
+    /// The relationship's name (a GUID unless one was given).
+    pub name: String,
+    /// The from column (usually the many side).
+    pub from: ColumnParam,
+    /// The to column (usually the one side).
+    pub to: ColumnParam,
+    /// `model.relationship.delete` only: the DAX whose `USERELATIONSHIP`
+    /// or `CROSSFILTER` calls name the relationship.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dependents: Option<Vec<DependentOut>>,
+    /// `model.relationship.delete` only: whether this was a dry run.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dry_run: Option<bool>,
+    /// Problems that do not stop the edit: what the engine finds in the
+    /// loaded data (duplicate keys on the one side, differing key types,
+    /// ambiguous filter paths), references that cannot be confirmed.
+    pub warnings: Vec<String>,
+}
+
+impl RelationshipEditOut {
+    fn new(edit: DocumentEditOut, r: &Relationship, warnings: Vec<String>) -> Self {
+        let end = |c: &ColumnRef| ColumnParam {
+            table: c.table.clone(),
+            column: c.column.clone(),
+        };
+        Self {
+            changed: edit.changed,
+            revision: edit.revision,
+            dirty: edit.dirty,
+            changed_object_ids: edit.changed_object_ids,
+            relationship_id: r.id.get(),
+            name: r.name.clone(),
+            from: end(&r.from),
+            to: end(&r.to),
+            dependents: None,
+            dry_run: None,
+            warnings,
+        }
+    }
+}
+
+/// Relationship `id` in the session's document.
+fn find_relationship(session: &Session, id: ObjectId) -> Option<Relationship> {
+    let document = session.document();
+    let Some(ObjectPath::Relationship { relationship }) = document.locate(id) else {
+        return None;
+    };
+    document
+        .model
+        .as_ref()?
+        .relationships
+        .get(relationship)
+        .cloned()
+}
+
+/// `model.relationship.create`.
+#[derive(Debug)]
+pub struct ModelRelationshipCreate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CreateRelationshipParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The from column (TOM `fromColumn`, usually the many side).
+    pub from: ColumnParam,
+    /// The to column (TOM `toColumn`, usually the one side).
+    pub to: ColumnParam,
+    /// Default `many`.
+    #[serde(default)]
+    pub from_cardinality: Option<CardinalityParam>,
+    /// Default `one`.
+    #[serde(default)]
+    pub to_cardinality: Option<CardinalityParam>,
+    /// Default `oneDirection`.
+    #[serde(default)]
+    pub cross_filtering_behavior: Option<CrossFilterParam>,
+    /// Default `true`. Two tables have at most one active relationship.
+    #[serde(default)]
+    pub is_active: Option<bool>,
+    /// Unique among relationships; a new GUID by default, as Power BI
+    /// Desktop names them.
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+impl CreateRelationshipParams {
+    fn new_relationship(self) -> NewRelationship {
+        NewRelationship {
+            from: self.from,
+            to: self.to,
+            from_cardinality: self.from_cardinality,
+            to_cardinality: self.to_cardinality,
+            cross_filtering_behavior: self.cross_filtering_behavior,
+            is_active: self.is_active,
+            name: self.name,
+        }
+    }
+}
+
+impl Command for ModelRelationshipCreate {
+    type Params = CreateRelationshipParams;
+    type Output = RelationshipEditOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.relationship.create",
+            title: "Create a relationship",
+            summary: "Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[
+                (
+                    "Many-to-one, single direction",
+                    r#"{"docId": "d1", "from": {"table": "Orders", "column": "Store ID"}, "to": {"table": "Stores", "column": "Store ID"}}"#,
+                ),
+                (
+                    "Inactive, both directions",
+                    r#"{"docId": "d1", "from": {"table": "Orders", "column": "Ship Date"}, "to": {"table": "Date", "column": "Date"}, "crossFilteringBehavior": "bothDirections", "isActive": false}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        resolve::require_model(&entry)?;
+        let session = entry.session();
+        let command = create_relationship(session, params.new_relationship());
+        let result = session.execute_document_command(command).await?;
+        let id = result
+            .events
+            .iter()
+            .find_map(|e| match e {
+                ChangeEvent::ObjectAdded { id } => Some(*id),
+                _ => None,
+            })
+            .ok_or_else(|| OpError::internal("the new relationship has no id"))?;
+        let relationship = find_relationship(session, id)
+            .ok_or_else(|| OpError::internal("the new relationship is missing"))?;
+        let warnings = session
+            .diagnostics()
+            .into_iter()
+            .filter(|d| d.object == Some(id))
+            .map(|d| format!("{}: {}", d.code, d.message))
+            .collect();
+        Ok(RelationshipEditOut::new(
+            DocumentEditOut::committed(ctx, &entry, &result),
+            &relationship,
+            warnings,
+        ))
+    }
+}
+
+/// `model.relationship.delete`.
+#[derive(Debug)]
+pub struct ModelRelationshipDelete;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeleteRelationshipParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The relationship's id from `model.relationships` (instead of `name`).
+    #[serde(default)]
+    pub relationship_id: Option<u64>,
+    /// The relationship's name (case-insensitive).
+    #[serde(default)]
+    pub name: Option<String>,
+    /// Only list what uses the relationship; the document is unchanged.
+    #[serde(default)]
+    pub dry_run: bool,
+}
+
+impl Command for ModelRelationshipDelete {
+    type Params = DeleteRelationshipParams;
+    type Output = RelationshipEditOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.relationship.delete",
+            title: "Delete a relationship",
+            summary: "Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[
+                (
+                    "What uses a relationship",
+                    r#"{"docId": "d1", "relationshipId": 7, "dryRun": true}"#,
+                ),
+                (
+                    "Delete by name",
+                    r#"{"docId": "d1", "name": "d0c1e2f3-a4b5-4c6d-8e7f-000000000001"}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        resolve::require_model(&entry)?;
+        let session = entry.session();
+        let id = relationship_target(session, params.relationship_id, params.name.as_deref())?;
+        let relationship = find_relationship(session, id)
+            .ok_or_else(|| OpError::not_found(format!("no relationship with id {}", id.get())))?;
+        let found = session.object_dependents(id)?;
+        let edit = if params.dry_run {
+            let history = session.document_history();
+            DocumentEditOut {
+                changed: false,
+                revision: history.revision,
+                dirty: history.dirty,
+                changed_object_ids: Vec::new(),
+            }
+        } else {
+            let result = session
+                .execute_document_command(DeleteRelationship { relationship: id })
+                .await?;
+            DocumentEditOut::committed(ctx, &entry, &result)
+        };
+        let mut out = RelationshipEditOut::new(edit, &relationship, found.warnings);
+        out.dependents = Some(
+            found
+                .dependents
+                .into_iter()
+                .map(|d| DependentOut {
+                    location: d.location,
+                    property: d.property,
+                })
+                .collect(),
+        );
+        out.dry_run = Some(params.dry_run);
+        Ok(out)
     }
 }
 
@@ -1325,6 +1708,28 @@ pub enum EditOperation {
         table: Option<String>,
         #[serde(default)]
         measure: Option<String>,
+    },
+    /// Like `model.relationship.create`.
+    CreateRelationship {
+        from: ColumnParam,
+        to: ColumnParam,
+        #[serde(default)]
+        from_cardinality: Option<CardinalityParam>,
+        #[serde(default)]
+        to_cardinality: Option<CardinalityParam>,
+        #[serde(default)]
+        cross_filtering_behavior: Option<CrossFilterParam>,
+        #[serde(default)]
+        is_active: Option<bool>,
+        #[serde(default)]
+        name: Option<String>,
+    },
+    /// Like `model.relationship.delete` (without `dryRun`).
+    DeleteRelationship {
+        #[serde(default)]
+        relationship_id: Option<u64>,
+        #[serde(default)]
+        name: Option<String>,
     },
 }
 
@@ -1462,6 +1867,32 @@ impl Command for DocumentApplyEdits {
                         table.as_deref(),
                         measure.as_deref(),
                     )?,
+                }),
+                EditOperation::CreateRelationship {
+                    from,
+                    to,
+                    from_cardinality,
+                    to_cardinality,
+                    cross_filtering_behavior,
+                    is_active,
+                    name,
+                } => group.with(create_relationship(
+                    session,
+                    NewRelationship {
+                        from,
+                        to,
+                        from_cardinality,
+                        to_cardinality,
+                        cross_filtering_behavior,
+                        is_active,
+                        name,
+                    },
+                )),
+                EditOperation::DeleteRelationship {
+                    relationship_id,
+                    name,
+                } => group.with(DeleteRelationship {
+                    relationship: relationship_target(session, relationship_id, name.as_deref())?,
                 }),
             };
         }

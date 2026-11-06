@@ -31,7 +31,7 @@ pub use edit::{SetDescription, SetMeasureExpression, SetMeasureProperties, SetVi
 pub use history::{History, HistoryResult};
 pub use rename::{RenameColumn, RenameMeasure, RenameTable};
 pub use snapshot::{ReplaceObjects, Snapshot};
-pub use structure::{CreateMeasure, DeleteMeasure};
+pub use structure::{CreateMeasure, CreateRelationship, DeleteMeasure, DeleteRelationship};
 
 /// A reversible edit.
 pub trait Command: fmt::Debug + Send {
