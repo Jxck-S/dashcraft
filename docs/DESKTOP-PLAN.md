@@ -579,7 +579,8 @@ Deletes list their dependents first (`pbi-session::delete_dependents`: what goes
 table is left out) and warn about M queries naming a deleted table; a saved delete removes the
 column's TMDL block, or the table's file, `ref table` line, relationships and role filters, and
 undoing saves the original project (`column_and_table_delete_through_the_registry`,
-`column_and_table_deletes_save_and_reopen`). Still open:
+`column_and_table_deletes_save_and_reopen`); Desktop opens the saved deletes and answers all 643
+recorded cases on the edited model as DashCraft does (GT-6 s16). Still open:
 the app's change events (M6.8), dependent recalculation after measure edits, table and column
 create, data column delete (with M editing), hierarchy create and delete, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures

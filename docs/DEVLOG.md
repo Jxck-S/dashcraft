@@ -28,10 +28,13 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   DAX and undo gives the same values, a column with its two measures in one group, Stores with
   its 2 relationships and 2 role filters; `save.rs::column_and_table_deletes_save_and_reopen`:
   5 files written, `Stores.tmdl` deleted, reopen without them, undo saves the original project
-  byte for byte). Registry 65 → 67 commands.
+  byte for byte). Registry 65 → 67 commands. GT-6 with Desktop 2.159 (s16, the same deletes
+  saved on a Desktop copy and on the example): Desktop opens the project with 10 tables, and
+  DashCraft's results on the edited example match Desktop's on all 643 recorded cases, including
+  the 226 measure and 12 RLS cases that now fail in both because Stores is gone.
 - **Still open:** table and column create (type inference, recalculation of the new object only),
-  data column delete with M editing, hierarchy create and delete; Desktop not yet checked on a
-  saved delete (GT-6).
+  data column delete with M editing, hierarchy create and delete; Desktop's own refusals of a
+  delete (it may allow deleting a column a relationship uses) not checked.
 
 ### M6 relationship update (M6.5) and GT-6 relationship checks
 
