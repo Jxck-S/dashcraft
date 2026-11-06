@@ -167,6 +167,16 @@ identical and the other differences are the edits, as above. `Targets[Month]` ke
 `yyyy-mm` format: DashCraft converts the template itself, so Desktop's template import does not
 reset it.
 
+**Lineage tags of new objects.** Copy `target/groundtruth/acme-desktop/` to
+`target/groundtruth/s12/acme/`, create two measures (`model.measure.create` `Tag Check`, and
+`Tag Check B` through `doc.applyEdits`), `doc.save`, open the project in Desktop and record a
+scratch suite with `EVALUATE SELECTCOLUMNS(FILTER(INFO.MEASURES(), LEFT([Name], 9) = "Tag
+Check"), "Name", [Name], "LineageTag", [LineageTag], "Expression", [Expression])` next to the
+committed suites. Results with Desktop 2.159: both measures have exactly the random tags DashCraft
+wrote into `Orders.tmdl`; `acme-measures` (601) and `acme-calcgroup-rls` (26) are identical to the
+committed recordings, and `acme-metadata` differs only by the two added measures (rows added in
+`measures` and `measure-formats`, none changed or missing).
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.

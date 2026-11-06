@@ -10,6 +10,7 @@ use pbi_m::{BlobResolver, Clock};
 use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
 
+use crate::identifiers::IdentifierGenerator;
 use crate::report::RefreshEvent;
 
 /// Resource limits of a session.
@@ -52,6 +53,10 @@ pub struct SessionOptions {
     /// Clock for `DateTimeZone.UtcNow()` & co. (default: the system clock).
     /// Inject a fixed clock for reproducible `Last Refreshed` tables.
     pub clock: Option<Arc<dyn Clock>>,
+    /// Source of the lineage tags of new objects (default: random GUIDs).
+    /// Inject [`SequentialIdentifiers`](crate::SequentialIdentifiers) for
+    /// reproducible output in tests.
+    pub identifiers: Option<Arc<dyn IdentifierGenerator>>,
     /// Resource limits.
     pub limits: SessionLimits,
 }

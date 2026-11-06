@@ -123,6 +123,7 @@ pub mod edit;
 mod error;
 pub mod export;
 mod filters;
+mod identifiers;
 mod options;
 mod query;
 pub mod refresh;
@@ -150,6 +151,7 @@ pub use filters::{
     ColumnFilterSpec, FilterSpec, UnsupportedFilter, filters_from, filters_from_page,
     filters_from_report,
 };
+pub use identifiers::{IdentifierGenerator, RandomIdentifiers, SequentialIdentifiers};
 pub use options::{
     CsvOptions, CsvSource, ProgressFn, RefreshOptions, RefreshSource, SessionLimits, SessionOptions,
 };
