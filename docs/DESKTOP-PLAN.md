@@ -45,7 +45,7 @@ What exists after M0–M5 (`v0.1.0`, `v0.2.0`) and the unreleased work, from [GA
 |---|---|---|
 | File formats | Content detection and safe containers; readers for PBIP (TMDL or `model.bim`, PBIR and PBIR-Legacy), PBIX (report, model, VertiPaq data), PBIT, `.abf`, `.pbi/cache.abf`, Power Pivot, VPAX, RDL outline, mashups, `.pbiviz`/`.mez`/`.pqx` metadata; writers: TMDL (byte-identical), TMSL, PBIR, `save_as_pbip`, `export_pbit`. No PBIX writer, bookmarks and report-level measures only kept | 3.1 |
 | M | Full grammar, lazy evaluator, 336 library names, `AzureStorage.Blobs` offline through the blob map; every other data source unsupported by policy | 3.1 |
-| DAX | Parser, printer, evaluator with filter and row context, context transition, BLANK; 294 functions (271 supported, 23 partial); calculation groups; security functions; differential tests against Desktop (2,212 recorded queries, ADR-0011) | 3.8 |
+| DAX | Parser, printer, evaluator with filter and row context, context transition, BLANK; 294 functions (271 supported, 23 partial); calculation groups; security functions; differential tests against Desktop (2,242 recorded queries, ADR-0011) | 3.9 |
 | Engine | Arrow store, DataFusion SQL, one-to-many, one-to-one and limited many-to-many relationships, filter propagation, RLS "View as", calculation groups, one-pass group-by, cancellable refresh | 3.4 |
 | Visuals | Text box, shapes, buttons, cards, KPI, slicers, table, matrix, pie/donut, bar/column variants, line/area/combos, scatter, funnel, gauge, treemap, waterfall; conditional formatting of tables, matrices and chart colors; dynamic format strings. Placeholders for image, maps, ribbon, AI and custom visuals | 2.1 |
 | Interactions | Slicers, cross-filter per `visualInteractions`, tooltips, navigation and clear-all buttons, scrolling, matrix expand; no highlight, drill, drillthrough, bookmarks, synced slicers | 1.6 |
@@ -1000,7 +1000,7 @@ render them; differences from Desktop's engine are listed and shrinking.
   `TOCSV`/`TOJSON`, `COLUMNSTATISTICS`, `NONVISUAL`, `SUBSTITUTEWITHINDEX`, `SAMPLE`,
   `ALLCROSSFILTERED`, the `ROLLUP` family in `SUMMARIZE`, `EVALUATEANDLOG` (to a log pane), window
   functions without partial notes, UDF `EXPR` parameters, `DEFINE COLUMN`; the known semantic gaps
-  of FUNCTIONS.md (exact auto-exist, shadow contexts in iterations, overrides for `RELATED` and
+  of FUNCTIONS.md (exact auto-exist, overrides for `RELATED` and
   `SUMMARIZE`, keyless duplicate rows, `nonvisual` subtotals).
 - [ ] **M13.3 `INFO` functions.** `INFO.*` and `INFO.VIEW.*` answered from the model.
 - [ ] **M13.4 Visual calculations engine.** The visual-calculation functions (`RUNNINGSUM`,
@@ -1011,7 +1011,7 @@ render them; differences from Desktop's engine are listed and shrinking.
 - [x] **M13.5 Differential testing against Desktop's engine.** A query corpus (curated plus
   generated) over the Acme model, results recorded in GT-2 under ADR-0011 and compared in CI with
   documented tolerances; failures become issues with the query attached. Done 2026-11-05:
-  `crates/pbi-session/tests/groundtruth.rs`, 2,212 cases, deviations in
+  `crates/pbi-session/tests/groundtruth.rs`, 2,242 cases, deviations in
   `reference/groundtruth/deviations.json`.
 
 **Crates and layers.** `pbi-dax` (functions, semantics, visual calculations), `pbi-render`

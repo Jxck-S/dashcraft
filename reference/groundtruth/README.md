@@ -32,7 +32,7 @@ ready-to-edit ledger entries to `target/tmp/groundtruth/<suite>.proposed.json`.
 | `acme-calcgroup-rls` | Acme | 26 | Calculation items, and every RLS role and user of `expected.json` |
 | `acme-visuals` | Acme | 9 | `SUMMARIZECOLUMNS` queries shaped like the report's visuals |
 | `format` | Acme | 747 | `FORMAT` with every format string of the model and the standard and custom formats |
-| `dax-functions` | dax-lab | 522 | The cases of `crates/pbi-dax/tests/functions.rs` |
+| `dax-functions` | dax-lab | 552 | The cases of `crates/pbi-dax/tests/functions.rs` |
 | `dax-lab-tables` | dax-lab | 5 | The dax-lab tables |
 | `samples-*` | Microsoft samples | 286 | Metadata, row counts, column aggregates, small tables and every measure of three MIT PBIX samples (VertiPaq decoding against Desktop) |
 
@@ -59,7 +59,7 @@ row count only. A recording whose `query` differs from the corpus is stale and f
 A mismatch fails the test unless `deviations.json` lists it:
 
 ```json
-{ "suite": "dax-functions", "case": "window/ae56c26b", "kind": "bug", "reason": "…", "gap": "DAX engine" }
+{ "suite": "dax-functions", "case": "window/1a2b3c4d", "kind": "bug", "reason": "…", "gap": "DAX engine" }
 ```
 
 `kind` is `bug` (DashCraft is wrong; link the `docs/GAPS.md` area in `gap`), `unsupported`,

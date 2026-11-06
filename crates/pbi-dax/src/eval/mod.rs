@@ -53,7 +53,10 @@
 //!   [`EvalContext::with_data_point`]) that `ALLSELECTED` restores, and the
 //!   group-by columns of the current level (`ISINSCOPE`).
 //!   `SUMMARIZECOLUMNS` sets both for every row, including
-//!   `ROLLUPADDISSUBTOTAL` subtotal rows.
+//!   `ROLLUPADDISSUBTOTAL` subtotal rows. Every iteration (`SUMX`,
+//!   `FILTER`, `ADDCOLUMNS`, …) starts a new shadow context: the filter
+//!   context at its start with the iterated table applied as a filter.
+//!   Without any shadow, `ALLSELECTED` keeps the current filters.
 //! - **Names** are case-insensitive (tables, columns, measures, variables,
 //!   functions); text comparison is case-insensitive.
 //! - **Measures**: bare `[X]` is a measure first, then a row-context
@@ -91,8 +94,7 @@
 //! DirectQuery, `NONVISUAL`, `DEFINE COLUMN`,
 //! `SUMMARIZE` rollups, `FORMAT` cultures other than `en-US`, `EXPR` (lazy)
 //! parameters of user-defined functions (all parameters are bound by
-//! value). `ALLSELECTED` knows one shadow context per query / data point
-//! (iterations do not create new ones). `RELATED` ignores relationship
+//! value). `RELATED` ignores relationship
 //! overrides and cannot follow many-to-many (limited) relationships, as in
 //! Power BI. Context transition filters a stored row by row number, so
 //! duplicate rows of a table without a key count once. Tuple filters on
@@ -158,7 +160,7 @@ impl EvalOptions {
         env.rows = self.row.clone();
         env.vars = self.vars.clone();
         if let Some(shadow) = &self.allselected {
-            env.shadow = std::sync::Arc::new(shadow.clone());
+            env.shadow = Some(context::Shadow::fixed(std::sync::Arc::new(shadow.clone())));
         }
         env.scope = self.group_by.clone().into();
         env
@@ -286,11 +288,11 @@ pub(crate) fn evaluate_measure_format_strings_with(
             .measure(&m.table, &m.name)
             .and_then(|x| x.format_string.clone());
         let base = opts.env();
-        let shadow = std::sync::Arc::new(
+        let shadow = Some(context::Shadow::fixed(std::sync::Arc::new(
             opts.allselected
                 .clone()
                 .unwrap_or_else(|| opts.filter.clone()),
-        );
+        )));
         let scope: std::sync::Arc<[pbi_model::ColumnRef]> = columns.to_vec().into();
         let mut out = Vec::with_capacity(points.len());
         for point in points {
@@ -305,7 +307,7 @@ pub(crate) fn evaluate_measure_format_strings_with(
             }
             let mut env = base.with_filter(std::sync::Arc::new(filter));
             env.rows = base.rows.clone();
-            env.shadow = std::sync::Arc::clone(&shadow);
+            env.shadow = shadow.clone();
             env.scope = std::sync::Arc::clone(&scope);
             out.push(match interp.measure_format_string(&env, &m) {
                 Ok(format) => format,

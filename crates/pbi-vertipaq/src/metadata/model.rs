@@ -2,7 +2,8 @@
 //!
 //! Typed fields are filled where the model has them; other TOM properties that TMDL
 //! knows go to `extra` under their TMDL names (`showAsVariationsOnly`,
-//! `isAvailableInMdx`, `variation`, `joinOnDateBehavior`, `calculationGroup`, ...).
+//! `isAvailableInMdx`, `variation`, `relatedColumnDetails`, `joinOnDateBehavior`,
+//! `calculationGroup`, ...).
 //! Facts derived from storage use a `vertipaq.` prefix and are not TMDL properties:
 //!
 //! * `vertipaq.systemFlags` (tables): raw `Table.SystemFlags` when non-zero
@@ -50,6 +51,8 @@ pub(crate) struct Catalog {
     pub format_string_definitions: Rows,
     pub detail_rows_definitions: Rows,
     pub kpis: Rows,
+    pub related_column_details: Rows,
+    pub group_by_columns: Rows,
 }
 
 fn json_number(value: i64) -> PropValue {
@@ -309,6 +312,7 @@ impl<'a> Mapper<'a> {
         let hierarchies_by_table = group_by(&cat.hierarchies, "TableID");
         let levels_by_hierarchy = group_by(&cat.levels, "HierarchyID");
         let variations_by_column = group_by(&cat.variations, "ColumnID");
+        let group_by_by_column = self.group_by_columns();
 
         let mut out = Vec::new();
         for row in cat.tables.iter() {
@@ -361,7 +365,7 @@ impl<'a> Mapper<'a> {
             }
 
             for column in columns_by_table.get(&id).into_iter().flatten() {
-                if let Some(c) = self.column(*column, &variations_by_column) {
+                if let Some(c) = self.column(*column, &variations_by_column, &group_by_by_column) {
                     table.columns.push(c);
                 }
             }
@@ -381,10 +385,32 @@ impl<'a> Mapper<'a> {
         out
     }
 
+    /// Column ID → names of its group-by columns (`RelatedColumnDetails` +
+    /// `GroupByColumn`, e.g. a field parameter's display column).
+    fn group_by_columns(&self) -> HashMap<i64, Vec<String>> {
+        let groupings = group_by(&self.cat.group_by_columns, "RelatedColumnDetailsID");
+        let mut out: HashMap<i64, Vec<String>> = HashMap::new();
+        for details in self.cat.related_column_details.iter() {
+            let Some(column) = details.i64("ColumnID") else {
+                continue;
+            };
+            for grouping in groupings.get(&details.id()).into_iter().flatten() {
+                if let Some((_, name)) = grouping
+                    .id_ref("GroupingColumnID")
+                    .and_then(|id| self.column_names.get(&id))
+                {
+                    out.entry(column).or_default().push(name.clone());
+                }
+            }
+        }
+        out
+    }
+
     fn column(
         &self,
         row: Row<'_>,
         variations_by_column: &HashMap<i64, Vec<Row<'_>>>,
+        group_by_by_column: &HashMap<i64, Vec<String>>,
     ) -> Option<Column> {
         let id = row.id();
         let kind_code = column_kind_code(row);
@@ -481,6 +507,23 @@ impl<'a> Mapper<'a> {
             _ => {
                 extra.insert("variation".into(), PropValue::List(variations));
             }
+        }
+        if let Some(names) = group_by_by_column.get(&id).filter(|n| !n.is_empty()) {
+            let mut details = RawObject::default();
+            let mut values: Vec<PropValue> = names
+                .iter()
+                .map(|n| PropValue::Text(tmdl_name(n).into_owned()))
+                .collect();
+            let value = if values.len() == 1 {
+                values.remove(0)
+            } else {
+                PropValue::List(values)
+            };
+            details.properties.insert("groupByColumn".into(), value);
+            extra.insert(
+                "relatedColumnDetails".into(),
+                PropValue::Object(Box::new(details)),
+            );
         }
         Some(column)
     }

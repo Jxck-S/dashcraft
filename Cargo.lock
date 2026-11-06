@@ -4625,6 +4625,7 @@ dependencies = [
  "insta",
  "pbi-model",
  "pretty_assertions",
+ "serde_json",
  "thiserror 2.0.21",
  "walkdir",
 ]

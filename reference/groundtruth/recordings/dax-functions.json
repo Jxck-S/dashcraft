@@ -1210,6 +1210,75 @@
       "error": "Query (1, 29) KEEPFILTERS function can only be used as a top level filter argument of CALCULATE and CALCULATETABLE or with a table argument of a function performing a table scan."
     },
     {
+      "id": "table/4b702457",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(KEEPFILTERS(ALL(Product[Name])), [Total Qty]), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "table/fbfd0f16",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTX(KEEPFILTERS(ALL(Product[Name])), [Total Qty]), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "table/d99b6989",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(FILTER(KEEPFILTERS(ALL(Product[Name])), [Total Qty] > 0)), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "table/c4f509b1",
+      "query": "EVALUATE ROW(\"v\", SUMX(KEEPFILTERS(VALUES(Product[Name])), [Total Qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        [15]
+      ]
+    },
+    {
+      "id": "table/fa006bea",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(KEEPFILTERS(Product), TRUE())))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "table/0b9cac97",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ADDCOLUMNS(KEEPFILTERS(VALUES(Product[Name])), \"q\", [Total Qty])))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "table/c4575d9d",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(Product, KEEPFILTERS(Product[Color] = \"Red\"))))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "table/f35fe765",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Product), KEEPFILTERS(ALL(Product[Name])), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "table/e0b14fbb",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(VALUES(KEEPFILTERS(Product[Name]))))",
+      "error": "Query (1, 36) KEEPFILTERS function can only be used as a top level filter argument of CALCULATE and CALCULATETABLE or with a table argument of a function performing a table scan."
+    },
+    {
       "id": "table/854ac4f2",
       "query": "EVALUATE ROW(\"v\", 2 IN {1, 2})",
       "columns": ["[v]"],
@@ -1823,6 +1892,30 @@
       ]
     },
     {
+      "id": "window/5f4f6cec",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Name]), CALCULATE([Total Qty], OFFSET(1, ORDERBY(Product[Name])))))",
+      "columns": ["[v]"],
+      "rows": [
+        [11]
+      ]
+    },
+    {
+      "id": "window/e90a5761",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(VALUES(Product[Name]), CALCULATE([Total Qty], OFFSET(-1, ORDERBY(Product[Name])))), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "window/e8475544",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], OFFSET(-1, ORDERBY(Product[Name]))), Product[Name] IN {\"Apple\", \"Cherry\"}, Product[Name] = \"Cherry\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [null]
+      ]
+    },
+    {
       "id": "misc/90ed429a",
       "query": "EVALUATE ROW(\"v\", SWITCH(TRUE(), 1 > 2, \"a\", 2 > 1, \"b\", \"c\"))",
       "columns": ["[v]"],
@@ -2222,6 +2315,19 @@
       "error": "Query (1, 19) IGNORE function can only be used in the SUMMARIZECOLUMNS function."
     },
     {
+      "id": "misc/1c6b1d80",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"Two\", IGNORE(1) + 1)))",
+      "error": "Query (1, 86) IGNORE function can only be used in the SUMMARIZECOLUMNS function."
+    },
+    {
+      "id": "misc/a69fff63",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", IGNORE([Total Qty]))))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
       "id": "visual/c2ff4539",
       "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Pct\", DIVIDE([Total Qty], CALCULATE([Total Qty], ALLSELECTED()))), [Pct]))",
       "columns": ["[v]"],
@@ -2387,6 +2493,102 @@
       "columns": ["[v]"],
       "rows": [
         [false]
+      ]
+    },
+    {
+      "id": "visual/1a03f5d3",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(ALLSELECTED(Product[Name])), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "visual/78d3ebbd",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE(COUNTROWS(Product), ALLSELECTED(Product[Name])), Product[Name] = \"Apple\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [1]
+      ]
+    },
+    {
+      "id": "visual/4b1a77a5",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], ALLSELECTED()), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "visual/7a8b87b0",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE(COUNTROWS(ALLSELECTED(Product)), Product[Color] = \"Red\"), Product[Category] = \"Fruit\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "visual/476015cd",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(ALLSELECTED(Product[Name]), Product[Color] = \"Red\")))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "visual/7c09e4ce",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(VALUES(Product[Name]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Name])))), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [4]
+      ]
+    },
+    {
+      "id": "visual/ace46b60",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color])))))",
+      "columns": ["[v]"],
+      "rows": [
+        [16]
+      ]
+    },
+    {
+      "id": "visual/2180d3b8",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Category]), CALCULATE(SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color])))))))",
+      "columns": ["[v]"],
+      "rows": [
+        [6]
+      ]
+    },
+    {
+      "id": "visual/ae01cc6f",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Category]), SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color]))))))",
+      "columns": ["[v]"],
+      "rows": [
+        [48]
+      ]
+    },
+    {
+      "id": "visual/2feb13fd",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(FILTER(VALUES(Product[Name]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Name]))) = 2)), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [2]
+      ]
+    },
+    {
+      "id": "visual/b4400192",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(MAXX(SUMMARIZECOLUMNS(Product[Name], \"N\", COUNTROWS(ALLSELECTED(Product[Name]))), [N]), Product[Color] = \"Red\"))",
+      "columns": ["[v]"],
+      "rows": [
+        [5]
+      ]
+    },
+    {
+      "id": "visual/6cac5193",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Category]), CALCULATE(CALCULATE(COUNTROWS(ALLSELECTED(Product[Category]))))))",
+      "columns": ["[v]"],
+      "rows": [
+        [9]
       ]
     },
     {
@@ -4067,6 +4269,35 @@
       "id": "time-intelligence/f06840d5",
       "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_LeftFiltersRight))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
       "error": "Query (1, 51) The CROSSFILTER function cannot be used to enable only the many-side of a many-to-one relationship to filter the one-side."
+    },
+    {
+      "id": "time-intelligence/d0b9dfcc",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_RightFiltersLeft))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [110]
+      ]
+    },
+    {
+      "id": "time-intelligence/1c98b3a3",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER('Date'[Date], Orders[OrderDate], OneWay_LeftFiltersRight))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [110]
+      ]
+    },
+    {
+      "id": "time-intelligence/6920dcdc",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER('Date'[Date], Orders[OrderDate], OneWay_RightFiltersLeft))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "error": "Query (1, 51) The CROSSFILTER function cannot be used to enable only the many-side of a many-to-one relationship to filter the one-side."
+    },
+    {
+      "id": "time-intelligence/5a5e69e3",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], 2))), 'Date'[Year] = 2024, 'Date'[Month] = 2)",
+      "columns": ["[v]"],
+      "rows": [
+        [110]
+      ]
     },
     {
       "id": "time-intelligence/1915df3a",

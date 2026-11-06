@@ -330,8 +330,8 @@ table, as in Power BI. Periods are whole days; fiscal years via
 | `ALLNOBLANKROW` | supported | |
 | `ALLEXCEPT` | partial | `CALCULATE` filter argument only. |
 | `REMOVEFILTERS` | supported | |
-| `KEEPFILTERS` | supported | |
-| `ALLSELECTED` | partial | Restores the *shadow* filter context (`EvalContext::with_allselected`, set per row by `SUMMARIZECOLUMNS`) on the given scope; iterations do not create new shadow contexts. |
+| `KEEPFILTERS` | supported | As a `CALCULATE`/`CALCULATETABLE` filter or an iterator's table argument (context transition then intersects with the existing filters); anywhere else an error, as in Desktop. |
+| `ALLSELECTED` | supported | Restores the *shadow* filter context on the given scope: the innermost iteration's (filters at its start plus the iterated table), else the query's/visual's (`EvalContext::with_allselected`, per row of `SUMMARIZECOLUMNS`), else the current filters. The table form keeps only the shadow's filters on its scope. |
 | `VALUES` | supported | |
 | `DISTINCT` | supported | |
 | `FILTERS` | supported | |
@@ -349,7 +349,7 @@ table, as in Power BI. Periods are whole days; fiscal years via
 | `LOOKUPVALUE` | partial | Search columns must belong to the result column's table. |
 | `TREATAS` | supported | |
 | `USERELATIONSHIP` | supported | `CALCULATE`/`CALCULATETABLE` modifier; the other active relationship between the two tables is deactivated. |
-| `CROSSFILTER` | supported | `None`, `OneWay`, `Both`, `OneWay_LeftFiltersRight`, `OneWay_RightFiltersLeft`. |
+| `CROSSFILTER` | supported | `None`, `OneWay`, `Both`, `OneWay_LeftFiltersRight`, `OneWay_RightFiltersLeft`; a one-way direction from the many side to the one side of a many-to-one relationship is an error, as in Desktop. |
 
 ## Table manipulation
 
@@ -359,7 +359,7 @@ table, as in Power BI. Periods are whole days; fiscal years via
 | `SUMMARIZECOLUMNS` | partial | Group-by columns, `ROLLUPADDISSUBTOTAL` (subtotal flag columns follow the group-by columns), `ROLLUPGROUP`, filter tables, `IGNORE`. No `NONVISUAL`, no group-level filters in `ROLLUPADDISSUBTOTAL`. |
 | `ROLLUPADDISSUBTOTAL` | partial | Inside `SUMMARIZECOLUMNS` only. |
 | `ROLLUPGROUP` | partial | Inside `SUMMARIZECOLUMNS`/`ROLLUPADDISSUBTOTAL` only. |
-| `IGNORE` | supported | |
+| `IGNORE` | supported | Only as a whole `SUMMARIZECOLUMNS` expression (elsewhere an error, as in Desktop); when every expression is ignored, all combinations are kept. |
 | `GROUPBY` | supported | Group-by columns of the table or of related one-side tables. |
 | `CURRENTGROUP` | supported | |
 | `SELECTCOLUMNS` | supported | |
@@ -465,9 +465,6 @@ return infinities or `NaN`.
   reads another secured table sees all of its rows.
 - **DirectQuery / Direct Lake / composite models**: no live execution; only
   imported data is evaluated.
-- **`ALLSELECTED`**: one shadow context per query/visual data point (and per
-  `SUMMARIZECOLUMNS` row); real DAX also creates shadow contexts in
-  iterations.
 - **Relationship overrides** (`USERELATIONSHIP`, `CROSSFILTER`) change
   filter propagation (so `RELATEDTABLE` and every aggregation) and expanded
   tables, but not `RELATED` navigation or `SUMMARIZE`/`GROUPBY` over related

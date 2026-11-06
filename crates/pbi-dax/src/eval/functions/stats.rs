@@ -103,7 +103,7 @@ fn rank_of(values: &[Value], value: &Value, desc: bool, dense: bool) -> i64 {
 /// `RANKX(table, expression[, value[, order[, ties]]])`.
 fn rankx(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("RANKX", args, 2, 5)?;
-    let table = i.table(env, arg("RANKX", args, 0)?)?;
+    let table = i.iter_table(env, arg("RANKX", args, 0)?)?;
     let expr = arg("RANKX", args, 1)?;
     let mut values = Vec::with_capacity(table.row_count());
     i.iterate(env, &table, |row_env, _| {
@@ -200,7 +200,7 @@ fn numbers(f: &str, values: Vec<Value>) -> Result<Numbers> {
 /// `args[0]` table, `args[1]` expression).
 fn inputs(i: &Interp<'_>, env: &Env, f: &str, args: &[Expr], x: bool) -> Result<Numbers> {
     let values = if x {
-        let table = i.table(env, arg(f, args, 0)?)?;
+        let table = i.iter_table(env, arg(f, args, 0)?)?;
         let expr = arg(f, args, 1)?;
         let mut out = Vec::with_capacity(table.row_count());
         i.iterate(env, &table, |row_env, _| {
@@ -402,7 +402,7 @@ fn product(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
 
 fn productx(i: &Interp<'_>, env: &Env, args: &[Expr]) -> R {
     arity("PRODUCTX", args, 2, 2)?;
-    let table = i.table(env, arg("PRODUCTX", args, 0)?)?;
+    let table = i.iter_table(env, arg("PRODUCTX", args, 0)?)?;
     let expr = arg("PRODUCTX", args, 1)?;
     let mut values = Vec::with_capacity(table.row_count());
     i.iterate(env, &table, |row_env, _| {

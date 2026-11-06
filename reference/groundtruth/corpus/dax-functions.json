@@ -776,6 +776,51 @@
       "query": "EVALUATE ROW(\"v\", COUNTROWS(KEEPFILTERS(Product)))"
     },
     {
+      "id": "table/4b702457",
+      "expr": "CALCULATE(SUMX(KEEPFILTERS(ALL(Product[Name])), [Total Qty]), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(KEEPFILTERS(ALL(Product[Name])), [Total Qty]), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "table/fbfd0f16",
+      "expr": "CALCULATE(COUNTX(KEEPFILTERS(ALL(Product[Name])), [Total Qty]), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTX(KEEPFILTERS(ALL(Product[Name])), [Total Qty]), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "table/d99b6989",
+      "expr": "CALCULATE(COUNTROWS(FILTER(KEEPFILTERS(ALL(Product[Name])), [Total Qty] > 0)), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(FILTER(KEEPFILTERS(ALL(Product[Name])), [Total Qty] > 0)), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "table/c4f509b1",
+      "expr": "SUMX(KEEPFILTERS(VALUES(Product[Name])), [Total Qty])",
+      "query": "EVALUATE ROW(\"v\", SUMX(KEEPFILTERS(VALUES(Product[Name])), [Total Qty]))"
+    },
+    {
+      "id": "table/fa006bea",
+      "expr": "COUNTROWS(FILTER(KEEPFILTERS(Product), TRUE()))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(KEEPFILTERS(Product), TRUE())))"
+    },
+    {
+      "id": "table/0b9cac97",
+      "expr": "COUNTROWS(ADDCOLUMNS(KEEPFILTERS(VALUES(Product[Name])), \"q\", [Total Qty]))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ADDCOLUMNS(KEEPFILTERS(VALUES(Product[Name])), \"q\", [Total Qty])))"
+    },
+    {
+      "id": "table/c4575d9d",
+      "expr": "COUNTROWS(CALCULATETABLE(Product, KEEPFILTERS(Product[Color] = \"Red\")))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(Product, KEEPFILTERS(Product[Color] = \"Red\"))))"
+    },
+    {
+      "id": "table/f35fe765",
+      "expr": "CALCULATE(COUNTROWS(Product), KEEPFILTERS(ALL(Product[Name])), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Product), KEEPFILTERS(ALL(Product[Name])), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "table/e0b14fbb",
+      "expr": "COUNTROWS(VALUES(KEEPFILTERS(Product[Name])))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(VALUES(KEEPFILTERS(Product[Name]))))"
+    },
+    {
       "id": "table/854ac4f2",
       "expr": "2 IN {1, 2}",
       "query": "EVALUATE ROW(\"v\", 2 IN {1, 2})"
@@ -1161,6 +1206,21 @@
       "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], OFFSET(1, ORDERBY(Product[Name]))), Product[Name] = \"Apple\"))"
     },
     {
+      "id": "window/5f4f6cec",
+      "expr": "SUMX(VALUES(Product[Name]), CALCULATE([Total Qty], OFFSET(1, ORDERBY(Product[Name]))))",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Name]), CALCULATE([Total Qty], OFFSET(1, ORDERBY(Product[Name])))))"
+    },
+    {
+      "id": "window/e90a5761",
+      "expr": "CALCULATE(SUMX(VALUES(Product[Name]), CALCULATE([Total Qty], OFFSET(-1, ORDERBY(Product[Name])))), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(VALUES(Product[Name]), CALCULATE([Total Qty], OFFSET(-1, ORDERBY(Product[Name])))), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "window/e8475544",
+      "expr": "CALCULATE(CALCULATE([Total Qty], OFFSET(-1, ORDERBY(Product[Name]))), Product[Name] IN {\"Apple\", \"Cherry\"}, Product[Name] = \"Cherry\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], OFFSET(-1, ORDERBY(Product[Name]))), Product[Name] IN {\"Apple\", \"Cherry\"}, Product[Name] = \"Cherry\"))"
+    },
+    {
       "id": "misc/90ed429a",
       "expr": "SWITCH(TRUE(), 1 > 2, \"a\", 2 > 1, \"b\", \"c\")",
       "query": "EVALUATE ROW(\"v\", SWITCH(TRUE(), 1 > 2, \"a\", 2 > 1, \"b\", \"c\"))"
@@ -1419,6 +1479,16 @@
       "query": "EVALUATE ROW(\"v\", IGNORE(7))"
     },
     {
+      "id": "misc/1c6b1d80",
+      "expr": "COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"Two\", IGNORE(1) + 1))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", [Total Qty], \"Two\", IGNORE(1) + 1)))"
+    },
+    {
+      "id": "misc/a69fff63",
+      "expr": "COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", IGNORE([Total Qty])))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", IGNORE([Total Qty]))))"
+    },
+    {
       "id": "visual/c2ff4539",
       "expr": "MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Pct\", DIVIDE([Total Qty], CALCULATE([Total Qty], ALLSELECTED()))), [Pct])",
       "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Pct\", DIVIDE([Total Qty], CALCULATE([Total Qty], ALLSELECTED()))), [Pct]))"
@@ -1522,6 +1592,66 @@
       "id": "visual/ffaa2d99",
       "expr": "CALCULATE(ISFILTERED(Product), ALLSELECTED(Product[Color]))",
       "query": "EVALUATE ROW(\"v\", CALCULATE(ISFILTERED(Product), ALLSELECTED(Product[Color])))"
+    },
+    {
+      "id": "visual/1a03f5d3",
+      "expr": "CALCULATE(COUNTROWS(ALLSELECTED(Product[Name])), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(ALLSELECTED(Product[Name])), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "visual/78d3ebbd",
+      "expr": "CALCULATE(CALCULATE(COUNTROWS(Product), ALLSELECTED(Product[Name])), Product[Name] = \"Apple\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE(COUNTROWS(Product), ALLSELECTED(Product[Name])), Product[Name] = \"Apple\"))"
+    },
+    {
+      "id": "visual/4b1a77a5",
+      "expr": "CALCULATE(CALCULATE([Total Qty], ALLSELECTED()), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE([Total Qty], ALLSELECTED()), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "visual/7a8b87b0",
+      "expr": "CALCULATE(CALCULATE(COUNTROWS(ALLSELECTED(Product)), Product[Color] = \"Red\"), Product[Category] = \"Fruit\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE(COUNTROWS(ALLSELECTED(Product)), Product[Color] = \"Red\"), Product[Category] = \"Fruit\"))"
+    },
+    {
+      "id": "visual/476015cd",
+      "expr": "COUNTROWS(CALCULATETABLE(ALLSELECTED(Product[Name]), Product[Color] = \"Red\"))",
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(ALLSELECTED(Product[Name]), Product[Color] = \"Red\")))"
+    },
+    {
+      "id": "visual/7c09e4ce",
+      "expr": "CALCULATE(SUMX(VALUES(Product[Name]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Name])))), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(SUMX(VALUES(Product[Name]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Name])))), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "visual/ace46b60",
+      "expr": "SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color]))))",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color])))))"
+    },
+    {
+      "id": "visual/2180d3b8",
+      "expr": "SUMX(VALUES(Product[Category]), CALCULATE(SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color]))))))",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Category]), CALCULATE(SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color])))))))"
+    },
+    {
+      "id": "visual/ae01cc6f",
+      "expr": "SUMX(VALUES(Product[Category]), SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color])))))",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Category]), SUMX(VALUES(Product[Color]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Color]))))))"
+    },
+    {
+      "id": "visual/2feb13fd",
+      "expr": "CALCULATE(COUNTROWS(FILTER(VALUES(Product[Name]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Name]))) = 2)), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(FILTER(VALUES(Product[Name]), CALCULATE(COUNTROWS(ALLSELECTED(Product[Name]))) = 2)), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "visual/b4400192",
+      "expr": "CALCULATE(MAXX(SUMMARIZECOLUMNS(Product[Name], \"N\", COUNTROWS(ALLSELECTED(Product[Name]))), [N]), Product[Color] = \"Red\")",
+      "query": "EVALUATE ROW(\"v\", CALCULATE(MAXX(SUMMARIZECOLUMNS(Product[Name], \"N\", COUNTROWS(ALLSELECTED(Product[Name]))), [N]), Product[Color] = \"Red\"))"
+    },
+    {
+      "id": "visual/6cac5193",
+      "expr": "SUMX(VALUES(Product[Category]), CALCULATE(CALCULATE(COUNTROWS(ALLSELECTED(Product[Category])))))",
+      "query": "EVALUATE ROW(\"v\", SUMX(VALUES(Product[Category]), CALCULATE(CALCULATE(COUNTROWS(ALLSELECTED(Product[Category]))))))"
     },
     {
       "id": "library/0a6ffbb1",
@@ -2580,6 +2710,26 @@
       "id": "time-intelligence/f06840d5",
       "expr": "CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_LeftFiltersRight))",
       "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_LeftFiltersRight))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/d0b9dfcc",
+      "expr": "CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_RightFiltersLeft))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], OneWay_RightFiltersLeft))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/1c98b3a3",
+      "expr": "CALCULATE([Amt], CROSSFILTER('Date'[Date], Orders[OrderDate], OneWay_LeftFiltersRight))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER('Date'[Date], Orders[OrderDate], OneWay_LeftFiltersRight))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/6920dcdc",
+      "expr": "CALCULATE([Amt], CROSSFILTER('Date'[Date], Orders[OrderDate], OneWay_RightFiltersLeft))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER('Date'[Date], Orders[OrderDate], OneWay_RightFiltersLeft))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
+    },
+    {
+      "id": "time-intelligence/5a5e69e3",
+      "expr": "CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], 2))",
+      "query": "EVALUATE CALCULATETABLE(ROW(\"v\", CALCULATE([Amt], CROSSFILTER(Orders[OrderDate], 'Date'[Date], 2))), 'Date'[Year] = 2024, 'Date'[Month] = 2)"
     },
     {
       "id": "time-intelligence/1915df3a",

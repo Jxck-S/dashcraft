@@ -10,7 +10,7 @@ use pbi_model::names::{name_key, names_eq};
 use pbi_model::{ColumnRef, Model};
 
 use super::calcgroup::{self, CalcGroupInfo};
-use super::context::{Cancel, Env, RowFrame, VarScope, VarValue};
+use super::context::{Cancel, Env, RowFrame, Shadow, VarScope, VarValue};
 use super::error::{DaxError, Result};
 use super::functions;
 use super::ops;
@@ -553,6 +553,16 @@ impl<'a> Interp<'a> {
         self.query_tables.contains_key(&name_key(name)) || self.snapshot.table(name).is_ok()
     }
 
+    /// `true` if the model column is grouped by other columns
+    /// (`relatedColumnDetails`, e.g. a field parameter's display column), so
+    /// it is one part of a composite key.
+    pub fn is_grouped_column(&self, table: &str, column: &str) -> bool {
+        self.model
+            .table(table)
+            .and_then(|t| t.column(column))
+            .is_some_and(|c| !c.group_by_columns().is_empty())
+    }
+
     // ---- measures --------------------------------------------------------
 
     pub fn find_measure(&self, table: Option<&str>, name: &str) -> Result<Option<MeasureRef>> {
@@ -634,7 +644,7 @@ impl<'a> Interp<'a> {
                 VarScope::new()
             },
             home: Some(Arc::from(m.table.as_str())),
-            shadow: Arc::clone(&env.shadow),
+            shadow: env.shadow.clone(),
             scope: Arc::clone(&env.scope),
             applied: env.applied.clone(),
             selected: None,
@@ -671,8 +681,12 @@ impl<'a> Interp<'a> {
             } else {
                 TableFilter::new(data.name(), RowSet::from_rows(n, [row]))
             };
-            let graph = self.snapshot.graph_for(f);
-            f.replace_table(filter, &graph);
+            if frame.keep {
+                f.add(filter);
+            } else {
+                let graph = self.snapshot.graph_for(f);
+                f.replace_table(filter, &graph);
+            }
             return;
         }
         for (i, col) in t.columns.iter().enumerate() {
@@ -682,25 +696,75 @@ impl<'a> Interp<'a> {
                     .table(&lin.table)
                     .is_ok_and(|d| d.has_column(&lin.column))
             {
-                f.replace_column(pbi_engine::ColumnFilter::in_values(
+                let filter = pbi_engine::ColumnFilter::in_values(
                     &lin.table,
                     &lin.column,
                     [t.value(frame.pos, i)],
-                ));
+                );
+                if frame.keep {
+                    f.add(filter);
+                } else {
+                    f.replace_column(filter);
+                }
             }
         }
     }
 
     // ---- iteration -------------------------------------------------------
 
+    /// The table argument of an iterator: `KEEPFILTERS(table)` is allowed
+    /// here (and marks the table, see [`RowFrame`]); elsewhere it is an
+    /// error.
+    pub fn iter_table(&self, env: &Env, e: &Expr) -> Result<Arc<VirtualTable>> {
+        if let Some(("KEEPFILTERS", args)) = e.unparen().as_call() {
+            let [inner] = args else {
+                return Err(DaxError::argument(
+                    "KEEPFILTERS",
+                    "expects exactly one argument",
+                ));
+            };
+            let t = self.iter_table(env, inner)?;
+            return Ok(Arc::new(t.with_keep_filters()));
+        }
+        self.table(env, e)
+    }
+
+    /// The `ALLSELECTED` shadow filter context of `env` (the current
+    /// filter context when there is none).
+    pub fn shadow_context(&self, env: &Env) -> Result<Arc<FilterContext>> {
+        match &env.shadow {
+            None => Ok(Arc::clone(&env.filter)),
+            Some(s) => s.resolve(|base, table| {
+                let filters = self
+                    .table_filters(table)?
+                    .into_iter()
+                    .map(|spec| (spec, false))
+                    .collect();
+                Ok(self.apply_filter_args(
+                    base,
+                    super::filters::FilterArgs {
+                        modifiers: Vec::new(),
+                        filters,
+                    },
+                ))
+            }),
+        }
+    }
+
     /// Calls `f` for each row of `table` with a row context on it; stops
-    /// when `f` returns `false`.
+    /// when `f` returns `false`. The iteration is the shadow context of
+    /// `ALLSELECTED` inside it.
     pub fn iterate(
         &self,
         env: &Env,
         table: &Arc<VirtualTable>,
         mut f: impl FnMut(&Env, RowPos) -> Result<bool>,
     ) -> Result<()> {
+        let mut env = env.clone();
+        env.shadow = Some(Shadow::iteration(
+            Arc::clone(&env.filter),
+            Arc::clone(table),
+        ));
         for pos in table.positions() {
             self.check_cancel()?;
             let row_env = env.with_row(RowFrame::new(Arc::clone(table), pos));

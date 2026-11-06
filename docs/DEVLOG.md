@@ -7,6 +7,35 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-05
 
+### Field-parameter composite keys
+
+- **What:** `pbi-model` `Column::group_by_columns()` reads `relatedColumnDetails` (TMDL
+  `groupByColumn`, TOM JSON `groupByColumns`); `pbi-vertipaq` fills it from the
+  `RelatedColumnDetails`/`GroupByColumn` metadata tables; the TMDL and TMSL writers convert
+  between the two shapes; `pbi-dax` raises Desktop's "part of composite key" error when such a
+  column is aggregated alone (and the storage-engine fast path falls back to that error).
+- **Why:** The last fixable deviation-ledger entry (`samples-corporate-spend`
+  `column/toggle-for-*`).
+- **Numbers:** `samples-corporate-spend` 79/79 equal to Desktop without a ledger entry; ledger
+  2 → 1. The remaining entry (`format` `measure/sales-scaled`, by design) is the 15th digit of a
+  double sum: adding Orders[Line Amount] in Desktop's own storage row order reproduces its
+  …003 exactly, the CSV order gives …4999999986 and DashCraft's per-dictionary-value sum …001, so
+  matching would mean reproducing VertiPaq's row-reordering heuristic.
+
+### DAX context semantics from the ground-truth ledger
+
+- **What:** `pbi-dax` gains per-iteration `ALLSELECTED` shadow contexts (`context::Shadow`,
+  resolved lazily; `SUMMARIZECOLUMNS` rows and `EvalContext::with_allselected` set fixed ones), the
+  table form of `ALLSELECTED` and the implied relation of the window functions keep only the
+  shadow's filters on their scope, `KEEPFILTERS` on an iterator's table (context transition
+  intersects), and Desktop's errors for `KEEPFILTERS`/`IGNORE` outside their valid positions and
+  for a many-to-one-side-only `CROSSFILTER`. 30 new `functions.rs` cases, recorded in Desktop.
+- **Why:** The 4 non-trivial entries of the deviation ledger (1 bug, 3 lenient) and the GAPS DAX
+  row "`ALLSELECTED` shadow contexts".
+- **Numbers:** `dax-functions` 522 → 552 cases, all equal to Desktop; ledger 6 → 2 entries (left:
+  float summation order in one `FORMAT` case, by design; the field-parameter composite key of one
+  MIT sample). GAPS DAX 3.8 → 3.9.
+
 ### Power BI Desktop ground truth (ADR-0011)
 
 - **What:** A one-to-one oracle for computed values. `scripts/groundtruth/` records DAX query

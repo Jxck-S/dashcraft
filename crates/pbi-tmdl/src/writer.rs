@@ -797,8 +797,9 @@ impl Out {
         if let Some(t) = explicit_type {
             self.raw_text(2, "type", t);
         }
-        self.extras_scalars(2, &c.extra, &[]);
-        self.extras_objects(2, &c.extra, &[]);
+        let extra = tmdl_related_column_details(c);
+        self.extras_scalars(2, &extra, &[]);
+        self.extras_objects(2, &extra, &[]);
         self.annotations(2, &c.annotations);
     }
 
@@ -956,6 +957,37 @@ impl Out {
         self.extras_objects(1, &p.extra, &[]);
         self.annotations(1, &p.annotations);
     }
+}
+
+/// TOM JSON (TMSL) keeps a column's group-by columns as
+/// `relatedColumnDetails: {"groupByColumns": [{"groupingColumn": …}]}`; TMDL
+/// writes `relatedColumnDetails` with one `groupByColumn: Name` per column.
+fn tmdl_related_column_details(c: &Column) -> Cow<'_, PropertyBag> {
+    let Some((key, PropValue::Json(_))) = c
+        .extra
+        .iter()
+        .find(|(k, _)| k.eq_ignore_ascii_case("relatedColumnDetails"))
+    else {
+        return Cow::Borrowed(&c.extra);
+    };
+    let names = c.group_by_columns();
+    if names.is_empty() {
+        return Cow::Borrowed(&c.extra);
+    }
+    let mut values: Vec<PropValue> = names
+        .iter()
+        .map(|n| PropValue::Text(quote_name(n)))
+        .collect();
+    let value = if values.len() == 1 {
+        values.remove(0)
+    } else {
+        PropValue::List(values)
+    };
+    let mut details = RawObject::default();
+    details.properties.insert("groupByColumn".into(), value);
+    let mut bag = c.extra.clone();
+    bag.insert(key.clone(), PropValue::Object(Box::new(details)));
+    Cow::Owned(bag)
 }
 
 /// TOM JSON (TMSL) keeps a measure's dynamic format string as
