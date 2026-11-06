@@ -168,6 +168,18 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
 - **Ground truth** (ADR-0011): Power BI Desktop's local engine is the oracle, used black-box over
   ADOMD.NET; corpora and recordings are committed, compared value by value in `cargo test`, with a
   deviation ledger that only shrinks.
+- **Editable document state** (ADR-0012): one revisioned state is authoritative; edits publish
+  atomically, queries capture a revision, and session-local history does not rewind revision
+  numbers.
+- **Saving and recovery** (ADR-0013): PBIP saves detect external changes and require explicit
+  overwrite; per-file writes are atomic, recovery stays in user data, and project content is never
+  silently replaced.
+- **Serialization contract** (ADR-0014): no-op saves are byte-identical; unchanged and unknown
+  content is preserved; canonical output requires Desktop evidence, with bounded reviewed
+  deviations and injectable identifiers.
+- **Accessibility** (ADR-0015): new and changed app surfaces target WCAG 2.2 AA with keyboard,
+  focus, names, contrast, reduced-motion and platform/webview screen-reader checks; independent
+  audit before 1.0.
 - **Blob access**: offline only, through the `BlobResolver` trait and `blob-map.json`; real Azure
   access (SAS or az token from the OS keychain) may come later behind the same trait.
 - **Save formats**: PBIP via `save_as_pbip`, PBIT via `export_pbit` (`dashcraft convert`). Writing

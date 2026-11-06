@@ -18,7 +18,7 @@ use crate::relationships::{RelationshipGraph, RelationshipOverride};
 use crate::rowset::RowSet;
 use crate::security::{SecurityContext, SecurityRole};
 use crate::sql::SqlState;
-use crate::storage::{Storage, TableData};
+use crate::storage::{Storage, StorageRename, TableData};
 use crate::value::Value;
 
 /// Maximum cached `visible` results per snapshot.
@@ -183,7 +183,29 @@ impl Engine {
     /// Re-reads the relationships from `model` (e.g. after an edit) and adds
     /// empty tables for model tables that are not stored yet.
     pub fn sync_model(&mut self, model: &Model) {
+        let storage = self.current.storage.clone();
+        self.publish_synced(storage, model);
+    }
+
+    /// Renames stored tables and columns ([`Storage::rename`]: their data is
+    /// kept), then re-syncs with `model` like [`Engine::sync_model`], as one
+    /// new snapshot.
+    ///
+    /// # Errors
+    /// A new name collides with a stored table or column; the engine is
+    /// unchanged.
+    pub fn sync_model_with_renames(
+        &mut self,
+        model: &Model,
+        renames: &[StorageRename],
+    ) -> Result<()> {
         let mut storage = self.current.storage.clone();
+        storage.rename(renames)?;
+        self.publish_synced(storage, model);
+        Ok(())
+    }
+
+    fn publish_synced(&mut self, mut storage: Storage, model: &Model) {
         for table in &model.tables {
             storage.ensure_model_table(table);
         }

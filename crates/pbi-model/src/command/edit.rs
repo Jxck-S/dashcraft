@@ -51,6 +51,60 @@ impl Command for SetMeasureExpression {
     }
 }
 
+/// Patches a measure's properties in one step. `None` leaves a property
+/// unchanged; `Some(None)` clears an optional one.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SetMeasureProperties {
+    pub measure: ObjectId,
+    pub expression: Option<String>,
+    pub format_string: Option<Option<String>>,
+    pub display_folder: Option<Option<String>>,
+    pub description: Option<Option<String>>,
+    pub is_hidden: Option<bool>,
+}
+
+fn swap<T: PartialEq + Clone>(slot: &mut T, new: &Option<T>, differs: &mut bool) -> Option<T> {
+    let new = new.as_ref()?;
+    *differs |= slot != new;
+    Some(mem::replace(slot, new.clone()))
+}
+
+impl Command for SetMeasureProperties {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let ObjectPath::Measure { table, measure } =
+            expect_kind(doc, self.measure, ObjectKind::Measure)?
+        else {
+            return Err(CommandError::NotFound(self.measure));
+        };
+        let slot = model_mut(doc)?
+            .tables
+            .get_mut(table)
+            .and_then(|t| t.measures.get_mut(measure))
+            .ok_or(CommandError::NotFound(self.measure))?;
+        if matches!(self.format_string, Some(Some(_))) && slot.format_string_definition().is_some()
+        {
+            return Err(CommandError::Rejected(format!(
+                "measure '{}' has a dynamic format string; a static format string cannot be set too",
+                slot.name
+            )));
+        }
+        let mut differs = false;
+        let inverse = SetMeasureProperties {
+            measure: self.measure,
+            expression: swap(&mut slot.expression, &self.expression, &mut differs),
+            format_string: swap(&mut slot.format_string, &self.format_string, &mut differs),
+            display_folder: swap(&mut slot.display_folder, &self.display_folder, &mut differs),
+            description: swap(&mut slot.description, &self.description, &mut differs),
+            is_hidden: swap(&mut slot.is_hidden, &self.is_hidden, &mut differs),
+        };
+        Ok(Applied::new(inverse, changed(self.measure, differs)))
+    }
+
+    fn label(&self) -> String {
+        "Edit measure".to_owned()
+    }
+}
+
 /// Sets (or clears, with `None`) the description of any object that has one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SetDescription {

@@ -51,7 +51,7 @@ What exists after M0–M5 (`v0.1.0`, `v0.2.0`) and the unreleased work, from [GA
 | Interactions | Slicers, cross-filter per `visualInteractions`, tooltips, navigation and clear-all buttons, scrolling, matrix expand; no highlight, drill, drillthrough, bookmarks, synced slicers | 1.6 |
 | Rendering fidelity | Deterministic SVG and PNG with bundled fonts, render snapshots of every Acme page, 39 card values asserted; no golden images | 3.2 |
 | Performance | `cargo xtask perf`, eight scenarios P01–P08, all within target | 4.9 |
-| Registry, MCP, AI | `pbi-ops` with 47 commands, `run`, `serve`, `mcp`; opt-in `pbi-ai` with 9 `ai.*` commands; no editing commands | 2.7 |
+| Registry, MCP, AI | `pbi-ops` with 60 commands including measure create, update and delete, object dependents, measure editing, DAX-aware rename, descriptions, visual move and resize, grouped edits and history, `run`, `serve`, `mcp`; opt-in `pbi-ai` with 9 `ai.*` commands | 2.8 |
 | App UX | Desktop-style shell: ribbon, view rail, panes, Report (interactive reading), Table, Model (read-only diagram), DAX query, TMDL (read-only) views, View as, opt-in AI; editing commands shown disabled | 1.4 |
 | Platform and packaging | CI on macOS, Windows, Linux; dmg, msi, nsis, AppImage, deb; unsigned; no auto-update | 2.7 |
 | Security and fuzzing | No `unsafe`, caps and zip-slip guards, 14 fuzz targets, `cargo-deny`; legal review of ADR-0003 pending | 3.1 |
@@ -65,7 +65,7 @@ The document state is held in several places today: `OpenedDocument::document` (
 returned, with the TMDL CST and typed PBIR sources the writers consume), `Session::base_model` (a
 copy of the model), the session model with derived columns, the engine snapshots (and a second
 engine under "View as"), and the `pbi-ops` `DocEntry` with a data generation and a per-document
-lock. M6 replaces this with one revisioned state ([ADR-0010](#new-adrs-required)).
+lock. M6 replaces this with one revisioned state ([ADR-0012](#new-adrs-required)).
 
 ## Guiding principles
 
@@ -96,7 +96,7 @@ lock. M6 replaces this with one revisioned state ([ADR-0010](#new-adrs-required)
    example and licensed public samples (golden rules 2–4).
 9. **Determinism.** Same inputs, same bytes on every OS: bundled fonts, no wall clock in output.
    Generated identifiers come from an injectable generator: fixed sequences in tests and
-   cross-writer comparisons, random values in use (ADR-0012).
+   cross-writer comparisons, random values in use (ADR-0014).
 10. **No panics, bounded resources, fuzzed parsers and writers** (golden rule 7).
 11. **Performance budgets only get stricter** (golden rule 12); each milestone adds the scenarios
     for what it introduces.
@@ -139,7 +139,7 @@ lock. M6 replaces this with one revisioned state ([ADR-0010](#new-adrs-required)
 ## Output contract
 
 The oracle for every writer (TMDL, TMSL, PBIR, themes, `diagramLayout.json`, PBIT, conversions).
-ADR-0012 makes it binding and fixes the file that records the per-field classification and the
+ADR-0014 makes it binding and fixes the file that records the per-field classification and the
 deviation list (proposed: a machine-readable contract file next to the writer tests, checked by
 them). Every field or file a writer emits belongs to exactly one category:
 
@@ -148,7 +148,7 @@ them). Every field or file a writer emits belongs to exactly one category:
 | **Byte-stable** | Files and regions DashCraft did not change are re-emitted byte for byte. A no-op save is byte-identical for every file of the project, with no deviation entries ever. In an edited file, every byte outside the edited objects' spans is unchanged | Save round-trips on Acme, the samples and every Desktop-saved fixture |
 | **Canonical** | Content DashCraft generates for new or edited objects matches Desktop's form for the same construct (ordering, indentation, quoting, escaping, number spelling, file and folder layout), byte for byte after identifier normalization, once GT-4 has recorded that construct | Cross-writer tests against GT-4 recordings |
 | **Value-equal** | JSON content whose Desktop form is not recorded yet, compared as JSON values. Temporary: a field stays here only through an entry on the deviation list, and moves to Canonical when its recording exists | Value comparison plus the deviation list |
-| **Identifier-normalized** | Generated identifiers (`lineageTag`, page, visual and bookmark names, folder names derived from them, other GUIDs). Tests inject a fixed identifier sequence into DashCraft's generator; identifiers in Desktop recordings are mapped to the same sequence by object path before comparison. In use, identifiers are random per ADR-0012 | Cross-writer tests with injected identifiers |
+| **Identifier-normalized** | Generated identifiers (`lineageTag`, page, visual and bookmark names, folder names derived from them, other GUIDs). Tests inject a fixed identifier sequence into DashCraft's generator; identifiers in Desktop recordings are mapped to the same sequence by object path before comparison. In use, identifiers are random per ADR-0014 | Cross-writer tests with injected identifiers |
 | **Preserved-from-input** | Everything DashCraft does not model: `extra` bags, unknown properties and annotations, unknown files, `.pbi/` content, security bindings, sensitivity-label parts. After any edit, save or conversion that keeps the container kind, they equal the input (bytes for files, values for JSON properties) | Preservation tests with structurally representative synthetic fixtures |
 
 **Approved deviation list.** A committed, reviewed list of the only differences allowed against
@@ -235,9 +235,9 @@ graph TD
 
 | Milestone | Name | Goal | Size | Depends on | Blocked by |
 |---|---|---|---|---|---|
-| M6 | Editable document state and save | One revisioned document state, atomic undoable edits through the registry (CLI, RPC, MCP, app), Save and Save As PBIP | XL | none; ADR-0010, 0011, 0012, 0013 | GT-4, GT-6 (Desktop-compatibility criteria only) |
+| M6 | Editable document state and save | One revisioned document state, atomic undoable edits through the registry (CLI, RPC, MCP, app), Save and Save As PBIP | XL | none; ADR-0012–0015 | GT-4, GT-6 (Desktop-compatibility criteria only) |
 | M7 | Language foundation | DAX, M and TMDL language services and formatters; formula bar with IntelliSense | L | M6 | none |
-| M8 | Recovery, external changes and semantic diff | Autosave and recovery, safe handling of files changed by other tools, a model and report diff | M | M6; ADR-0011 | none |
+| M8 | Recovery, external changes and semantic diff | Autosave and recovery, safe handling of files changed by other tools, a model and report diff | M | M6; ADR-0013 | none |
 | M9 | Reading view parity | Every reading-view interaction and report feature of existing reports works | XL | M6 | GT-3 (golden criterion only) |
 | M10 | Modeling core | Create and edit tables, columns, measures, hierarchies and relationships in the Model and Table views | XL | M7 | GT-4, GT-6 (canonical and Desktop-open criteria only) |
 | M11 | Advanced modeling and security | Calculation groups, field and what-if parameters, roles with RLS and OLS, perspectives, translations, synonyms, user-defined functions | L | M10 | GT-2 (differential criterion), GT-4 (M11.11) |
@@ -245,32 +245,30 @@ graph TD
 | M13 | DAX engine parity | Pinned DAX inventory, the remaining functions and semantics, `INFO` functions, visual-calculation engine, differential testing | L | none | GT-2 (differential criterion) |
 | M14 | Power Query Editor core | Feature matrix, queries pane, applied steps, preview, profiling, core transforms, parameters, Close & Apply | L | M7 | GT-5 (differential criterion) |
 | M15 | Power Query transform parity | Every remaining transform, merges and appends, fuzzy matching, Column from Examples, query diagnostics | L | M14 | GT-5 (differential criterion) |
-| M16 | Get Data, local connectors and M library | Local CSV, Excel, JSON, XML, Parquet and folder connectors, privacy levels, cultures, M library inventory | L | M14; ADR-0015, 0016 | GT-5 (firewall criterion) |
-| M17 | Data engine at scale | Compressed, multithreaded storage for 10M+ rows, local data cache, incremental refresh, aggregations | XL | M16; ADR-0017, 0018 | none |
-| M18 | Report authoring: canvas, pages and PBIR creation | Build pages from scratch: canvas editing, pages, insert, field wells, Selection pane, new PBIR files | L | M9; ADR-0019 | GT-4, GT-6 (canonical and Desktop-open criteria only) |
+| M16 | Get Data, local connectors and M library | Local CSV, Excel, JSON, XML, Parquet and folder connectors, privacy levels, cultures, M library inventory | L | M14; ADR-0016, ADR-0017 | GT-5 (firewall criterion) |
+| M17 | Data engine at scale | Compressed, multithreaded storage for 10M+ rows, local data cache, incremental refresh, aggregations | XL | M16; ADR-0018, ADR-0019 | none |
+| M18 | Report authoring: canvas, pages and PBIR creation | Build pages from scratch: canvas editing, pages, insert, field wells, Selection pane, new PBIR files | L | M9; ADR-0020 | GT-4, GT-6 (canonical and Desktop-open criteria only) |
 | M19 | Format pane and visual property descriptors | Every formatting property of every supported visual editable and behaviour-tested | XL | M18 | GT-6 (Desktop-open criterion) |
 | M20 | Report authoring: filters, interactions, bookmarks, themes, mobile | Author filters, interactions, bookmarks, drillthrough, sync slicers, actions, themes, mobile layout, visual calculations | L | M19, M11, M13 | GT-4 (mobile format), GT-6 (Desktop-open criterion) |
 | M21 | Standard visuals completeness | Ribbon chart, Analytics pane, small multiples, sparklines, newer slicers, conditional formatting everywhere, chart polish | L | M19 | GT-3 (golden criterion only) |
-| M22 | Maps and geodata | Shape, filled and bubble maps offline with bundled geodata and geocoding | M | M19; ADR-0020 | GT-3 (golden criterion only) |
+| M22 | Maps and geodata | Shape, filled and bubble maps offline with bundled geodata and geocoding | M | M19; ADR-0021 | GT-3 (golden criterion only) |
 | M23 | Statistical visuals, Q&A and insights | Decomposition tree, key influencers, smart narrative, offline Q&A and its setup, Analyze insights, all local | L | M11, M19 | GT-3 (golden criterion only) |
-| M24 | Desktop shell: ribbon, settings, Performance analyzer and documents | Every in-scope ribbon command, Options, Performance analyzer, Optimize, shortcuts, documents, export, update checks | L | M12, M16, M20, M21; ADR-0027 | GT-1 (shell comparison criterion) |
-| M25 | Accessibility and localization | Canvas and visual accessibility, screen-reader semantics of rendered visuals, high contrast, localization | L | M24; ADR-0021 | none |
+| M24 | Desktop shell: ribbon, settings, Performance analyzer and documents | Every in-scope ribbon command, Options, Performance analyzer, Optimize, shortcuts, documents, export, update checks | L | M12, M16, M20, M21; ADR-0028 | GT-1 (shell comparison criterion) |
+| M25 | Accessibility and localization | Canvas and visual accessibility, screen-reader semantics of rendered visuals, high contrast, localization | L | M24; ADR-0022 | none |
 | M26 | File formats and Desktop interoperability | Output contract verified against Desktop, PBIT parity, upgrades, compatibility levels, sensitivity-label preservation | L | M20 | GT-4, GT-6 |
-| M27 | PBIX writing (optional) | Staged research, prototype and per-encoding validation of PBIX writing, outside the default build | XL | M17, M26; ADR-0022 | Affirmative legal clearance (enabling and shipping); GT-6 |
-| M28 | AI-assisted editing (optional) | DAX and M writing, descriptions, page suggestions, narratives and provider-assisted Q&A on `pbi-ai`, with consent and review | L | M12, M14, M20, M23; ADR-0026 | Owner-supplied provider accounts (real-provider criterion) |
-| M29 | Custom visuals sandbox (optional) | Run `.pbiviz` visuals in an OS-sandboxed out-of-process host when the user allows it | XL | M21; ADR-0023 | Owner decision on ADR-0023 |
-| M30 | Online integration (optional) | Network connectors, remote models, publish and download, opt-in | XL | M16, M26; ADR-0024, 0025 | ADR decisions; a test tenant with synthetic content |
+| M27 | PBIX writing (optional) | Staged research, prototype and per-encoding validation of PBIX writing, outside the default build | XL | M17, M26; ADR-0023 | Affirmative legal clearance (enabling and shipping); GT-6 |
+| M28 | AI-assisted editing (optional) | DAX and M writing, descriptions, page suggestions, narratives and provider-assisted Q&A on `pbi-ai`, with consent and review | L | M12, M14, M20, M23; ADR-0027 | Owner-supplied provider accounts (real-provider criterion) |
+| M29 | Custom visuals sandbox (optional) | Run `.pbiviz` visuals in an OS-sandboxed out-of-process host when the user allows it | XL | M21; ADR-0024 | Owner decision on ADR-0024 |
+| M30 | Online integration (optional) | Network connectors, remote models, publish and download, opt-in | XL | M16, M26; ADR-0025, ADR-0026 | ADR decisions; a test tenant with synthetic content |
 | M31 | Verification and 1.0 | Ground truth, goldens, differential suites, perf at scale, fuzzing, independent accessibility audit, signing, update installs, 1.0 | L | M8, M15, M17, M22, M23, M25, M26 | Windows with Desktop (GT-1 to GT-6), signing certificates, legal review, trademark search |
 
 ## New ADRs required
 
-Proposals, numbered from the next free number; each is written (Status, Context, Decision,
-Alternatives considered, Consequences) and accepted before the step in "Needed by" starts.
-The numbers below are provisional: ADR-0010 became "DashCraft everywhere", and the ground-truth
-decision proposed as ADR-0014 was accepted as
-[ADR-0011](adr/0011-desktop-ground-truth.md); the other proposals take the next free numbers when
-they are written.
-**Network exceptions** (ADR-0024, ADR-0025, ADR-0027): the change that accepts one also updates
+Each proposal is written (Status, Context, Decision, Alternatives considered, Consequences) and
+accepted before the step in "Needed by" starts. ADR-0010 is already "DashCraft everywhere";
+ground-truth was accepted as [ADR-0011](adr/0011-desktop-ground-truth.md). M6.1's decisions are
+accepted as ADR-0012 through ADR-0015; the remaining proposals below are renumbered from ADR-0016.
+**Network exceptions** (ADR-0025, ADR-0026, ADR-0028): the change that accepts one also updates
 the network rules of [AGENTS.md](../AGENTS.md) (golden rules 5 and 9, the layer map), the crate
 graph in [ARCHITECTURE.md](ARCHITECTURE.md) and the network rule in `cargo xtask layers`
 (`xtask/src/layers.rs`), so the allowed set of network crates is never wider than the documents
@@ -278,24 +276,24 @@ say.
 
 | ADR | Title | Decision to make | Needed by |
 |---|---|---|---|
-| ADR-0010 | Editable document state, transactions and history | One authoritative, revisioned document state per open document that replaces today's copies: an immutable revision (`Document`, writer sources such as the TMDL CST and typed PBIR files, the derived session model) swapped atomically under the per-document lock; how engine snapshots, the "View as" engine and writer sources are derived from a revision and its change set (never from a separate model copy); atomic transactions (multi-command edits, undo and redo apply to a working copy and commit as one new revision or not at all); concurrent queries capture one revision and report it; no-op edits (no revision, no history entry, not dirty); data generation versus document revision; which editing commands are `agent_safe` (proposal: in-memory edits, undo, redo and saves inside write roots are; recovery commands are not) and how MCP exposes them | M6.1 |
-| ADR-0011 | Save, autosave, recovery and external changes | In-place PBIP save (changed files only, atomic per file, unknown files kept), Save As targets, the conflict policy when files changed on disk (reload, keep mine, compare), autosave journal location (user data folder, never the project) and recovery flow; history is not persisted across sessions | M6.1 (save), M8.1 (recovery) |
-| ADR-0012 | Canonical serialization, output contract and identifiers | Makes the [output contract](#output-contract) binding: per-field categories, the contract and deviation-list files and their cap, how new TMDL objects and PBIR pages and visuals are written, the `$schema` and compatibility-level matrix, an injectable identifier generator (fixed sequences in tests, random in use) | M6.1 |
-| ADR-0013 | Accessibility target and verification | WCAG 2.2 AA as the target; the [checklist](#w5-accessibility) every UI milestone meets; the screen reader and webview engine pairs for smoke tests; the independent audit before 1.0 | M6.1 |
-| ADR-0014 → [ADR-0011](adr/0011-desktop-ground-truth.md) (accepted) | Ground-truth recordings from Power BI Desktop | The black-box protocol (synthetic inputs only, outputs only, no binaries inspected); what may be committed (values, JSON and text produced from synthetic inputs) and what stays local (images); where recordings live and how they are refreshed per Desktop release | The first ground-truth session (whichever GT-n runs first); every criterion blocked by a GT session waits for it |
-| ADR-0015 | Local file data sources in M | Generalize `BlobResolver` into a data-source resolver that reads local files through the path policy; per-source permissions and privacy levels; still no network; extends golden rule 5 for local files only | M16.1 |
-| ADR-0016 | Cultures and regional settings | Culture handling in M parsing and formatting, DAX `FORMAT` and typed conversions; model culture versus UI locale versus regional settings; CLDR-derived data and its licence | M16.8 |
-| ADR-0017 | Columnar storage, compression and the local data cache | In-memory encodings (dictionary, value, bit-packing, run-length, segments) under the Arrow-facing API; threading model; memory budgets; a DashCraft-owned cache for PBIP data (format, location, invalidation), never written as `.pbi/cache.abf` | M17.1 |
-| ADR-0018 | DirectQuery, Direct Lake, composite models and automatic page refresh | Confirm that live execution stays out of scope; how such models open (read-only with a notice, imported partitions usable); automatic page refresh unavailable as a consequence; what would change the decision | M17.8 |
-| ADR-0019 | Report editing model and visual property descriptors | PBIR as the edit target (legacy layouts upgraded on save or kept), per-visual descriptors (roles, objects, properties, defaults) authored clean-room as data, pane-based versus on-object formatting, clipboard format | M18.1 |
-| ADR-0020 | Offline maps and geodata | Bundled public-domain boundaries and basemap, an offline gazetteer and its licence, binary-size limits, the optional geodata crate, behaviour for unknown locations; online tiles only through ADR-0024 | M22.1 |
-| ADR-0021 | UI localization | Message catalogs for the app, codes and arguments for Rust messages, the pilot locale, translation workflow, right-to-left readiness | M25.4 |
-| ADR-0022 | PBIX writing | Whether DashCraft writes PBIX at all (XPress9, ABF, `metadata.sqlitedb` and VertiPaq encoders), drafted from the M27.1 research; outside the default build; enabling and shipping only after affirmative written legal clearance of the ADR-0003 UNVERIFIED rows and of encoding; would supersede ADR-0003 decision 2 for encoders | M27.2 |
-| ADR-0023 | Custom visuals sandbox | Whether `.pbiviz` code may run: an out-of-process host with OS sandboxing, a minimal message protocol, no inherited file or network handles, memory and CPU limits, kill on timeout, approvals pinned by package hash, headless behaviour; R and Python visuals stay out; amends golden rule 6 for this one opt-in | M29.1 |
-| ADR-0024 | Network data sources and credentials | Network exception for M data sources: an opt-in layer-5 crate, consent per source, keychain-only credentials, privacy levels enforced, no background access, the connector priority list, how ODBC drivers would be isolated or excluded | M30.1 |
-| ADR-0025 | Power BI service and Fabric integration | Network exception for the service: sign-in flow, token storage in the keychain, which APIs (read remote models, publish, download), consent and a preview of what will be uploaded; offline stays the default | M30.1 |
-| ADR-0026 | AI-assisted editing and new exposure classes | New capabilities (DAX queries, M, descriptions, page suggestions, narratives, Q&A interpretation), an `aggregates` exposure class (bounded visual-level results), AI output applied only through reviewed, undoable commands | M28.1 |
-| ADR-0027 | Update checks and release channels | Network exception for update checks: a dedicated opt-in layer-5 plugin crate (not the app), off by default, `app.update.preview` shows the exact request and `app.update.check` sends it with no identifier (no installation id, no usage data), signed manifests, channels; installing updates needs code signing (M31.11) | M24.11 |
+| [ADR-0012](adr/0012-revisioned-document-state.md) | Revisioned document state and edit transactions | One authoritative revision, atomic publication, query consistency, separate data generations, change events and safe registry exposure | M6.1 |
+| [ADR-0013](adr/0013-save-conflicts-and-recovery.md) | Save, external changes and recovery | PBIP save targets, conflict detection and explicit resolution, per-file atomic writes, recovery boundary and path policy | M6.1 (save), M8.1 (recovery) |
+| [ADR-0014](adr/0014-serialization-contract.md) | Serialization contract and generated identifiers | No-op byte identity, preservation, canonical evidence, bounded deviations, compatibility and injectable identifiers | M6.1 |
+| [ADR-0015](adr/0015-accessibility-target.md) | Accessibility target and verification | WCAG 2.2 AA target, per-surface checklist, platform/webview screen-reader smoke tests and independent 1.0 audit | M6.1 |
+| Ground-truth decision → [ADR-0011](adr/0011-desktop-ground-truth.md) (accepted) | Ground-truth recordings from Power BI Desktop | The black-box protocol (synthetic inputs only, outputs only, no binaries inspected); what may be committed (values, JSON and text produced from synthetic inputs) and what stays local (images); where recordings live and how they are refreshed per Desktop release | The first ground-truth session (whichever GT-n runs first); every criterion blocked by a GT session waits for it |
+| ADR-0016 | Local file data sources in M | Generalize `BlobResolver` into a data-source resolver that reads local files through the path policy; per-source permissions and privacy levels; still no network; extends golden rule 5 for local files only | M16.1 |
+| ADR-0017 | Cultures and regional settings | Culture handling in M parsing and formatting, DAX `FORMAT` and typed conversions; model culture versus UI locale versus regional settings; CLDR-derived data and its licence | M16.8 |
+| ADR-0018 | Columnar storage, compression and the local data cache | In-memory encodings (dictionary, value, bit-packing, run-length, segments) under the Arrow-facing API; threading model; memory budgets; a DashCraft-owned cache for PBIP data (format, location, invalidation), never written as `.pbi/cache.abf` | M17.1 |
+| ADR-0019 | DirectQuery, Direct Lake, composite models and automatic page refresh | Confirm that live execution stays out of scope; how such models open (read-only with a notice, imported partitions usable); automatic page refresh unavailable as a consequence; what would change the decision | M17.8 |
+| ADR-0020 | Report editing model and visual property descriptors | PBIR as the edit target (legacy layouts upgraded on save or kept), per-visual descriptors (roles, objects, properties, defaults) authored clean-room as data, pane-based versus on-object formatting, clipboard format | M18.1 |
+| ADR-0021 | Offline maps and geodata | Bundled public-domain boundaries and basemap, an offline gazetteer and its licence, binary-size limits, the optional geodata crate, behaviour for unknown locations; online tiles only through ADR-0025 | M22.1 |
+| ADR-0022 | UI localization | Message catalogs for the app, codes and arguments for Rust messages, the pilot locale, translation workflow, right-to-left readiness | M25.4 |
+| ADR-0023 | PBIX writing | Whether DashCraft writes PBIX at all (XPress9, ABF, `metadata.sqlitedb` and VertiPaq encoders), drafted from the M27.1 research; outside the default build; enabling and shipping only after affirmative written legal clearance of the ADR-0003 UNVERIFIED rows and of encoding; would supersede ADR-0003 decision 2 for encoders | M27.2 |
+| ADR-0024 | Custom visuals sandbox | Whether `.pbiviz` code may run: an out-of-process host with OS sandboxing, a minimal message protocol, no inherited file or network handles, memory and CPU limits, kill on timeout, approvals pinned by package hash, headless behaviour; R and Python visuals stay out; amends golden rule 6 for this one opt-in | M29.1 |
+| ADR-0025 | Network data sources and credentials | Network exception for M data sources: an opt-in layer-5 crate, consent per source, keychain-only credentials, privacy levels enforced, no background access, the connector priority list, how ODBC drivers would be isolated or excluded | M30.1 |
+| ADR-0026 | Power BI service and Fabric integration | Network exception for the service: sign-in flow, token storage in the keychain, which APIs (read remote models, publish, download), consent and a preview of what will be uploaded; offline stays the default | M30.1 |
+| ADR-0027 | AI-assisted editing and new exposure classes | New capabilities (DAX queries, M, descriptions, page suggestions, narratives, Q&A interpretation), an `aggregates` exposure class (bounded visual-level results), AI output applied only through reviewed, undoable commands | M28.1 |
+| ADR-0028 | Update checks and release channels | Network exception for update checks: a dedicated opt-in layer-5 plugin crate (not the app), off by default, `app.update.preview` shows the exact request and `app.update.check` sends it with no identifier (no installation id, no usage data), signed manifests, channels; installing updates needs code signing (M31.11) | M24.11 |
 
 ## Cross-cutting workstreams
 
@@ -381,7 +379,7 @@ section, the [DEVLOG](DEVLOG.md), and this plan's checkboxes.
 
 ### W5. Accessibility
 
-ADR-0013 sets the target (WCAG 2.2 AA). Every milestone that adds or changes UI lists, in its
+ADR-0015 sets the target (WCAG 2.2 AA). Every milestone that adds or changes UI lists, in its
 acceptance criteria, the surfaces that must pass this checklist:
 
 | Item | Criterion |
@@ -400,10 +398,10 @@ independent audit.
 ### W6. Architecture, layers and dependencies
 
 - **No new upward edges**, anywhere in the plan. Work in M6–M26 lands as new modules in existing
-  crates, with two exceptions: the optional geodata crate (layer 1, data only, ADR-0020) and the
-  opt-in update-check plugin crate (layer 5, ADR-0027). The optional milestones add an online
-  crate (layer 5, ADR-0024, ADR-0025); the custom-visual host is a second binary target of
-  `dashcraft-app`, so UI-toolkit crates stay there (ADR-0023). Each new crate gets its
+  crates, with two exceptions: the optional geodata crate (layer 1, data only, ADR-0021) and the
+  opt-in update-check plugin crate (layer 5, ADR-0028). The optional milestones add an online
+  crate (layer 5, ADR-0025, ADR-0026); the custom-visual host is a second binary target of
+  `dashcraft-app`, so UI-toolkit crates stay there (ADR-0024). Each new crate gets its
   `cargo xtask layers` entry and an ARCHITECTURE.md update in the change that adds it.
 - Candidate third-party crates (file watching, spreadsheet reading, decimal arithmetic, a
   data-parallel thread pool, PDF from SVG, XLSX writing, OS sandboxing helpers) are requested from
@@ -421,7 +419,7 @@ section 8.
 
 | Non-goal | Reason |
 |---|---|
-| DirectQuery, Direct Lake and live composite models | No live connections (offline-first); models with such partitions open read-only with a notice (ADR-0018, M17.8) |
+| DirectQuery, Direct Lake and live composite models | No live connections (offline-first); models with such partitions open read-only with a notice (ADR-0019, M17.8) |
 | Automatic page refresh | Only meaningful for DirectQuery sources, which are a non-goal; the Page refresh settings are kept in files and shown as unavailable |
 | Running R or Python (visuals or Power Query steps) | Executes embedded code and needs local runtimes (golden rule 6); shown as placeholders or unsupported steps |
 | Executing custom connectors (`.mez`, `.pqx`) | Embedded code with network and credential access; listed only |
@@ -452,10 +450,10 @@ their write roots).
 
 **Scope**
 
-- [ ] **M6.1 Decisions.** ADR-0010 (document state, transactions, history, agent safety),
-  ADR-0011 (save and conflicts; recovery parts used in M8), ADR-0012 (output contract,
-  identifiers) and ADR-0013 (accessibility target) accepted.
-- [ ] **M6.2 One revisioned document state.** Per ADR-0010, `OpenedDocument::document`,
+- [x] **M6.1 Decisions.** ADR-0012 (document state, transactions, history, agent safety),
+  ADR-0013 (save and conflicts; recovery parts used in M8), ADR-0014 (output contract,
+  identifiers) and ADR-0015 (accessibility target) accepted.
+- [ ] **M6.2 One revisioned document state.** Per ADR-0012, `OpenedDocument::document`,
   `Session::base_model`, the session model and the engine's model become views of the current
   revision; writer sources (TMDL CST, typed PBIR files, metadata parts) belong to a revision;
   engine snapshots (including the "View as" engine) are derived from a revision and its change
@@ -477,7 +475,7 @@ their write roots).
   registry commands with basic validation (editors and Desktop's full validations in M10).
 - [ ] **M6.6 Save and Save As under the output contract.** `doc.save` writes a PBIP in place:
   only changed files, each atomically (temporary file and rename), Byte-stable and
-  Preserved-from-input content untouched, new objects per ADR-0012 with the injectable identifier
+  Preserved-from-input content untouched, new objects per ADR-0014 with the injectable identifier
   generator, refusing when newer external changes exist unless forced. `doc.saveAs` writes a PBIP
   project from any readable source (PBIP, PBIX, PBIT, `model.bim`) or a PBIT file. Saving a PBIX or
   PBIT source in place offers Save As PBIP; embedded VertiPaq data cannot be carried over (no
@@ -490,7 +488,7 @@ their write roots).
   Ctrl+S, Ctrl+Z, Ctrl+Y; unsaved marker in the title; prompt on close and quit; the formula bar
   edits measure expressions (plain editor; IntelliSense in M7.5); the Properties pane edits
   description, format string and display folder; File, Save and Save as enabled.
-- [ ] **M6.9 Agent editing over MCP.** The `agent_safe` editing set decided in ADR-0010 is exposed
+- [ ] **M6.9 Agent editing over MCP.** The `agent_safe` editing set decided in ADR-0012 is exposed
   as MCP tools in a new `edit` category (`--allow edit`), saves only inside write roots,
   [MCP.md](MCP.md) updated. AI-assisted editing is a separate, optional milestone (M28).
 - [ ] **M6.10 CLI as registry wrappers.** `detect`, `inspect` and `lint` become thin wrappers
@@ -499,6 +497,28 @@ their write roots).
 - [ ] **M6.11 Registry fuzzing.** A fuzz or property target calls every command with
   schema-derived and mutated parameters, and runs random edit, undo and redo sequences: no panic,
   undo of everything restores an equal document, saved output parses back to an equal model.
+
+**Progress (M6.2–M6.7 partial, not ticked).** The session owns a `pbi-model::History` per open
+document and publishes each edit, undo and redo into the opened document, the session model and
+the engine in one step (prepare, then commit; report-only edits keep the engine and the canvas
+cache); queries report the revision they captured. Registry commands: `doc.applyEdits`,
+`doc.undo`, `doc.redo`, `doc.history`, `model.setMeasureExpression`, `model.measure.create`,
+`model.measure.update`, `model.measure.delete`, `model.dependencies`, `model.object.rename`,
+`model.object.setDescription`, `report.visual.move` and `report.visual.resize`. Renames rewrite
+DAX at token level in measures, calculated columns and tables, calculation items and selection
+expressions, format string expressions, RLS filters and session-derived columns, keep the loaded
+data (storage renames, no refresh), and preview with `dryRun`; acceptance criterion 4 passes
+(`crates/pbi-ops/tests/e2e.rs::renaming_line_amount_keeps_the_expected_values`). Measure deletes
+list their dependents first (`pbi-session::object_dependents`: DAX, relationships, hierarchy
+levels, sort-by columns, role permissions, report, page and visual fields and filters); undo
+restores the measure with its id, and ids are never reused. `model.dependencies` lists the same
+dependents for any table, column or measure. Still open:
+writer sources per revision and save (conversions refuse dirty documents), `doc/changed`
+notifications, dependent recalculation after measure edits, table, column, hierarchy and
+relationship create and delete, M references (warned about,
+not rewritten), KPI and detail-rows expressions, report-level measures
+(`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
+app, MCP-category and CLI work.
 
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,
 invalidation, recalculation), `pbi-core` (save in place, minimal-diff writes, identifier
@@ -514,7 +534,7 @@ generator), `pbi-tmdl` and `pbi-pbir` (writers for created objects), `pbi-dax` a
 `model.object.setDescription`, `model.dependencies`, `report.visual.move`, `report.visual.resize`.
 
 **Writers.** In-place PBIP save with per-file change tracking; TMDL emission of new objects per
-ADR-0012; PBIR visual position edits.
+ADR-0014; PBIR visual position edits.
 
 **Acceptance criteria**
 
@@ -557,7 +577,7 @@ tests; property tests of edit sequences; output-contract tests on Acme and the s
 tests with comment and formatting preservation; app tests for the Save, Undo and Redo wiring;
 CLI snapshot tests unchanged; MCP tests with write roots.
 
-**Depends on.** none (baseline); ADR-0010, ADR-0011, ADR-0012, ADR-0013. **Blocked by.** GT-4
+**Depends on.** none (baseline); ADR-0012, ADR-0013, ADR-0014, ADR-0015. **Blocked by.** GT-4
 for criterion 14, GT-6 for criterion 15. **Size.** XL.
 
 **Risks and unknowns.** The state refactor touches every reader of the model (session, render,
@@ -659,7 +679,7 @@ version; compare two versions of a project.
 **Tests.** Recovery tests with simulated crashes; watcher tests with simulated file events
 (including event storms during saves); diff tests; app tests.
 
-**Depends on.** M6; ADR-0011. **Blocked by.** none. **Size.** M.
+**Depends on.** M6; ADR-0013. **Blocked by.** none. **Size.** M.
 
 **Risks and unknowns.** File watching differs per OS (network folders, event coalescing);
 journal compatibility across versions.
@@ -767,7 +787,7 @@ tables in saved layouts; see edits immediately in visuals and the grid.
   (dependants listed, cascade or cancel) for every core object kind.
 - [ ] **M10.2 Tables.** New calculated table; Enter data: create a static table and edit an
   existing Enter-data table again (the Create Table grid reopened from the table or its source
-  step), written as Desktop writes it (ADR-0012, GT-4); properties (name, description, hidden);
+  step), written as Desktop writes it (ADR-0014, GT-4); properties (name, description, hidden);
   Mark as date table with Desktop's validation (unique, contiguous dates).
 - [ ] **M10.3 Columns.** New calculated column; properties: data type (data converted in the
   engine), format string with presets (currency, percent, thousands separator, decimals, date
@@ -1195,7 +1215,7 @@ in other cultures; refresh one table at a time.
 
 **Scope**
 
-- [ ] **M16.1 Local data sources (ADR-0015).** A data-source resolver in `pbi-m` (generalizing
+- [ ] **M16.1 Local data sources (ADR-0016).** A data-source resolver in `pbi-m` (generalizing
   `BlobResolver`) implemented by `pbi-session` with the workspace path policy; per-source
   permissions; Data source settings (list, change source, clear permissions, privacy level).
 - [ ] **M16.2 Get Data dialog and Navigator.** Categories and search; local connectors enabled,
@@ -1214,8 +1234,8 @@ in other cultures; refresh one table at a time.
 - [ ] **M16.7 M library inventory.** The M library inventory file (see
   [Coverage inventories](#coverage-inventories)) with every public function categorized and
   success and error vectors per implemented function; network data functions stay non-goal by
-  default with a pointer to ADR-0024.
-- [ ] **M16.8 Cultures (ADR-0016).** Culture-aware `Number.FromText`, `Date.FromText`,
+  default with a pointer to ADR-0025.
+- [ ] **M16.8 Cultures (ADR-0017).** Culture-aware `Number.FromText`, `Date.FromText`,
   `Text.From`, typed transforms with a locale, `Csv.Document` cultures, and DAX `FORMAT` with
   cultures, from CLDR-derived tables.
 - [ ] **M16.9 Decimal and currency precision.** A decimal type for M's decimal precision and the
@@ -1262,7 +1282,7 @@ per user (not in the project), privacy levels as Desktop stores them.
 tables, decimal arithmetic tests, privacy tests, path-policy tests, fuzz targets, app tests of Get
 Data and the Navigator.
 
-**Depends on.** M14; ADR-0015, ADR-0016. **Blocked by.** GT-5 for criterion 8. **Size.** L.
+**Depends on.** M14; ADR-0016, ADR-0017. **Blocked by.** GT-5 for criterion 8. **Size.** L.
 
 **Risks and unknowns.** Licences and robustness of spreadsheet and Parquet readers; type
 detection parity; the formula firewall's exact rules.
@@ -1279,7 +1299,7 @@ answers summary visuals instantly; see per-column memory use.
 
 **Scope**
 
-- [ ] **M17.1 Compressed column store (ADR-0017).** Segments with dictionary, value, bit-packed
+- [ ] **M17.1 Compressed column store (ADR-0018).** Segments with dictionary, value, bit-packed
   and run-length encodings and per-segment minimum and maximum under the existing Arrow-facing
   API; Arrow arrays materialized on demand for SQL and exports.
 - [ ] **M17.2 Multithreaded storage engine.** Parallel scans, filters and aggregations per
@@ -1287,7 +1307,7 @@ answers summary visuals instantly; see per-column memory use.
 - [ ] **M17.3 Streaming large imports.** CSV and Parquet stream into segments under a memory
   budget with progress; clear errors when the budget is exceeded.
 - [ ] **M17.4 Local data cache.** Loaded data saved in a DashCraft-owned cache (format and
-  location per ADR-0017, never the project's `.pbi/cache.abf`), invalidated by query text,
+  location per ADR-0018, never the project's `.pbi/cache.abf`), invalidated by query text,
   parameters and source file changes; reopen without refresh; a PBIX saved as PBIP (M6.6) keeps
   its decoded data in the cache, linked to the new project.
 - [ ] **M17.5 Incremental refresh policies.** Read and edit refresh policies (rolling and
@@ -1298,7 +1318,7 @@ answers summary visuals instantly; see per-column memory use.
   answers identical to the detail table.
 - [ ] **M17.7 Fast paths and query cache.** More aggregation shapes in one pass (GAPS section 4),
   a per-revision result cache invalidated by change events, high-cardinality relationship keys.
-- [ ] **M17.8 DirectQuery and composite models (ADR-0018).** Such partitions open read-only with a
+- [ ] **M17.8 DirectQuery and composite models (ADR-0019).** Such partitions open read-only with a
   notice; imported parts keep working; no live execution; automatic page refresh shown as
   unavailable.
 - [ ] **M17.9 Model statistics and VPAX export.** Per-table and per-column size, cardinality and
@@ -1335,7 +1355,7 @@ mappings; VPAX (a ZIP of JSON parts).
 **Tests.** Encoding round-trip property tests and fuzz targets for segment decoding; threading
 determinism tests; cache invalidation tests; policy and aggregation tests; perf scenarios.
 
-**Depends on.** M16; ADR-0017, ADR-0018. **Blocked by.** none. **Size.** XL.
+**Depends on.** M16; ADR-0018, ADR-0019. **Blocked by.** none. **Size.** XL.
 
 **Risks and unknowns.** Memory on 16 GB machines; keeping DataFusion integration cheap over
 compressed data; cache invalidation for sources outside the project; licence of any parallelism
@@ -1353,7 +1373,7 @@ result.
 
 **Scope**
 
-- [ ] **M18.1 Decisions and layout descriptors (ADR-0019).** PBIR as the edit target (legacy
+- [ ] **M18.1 Decisions and layout descriptors (ADR-0020).** PBIR as the edit target (legacy
   layouts upgraded on save per the ADR); the descriptor format; descriptors for roles and the
   General card (position, size, title, background, border, padding, alt text) of every supported
   visual type. Full formatting descriptors are M19.
@@ -1373,8 +1393,8 @@ result.
   change the visual type with role remapping.
 - [ ] **M18.7 Selection pane editing.** Rename, reorder layers and tab order, show and hide,
   groups.
-- [ ] **M18.8 PBIR writers for new artefacts.** New page and visual folders with ADR-0012
-  identifiers, `pages.json` order, resource registration, `$schema` versions from the ADR-0012
+- [ ] **M18.8 PBIR writers for new artefacts.** New page and visual folders with ADR-0014
+  identifiers, `pages.json` order, resource registration, `$schema` versions from the ADR-0014
   matrix.
 - [ ] **M18.9 Live editing latency.** Property changes re-render only the edited visual; drag and
   resize at frame rate (P21).
@@ -1392,7 +1412,7 @@ result.
 `report.visual.move` and `report.visual.resize` from M6.
 
 **Writers.** PBIR page, visual, `pages.json`, `report.json` resources; legacy-to-PBIR upgrade
-per ADR-0019.
+per ADR-0020.
 
 **Acceptance criteria**
 
@@ -1409,7 +1429,7 @@ per ADR-0019.
 **Tests.** Report command tests, PBIR writer tests and a fuzz round-trip target, canvas tool tests
 in the app, render snapshots.
 
-**Depends on.** M9 (interaction and selection infrastructure; M6 through it); ADR-0019.
+**Depends on.** M9 (interaction and selection infrastructure; M6 through it); ADR-0020.
 **Blocked by.** GT-4 and GT-6 for criterion 5. **Size.** L.
 
 **Risks and unknowns.** Desktop's clipboard format (copying between DashCraft and Desktop may not
@@ -1633,7 +1653,7 @@ work from region names or latitude and longitude; unknown locations are listed, 
 
 **Scope**
 
-- [ ] **M22.1 Decision and data (ADR-0020).** Public-domain boundaries and basemap with verified
+- [ ] **M22.1 Decision and data (ADR-0021).** Public-domain boundaries and basemap with verified
   licences, the gazetteer source, size budget, the optional geodata crate.
 - [ ] **M22.2 Shape map** with bundled boundaries and custom TopoJSON from the report's resources
   (parsed with caps).
@@ -1657,14 +1677,14 @@ view-state changes through `canvas.*`.
    carry the expected values.
 2. Geocoding a synthetic list of countries, states and cities resolves the documented share and
    lists the rest.
-3. The geodata parser fuzz target runs nightly; bundled data stays within the ADR-0020 size
+3. The geodata parser fuzz target runs nightly; bundled data stays within the ADR-0021 size
    budget.
 4. Accessibility checklist A1–A6 passes for map interaction (keyboard pan, zoom and selection).
 5. Where local golden images exist, map pages reach SSIM at least 0.85 (GT-3).
 
 **Tests.** Rendering tests per map type, geocoding tests, network-deny test, fuzz target.
 
-**Depends on.** M19; ADR-0020. **Blocked by.** GT-3 for criterion 5. **Size.** M.
+**Depends on.** M19; ADR-0021. **Blocked by.** GT-3 for criterion 5. **Size.** M.
 
 **Risks and unknowns.** Licences and size of geodata; differences from online geocoding.
 
@@ -1774,7 +1794,7 @@ after seeing exactly what would be sent.
   PowerPoint as a stretch item; print stays out.
 - [ ] **M24.10 Offline help.** The user guide bundled and searchable; links shown and copyable,
   never opened automatically.
-- [ ] **M24.11 Update checks (ADR-0027).** A dedicated opt-in layer-5 plugin crate registered by
+- [ ] **M24.11 Update checks (ADR-0028).** A dedicated opt-in layer-5 plugin crate registered by
   the front ends (not code in the app), off by default: `app.update.preview` shows the exact
   request, `app.update.check` sends it only when the user turned checks on and sends no
   identifier; signed manifests verified; installing updates waits for code signing (M31.11). The
@@ -1814,7 +1834,7 @@ new), `pbi-ops` (settings, Optimize and performance commands, timings in `canvas
 **Tests.** App tests through the mock runtime, PDF determinism tests, settings persistence tests,
 scripted-server tests of update checks, network-deny tests.
 
-**Depends on.** M12, M16, M20, M21; ADR-0027. **Blocked by.** GT-1 for criterion 8.
+**Depends on.** M12, M16, M20, M21; ADR-0028. **Blocked by.** GT-1 for criterion 8.
 **Size.** L.
 
 **Risks and unknowns.** PDF text fidelity with bundled fonts; the trust impact of any network
@@ -1838,9 +1858,9 @@ to the pilot language.
   attached to the SVG for each webview engine.
 - [ ] **M25.3 Alternatives and modes.** Show as table as the accessible alternative of every
   visual, alt text authoring in the General card, a high-contrast shell, reduced motion everywhere.
-- [ ] **M25.4 Localization (ADR-0021).** Message catalogs for the app, codes and arguments for Rust
+- [ ] **M25.4 Localization (ADR-0022).** Message catalogs for the app, codes and arguments for Rust
   messages, English plus one pilot locale.
-- [ ] **M25.5 Regional formats in the UI** from settings (ADR-0016), separate from the model's
+- [ ] **M25.5 Regional formats in the UI** from settings (ADR-0017), separate from the model's
   culture.
 
 **Crates and layers.** `pbi-render` (accessibility tree from the scene), `pbi-ops`
@@ -1863,7 +1883,7 @@ to the pilot language.
 **Tests.** Accessibility tree tests per visual type; keyboard navigation tests; localization key
 tests; recorded screen-reader walkthroughs.
 
-**Depends on.** M24; ADR-0021. **Blocked by.** none (screen-reader runs need a person on each OS).
+**Depends on.** M24; ADR-0022. **Blocked by.** none (screen-reader runs need a person on each OS).
 **Size.** L.
 
 **Risks and unknowns.** Accessibility differences between WKWebView, WebView2 and WebKitGTK;
@@ -1894,7 +1914,7 @@ and keep it through saves and conversions.
   with the same result as Desktop's equivalents.
 - [ ] **M26.4 Compatibility levels and feature gates.** Write the compatibility level a model
   needs, refuse features above the chosen level, keep the `$schema` and version matrix of
-  ADR-0012 current per Desktop release.
+  ADR-0014 current per Desktop release.
 - [ ] **M26.5 Interoperability matrix.** Desktop-saved fixtures with synthetic content (GT-4: a
   PBIR-Legacy PBIP, a real `.pbi/cache.abf`, a Power Pivot workbook, a VPAX, an RDL) round-trip in
   DashCraft; every DashCraft-written file opens in Desktop (GT-6); the matrix is recorded in
@@ -1950,9 +1970,9 @@ clearance: Save As PBIX of a project with its data.
 - [ ] **M27.1 Research.** From Microsoft Open Specifications, the decoders of ADR-0003 and black-box
   observation of synthetic files only: what an encoder must produce for XPress9, the ABF
   container, `metadata.sqlitedb`, the VertiPaq column files and the PBIX package; the legal
-  questions; output is the ADR-0022 draft.
+  questions; output is the ADR-0023 draft.
 - [ ] **M27.2 Prototype** behind a cargo feature that is never part of a release build, after
-  ADR-0022 is accepted as a research decision.
+  ADR-0023 is accepted as a research decision.
 - [ ] **M27.3 XPress9 encoder validation.** Decode of encode equals the input (property and fuzz
   tests); compressed blobs readable by the existing decoder.
 - [ ] **M27.4 ABF container validation.** Backup log, virtual directory and file layout written
@@ -1965,7 +1985,7 @@ clearance: Save As PBIX of a project with its data.
   with preserved parts kept as found; GT-6 checks that Desktop opens the result.
 - [ ] **M27.8 Distribution gates.** Enabling the feature in any distributed build requires
   affirmative written legal clearance of the ADR-0003 UNVERIFIED rows and of encoding (a risk memo
-  is not enough), an owner decision recorded in ADR-0022, and a security review; until then the
+  is not enough), an owner decision recorded in ADR-0023, and a security review; until then the
   feature stays out of the default build and out of 1.0 acceptance.
 
 **Crates and layers.** `pbi-vertipaq` (encoders behind the feature), `pbi-core` (package),
@@ -1986,7 +2006,7 @@ clearance: Save As PBIX of a project with its data.
 **Tests.** Property and fuzz tests per encoder; package round-trip tests; a CI check on release
 artefacts.
 
-**Depends on.** M17 (encodings), M26 (canonical writers); ADR-0022. **Blocked by.** Affirmative
+**Depends on.** M17 (encodings), M26 (canonical writers); ADR-0023. **Blocked by.** Affirmative
 legal clearance for enabling and shipping (M27.8); GT-6 for criterion 3. **Size.** XL.
 
 **Risks and unknowns.** The legal outcome; undocumented details of the formats; Desktop's
@@ -2007,7 +2027,7 @@ describe an M transform, and get fixes for linter findings.
 
 **Scope**
 
-- [ ] **M28.1 Decisions (ADR-0026).** New capabilities and an `aggregates` exposure class
+- [ ] **M28.1 Decisions (ADR-0027).** New capabilities and an `aggregates` exposure class
   (bounded visual-level results); AI output becomes edits only through reviewable, undoable
   transactions.
 - [ ] **M28.2 DAX queries.** Natural language to a DAX query in the DAX query view, run locally;
@@ -2048,7 +2068,7 @@ outside `pbi-ai`.
 **Tests.** Mock-provider tests per capability; prompt-injection tests over hostile metadata;
 review-and-undo tests.
 
-**Depends on.** M12, M14, M20, M23; ADR-0026. **Blocked by.** Owner-supplied provider accounts
+**Depends on.** M12, M14, M20, M23; ADR-0027. **Blocked by.** Owner-supplied provider accounts
 for criterion 5. **Size.** L.
 
 **Risks and unknowns.** Data exposure of aggregates; quality variance between providers; keeping
@@ -2056,7 +2076,7 @@ DashCraft's AI clearly distinct from Microsoft's Copilot branding.
 
 ## M29: Custom visuals sandbox (optional)
 
-**Goal.** If ADR-0023 is accepted, run custom visual packages in an out-of-process, OS-sandboxed
+**Goal.** If ADR-0024 is accepted, run custom visual packages in an out-of-process, OS-sandboxed
 host fed by DashCraft's DataViews, with the user's explicit approval per package. If this
 milestone is skipped, custom visuals stay placeholders.
 
@@ -2066,7 +2086,7 @@ misbehaves is stopped and replaced by a placeholder; headless renders show a pla
 
 **Scope**
 
-- [ ] **M29.1 Decision (ADR-0023).** Isolation model, approvals pinned by package hash, limits,
+- [ ] **M29.1 Decision (ADR-0024).** Isolation model, approvals pinned by package hash, limits,
   what the CLI does; R and Python visuals stay out.
 - [ ] **M29.2 Out-of-process host with OS sandboxing.** A second binary target of `dashcraft-app`
   started per report with the platform's sandbox (macOS: a sandbox profile denying file and network
@@ -2116,15 +2136,15 @@ commands, not agent-safe). UI-toolkit crates stay in `dashcraft-app`.
 **Tests.** The hostile-package suite above in CI on all three platforms; protocol fuzz target;
 DataView mapping tests; approval tests.
 
-**Depends on.** M21 (descriptors, visual infrastructure); ADR-0023. **Blocked by.** The owner's
-decision on ADR-0023. **Size.** XL.
+**Depends on.** M21 (descriptors, visual infrastructure); ADR-0024. **Blocked by.** The owner's
+decision on ADR-0024. **Size.** XL.
 
 **Risks and unknowns.** Sandbox mechanisms differ per OS and version; display latency of an
 out-of-process host; the visuals API surface is large; security review effort.
 
 ## M30: Online integration (optional)
 
-**Goal.** If ADR-0024 and ADR-0025 are accepted, offer opt-in network data connectors and service
+**Goal.** If ADR-0025 and ADR-0026 are accepted, offer opt-in network data connectors and service
 integration (remote models, publish, download), with offline staying the default.
 
 **User-visible outcome.** After signing in and consenting: load data from a database, web,
@@ -2134,7 +2154,7 @@ report as a project.
 
 **Scope**
 
-- [ ] **M30.1 Decisions and crates.** ADR-0024 and ADR-0025 accepted; an online crate (layer 5,
+- [ ] **M30.1 Decisions and crates.** ADR-0025 and ADR-0026 accepted; an online crate (layer 5,
   opt-in, registered by the front ends); the same change updates AGENTS.md, ARCHITECTURE.md and the
   network rule of `cargo xtask layers`.
 - [ ] **M30.2 Network connector framework.** The M data-source resolver (M16.1) gains network
@@ -2154,7 +2174,7 @@ report as a project.
   | 7 | Power BI and Fabric dataflows | Consuming dataflow outputs; dataflow authoring stays a non-goal |
   | 8 | Dataverse | |
   | 9 | Other common relational databases | PostgreSQL, MySQL and similar, by demand |
-  | 10 | ODBC | Loads user-installed native drivers: only through an isolated out-of-process bridge if ADR-0024 allows it, else non-goal |
+  | 10 | ODBC | Loads user-installed native drivers: only through an isolated out-of-process bridge if ADR-0025 allows it, else non-goal |
 
 - [ ] **M30.4 Remote mode for `byConnection` reports.** Read model metadata and run DAX queries
   against a remote semantic model through public APIs, read-only, with rate limits respected.
@@ -2186,7 +2206,7 @@ report as a project.
 tests, privacy-level tests across network and local sources.
 
 **Depends on.** M16 (resolver, privacy levels), M26 (canonical PBIP for publishing);
-ADR-0024, ADR-0025. **Blocked by.** The ADR decisions; a test tenant with synthetic content for
+ADR-0025, ADR-0026. **Blocked by.** The ADR decisions; a test tenant with synthetic content for
 criterion 4. **Size.** XL.
 
 **Risks and unknowns.** API changes and throttling; protocol implementations for databases; the

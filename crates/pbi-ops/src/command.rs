@@ -48,6 +48,8 @@ pub enum Category {
     Convert,
     /// Text transforms.
     Transform,
+    /// Editing the open document model.
+    Edit,
     /// Opt-in AI capabilities (`ai.*`). Not in `Registry::default_catalog()`;
     /// front ends add them with `pbi_ai::register`.
     Ai,
@@ -55,7 +57,7 @@ pub enum Category {
 
 impl Category {
     /// Every category, in catalog order.
-    pub const ALL: [Category; 12] = [
+    pub const ALL: [Category; 13] = [
         Category::Meta,
         Category::Workspace,
         Category::Inspect,
@@ -67,6 +69,7 @@ impl Category {
         Category::Export,
         Category::Convert,
         Category::Transform,
+        Category::Edit,
         Category::Ai,
     ];
 
@@ -85,6 +88,7 @@ impl Category {
             Category::Export => "export",
             Category::Convert => "convert",
             Category::Transform => "transform",
+            Category::Edit => "edit",
             Category::Ai => "ai",
         }
     }

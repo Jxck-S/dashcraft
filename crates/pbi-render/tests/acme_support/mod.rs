@@ -114,8 +114,9 @@ pub fn report_index(session: &Session, short: &str) -> usize {
         .unwrap_or_else(|| panic!("no report {name}"))
 }
 
-pub fn report<'a>(session: &'a Session, short: &str) -> &'a Report {
-    &session.document().reports[report_index(session, short)]
+/// A copy of the report `Acme Outfitters - <short>` (the session hands out a document snapshot).
+pub fn report(session: &Session, short: &str) -> Report {
+    session.document().reports[report_index(session, short)].clone()
 }
 
 /// The page with display name `display`.

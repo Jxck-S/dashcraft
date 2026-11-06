@@ -119,6 +119,16 @@ export interface ApiKeySetParams {
   key: string
 }
 
+export interface ApplyEditsParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /**
+   * Edits applied atomically and undone as one history step. Names are
+   * resolved against the document before the first edit.
+   */
+  edits: EditOperation[]
+}
+
 /** One step of a batch. */
 export interface BatchStep {
   /** Command id. */
@@ -473,7 +483,7 @@ export interface CapabilityLimits {
 }
 
 /** What a command is about; groups the catalog. */
-export type Category = 'meta' | 'workspace' | 'inspect' | 'lint' | 'data' | 'dax' | 'render' | 'canvas' | 'export' | 'convert' | 'transform' | 'ai'
+export type Category = 'meta' | 'workspace' | 'inspect' | 'lint' | 'data' | 'dax' | 'render' | 'canvas' | 'export' | 'convert' | 'transform' | 'edit' | 'ai'
 
 /** One chat message. */
 export interface ChatMessage {
@@ -785,6 +795,21 @@ export interface Counts {
   infos: number
 }
 
+export interface CreateMeasureParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The measure's home table. */
+  table: string
+  /** The measure name: unique across the model and not a column of `table`. */
+  name: string
+  /** The DAX expression. */
+  expression: string
+  formatString?: string | null
+  displayFolder?: string | null
+  description?: string | null
+  isHidden?: boolean
+}
+
 /** CSV reading options. */
 export interface CsvParams {
   /** Field delimiter, one ASCII character (default `,`). */
@@ -946,6 +971,8 @@ export interface DatasetReferenceOut {
 }
 
 export interface DaxQueryOut {
+  /** Semantic document revision captured with the query engine snapshot. */
+  documentRevision: number
   /** One table per `EVALUATE`. */
   tables: DaxTableOut[]
   durationMs: number
@@ -966,6 +993,19 @@ export interface DaxQueryParams {
   blankAsNull?: boolean
 }
 
+/** One DAX expression a rename rewrites. */
+export interface DaxRewriteOut {
+  /**
+   * The object holding the expression, with the names after the rename
+   * (e.g. `measure 'Orders'[Total Sales]`).
+   */
+  location: string
+  /** `expression`, `formatStringDefinition`, `filterExpression`, … */
+  property: string
+  before: string
+  after: string
+}
+
 /** One result table of a DAX query. */
 export interface DaxTableOut {
   columns: ResultColumnOut[]
@@ -976,12 +1016,72 @@ export interface DaxTableOut {
   truncated: boolean
 }
 
+export interface DeleteMeasureParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The measure's id (instead of `table` and `measure`). */
+  measureId?: number | null
+  /** The measure's table. */
+  table?: string | null
+  /** The measure's name. */
+  measure?: string | null
+  /** Only list what refers to the measure; the document is unchanged. */
+  dryRun?: boolean
+}
+
+/** Result of `model.dependencies`. */
+export interface DependenciesOut {
+  objectId: number
+  /** `table`, `column` or `measure`. */
+  kind: string
+  /** The table, or the table of the column or measure. */
+  table: string
+  name: string
+  /** The document revision the list was computed on. */
+  revision: number
+  /**
+   * What refers to the object: DAX expressions, relationships, hierarchy
+   * levels, sort-by columns, role permissions, report, page and visual
+   * fields and filters.
+   */
+  dependents: DependentOut[]
+  /**
+   * References that cannot be confirmed (DAX that does not parse,
+   * ambiguous unqualified names, M queries naming a table).
+   */
+  warnings: string[]
+}
+
+export interface DependenciesParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The object's id (instead of `table`). */
+  objectId?: number | null
+  /** The table, or the table of `column` / `measure`. */
+  table?: string | null
+  /** A column of `table`. */
+  column?: string | null
+  /** A measure of `table`. */
+  measure?: string | null
+}
+
 /** A note about one dependency. */
 export interface DependencyNote {
   /** `[Measure]`, `Table[Column]` or `Table`. */
   name: string
   /** Its role in the calculation. */
   note: string
+}
+
+/** An object property that refers to another object. */
+export interface DependentOut {
+  /**
+   * E.g. `measure 'Orders'[Twice]` or `visual 'card1' (card) on page
+   * 'Overview' of report 'Sales'`.
+   */
+  location: string
+  /** E.g. `expression`, `fields`, `filters`, `filterExpression`. */
+  property: string
 }
 
 /** A session derived column. */
@@ -1066,6 +1166,13 @@ export interface DocCloseOut {
   /** The document id. */
   docId: string
   closed: boolean
+}
+
+export interface DocCloseParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Explicitly discard unsaved in-memory edits. */
+  discardChanges?: boolean
 }
 
 export interface DocInspectParams {
@@ -1169,6 +1276,80 @@ export interface DocSummary {
   diagnostics: DiagnosticCounts
 }
 
+/** Result of a document edit or history operation. */
+export interface DocumentEditOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+}
+
+export interface DocumentHistoryOut {
+  revision: number
+  dirty: boolean
+  canUndo: boolean
+  canRedo: boolean
+  undoLabel?: string | null
+  redoLabel?: string | null
+}
+
+export interface DocumentParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+}
+
+/** One reversible edit accepted by `doc.applyEdits`. */
+export type EditOperation = {
+  type: 'setMeasureExpression'
+  measureId: number
+  expression: string
+} | {
+  type: 'setDescription'
+  objectId: number
+  /** `null` clears the description. */
+  text?: string | null
+} | {
+  type: 'renameObject'
+  objectId?: number | null
+  table?: string | null
+  column?: string | null
+  measure?: string | null
+  newName: string
+} | {
+  type: 'setVisualPosition'
+  report?: string | null
+  page?: string | null
+  visual: string
+  x?: number | null
+  y?: number | null
+  width?: number | null
+  height?: number | null
+} | {
+  type: 'createMeasure'
+  table: string
+  name: string
+  expression: string
+  formatString?: string | null
+  displayFolder?: string | null
+  description?: string | null
+  isHidden?: boolean
+} | {
+  type: 'updateMeasure'
+  measureId?: number | null
+  table?: string | null
+  measure?: string | null
+  expression?: string | null
+  formatString?: string | null
+  displayFolder?: string | null
+  description?: string | null
+  isHidden?: boolean | null
+} | {
+  type: 'deleteMeasure'
+  measureId?: number | null
+  table?: string | null
+  measure?: string | null
+}
+
 /** [`CapabilityLimits`] with the defaults applied. */
 export interface EffectiveLimits {
   maxTokens: number
@@ -1178,6 +1359,8 @@ export interface EffectiveLimits {
 }
 
 export interface EvaluateMeasureOut {
+  /** Semantic document revision captured with the query engine snapshot. */
+  documentRevision: number
   measure: MeasureValueOut
   /** The filters applied, and those that could not be. */
   filters: FilterSpecOut
@@ -1584,6 +1767,8 @@ export interface MashupQueryOut {
 
 /** A measure definition. */
 export interface MeasureDefOut {
+  /** Stable document object id for edits. */
+  id: number
   name: string
   /** Home table. */
   table: string
@@ -1593,6 +1778,34 @@ export interface MeasureDefOut {
   description?: string | null
   displayFolder?: string | null
   isHidden: boolean
+}
+
+/**
+ * Result of `model.measure.create`, `model.measure.update` and
+ * `model.measure.delete`.
+ */
+export interface MeasureEditOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  measureId: number
+  /** The measure's table. */
+  table: string
+  /** The measure's name. */
+  name: string
+  /**
+   * `model.measure.delete` only: what refers to the measure (and breaks
+   * once it is deleted).
+   */
+  dependents?: DependentOut[] | null
+  /** `model.measure.delete` only: whether this was a dry run. */
+  dryRun?: boolean | null
+  /**
+   * Problems that do not stop the edit (DAX that does not parse,
+   * references that cannot be confirmed).
+   */
+  warnings: string[]
 }
 
 export interface MeasureOut {
@@ -1645,6 +1858,8 @@ export interface MeasureValueOut {
 }
 
 export interface MeasuresValuesOut {
+  /** Semantic document revision captured with the query engine snapshot. */
+  documentRevision: number
   /** Every measure evaluated without error. */
   ok: boolean
   /** Report name. */
@@ -1759,6 +1974,21 @@ export interface ModelTableOut {
 
 export interface ModelTablesOut {
   tables: ModelTableOut[]
+}
+
+export interface MoveVisualParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /** The visual's name (see `report.visuals`). */
+  visual: string
+  /** New left edge (page units, as in `report.visuals`); unchanged when absent. */
+  x?: number | null
+  /** New top edge; unchanged when absent. */
+  y?: number | null
 }
 
 export type NoParams = { [key: string]: never }
@@ -2127,6 +2357,47 @@ export interface RelationshipOut {
   securityFilteringBehavior: string
 }
 
+/** Result of `model.object.rename`. */
+export interface RenameObjectOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  /** The renamed object's id. */
+  objectId: number
+  /** `table`, `column` or `measure`. */
+  kind: string
+  /** The renamed table's old name, or the table of the column or measure. */
+  table: string
+  oldName: string
+  newName: string
+  dryRun: boolean
+  /** DAX expressions rewritten (or, with `dryRun`, to be rewritten). */
+  rewrites: DaxRewriteOut[]
+  /**
+   * References left as they are that may need a manual fix (M queries,
+   * expressions that do not parse, ambiguous unqualified names).
+   */
+  warnings: string[]
+}
+
+export interface RenameObjectParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The object's id (instead of `table`). */
+  objectId?: number | null
+  /** The table, or the table of `column` / `measure`. */
+  table?: string | null
+  /** A column of `table`. */
+  column?: string | null
+  /** A measure of `table`. */
+  measure?: string | null
+  /** The new name. */
+  newName: string
+  /** Only report what the rename would rewrite; the document is unchanged. */
+  dryRun?: boolean
+}
+
 /** Output format. */
 export type RenderFormat = 'svg' | 'png'
 
@@ -2308,6 +2579,21 @@ export interface ReportVisualsOut {
   visuals: VisualOut[]
 }
 
+export interface ResizeVisualParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /** The visual's name (see `report.visuals`). */
+  visual: string
+  /** New width (page units, > 0); unchanged when absent. */
+  width?: number | null
+  /** New height (> 0); unchanged when absent. */
+  height?: number | null
+}
+
 /** A column of a tabular result. */
 export interface ResultColumnOut {
   name: string
@@ -2421,6 +2707,33 @@ export interface SelectionOut {
   fields: string[]
   /** `is West or East`, `is not Online`, … */
   summary: string
+}
+
+export interface SetMeasureExpressionParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Stable measure id returned by `model.measures`. */
+  measureId: number
+  /** The replacement DAX expression. */
+  expression: string
+}
+
+export interface SetObjectDescriptionParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /**
+   * The object's id (instead of `table`): any model object with a
+   * description (tables, columns, measures, hierarchies, roles, …).
+   */
+  objectId?: number | null
+  /** The table, or the table of `column` / `measure`. */
+  table?: string | null
+  /** A column of `table`. */
+  column?: string | null
+  /** A measure of `table`. */
+  measure?: string | null
+  /** The description; absent, `null` or empty clears it. */
+  text?: string | null
 }
 
 export interface SettingsSetOut {
@@ -2602,6 +2915,26 @@ export interface UnsupportedFilterOut {
   reason: string
 }
 
+export interface UpdateMeasureParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The measure's id (instead of `table` and `measure`). */
+  measureId?: number | null
+  /** The measure's table. */
+  table?: string | null
+  /** The measure's name. */
+  measure?: string | null
+  /** The new DAX expression. */
+  expression?: string | null
+  /** The static format string; empty clears it. */
+  formatString?: string | null
+  /** The display folder; empty clears it. */
+  displayFolder?: string | null
+  /** The description; empty clears it. */
+  description?: string | null
+  isHidden?: boolean | null
+}
+
 /** Token counts reported by the provider. */
 export interface Usage {
   promptTokens?: number | null
@@ -2684,6 +3017,21 @@ export interface VisualOut {
   filters: FilterOut[]
 }
 
+/** Result of `report.visual.move` and `report.visual.resize`. */
+export interface VisualPositionOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  /** The visual's name. */
+  visual: string
+  /**
+   * The visual's position after the edit (page units, as in
+   * `report.visuals`).
+   */
+  position: PositionOut
+}
+
 /** Status of one visual. */
 export interface VisualStatusOut {
   name: string
@@ -2757,8 +3105,8 @@ export interface OpsCommands {
   'doc.detect': { params: PathParams; output: DetectOut }
   /** Opens a Power BI file or folder into the workspace (no data loaded yet) and returns its docId and summary. */
   'doc.open': { params: DocOpenParams; output: DocSummary }
-  /** Closes an open document and frees its data (running canvas renders are cancelled). */
-  'doc.close': { params: DocParams; output: DocCloseOut }
+  /** Closes an open document and frees its data; unsaved edits require explicit discardChanges. */
+  'doc.close': { params: DocCloseParams; output: DocCloseOut }
   /** The open documents of the workspace with their summaries. */
   'doc.list': { params: NoParams; output: DocListOut }
   /** The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). */
@@ -2779,6 +3127,32 @@ export interface OpsCommands {
   'report.filters': { params: ReportFiltersParams; output: ReportFiltersOut }
   /** The model's row-level security roles (permission, DAX table filters, members, dynamic or not) and the current "View as" state. */
   'security.roles': { params: DocParams; output: SecurityRolesOut }
+  /** Replaces a measure's DAX expression as one undoable document edit. */
+  'model.setMeasureExpression': { params: SetMeasureExpressionParams; output: DocumentEditOut }
+  /** Renames a table, column or measure as one undoable edit; references, report fields and DAX follow and the loaded data is kept. dryRun previews it. */
+  'model.object.rename': { params: RenameObjectParams; output: RenameObjectOut }
+  /** Sets or clears the description of a table, column, measure or other model object as one undoable edit. */
+  'model.object.setDescription': { params: SetObjectDescriptionParams; output: DocumentEditOut }
+  /** Adds a DAX measure to a table as one undoable edit and returns its id. */
+  'model.measure.create': { params: CreateMeasureParams; output: MeasureEditOut }
+  /** Changes a measure's expression, format string, display folder, description or visibility as one undoable edit. */
+  'model.measure.update': { params: UpdateMeasureParams; output: MeasureEditOut }
+  /** Deletes a measure as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
+  'model.measure.delete': { params: DeleteMeasureParams; output: MeasureEditOut }
+  /** Lists what refers to a table, column or measure: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
+  'model.dependencies': { params: DependenciesParams; output: DependenciesOut }
+  /** Moves a visual on its page as one undoable edit (visual groups not yet). */
+  'report.visual.move': { params: MoveVisualParams; output: VisualPositionOut }
+  /** Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet). */
+  'report.visual.resize': { params: ResizeVisualParams; output: VisualPositionOut }
+  /** Applies a group of document edits atomically as one undoable history step. */
+  'doc.applyEdits': { params: ApplyEditsParams; output: DocumentEditOut }
+  /** Undoes the latest document edit. */
+  'doc.undo': { params: DocumentParams; output: DocumentEditOut }
+  /** Reapplies the latest undone document edit. */
+  'doc.redo': { params: DocumentParams; output: DocumentEditOut }
+  /** Returns the document revision, dirty state and undo/redo availability. */
+  'doc.history': { params: DocumentParams; output: DocumentHistoryOut }
   /** Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report. */
   'doc.lint': { params: DocLintParams; output: LintOut }
   /** Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status. */
@@ -2883,6 +3257,19 @@ export const OPS_META = {
   'report.visuals': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.filters': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'security.roles': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.setMeasureExpression': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.object.rename': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.object.setDescription': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.measure.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.measure.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.measure.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.dependencies': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'report.visual.move': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'report.visual.resize': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'doc.applyEdits': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'doc.undo': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'doc.redo': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'doc.history': { category: 'edit', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.lint': { category: 'lint', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'data.refresh': { category: 'data', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'data.tables': { category: 'data', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -2944,8 +3331,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     docDetect: (params: PathParams, options?: O) => run('doc.detect', params, options),
     /** Opens a Power BI file or folder into the workspace (no data loaded yet) and returns its docId and summary. */
     docOpen: (params: DocOpenParams, options?: O) => run('doc.open', params, options),
-    /** Closes an open document and frees its data (running canvas renders are cancelled). */
-    docClose: (params: DocParams, options?: O) => run('doc.close', params, options),
+    /** Closes an open document and frees its data; unsaved edits require explicit discardChanges. */
+    docClose: (params: DocCloseParams, options?: O) => run('doc.close', params, options),
     /** The open documents of the workspace with their summaries. */
     docList: (params: NoParams = {}, options?: O) => run('doc.list', params, options),
     /** The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). */
@@ -2966,6 +3353,32 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     reportFilters: (params: ReportFiltersParams, options?: O) => run('report.filters', params, options),
     /** The model's row-level security roles (permission, DAX table filters, members, dynamic or not) and the current "View as" state. */
     securityRoles: (params: DocParams, options?: O) => run('security.roles', params, options),
+    /** Replaces a measure's DAX expression as one undoable document edit. */
+    modelSetMeasureExpression: (params: SetMeasureExpressionParams, options?: O) => run('model.setMeasureExpression', params, options),
+    /** Renames a table, column or measure as one undoable edit; references, report fields and DAX follow and the loaded data is kept. dryRun previews it. */
+    modelObjectRename: (params: RenameObjectParams, options?: O) => run('model.object.rename', params, options),
+    /** Sets or clears the description of a table, column, measure or other model object as one undoable edit. */
+    modelObjectSetDescription: (params: SetObjectDescriptionParams, options?: O) => run('model.object.setDescription', params, options),
+    /** Adds a DAX measure to a table as one undoable edit and returns its id. */
+    modelMeasureCreate: (params: CreateMeasureParams, options?: O) => run('model.measure.create', params, options),
+    /** Changes a measure's expression, format string, display folder, description or visibility as one undoable edit. */
+    modelMeasureUpdate: (params: UpdateMeasureParams, options?: O) => run('model.measure.update', params, options),
+    /** Deletes a measure as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
+    modelMeasureDelete: (params: DeleteMeasureParams, options?: O) => run('model.measure.delete', params, options),
+    /** Lists what refers to a table, column or measure: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
+    modelDependencies: (params: DependenciesParams, options?: O) => run('model.dependencies', params, options),
+    /** Moves a visual on its page as one undoable edit (visual groups not yet). */
+    reportVisualMove: (params: MoveVisualParams, options?: O) => run('report.visual.move', params, options),
+    /** Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet). */
+    reportVisualResize: (params: ResizeVisualParams, options?: O) => run('report.visual.resize', params, options),
+    /** Applies a group of document edits atomically as one undoable history step. */
+    docApplyEdits: (params: ApplyEditsParams, options?: O) => run('doc.applyEdits', params, options),
+    /** Undoes the latest document edit. */
+    docUndo: (params: DocumentParams, options?: O) => run('doc.undo', params, options),
+    /** Reapplies the latest undone document edit. */
+    docRedo: (params: DocumentParams, options?: O) => run('doc.redo', params, options),
+    /** Returns the document revision, dirty state and undo/redo availability. */
+    docHistory: (params: DocumentParams, options?: O) => run('doc.history', params, options),
     /** Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report. */
     docLint: (params: DocLintParams, options?: O) => run('doc.lint', params, options),
     /** Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status. */

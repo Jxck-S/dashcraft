@@ -20,10 +20,19 @@ use crate::ctx::Ctx;
 use crate::error::OpError;
 use crate::files::{check_output_file, write_bytes, write_file_atomic};
 use crate::resolve;
-use crate::workspace::Workspace;
+use crate::workspace::{DocEntry, Workspace};
 
 /// Largest inline model documentation (bytes); pass `path` beyond.
 pub const MAX_INLINE_DOC_BYTES: usize = 16 * 1024 * 1024;
+
+fn require_clean_document(entry: &DocEntry) -> Result<(), OpError> {
+    if entry.session().is_document_dirty() {
+        return Err(OpError::unsupported(
+            "conversion cannot include unsaved document edits yet; reopen the source or discard the edits before converting",
+        ));
+    }
+    Ok(())
+}
 
 /// Table export format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -411,6 +420,7 @@ impl Command for ConvertPbip {
             }
         }
         let entry = doc(ws, &p.doc_id)?;
+        require_clean_document(&entry)?;
         let opened = entry.session().opened().clone();
         let policy = ws.policy().clone();
         let dir = out_dir.clone();
@@ -506,7 +516,8 @@ impl Command for ConvertPbit {
     async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
         let out = check_output_file(ws.policy(), &p.out_path, p.overwrite)?;
         let entry = doc(ws, &p.doc_id)?;
-        let mut opened = entry.session().opened().clone();
+        require_clean_document(&entry)?;
+        let mut opened = (*entry.session().opened()).clone();
         let names: Vec<String> = opened
             .document
             .reports

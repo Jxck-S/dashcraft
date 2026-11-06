@@ -101,10 +101,25 @@
 //! or an [`DerivedColumn::Array`]). It is visible to DAX, SQL, the grid,
 //! statistics and table exports, re-applied after every refresh and CSV
 //! load, and never written to model files (see [`derived`]).
+//!
+//! # Editing
+//!
+//! [`Session::execute_document_command`], [`Session::undo_document_command`]
+//! and [`Session::redo_document_command`] change the document through
+//! `pbi-model` commands with one shared undo history. Each edit is prepared
+//! on copies first (renamed tables and columns keep their loaded data,
+//! derived columns follow, the engine re-syncs only when the structure
+//! changed) and published only if that succeeds, so a rejected edit leaves
+//! the document, history and data unchanged. [`Session::rename_object`] /
+//! [`RenameObject`] also rewrite the DAX that refers to the renamed object
+//! (see [`edit`]). [`object_dependents`] / [`Session::object_dependents`]
+//! list what refers to a table, column or measure (see [`dependents`]).
 
 pub mod cache;
 mod csv_load;
+pub mod dependents;
 pub mod derived;
+pub mod edit;
 mod error;
 pub mod export;
 mod filters;
@@ -117,9 +132,13 @@ mod session;
 pub mod transforms;
 
 pub use cache::{CACHE_ENTRY, CacheInfo};
+pub use dependents::{Dependent, Dependents, object_dependents};
 pub use derived::{
     DERIVED_ANNOTATION, DERIVED_KIND_ANNOTATION, DerivedColumn, DerivedColumnInfo, DerivedKind,
     is_derived,
+};
+pub use edit::{
+    DaxRewrite, RenameKind, RenameObject, RenamePreview, dax_syntax_error, preview_rename,
 };
 pub use error::SessionError;
 pub use export::{
@@ -142,4 +161,4 @@ pub use report::{
     TableRefresh, TableStatus,
 };
 pub use security::{VIEW_AS_FAILED, ViewAs};
-pub use session::{Session, TableInfo};
+pub use session::{DocumentHistory, Session, TableInfo};

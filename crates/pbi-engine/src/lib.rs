@@ -124,6 +124,6 @@ pub use relationships::{
 pub use rowset::RowSet;
 pub use security::{RoleFilter, SecurityContext, SecurityRole, UserIdentity};
 pub use sql::{PageRequest, ROW_ID_COLUMN, SortSpec};
-pub use storage::{EncodedColumn, Storage, TableData};
+pub use storage::{EncodedColumn, Storage, StorageRename, TableData};
 pub use tokio_util::sync::CancellationToken;
 pub use value::{Value, ValueKey, ValueType, arrow_type};

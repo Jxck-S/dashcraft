@@ -12,6 +12,8 @@
 //!   re-exported at the crate root. `FUNCTIONS.md` (next to `Cargo.toml`)
 //!   lists every supported function with its status and the known semantic
 //!   gaps.
+//! - [`rename`]: token-level rewriting of table, column and measure
+//!   references for DAX-aware renames.
 //!
 //! Visuals evaluate measures per data point with
 //! [`EvalContext::with_data_point`] (or [`EvalContext::with_allselected`] +
@@ -21,6 +23,7 @@
 
 pub mod eval;
 pub mod format;
+pub mod rename;
 pub mod syntax;
 
 pub use eval::{
@@ -31,4 +34,5 @@ pub use eval::{
     transitive_dependencies,
 };
 pub use format::format_value;
+pub use rename::{NameChange, rename_references};
 pub use syntax::*;

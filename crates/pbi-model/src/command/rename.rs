@@ -8,8 +8,9 @@ use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
 use crate::names::{is_valid_object_name, names_eq};
 use crate::rewrite::Rename;
+use crate::semantic::Model;
 
-fn validate_name(name: &str) -> Result<(), CommandError> {
+pub(super) fn validate_name(name: &str) -> Result<(), CommandError> {
     if is_valid_object_name(name) {
         Ok(())
     } else {
@@ -22,6 +23,39 @@ fn conflict(name: &str, existing: String) -> CommandError {
         name: name.to_owned(),
         existing,
     }
+}
+
+/// Checks that measure `id` (unassigned for a new one) of table `table` can
+/// be named `name`: measure names are unique across the model and differ from
+/// the table's column names.
+pub(super) fn check_measure_name(
+    model: &Model,
+    table: usize,
+    id: ObjectId,
+    name: &str,
+) -> Result<(), CommandError> {
+    validate_name(name)?;
+    for other_table in &model.tables {
+        if let Some(other) = other_table
+            .measures
+            .iter()
+            .find(|x| x.id != id && names_eq(&x.name, name))
+        {
+            return Err(conflict(
+                name,
+                format!("measure '{}'[{}]", other_table.name, other.name),
+            ));
+        }
+    }
+    if let Some(t) = model.tables.get(table)
+        && let Some(other) = t.column(name)
+    {
+        return Err(conflict(
+            name,
+            format!("column '{}'[{}]", t.name, other.name),
+        ));
+    }
+    Ok(())
 }
 
 /// Snapshots of every report part whose field references change.
@@ -238,7 +272,6 @@ impl Command for RenameMeasure {
         else {
             return Err(CommandError::NotFound(self.measure));
         };
-        validate_name(&self.new_name)?;
         let model = model(doc)?;
         let table = model
             .tables
@@ -248,25 +281,7 @@ impl Command for RenameMeasure {
             .measures
             .get(m)
             .ok_or(CommandError::NotFound(self.measure))?;
-        // Measure names are unique across the model.
-        for other_table in &model.tables {
-            if let Some(other) = other_table
-                .measures
-                .iter()
-                .find(|x| x.id != measure.id && names_eq(&x.name, &self.new_name))
-            {
-                return Err(conflict(
-                    &self.new_name,
-                    format!("measure '{}'[{}]", other_table.name, other.name),
-                ));
-            }
-        }
-        if let Some(other) = table.column(&self.new_name) {
-            return Err(conflict(
-                &self.new_name,
-                format!("column '{}'[{}]", table.name, other.name),
-            ));
-        }
+        check_measure_name(model, t, measure.id, &self.new_name)?;
         let old = measure.name.clone();
         if old == self.new_name {
             return Ok(no_op(self.clone()));

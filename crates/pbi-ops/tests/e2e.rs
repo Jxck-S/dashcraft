@@ -226,6 +226,820 @@ async fn pbip_structure_lint_and_render() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn model_edit_commands_publish_revisions_and_history() {
+    let dir = tmp_dir("edit");
+    let pbip = common::mini_pbip(dir.path());
+    let runner = Runner::new();
+    let doc = runner
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+
+    let measures = runner.run("model.measures", json!({"docId": doc})).await;
+    let measure = measures["measures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|measure| measure["name"] == "Total")
+        .unwrap();
+    let measure_id = measure["id"].as_u64().unwrap();
+
+    let initial = runner.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(initial["revision"], 0);
+    assert_eq!(initial["dirty"], false);
+    assert_eq!(initial["canUndo"], false);
+
+    let edited = runner
+        .run(
+            "model.setMeasureExpression",
+            json!({"docId": doc, "measureId": measure_id, "expression": "42"}),
+        )
+        .await;
+    assert_eq!(edited["changed"], true);
+    assert_eq!(edited["revision"], 1);
+    assert_eq!(edited["dirty"], true);
+    assert_eq!(edited["changedObjectIds"], json!([measure_id]));
+
+    let no_op = runner
+        .run(
+            "model.setMeasureExpression",
+            json!({"docId": doc, "measureId": measure_id, "expression": "42"}),
+        )
+        .await;
+    assert_eq!(no_op["changed"], false);
+    assert_eq!(no_op["revision"], 1);
+
+    let failed_group = runner
+        .try_run(
+            "doc.applyEdits",
+            json!({
+                "docId": doc,
+                "edits": [
+                    {"type": "setMeasureExpression", "measureId": measure_id, "expression": "99"},
+                    {"type": "setDescription", "objectId": u64::MAX, "text": "Missing object"}
+                ]
+            }),
+        )
+        .await;
+    assert!(failed_group.is_err());
+    let after_failure = runner.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(after_failure["revision"], 1);
+    let unchanged = runner.run("model.measures", json!({"docId": doc})).await["measures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|measure| measure["id"] == measure_id)
+        .unwrap()
+        .clone();
+    assert_eq!(unchanged["expression"], "42");
+
+    let undone = runner.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(undone["revision"], 2);
+    assert_eq!(undone["dirty"], false);
+    assert_eq!(undone["changedObjectIds"], json!([measure_id]));
+
+    let redone = runner.run("doc.redo", json!({"docId": doc})).await;
+    assert_eq!(redone["revision"], 3);
+    assert_eq!(redone["dirty"], true);
+    assert_eq!(redone["changedObjectIds"], json!([measure_id]));
+
+    let query = runner
+        .run(
+            "dax.query",
+            json!({"docId": doc, "query": "EVALUATE ROW(\"n\", [Total])"}),
+        )
+        .await;
+    assert_eq!(query["documentRevision"], 3);
+    assert_eq!(query["tables"][0]["rows"][0][0], 42);
+
+    let grouped = runner
+        .run(
+            "doc.applyEdits",
+            json!({
+                "docId": doc,
+                "edits": [
+                    {"type": "setMeasureExpression", "measureId": measure_id, "expression": "84"},
+                    {"type": "setDescription", "objectId": measure_id, "text": "Grouped edit"}
+                ]
+            }),
+        )
+        .await;
+    assert_eq!(grouped["changed"], true);
+    assert_eq!(grouped["revision"], 4);
+
+    let group_undo = runner.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(group_undo["revision"], 5);
+    let restored = runner.run("model.measures", json!({"docId": doc})).await["measures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|measure| measure["id"] == measure_id)
+        .unwrap()
+        .clone();
+    assert_eq!(restored["expression"], "42");
+    assert!(restored.get("description").is_none());
+
+    let group_redo = runner.run("doc.redo", json!({"docId": doc})).await;
+    assert_eq!(group_redo["revision"], 6);
+    let query = runner
+        .run(
+            "dax.query",
+            json!({"docId": doc, "query": "EVALUATE ROW(\"n\", [Total])"}),
+        )
+        .await;
+    assert_eq!(query["documentRevision"], 6);
+    assert_eq!(query["tables"][0]["rows"][0][0], 84);
+
+    let final_measures = runner.run("model.measures", json!({"docId": doc})).await;
+    let final_measure = final_measures["measures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|measure| measure["name"] == "Total")
+        .unwrap();
+    assert_eq!(final_measure["expression"], "84");
+    assert_eq!(final_measure["description"], "Grouped edit");
+
+    let pbip_conversion = runner
+        .try_run(
+            "convert.pbip",
+            json!({"docId": doc, "outDir": dir.path().join("converted-pbip")}),
+        )
+        .await;
+    assert!(pbip_conversion.is_err());
+    let pbit_conversion = runner
+        .try_run(
+            "convert.pbit",
+            json!({"docId": doc, "outPath": dir.path().join("converted.pbit")}),
+        )
+        .await;
+    assert!(pbit_conversion.is_err());
+
+    let close_without_discard = runner.try_run("doc.close", json!({"docId": doc})).await;
+    assert!(close_without_discard.is_err());
+    assert_eq!(
+        runner.run("doc.history", json!({"docId": doc})).await["dirty"],
+        true
+    );
+    let closed = runner
+        .run("doc.close", json!({"docId": doc, "discardChanges": true}))
+        .await;
+    assert_eq!(closed["closed"], true);
+}
+
+/// The single value of `EVALUATE ROW("n", <dax>)`.
+async fn scalar(r: &Runner, doc: &str, dax: &str) -> Value {
+    let q = r
+        .run(
+            "dax.query",
+            json!({"docId": doc, "query": format!("EVALUATE ROW(\"n\", {dax})")}),
+        )
+        .await;
+    q["tables"][0]["rows"][0][0].clone()
+}
+
+fn error_code(result: Result<Value, pbi_ops::OpError>) -> OpErrorCode {
+    result.expect_err("the command must fail").code
+}
+
+async fn visual_position(r: &Runner, doc: &str, page: &str, visual: &str) -> Value {
+    let visuals = r
+        .run("report.visuals", json!({"docId": doc, "page": page}))
+        .await;
+    visuals["visuals"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|v| v["name"] == visual)
+        .unwrap_or_else(|| panic!("no visual {visual}"))["position"]
+        .clone()
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn rename_describe_and_move_through_the_registry() {
+    let dir = tmp_dir("rename");
+    let pbip = common::mini_pbip(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let sum: i64 = (1..=60).sum();
+    let amount = json!({"docId": doc, "table": "Sales", "column": "Amount", "newName": "Revenue"});
+
+    // A dry run reports the rewrite and changes nothing.
+    let mut dry = amount.clone();
+    dry["dryRun"] = json!(true);
+    let preview = r.run("model.object.rename", dry).await;
+    assert_eq!(
+        (
+            &preview["dryRun"],
+            &preview["changed"],
+            &preview["revision"],
+            &preview["kind"],
+            &preview["oldName"]
+        ),
+        (
+            &json!(true),
+            &json!(false),
+            &json!(0),
+            &json!("column"),
+            &json!("Amount")
+        )
+    );
+    assert_eq!(
+        preview["rewrites"].as_array().unwrap().len(),
+        1,
+        "{preview}"
+    );
+    assert_eq!(preview["rewrites"][0]["before"], "SUM(Sales[Amount])");
+    assert_eq!(preview["rewrites"][0]["after"], "SUM(Sales[Revenue])");
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    assert_eq!(
+        measure(&measures, "Total")["expression"],
+        "SUM(Sales[Amount])"
+    );
+    assert_eq!(
+        r.run("doc.history", json!({"docId": doc})).await["dirty"],
+        false
+    );
+
+    // The rename rewrites the measure and the report fields and keeps the data.
+    let renamed = r.run("model.object.rename", amount.clone()).await;
+    assert_eq!(
+        (&renamed["changed"], &renamed["revision"], &renamed["dirty"]),
+        (&json!(true), &json!(1), &json!(true))
+    );
+    assert_eq!(renamed["rewrites"], preview["rewrites"]);
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    assert_eq!(
+        measure(&measures, "Total")["expression"],
+        "SUM(Sales[Revenue])"
+    );
+    assert_eq!(scalar(&r, &doc, "SUM(Sales[Revenue])").await, sum);
+    assert_eq!(scalar(&r, &doc, "[Total]").await, sum);
+    let tables = r.run("model.tables", json!({"docId": doc})).await;
+    let sales = table(&tables["tables"], "Sales");
+    assert_eq!(
+        (&sales["rows"], &sales["loaded"]),
+        (&json!(60), &json!(true))
+    );
+    let details = r
+        .run("report.visuals", json!({"docId": doc, "page": "Details"}))
+        .await;
+    assert!(details.to_string().contains("\"Revenue\""), "{details}");
+    let page = r
+        .run("render.page", json!({"docId": doc, "page": "Details"}))
+        .await;
+    assert_eq!(page["ok"], true, "{}", page["visuals"]);
+
+    // Invalid targets and names fail without a revision.
+    let rename = |params: Value| r.try_run("model.object.rename", params);
+    let conflict =
+        json!({"docId": doc, "table": "Sales", "column": "Revenue", "newName": "Region"});
+    assert_eq!(
+        error_code(rename(conflict).await),
+        OpErrorCode::InvalidParams
+    );
+    let unknown = json!({"docId": doc, "table": "Sales", "column": "Nope", "newName": "X"});
+    assert_eq!(error_code(rename(unknown).await), OpErrorCode::NotFound);
+    let both = json!({"docId": doc, "table": "Sales", "column": "Item", "measure": "Total", "newName": "X"});
+    assert_eq!(error_code(rename(both).await), OpErrorCode::InvalidParams);
+    let none = json!({"docId": doc, "newName": "X"});
+    assert_eq!(error_code(rename(none).await), OpErrorCode::InvalidParams);
+    let empty = json!({"docId": doc, "table": "Sales", "column": "Item", "newName": ""});
+    assert_eq!(error_code(rename(empty).await), OpErrorCode::InvalidParams);
+    assert_eq!(
+        r.run("doc.history", json!({"docId": doc})).await["revision"],
+        1
+    );
+
+    // By id: the measure, and the card that shows it.
+    let total = measure(&measures, "Total")["id"].as_u64().unwrap();
+    let by_id = r
+        .run(
+            "model.object.rename",
+            json!({"docId": doc, "objectId": total, "newName": "Total Sales"}),
+        )
+        .await;
+    assert_eq!(
+        (&by_id["kind"], &by_id["revision"]),
+        (&json!("measure"), &json!(2))
+    );
+    assert_eq!(scalar(&r, &doc, "[Total Sales]").await, sum);
+    let overview = r
+        .run("report.visuals", json!({"docId": doc, "page": "Overview"}))
+        .await;
+    assert!(
+        overview.to_string().contains("\"Total Sales\""),
+        "{overview}"
+    );
+
+    // Descriptions.
+    let describe =
+        json!({"docId": doc, "table": "Sales", "column": "Revenue", "text": "Net amount"});
+    let described = r.run("model.object.setDescription", describe).await;
+    assert_eq!(
+        (&described["changed"], &described["revision"]),
+        (&json!(true), &json!(3))
+    );
+    let column = |tables: &Value| {
+        table(&tables["tables"], "Sales")["columns"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == "Revenue")
+            .unwrap()
+            .clone()
+    };
+    let tables = r.run("model.tables", json!({"docId": doc})).await;
+    assert_eq!(column(&tables)["description"], "Net amount");
+    r.run(
+        "model.object.setDescription",
+        json!({"docId": doc, "table": "Sales", "column": "Revenue"}),
+    )
+    .await;
+    let tables = r.run("model.tables", json!({"docId": doc})).await;
+    assert!(column(&tables).get("description").is_none());
+
+    // Move and resize.
+    let start = visual_position(&r, &doc, "Overview", "total").await;
+    let moved = r
+        .run(
+            "report.visual.move",
+            json!({"docId": doc, "visual": "total", "x": 20, "y": 70}),
+        )
+        .await;
+    assert_eq!(
+        (&moved["changed"], &moved["revision"]),
+        (&json!(true), &json!(5))
+    );
+    assert_eq!(
+        (&moved["position"]["x"], &moved["position"]["y"]),
+        (&json!(20.0), &json!(70.0))
+    );
+    let resized = r
+        .run(
+            "report.visual.resize",
+            json!({"docId": doc, "visual": "total", "width": 200, "height": 100}),
+        )
+        .await;
+    assert_eq!(resized["revision"], 6);
+    let now = visual_position(&r, &doc, "Overview", "total").await;
+    assert_eq!(
+        (&now["x"], &now["y"], &now["width"], &now["height"]),
+        (&json!(20.0), &json!(70.0), &json!(200.0), &json!(100.0))
+    );
+    let bad_size = json!({"docId": doc, "visual": "total", "width": 0});
+    assert_eq!(
+        error_code(r.try_run("report.visual.resize", bad_size).await),
+        OpErrorCode::InvalidParams
+    );
+    let nothing = json!({"docId": doc, "visual": "total"});
+    assert_eq!(
+        error_code(r.try_run("report.visual.move", nothing).await),
+        OpErrorCode::InvalidParams
+    );
+    let missing = json!({"docId": doc, "visual": "nope", "x": 1});
+    assert_eq!(
+        error_code(r.try_run("report.visual.move", missing).await),
+        OpErrorCode::NotFound
+    );
+    let rendered = r.run("render.page", json!({"docId": doc})).await;
+    assert_eq!(rendered["ok"], true, "{}", rendered["visuals"]);
+
+    // One group, one undo step; a target that does not resolve applies nothing.
+    let failing = json!({"docId": doc, "edits": [
+        {"type": "renameObject", "table": "Sales", "newName": "Orders"},
+        {"type": "setVisualPosition", "visual": "nope", "x": 1}
+    ]});
+    assert_eq!(
+        error_code(r.try_run("doc.applyEdits", failing).await),
+        OpErrorCode::NotFound
+    );
+    let grouped = r
+        .run(
+            "doc.applyEdits",
+            json!({"docId": doc, "edits": [
+                {"type": "renameObject", "table": "Sales", "newName": "Orders"},
+                {"type": "setVisualPosition", "visual": "bars", "x": 12, "height": 180}
+            ]}),
+        )
+        .await;
+    assert_eq!(
+        (&grouped["changed"], &grouped["revision"]),
+        (&json!(true), &json!(7))
+    );
+    assert_eq!(scalar(&r, &doc, "SUM(Orders[Revenue])").await, sum);
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    assert_eq!(
+        measure(&measures, "Total Sales")["expression"],
+        "SUM(Orders[Revenue])"
+    );
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(history["undoLabel"], "Apply document edits");
+
+    // Undo everything: the original document, data and positions.
+    for _ in 0..7 {
+        r.run("doc.undo", json!({"docId": doc})).await;
+    }
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(
+        (&history["revision"], &history["dirty"]),
+        (&json!(14), &json!(false))
+    );
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    assert_eq!(
+        measure(&measures, "Total")["expression"],
+        "SUM(Sales[Amount])"
+    );
+    assert_eq!(scalar(&r, &doc, "[Total]").await, sum);
+    assert_eq!(visual_position(&r, &doc, "Overview", "total").await, start);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn measure_create_update_delete_through_the_registry() {
+    let dir = tmp_dir("measures");
+    let pbip = common::mini_pbip(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let sum: i64 = (1..=60).sum();
+    let original = r.run("model.measures", json!({"docId": doc})).await;
+    let total = measure(&original, "Total")["id"].as_u64().unwrap();
+    let number = |v: Value| v.as_f64().unwrap_or_else(|| panic!("not a number: {v}"));
+
+    // Dependents of a column (by name and by id) and of a table.
+    let amount = r
+        .run(
+            "model.dependencies",
+            json!({"docId": doc, "table": "Sales", "column": "Amount"}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &amount["kind"],
+            &amount["table"],
+            &amount["name"],
+            &amount["revision"]
+        ),
+        (
+            &json!("column"),
+            &json!("Sales"),
+            &json!("Amount"),
+            &json!(0)
+        )
+    );
+    let pairs = |out: &Value| -> Vec<(String, String)> {
+        out["dependents"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|d| {
+                (
+                    d["location"].as_str().unwrap().to_owned(),
+                    d["property"].as_str().unwrap().to_owned(),
+                )
+            })
+            .collect()
+    };
+    let found = pairs(&amount);
+    for (location, property) in [
+        ("measure 'Sales'[Total]", "expression"),
+        (
+            "visual 'bars' (clusteredBarChart) on page 'Overview'",
+            "fields",
+        ),
+        ("visual 'table' (tableEx) on page 'Details'", "fields"),
+    ] {
+        assert!(
+            found
+                .iter()
+                .any(|(l, p)| l.starts_with(location) && p == property),
+            "{location}: {found:?}"
+        );
+    }
+    let by_id = r
+        .run(
+            "model.dependencies",
+            json!({"docId": doc, "objectId": amount["objectId"]}),
+        )
+        .await;
+    assert_eq!(by_id["dependents"], amount["dependents"]);
+    let sales = r
+        .run(
+            "model.dependencies",
+            json!({"docId": doc, "table": "Sales"}),
+        )
+        .await;
+    assert_eq!(sales["kind"], "table");
+    assert!(
+        pairs(&sales).contains(&("measure 'Sales'[Total]".to_owned(), "expression".to_owned())),
+        "{sales}"
+    );
+    let dependencies = |params: Value| r.try_run("model.dependencies", params);
+    let missing = json!({"docId": doc, "table": "Sales", "column": "Nope"});
+    assert_eq!(
+        error_code(dependencies(missing).await),
+        OpErrorCode::NotFound
+    );
+    let nothing = json!({"docId": doc});
+    assert_eq!(
+        error_code(dependencies(nothing).await),
+        OpErrorCode::InvalidParams
+    );
+
+    // Create: a new id, a revision, and a measure that evaluates.
+    let twice = r
+        .run(
+            "model.measure.create",
+            json!({"docId": doc, "table": "Sales", "name": "Twice", "expression": "[Total] * 2", "formatString": "#,0"}),
+        )
+        .await;
+    assert_eq!(
+        (&twice["changed"], &twice["revision"], &twice["dirty"]),
+        (&json!(true), &json!(1), &json!(true))
+    );
+    assert_eq!(
+        (&twice["table"], &twice["name"]),
+        (&json!("Sales"), &json!("Twice"))
+    );
+    assert_eq!(twice["warnings"], json!([]));
+    let twice_id = twice["measureId"].as_u64().unwrap();
+    assert_ne!(twice_id, total);
+    assert_eq!(twice["changedObjectIds"], json!([twice_id]));
+    assert_eq!(number(scalar(&r, &doc, "[Twice]").await), (2 * sum) as f64);
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    assert_eq!(measure(&measures, "Twice")["formatString"], "#,0");
+
+    // Invalid creates change nothing.
+    let create = |params: Value| r.try_run("model.measure.create", params);
+    for (name, table, expression, code) in [
+        ("total", "Sales", "1", OpErrorCode::InvalidParams),
+        ("Amount", "Sales", "1", OpErrorCode::InvalidParams),
+        ("New", "Nope", "1", OpErrorCode::NotFound),
+        ("New", "Sales", " ", OpErrorCode::InvalidParams),
+    ] {
+        let params = json!({"docId": doc, "table": table, "name": name, "expression": expression});
+        assert_eq!(error_code(create(params).await), code, "{name} in {table}");
+    }
+    assert_eq!(
+        r.run("doc.history", json!({"docId": doc})).await["revision"],
+        1
+    );
+
+    // DAX that does not parse is kept, with a warning; delete it by id.
+    let broken = r
+        .run(
+            "model.measure.create",
+            json!({"docId": doc, "table": "Sales", "name": "Broken", "expression": "SUM("}),
+        )
+        .await;
+    assert_eq!(broken["revision"], 2);
+    assert_eq!(broken["warnings"].as_array().unwrap().len(), 1, "{broken}");
+    let broken_id = broken["measureId"].as_u64().unwrap();
+    let deleted = r
+        .run(
+            "model.measure.delete",
+            json!({"docId": doc, "measureId": broken_id}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &deleted["revision"],
+            &deleted["name"],
+            &deleted["dependents"]
+        ),
+        (&json!(3), &json!("Broken"), &json!([]))
+    );
+
+    // Update patches only the given properties; an empty text clears one.
+    let updated = r
+        .run(
+            "model.measure.update",
+            json!({"docId": doc, "table": "Sales", "measure": "Twice", "formatString": "0.00", "description": "Two totals", "isHidden": true}),
+        )
+        .await;
+    assert_eq!(updated["revision"], 4);
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    let m = measure(&measures, "Twice");
+    assert_eq!(
+        (
+            &m["expression"],
+            &m["formatString"],
+            &m["description"],
+            &m["isHidden"]
+        ),
+        (
+            &json!("[Total] * 2"),
+            &json!("0.00"),
+            &json!("Two totals"),
+            &json!(true)
+        )
+    );
+    let cleared = r
+        .run(
+            "model.measure.update",
+            json!({"docId": doc, "measureId": twice_id, "formatString": ""}),
+        )
+        .await;
+    assert_eq!(cleared["revision"], 5);
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    assert!(measure(&measures, "Twice").get("formatString").is_none());
+    let update = |params: Value| r.try_run("model.measure.update", params);
+    let nothing = json!({"docId": doc, "measureId": twice_id});
+    assert_eq!(
+        error_code(update(nothing).await),
+        OpErrorCode::InvalidParams
+    );
+    let both = json!({"docId": doc, "measureId": twice_id, "table": "Sales", "measure": "Twice", "isHidden": false});
+    assert_eq!(error_code(update(both).await), OpErrorCode::InvalidParams);
+    let gone = json!({"docId": doc, "measureId": broken_id, "isHidden": false});
+    assert_eq!(error_code(update(gone).await), OpErrorCode::NotFound);
+
+    // A dry run lists what uses the measure and changes nothing.
+    let dry = r
+        .run(
+            "model.measure.delete",
+            json!({"docId": doc, "table": "Sales", "measure": "Total", "dryRun": true}),
+        )
+        .await;
+    assert_eq!(
+        (&dry["dryRun"], &dry["changed"], &dry["revision"]),
+        (&json!(true), &json!(false), &json!(5))
+    );
+    let dependents: Vec<(&str, &str)> = dry["dependents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| {
+            (
+                d["location"].as_str().unwrap(),
+                d["property"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    assert!(
+        dependents.contains(&("measure 'Sales'[Twice]", "expression")),
+        "{dependents:?}"
+    );
+    assert!(
+        dependents.iter().any(|(location, property)| location
+            .starts_with("visual 'total' (cardVisual) on page 'Overview'")
+            && *property == "fields"),
+        "{dependents:?}"
+    );
+    assert_eq!(scalar(&r, &doc, "[Total]").await, sum);
+
+    // Delete proceeds despite the dependents; undo restores it with its id.
+    let deleted = r
+        .run(
+            "model.measure.delete",
+            json!({"docId": doc, "table": "Sales", "measure": "Total"}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &deleted["changed"],
+            &deleted["revision"],
+            &deleted["dryRun"]
+        ),
+        (&json!(true), &json!(6), &json!(false))
+    );
+    assert_eq!(deleted["dependents"], dry["dependents"]);
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    assert!(!measures.to_string().contains("\"Total\""), "{measures}");
+    let delete = |params: Value| r.try_run("model.measure.delete", params);
+    let unknown = json!({"docId": doc, "measureId": 999_999});
+    assert_eq!(error_code(delete(unknown).await), OpErrorCode::NotFound);
+    let region = r
+        .run(
+            "model.object.rename",
+            json!({"docId": doc, "table": "Sales", "column": "Region", "newName": "Area", "dryRun": true}),
+        )
+        .await["objectId"]
+        .clone();
+    let column = json!({"docId": doc, "measureId": region});
+    assert_eq!(error_code(delete(column).await), OpErrorCode::InvalidParams);
+    r.run("doc.undo", json!({"docId": doc})).await;
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    assert_eq!(measure(&measures, "Total")["id"], total);
+    assert_eq!(scalar(&r, &doc, "[Total]").await, sum);
+
+    // In a group, with a fresh id; a failing edit applies nothing.
+    let failing = json!({"docId": doc, "edits": [
+        {"type": "createMeasure", "table": "Sales", "name": "Half", "expression": "[Total] / 2"},
+        {"type": "deleteMeasure", "table": "Sales", "measure": "Nope"}
+    ]});
+    assert_eq!(
+        error_code(r.try_run("doc.applyEdits", failing).await),
+        OpErrorCode::NotFound
+    );
+    let grouped = r
+        .run(
+            "doc.applyEdits",
+            json!({"docId": doc, "edits": [
+                {"type": "createMeasure", "table": "Sales", "name": "Half", "expression": "[Total] / 2"},
+                {"type": "updateMeasure", "measureId": twice_id, "isHidden": false},
+                {"type": "deleteMeasure", "measureId": total}
+            ]}),
+        )
+        .await;
+    assert_eq!(
+        (&grouped["changed"], &grouped["revision"]),
+        (&json!(true), &json!(8))
+    );
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    let half = measure(&measures, "Half")["id"].as_u64().unwrap();
+    assert!(![total, twice_id, broken_id].contains(&half), "{half}");
+    assert_eq!(measure(&measures, "Twice")["isHidden"], false);
+
+    // Undo everything: the original measures.
+    for _ in 0..6 {
+        r.run("doc.undo", json!({"docId": doc})).await;
+    }
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(
+        (&history["revision"], &history["dirty"], &history["canUndo"]),
+        (&json!(14), &json!(false), &json!(false))
+    );
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    assert_eq!(measures["measures"], original["measures"]);
+    assert_eq!(scalar(&r, &doc, "[Total]").await, sum);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn renaming_line_amount_keeps_the_expected_values() {
+    let (Some(pbip), Some(map), Some(exp)) = (fixture(PBIP), fixture(BLOB_MAP), expected()) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+
+    let renamed = r
+        .run(
+            "model.object.rename",
+            json!({"docId": doc, "table": "Orders", "column": "Line Amount", "newName": "Line Total"}),
+        )
+        .await;
+    assert_eq!(renamed["changed"], true);
+    let locations: Vec<&str> = renamed["rewrites"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|w| w["location"].as_str().unwrap())
+        .collect();
+    for object in ["Total Sales", "Lifetime Sales", "Order Size"] {
+        assert!(
+            locations.iter().any(|l| l.contains(object)),
+            "{object} not rewritten: {locations:?}"
+        );
+    }
+    // No DAX still names the old column.
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    let tables = r.run("model.tables", json!({"docId": doc})).await;
+    for text in [measures.to_string(), tables["tables"].to_string()] {
+        assert!(!text.contains("[Line Amount]"), "a DAX reference was left");
+    }
+
+    // The loaded data follows the rename, and a refresh reloads it under the new name.
+    let check = |all: &Value| {
+        assert_eq!(all["ok"], true);
+        for (name, _, formatted) in exp.measures() {
+            assert_eq!(measure(all, name)["formatted"], formatted, "{name}");
+        }
+    };
+    check(&r.run("measures.values", json!({"docId": doc})).await);
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    for (name, rows) in exp.row_counts() {
+        assert_eq!(table(&refresh["tables"], name)["rows"], rows, "{name}");
+    }
+    check(&r.run("measures.values", json!({"docId": doc})).await);
+    let stores = r
+        .run("measures.values", json!({"docId": doc, "report": "Stores"}))
+        .await;
+    for (name, _, formatted) in exp.report_measures("Stores") {
+        assert_eq!(measure(&stores, name)["display"], formatted, "{name}");
+    }
+    let render = r
+        .run("render.page", json!({"docId": doc, "report": "Stores"}))
+        .await;
+    assert_eq!(render["ok"], true, "{}", render["visuals"]);
+    let card = exp.card("Stores", "Store Performance", "kpis", "Total Sales");
+    assert!(
+        render["svg"]
+            .as_str()
+            .unwrap()
+            .contains(&format!(">{card}<")),
+        "no {card} on the page"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn expected_values_through_the_registry() {
     let (Some(pbip), Some(map), Some(csv), Some(exp)) = (
         fixture(PBIP),
@@ -247,6 +1061,7 @@ async fn expected_values_through_the_registry() {
 
     let all = r.run("measures.values", json!({"docId": doc})).await;
     assert_eq!(all["ok"], true);
+    assert_eq!(all["documentRevision"], 0);
     for (name, _, formatted) in exp.measures() {
         assert_eq!(measure(&all, name)["formatted"], formatted, "{name}");
     }
@@ -267,6 +1082,7 @@ async fn expected_values_through_the_registry() {
         q["tables"][0]["rows"][0][0],
         exp.0["measures"]["unfiltered"]["Order Count"]["value"]
     );
+    assert_eq!(q["documentRevision"], 0);
     let one = r
         .run(
             "dax.evaluateMeasure",
@@ -277,6 +1093,7 @@ async fn expected_values_through_the_registry() {
         one["measure"]["formatted"],
         exp.measure(Some("Online"), "Total Sales")
     );
+    assert_eq!(one["documentRevision"], 0);
 
     // The West stores: the rows the "Region West" role sees.
     let west = exp.0["rls"][0]["visibleRows"]["Stores"].clone();

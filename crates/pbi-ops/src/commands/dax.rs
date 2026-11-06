@@ -39,10 +39,10 @@ fn filter_spec(
     if report.is_some() || page.is_some() {
         let ri = resolve::report_index(session, report)?;
         let r = resolve::report_at(session, ri)?;
-        spec.extend(filters_from_report(r));
+        spec.extend(filters_from_report(&r));
         report_name = Some(r.name.clone());
         if page.is_some() {
-            let pi = resolve::page_index(r, page)?;
+            let pi = resolve::page_index(&r, page)?;
             if let Some(pg) = r.pages.get(pi) {
                 spec.extend(filters_from_page(pg));
                 page_name = Some(pg.display_name.clone());
@@ -97,6 +97,8 @@ pub struct DaxTableOut {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DaxQueryOut {
+    /// Semantic document revision captured with the query engine snapshot.
+    pub document_revision: u64,
     /// One table per `EVALUATE`.
     pub tables: Vec<DaxTableOut>,
     pub duration_ms: u64,
@@ -136,10 +138,9 @@ impl Command for DaxQuery {
         let (spec, _, _) = filter_spec(&entry, None, None, p.filters)?;
         let started = Instant::now();
         let session = entry.session();
-        let batches = session
-            .dax_query(&p.query, &spec, ctx.cancel_token().child_token())
+        let (document_revision, model, batches) = session
+            .dax_query_with_revision(&p.query, &spec, ctx.cancel_token().child_token())
             .await?;
-        let model = session.model();
         let format = CellFormat {
             formatted: p.formatted,
             blank_as_null: p.blank_as_null,
@@ -159,6 +160,7 @@ impl Command for DaxQuery {
             })
             .collect();
         Ok(DaxQueryOut {
+            document_revision,
             tables,
             duration_ms: millis(started),
         })
@@ -192,6 +194,8 @@ pub struct EvaluateMeasureParams {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct EvaluateMeasureOut {
+    /// Semantic document revision captured with the query engine snapshot.
+    pub document_revision: u64,
     pub measure: MeasureValueOut,
     /// The filters applied, and those that could not be.
     pub filters: FilterSpecOut,
@@ -222,11 +226,12 @@ impl Command for DaxEvaluateMeasure {
         let entry = loaded_doc(ws, &p.doc_id, ctx).await?;
         resolve::require_model(&entry)?;
         let (spec, _, _) = filter_spec(&entry, p.report.as_deref(), p.page.as_deref(), p.filters)?;
-        let value = entry
+        let (document_revision, value) = entry
             .session()
-            .evaluate_measure(&p.measure, &spec, ctx.cancel_token().child_token())
+            .evaluate_measure_with_revision(&p.measure, &spec, ctx.cancel_token().child_token())
             .await?;
         Ok(EvaluateMeasureOut {
+            document_revision,
             measure: MeasureValueOut::from(&value),
             filters: FilterSpecOut::from(&spec),
         })
@@ -258,6 +263,8 @@ pub struct MeasuresValuesParams {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MeasuresValuesOut {
+    /// Semantic document revision captured with the query engine snapshot.
+    pub document_revision: u64,
     /// Every measure evaluated without error.
     pub ok: bool,
     /// Report name.
@@ -303,12 +310,13 @@ impl Command for MeasuresValues {
         resolve::require_model(&entry)?;
         let (spec, report, page) =
             filter_spec(&entry, p.report.as_deref(), p.page.as_deref(), p.filters)?;
-        let values = entry
+        let (document_revision, values) = entry
             .session()
-            .measures(&spec, ctx.cancel_token().child_token())
+            .measures_with_revision(&spec, ctx.cancel_token().child_token())
             .await?;
         let measures: Vec<MeasureValueOut> = values.iter().map(MeasureValueOut::from).collect();
         Ok(MeasuresValuesOut {
+            document_revision,
             ok: measures.iter().all(|m| m.error.is_none()),
             report,
             page,

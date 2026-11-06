@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use arrow::array::AsArray;
 use arrow::datatypes::Int64Type;
 use chrono::TimeZone;
+use pbi_model::{ObjectId, SetMeasureExpression};
 use pbi_session::{
     CancellationToken, ColumnFilterSpec, CsvExportOptions, CsvOptions, DerivedColumn, DerivedKind,
     FilterSpec, FixedClock, ModelDocOptions, OFFLINE_HINT, PageRequest, RefreshEvent, RefreshKind,
@@ -48,8 +49,13 @@ fn offline_pbip() -> Option<Session> {
 
 /// A session over an in-memory `model.bim` with the given tables JSON.
 fn bim_session(tables: &str) -> Session {
+    bim_session_with_roles(tables, "[]")
+}
+
+/// [`bim_session`] with roles.
+fn bim_session_with_roles(tables: &str, roles: &str) -> Session {
     let bim = format!(
-        r#"{{"compatibilityLevel": 1567, "model": {{"culture": "en-US", "tables": {tables}}}}}"#
+        r#"{{"compatibilityLevel": 1567, "model": {{"culture": "en-US", "tables": {tables}, "roles": {roles}}}}}"#
     );
     let opened = pbi_core::open_bytes(
         "model.bim",
@@ -63,6 +69,66 @@ fn bim_session(tables: &str) -> Session {
         opened.document.diagnostics
     );
     Session::from_opened(opened, options()).unwrap()
+}
+
+#[tokio::test]
+async fn document_edits_publish_to_session_and_support_undo_redo() {
+    let session =
+        bim_session(r#"[{"name":"Sales","measures":[{"name":"Total","expression":"1"}]}]"#);
+    let measure_id = session
+        .document()
+        .model
+        .as_ref()
+        .unwrap()
+        .measure("Sales", "Total")
+        .unwrap()
+        .id;
+
+    let applied = session
+        .execute_document_command(SetMeasureExpression {
+            measure: measure_id,
+            expression: "2".to_owned(),
+        })
+        .await
+        .unwrap();
+    assert!(applied.changed);
+    assert_eq!(applied.revision, 1);
+    assert!(session.is_document_dirty());
+    assert_eq!(
+        session
+            .base_model()
+            .measure("Sales", "Total")
+            .unwrap()
+            .expression,
+        "2"
+    );
+
+    let undone = session.undo_document_command().await.unwrap();
+    assert_eq!(undone.revision, 2);
+    assert!(!session.is_document_dirty());
+    assert_eq!(
+        session
+            .document()
+            .model
+            .as_ref()
+            .unwrap()
+            .measure("Sales", "Total")
+            .unwrap()
+            .expression,
+        "1"
+    );
+
+    let redone = session.redo_document_command().await.unwrap();
+    assert_eq!(redone.revision, 3);
+    assert!(session.is_document_dirty());
+    assert_eq!(
+        session
+            .model()
+            .measure("Sales", "Total")
+            .unwrap()
+            .expression,
+        "2"
+    );
 }
 
 const SALES: &str = r##"{
@@ -128,6 +194,162 @@ async fn kpis(session: &Session, filter: &FilterSpec) -> BTreeMap<String, String
         .into_iter()
         .map(|m| (m.name.clone(), m.display()))
         .collect()
+}
+
+fn object_id(session: &Session, find: impl Fn(&pbi_model::Model) -> Option<ObjectId>) -> ObjectId {
+    find(session.document().model.as_ref().unwrap()).unwrap()
+}
+
+async fn count(session: &Session, sql: &str) -> i64 {
+    let batches = session.sql(sql, CancellationToken::new()).await.unwrap();
+    batches[0].column(0).as_primitive::<Int64Type>().value(0)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn renames_rewrite_dax_and_keep_the_loaded_data() {
+    let roles = r#"[{"name": "A only", "modelPermission": "read",
+      "tablePermissions": [{"name": "Sales", "filterExpression": "Sales[Product] = \"a\""}]}]"#;
+    let session = bim_session_with_roles(&format!("[{SALES}]"), roles);
+    session.refresh(RefreshOptions::all()).await.unwrap();
+    session
+        .set_effective_roles(&["A only"], None)
+        .await
+        .unwrap();
+    let original = session.document();
+    let before = kpis(&session, &FilterSpec::new()).await;
+    assert_eq!(before["Rows"], "2", "{before:?}");
+
+    // A column: the DAX follows and the data stays loaded (no refresh).
+    let amount = object_id(&session, |m| m.column("Sales", "Amount").map(|c| c.id));
+    let (result, preview) = session.rename_object(amount, "Net Amount").await.unwrap();
+    assert!(result.changed);
+    let locations: Vec<_> = preview
+        .rewrites
+        .iter()
+        .map(|r| r.location.as_str())
+        .collect();
+    assert_eq!(
+        locations,
+        [
+            "measure 'Sales'[Total]",
+            "measure 'Sales'[Ranked]",
+            "column 'Sales'[Double]"
+        ]
+    );
+    assert_eq!(kpis(&session, &FilterSpec::new()).await, before);
+    let filtered = "SELECT COUNT(*) FROM \"Sales\" WHERE \"Net Amount\" > 2 AND \"Double\" > 4";
+    assert_eq!(count(&session, filtered).await, 1);
+
+    // A table (the role filter follows; "View as" is rebuilt) and a measure.
+    let product = object_id(&session, |m| m.column("Sales", "Product").map(|c| c.id));
+    session.rename_object(product, "Item").await.unwrap();
+    let sales = object_id(&session, |m| m.table("Sales").map(|t| t.id));
+    let (_, preview) = session.rename_object(sales, "Orders").await.unwrap();
+    assert!(
+        preview
+            .rewrites
+            .iter()
+            .any(|r| r.property == "filterExpression" && r.after == "Orders[Item] = \"a\""),
+        "{preview:#?}"
+    );
+    let total = object_id(&session, |m| m.measure("Orders", "Total").map(|x| x.id));
+    session.rename_object(total, "Revenue").await.unwrap();
+    let after = kpis(&session, &FilterSpec::new()).await;
+    assert_eq!(after["Revenue"], before["Total"]);
+    assert_eq!(after["Rows"], "2");
+    assert_eq!(session.tables()[0].name, "Orders");
+    assert_eq!(session.tables()[0].rows, 2);
+    assert!(session.table_status("Orders").is_some() && session.table_status("Sales").is_none());
+    assert_eq!(
+        count(
+            &session,
+            "SELECT COUNT(*) FROM \"Orders\" WHERE \"Item\" = 'a'"
+        )
+        .await,
+        2
+    );
+    assert_eq!(
+        session.document_history().undo_label.as_deref(),
+        Some("Rename to 'Revenue'")
+    );
+
+    // Undo restores the document and the queries on the original names.
+    for _ in 0..4 {
+        session.undo_document_command().await.unwrap();
+    }
+    assert_eq!(*session.document(), *original);
+    assert!(!session.is_document_dirty());
+    assert_eq!(kpis(&session, &FilterSpec::new()).await, before);
+    assert_eq!(
+        count(
+            &session,
+            "SELECT COUNT(*) FROM \"Sales\" WHERE \"Amount\" > 2"
+        )
+        .await,
+        1
+    );
+    session.redo_document_command().await.unwrap();
+    assert!(session.model().column("Sales", "Net Amount").is_some());
+    assert_eq!(kpis(&session, &FilterSpec::new()).await, before);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn renames_carry_derived_columns_and_refuse_their_names() {
+    let session = bim_session(&format!("[{ACCOUNTS}]"));
+    session.refresh(RefreshOptions::all()).await.unwrap();
+    let people = DerivedColumn::People {
+        source_column: "Managers".into(),
+    };
+    session
+        .add_derived_column("Accounts", "Managers (parsed)", people)
+        .await
+        .unwrap();
+    let twice = DerivedColumn::Expression {
+        dax: "Accounts[Id] * 2".into(),
+    };
+    session
+        .add_derived_column("Accounts", "Id Twice", twice)
+        .await
+        .unwrap();
+    let managers = object_id(&session, |m| m.column("Accounts", "Managers").map(|c| c.id));
+    let id = object_id(&session, |m| m.column("Accounts", "Id").map(|c| c.id));
+    let table = object_id(&session, |m| m.table("Accounts").map(|t| t.id));
+    let taken = object_id(&session, |m| m.measure("Accounts", "Taken").map(|x| x.id));
+
+    // Onto the name of a derived column: refused, nothing changes.
+    for (object, name) in [(id, "id twice"), (taken, "Managers (parsed)")] {
+        let err = session.rename_object(object, name).await.unwrap_err();
+        assert!(
+            matches!(err, pbi_model::CommandError::Rejected(_)),
+            "{name}: {err}"
+        );
+    }
+    assert_eq!(session.document_revision(), 0);
+
+    session.rename_object(managers, "Owners").await.unwrap();
+    session.rename_object(id, "Key").await.unwrap();
+    session.rename_object(table, "Clients").await.unwrap();
+    let derived = session.derived_columns();
+    assert_eq!(derived[0].table, "Clients");
+    assert_eq!(derived[0].source_column.as_deref(), Some("Owners"));
+    assert_eq!(derived[1].dax.as_deref(), Some("Clients[Key] * 2"));
+    assert!(session.model().column("Clients", "Id Twice").is_some());
+    assert_eq!(
+        kpis(&session, &FilterSpec::new()).await["Parsed Managers"],
+        "3"
+    );
+
+    // A refresh re-applies them under the new names.
+    let report = session.refresh(RefreshOptions::all()).await.unwrap();
+    assert!(report.is_ok(), "{report:#?}");
+    assert_eq!(
+        texts(&session, "Clients", "Id Twice"),
+        ["2", "4", "6", "8"].map(|s| Some(s.to_owned()))
+    );
+    assert_eq!(
+        texts(&session, "Clients", "Managers (parsed)")[1].as_deref(),
+        Some("Lena Ford; O'Neil Park")
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]

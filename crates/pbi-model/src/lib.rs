@@ -49,9 +49,9 @@ pub mod semantic;
 pub(crate) mod test_support;
 
 pub use command::{
-    Applied, ChangeEvent, Command, CommandError, CommandGroup, History, RenameColumn,
-    RenameMeasure, RenameTable, ReplaceObjects, SetDescription, SetMeasureExpression,
-    SetVisualPosition, Snapshot,
+    Applied, ChangeEvent, Command, CommandError, CommandGroup, CreateMeasure, DeleteMeasure,
+    History, HistoryResult, RenameColumn, RenameMeasure, RenameTable, ReplaceObjects,
+    SetDescription, SetMeasureExpression, SetMeasureProperties, SetVisualPosition, Snapshot,
 };
 pub use document::{
     Diagnostic, Document, ModelStatus, ObjectKind, ObjectPath, ObjectRef, PartInfo, Severity,

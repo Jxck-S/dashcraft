@@ -471,10 +471,11 @@ impl CanvasStore {
 
     fn theme(&self, session: &Session, index: usize) -> Arc<ThemeResolver> {
         let mut themes = lock(&self.themes);
+        let opened = session.opened();
         Arc::clone(
             themes
                 .entry(index)
-                .or_insert_with(|| Arc::new(report_theme(session.opened(), index))),
+                .or_insert_with(|| Arc::new(report_theme(&opened, index))),
         )
     }
 
@@ -593,7 +594,8 @@ impl Target {
     ) -> Result<Self, OpError> {
         let session = entry.session();
         let report = resolve::report_index(session, report)?;
-        let page = resolve::page_index(resolve::report_at(session, report)?, page)?;
+        let report_snapshot = resolve::report_at(session, report)?;
+        let page = resolve::page_index(&report_snapshot, page)?;
         Ok(Self {
             entry,
             report,
@@ -605,7 +607,7 @@ impl Target {
         (self.report, self.page)
     }
 
-    fn report_and_page(&self) -> Result<(&Report, &Page), OpError> {
+    fn report_and_page(&self) -> Result<(Report, Page), OpError> {
         locate(self.entry.session(), self.report, self.page)
     }
 
@@ -618,15 +620,16 @@ impl Target {
         Ok(self
             .entry
             .canvas
-            .update(self.key(), page, |e| f(e, report, page)))
+            .update(self.key(), &page, |e| f(e, &report, &page)))
     }
 }
 
-fn locate(session: &Session, report: usize, page: usize) -> Result<(&Report, &Page), OpError> {
+fn locate(session: &Session, report: usize, page: usize) -> Result<(Report, Page), OpError> {
     let r = resolve::report_at(session, report)?;
     let p = r
         .pages
         .get(page)
+        .cloned()
         .ok_or_else(|| OpError::not_found("the page is gone"))?;
     Ok((r, p))
 }
@@ -637,7 +640,7 @@ async fn render(target: &Target) -> Result<CanvasPageOut, OpError> {
     let env = QueryEnv::from_session(&session);
     let job = {
         let (_, page) = target.report_and_page()?;
-        target.entry.canvas.begin(target.key(), page, &env)
+        target.entry.canvas.begin(target.key(), &page, &env)
     };
     let theme = target.theme();
     let entry = Arc::clone(&target.entry);
@@ -675,7 +678,7 @@ fn run_job(
     };
     let data = match &job.cached {
         Some(d) => Arc::clone(d),
-        None => Arc::new(query_page_data(&env, report, page, &job.state, &limits)),
+        None => Arc::new(query_page_data(&env, &report, &page, &job.state, &limits)),
     };
     if job.cancel.is_cancelled() {
         return Err(superseded());
@@ -688,8 +691,8 @@ fn run_job(
         limits,
     };
     let rendered =
-        render_interactive_page(report, page, theme, &job.state, &opts, &job.view, &data);
-    let dto = page_dto(entry, report, page, theme, job, &data, &rendered, started);
+        render_interactive_page(&report, &page, theme, &job.state, &opts, &job.view, &data);
+    let dto = page_dto(entry, &report, &page, theme, job, &data, &rendered, started);
     let last = LastRender {
         generation: job.generation,
         state_version: job.state_version,
@@ -925,7 +928,7 @@ pub async fn scroll(
 ) -> Result<Changed, OpError> {
     {
         let (_, page) = target.report_and_page()?;
-        resolve::visual(page, visual)?;
+        resolve::visual(&page, visual)?;
     }
     ensure_rendered(target).await?;
     let changed = target.update(|entry, _, _| apply_scroll(entry, visual, dx, dy))??;

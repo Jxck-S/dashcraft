@@ -61,7 +61,7 @@ impl Command for DocInspect {
         };
         Ok(inspect_model::build(
             entry.shown_path(),
-            entry.session().opened(),
+            &entry.session().opened(),
             opts,
         ))
     }
@@ -180,6 +180,8 @@ pub struct ModelMeasuresParams {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MeasureDefOut {
+    /// Stable document object id for edits.
+    pub id: u64,
     pub name: String,
     /// Home table.
     pub table: String,
@@ -232,6 +234,7 @@ impl Command for ModelMeasures {
             .filter(|t| only.as_deref().is_none_or(|o| names_eq(o, &t.name)))
             .flat_map(|t| {
                 t.measures.iter().map(|m| MeasureDefOut {
+                    id: m.id.get(),
                     name: m.name.clone(),
                     table: t.name.clone(),
                     expression: m.expression.clone(),
@@ -427,7 +430,7 @@ impl Command for ReportPages {
         let session = entry.session();
         let index = resolve::report_index(session, p.report.as_deref())?;
         let report = resolve::report_at(session, index)?;
-        let active = resolve::page_index(report, None).ok();
+        let active = resolve::page_index(&report, None).ok();
         let pages = report
             .pages
             .iter()
@@ -508,7 +511,7 @@ impl Command for ReportVisuals {
         let session = entry.session();
         let ri = resolve::report_index(session, p.report.as_deref())?;
         let report = resolve::report_at(session, ri)?;
-        let pi = resolve::page_index(report, p.page.as_deref())?;
+        let pi = resolve::page_index(&report, p.page.as_deref())?;
         let page = report
             .pages
             .get(pi)
@@ -585,10 +588,10 @@ impl Command for ReportFilters {
         let session = entry.session();
         let ri = resolve::report_index(session, p.report.as_deref())?;
         let report = resolve::report_at(session, ri)?;
-        let mut spec = filters_from_report(report);
+        let mut spec = filters_from_report(&report);
         let mut page_name = None;
         if p.page.is_some() {
-            let pi = resolve::page_index(report, p.page.as_deref())?;
+            let pi = resolve::page_index(&report, p.page.as_deref())?;
             let page = report
                 .pages
                 .get(pi)

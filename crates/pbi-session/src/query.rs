@@ -137,14 +137,22 @@ impl Session {
         &self,
         filter: &FilterSpec,
         cancel: &CancellationToken,
-    ) -> Result<(EvalContext, String), SessionError> {
-        let (snapshot, model) = self.snapshot_and_model();
+    ) -> Result<(EvalContext, String, Arc<Model>, u64), SessionError> {
+        let (snapshot, model, revision) = self.snapshot_model_and_revision();
         let ctx: FilterContext = filter.to_filter_context(&model)?;
+        let culture = model
+            .culture
+            .as_deref()
+            .filter(|culture| !culture.trim().is_empty())
+            .unwrap_or("en-US")
+            .to_owned();
         Ok((
-            EvalContext::new(snapshot, model)
+            EvalContext::new(snapshot, Arc::clone(&model))
                 .with_filter(ctx)
                 .with_cancellation_token(cancel.clone()),
-            self.culture(),
+            culture,
+            model,
+            revision,
         ))
     }
 
@@ -160,12 +168,22 @@ impl Session {
         filter: &FilterSpec,
         cancel: CancellationToken,
     ) -> Result<Vec<MeasureValue>, SessionError> {
+        let (_, measures) = self.measures_with_revision(filter, cancel).await?;
+        Ok(measures)
+    }
+
+    /// Like [`measures`](Self::measures), returning the semantic revision
+    /// captured with the model and engine snapshot.
+    pub async fn measures_with_revision(
+        &self,
+        filter: &FilterSpec,
+        cancel: CancellationToken,
+    ) -> Result<(u64, Vec<MeasureValue>), SessionError> {
         let handle = runtime()?;
         let cancel = cancel.child_token();
         let _stop_on_drop = cancel.clone().drop_guard();
-        let (ctx, culture) = self.eval_context(filter, &cancel)?;
-        let model: Arc<Model> = self.model();
-        handle
+        let (ctx, culture, model, revision) = self.eval_context(filter, &cancel)?;
+        let measures = handle
             .spawn_blocking(move || {
                 let mut out = Vec::new();
                 for t in &model.tables {
@@ -178,7 +196,8 @@ impl Session {
                 }
                 Ok(out)
             })
-            .await?
+            .await??;
+        Ok((revision, measures))
     }
 
     /// Evaluates one measure (`Name`, `[Name]` or `Table[Name]`) in `filter`.
@@ -192,8 +211,24 @@ impl Session {
         filter: &FilterSpec,
         cancel: CancellationToken,
     ) -> Result<MeasureValue, SessionError> {
+        let (_, value) = self
+            .evaluate_measure_with_revision(name, filter, cancel)
+            .await?;
+        Ok(value)
+    }
+
+    /// Like [`evaluate_measure`](Self::evaluate_measure), returning the
+    /// semantic revision captured with the model and engine snapshot.
+    pub async fn evaluate_measure_with_revision(
+        &self,
+        name: &str,
+        filter: &FilterSpec,
+        cancel: CancellationToken,
+    ) -> Result<(u64, MeasureValue), SessionError> {
         let handle = runtime()?;
-        let model = self.model();
+        let cancel = cancel.child_token();
+        let _stop_on_drop = cancel.clone().drop_guard();
+        let (ctx, culture, model, revision) = self.eval_context(filter, &cancel)?;
         let wanted = name.trim();
         let (table_part, measure_part) = match wanted.find('[') {
             Some(i) if wanted.ends_with(']') => (
@@ -224,12 +259,10 @@ impl Session {
         let Some((table, measure)) = found else {
             return Err(SessionError::UnknownMeasure(name.to_owned()));
         };
-        let cancel = cancel.child_token();
-        let _stop_on_drop = cancel.clone().drop_guard();
-        let (ctx, culture) = self.eval_context(filter, &cancel)?;
-        handle
+        let value = handle
             .spawn_blocking(move || measure_value(&ctx, &table, &measure, &culture))
-            .await?
+            .await??;
+        Ok((revision, value))
     }
 
     /// Evaluates a DAX query (`EVALUATE …`, with `DEFINE` / `ORDER BY`) with
@@ -244,17 +277,30 @@ impl Session {
         filter: &FilterSpec,
         cancel: CancellationToken,
     ) -> Result<Vec<RecordBatch>, SessionError> {
+        let (_, _, tables) = self.dax_query_with_revision(query, filter, cancel).await?;
+        Ok(tables)
+    }
+
+    /// Like [`dax_query`](Self::dax_query), returning the semantic revision
+    /// and model captured with the engine snapshot.
+    pub async fn dax_query_with_revision(
+        &self,
+        query: &str,
+        filter: &FilterSpec,
+        cancel: CancellationToken,
+    ) -> Result<(u64, Arc<Model>, Vec<RecordBatch>), SessionError> {
         let handle = runtime()?;
         let cancel = cancel.child_token();
         let _stop_on_drop = cancel.clone().drop_guard();
-        let (ctx, _) = self.eval_context(filter, &cancel)?;
+        let (ctx, _, model, revision) = self.eval_context(filter, &cancel)?;
         let query = query.to_owned();
-        handle
+        let tables = handle
             .spawn_blocking(move || {
                 let tables = ctx.evaluate_query(&query)?;
-                Ok(tables.iter().map(pbi_dax::to_record_batch).collect())
+                Ok::<_, SessionError>(tables.iter().map(pbi_dax::to_record_batch).collect())
             })
-            .await?
+            .await??;
+        Ok((revision, model, tables))
     }
 
     /// [`dax_query`](Self::dax_query) returning the typed result tables
@@ -273,7 +319,7 @@ impl Session {
         let handle = runtime()?;
         let cancel = cancel.child_token();
         let _stop_on_drop = cancel.clone().drop_guard();
-        let (ctx, _) = self.eval_context(filter, &cancel)?;
+        let (ctx, _, _, _) = self.eval_context(filter, &cancel)?;
         let query = query.to_owned();
         handle
             .spawn_blocking(move || Ok(ctx.evaluate_query(&query)?))
