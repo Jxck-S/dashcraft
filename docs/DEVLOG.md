@@ -32,6 +32,9 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
     and Save As cases added to the model-folder, path-policy, conversion and `Send` tests.
   - Acceptance criteria 5 (structure of every sample after Save As) and the PBIP half of 6
     (Acme saved as, refreshed through the blob map: every `expected.json` value) pass.
+  - GT-6 with Desktop 2.159: Acme as a PBIT, edited and saved as a PBIP, opens and refreshes in
+    Desktop and records identically to the edited PBIP saved in place (643 of 643 cases;
+    `reference/groundtruth/README.md`).
 
 ### M6 save: `doc.save` writes edits into the opened PBIP project
 

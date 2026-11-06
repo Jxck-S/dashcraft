@@ -535,7 +535,9 @@ columns, measures, partitions, relationships, roles), pages, filters and theme o
 committed samples (`samples_save_as_pbip_with_an_equal_structure` in
 `crates/pbi-core/tests/save_in_place.rs`), and the PBIP half of 6 passes (Acme with a rename,
 saved as, reopened and refreshed through the blob map, gives every value of `expected.json`:
-`crates/pbi-ops/tests/e2e.rs::save_as_project_keeps_the_expected_values`). Still open:
+`crates/pbi-ops/tests/e2e.rs::save_as_project_keeps_the_expected_values`); Desktop opens a PBIT
+saved as a PBIP with the same edits and records it identically to the edited PBIP (GT-6). Still
+open:
 `lineageTag` generation for new objects, `doc/changed`
 notifications, dependent recalculation after measure edits, table, column, hierarchy and
 relationship create and delete, M references (warned about,

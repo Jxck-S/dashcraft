@@ -155,6 +155,18 @@ column header (`Line Total`, same 3,900 rows and values); `acme-metadata` differ
 themselves (the renamed column, the two measures and two calculated columns whose DAX referenced
 it, the new `Total Cost` expression, the new measure and its format, the Orders description).
 
+**Save As (`doc.saveAs`).** Run the same edits as a batch on the PBIT written above
+(`target/groundtruth/s9/AcmeOutfitters.pbit`, a TMSL model), then `doc.saveAs` with `outDir`
+`target/groundtruth/s11/acme-saveas` and a `doc.save`. Open the new project in Desktop and record
+and compare it as above (into `target/groundtruth/s11/recordings`). Results with Desktop 2.159:
+the `doc.save` after the Save As wrote nothing; Desktop opened and refreshed the project without
+an error; the four corpora are identical, case by case, to the `doc.save` recordings above (643
+of 643), so a PBIT saved as a PBIP with edits gives Desktop the same model as the edited PBIP.
+Compared with the committed recordings, `acme-measures` (601) and `acme-calcgroup-rls` (26) are
+identical and the other differences are the edits, as above. `Targets[Month]` keeps its
+`yyyy-mm` format: DashCraft converts the template itself, so Desktop's template import does not
+reset it.
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.

@@ -305,6 +305,24 @@ async fn only_pbip_projects_save_in_place() {
     assert_eq!(strings(&saved["written"]), [SALES_TMDL], "{saved}");
 }
 
+/// `path` relative to the current folder (`..` up to the root, then down;
+/// both are on the same drive here).
+fn relative_to_cwd(path: &Path) -> std::path::PathBuf {
+    use std::path::Component;
+    let normal = |p: &Path| -> Vec<std::ffi::OsString> {
+        p.components()
+            .filter_map(|c| match c {
+                Component::Normal(n) => Some(n.to_owned()),
+                _ => None,
+            })
+            .collect()
+    };
+    let up = normal(&std::env::current_dir().unwrap()).len();
+    let mut rel: std::path::PathBuf = std::iter::repeat_n("..", up).collect();
+    rel.extend(normal(path));
+    rel
+}
+
 /// The files of `out["files"]`, sorted.
 fn sorted(v: &Value) -> Vec<&str> {
     let mut files = strings(v);
@@ -432,6 +450,19 @@ async fn save_as_moves_the_document_to_a_new_project() {
         scalar(&fresh, &reopened, "[Total]").await,
         json!(MINI_TOTAL)
     );
+
+    // A relative folder is reported as the absolute folder doc.save uses.
+    let relative = relative_to_cwd(&copy);
+    assert!(relative.is_relative(), "{}", relative.display());
+    let out = r
+        .run(
+            "doc.saveAs",
+            json!({"docId": doc, "outDir": relative, "overwrite": true}),
+        )
+        .await;
+    assert_eq!(out["projectDir"], json!(project_dir), "{out}");
+    let again = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(again["projectDir"], json!(project_dir), "{again}");
 
     // A folder with files needs overwrite.
     let err = r

@@ -1805,9 +1805,14 @@ impl Command for DocumentSaveAs {
                 "the local data cache (.pbi/cache.abf) of the source is not copied: refresh the project from its data sources".to_owned(),
             );
         }
-        let pbip = out_dir.join(&report.pbip_file);
+        // The reread project's folder (absolute), as doc.save reports it.
+        let project_dir = session
+            .opened()
+            .container
+            .root_dir()
+            .map_or_else(|| out_dir.clone(), std::path::Path::to_path_buf);
         entry.relocate(
-            pbip,
+            project_dir.join(&report.pbip_file),
             params
                 .out_dir
                 .join(&report.pbip_file)
@@ -1815,7 +1820,7 @@ impl Command for DocumentSaveAs {
                 .into_owned(),
         );
         Ok(DocumentSaveAsOut {
-            project_dir: shown_dir(&out_dir),
+            project_dir: shown_dir(&project_dir),
             pbip_file: report.pbip_file,
             files: report.written,
             bytes: report.bytes,
