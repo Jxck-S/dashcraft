@@ -1678,15 +1678,25 @@ impl Command for DocumentSave {
         let entry = doc(ws, &params.doc_id)?;
         let session = entry.session();
         let opened = session.opened();
-        let Some(root) = opened.container.root_dir() else {
+        let root = opened
+            .container
+            .root_dir()
+            .filter(|_| opened.document.source.format == pbi_model::SourceFormat::Pbip);
+        let Some(root) = root else {
             return Err(OpError::unsupported(
-                "cannot save: only a PBIP project opened from a folder can be saved in place; use convert.pbip to save it as a new project",
+                "cannot save: only a PBIP project opened from a folder can be saved in place; use doc.saveAs to save it as a new PBIP project",
             ));
         };
         // Every file written lies under the project folder (the save refuses
         // other paths and symbolic links).
         let project_dir = ws.policy().check_write(root)?;
-        let report = session.save(params.overwrite).await?;
+        let report = session.save(params.overwrite).await.map_err(|e| {
+            let mut e = OpError::from(e);
+            if e.message.ends_with("save it as a new PBIP project instead") {
+                e.message.push_str(" with doc.saveAs");
+            }
+            e
+        })?;
         Ok(DocumentSaveOut {
             project_dir: shown_dir(&project_dir),
             written: report.written,
@@ -1705,6 +1715,114 @@ impl Command for DocumentSave {
                 .collect(),
             revision: report.revision,
             dirty: session.is_document_dirty(),
+        })
+    }
+}
+
+/// `doc.saveAs`.
+#[derive(Debug)]
+pub struct DocumentSaveAs;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DocumentSaveAsParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The new project folder (created if missing; must be empty unless
+    /// `overwrite`).
+    pub out_dir: std::path::PathBuf,
+    /// Write into a non-empty folder (files with the same paths are
+    /// replaced, others kept).
+    #[serde(default)]
+    pub overwrite: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DocumentSaveAsOut {
+    /// The new project folder.
+    pub project_dir: String,
+    /// The project's `.pbip` file, relative to `projectDir`.
+    pub pbip_file: String,
+    /// Files written, relative to `projectDir`.
+    pub files: Vec<String>,
+    pub bytes: u64,
+    /// The format the document had before (`pbix`, `pbit`, `pbip`, …).
+    pub previous_format: String,
+    /// The revision saved.
+    pub revision: u64,
+    /// Whether the document has edits after the save (always `false`).
+    pub dirty: bool,
+    /// What the new project does not carry over (imported data, a local
+    /// data cache).
+    pub warnings: Vec<String>,
+}
+
+impl Command for DocumentSaveAs {
+    type Params = DocumentSaveAsParams;
+    type Output = DocumentSaveAsOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "doc.saveAs",
+            title: "Save As",
+            summary: "Saves the document, edits included, as a new PBIP project from any format and continues editing there: later doc.save writes to it; imported data is not carried over.",
+            category: Category::Edit,
+            mutates_document: true,
+            writes_files: true,
+            long_running: true,
+            examples: &[
+                (
+                    "Save as a new project",
+                    r#"{"docId": "d1", "outDir": "target/tmp/acme-copy"}"#,
+                ),
+                (
+                    "Into an existing folder",
+                    r#"{"docId": "d1", "outDir": "target/tmp/acme-copy", "overwrite": true}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(
+        ws: &Workspace,
+        params: Self::Params,
+        _ctx: &Ctx,
+    ) -> Result<Self::Output, OpError> {
+        let out_dir = super::export::check_out_dir(ws, &params.out_dir, params.overwrite)?;
+        let entry = doc(ws, &params.doc_id)?;
+        let session = entry.session();
+        let report = session.save_as(&out_dir, params.overwrite).await?;
+        let mut warnings = Vec::new();
+        if report.data_not_carried {
+            warnings.push(
+                "the imported data of the source is not carried over: refresh the project from its data sources".to_owned(),
+            );
+        }
+        if report.cache_not_copied {
+            warnings.push(
+                "the local data cache (.pbi/cache.abf) of the source is not copied: refresh the project from its data sources".to_owned(),
+            );
+        }
+        let pbip = out_dir.join(&report.pbip_file);
+        entry.relocate(
+            pbip,
+            params
+                .out_dir
+                .join(&report.pbip_file)
+                .to_string_lossy()
+                .into_owned(),
+        );
+        Ok(DocumentSaveAsOut {
+            project_dir: shown_dir(&out_dir),
+            pbip_file: report.pbip_file,
+            files: report.written,
+            bytes: report.bytes,
+            previous_format: report.previous_format.as_str().to_owned(),
+            revision: report.revision,
+            dirty: session.is_document_dirty(),
+            warnings,
         })
     }
 }

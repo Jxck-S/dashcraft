@@ -161,4 +161,4 @@ pub use report::{
     TableRefresh, TableStatus,
 };
 pub use security::{VIEW_AS_FAILED, ViewAs};
-pub use session::{DocumentHistory, SaveReport, Session, TableInfo};
+pub use session::{DocumentHistory, SaveAsReport, SaveReport, Session, TableInfo};

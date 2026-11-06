@@ -525,9 +525,18 @@ lines, undo restores the bytes) and the save part of 7 (edit, save, reopen in a 
 undo, save the original bytes) pass (`crates/pbi-core/tests/save_in_place.rs`,
 `crates/pbi-ops/tests/save.rs`), and Desktop opens a saved, edited copy of Acme without a
 repair and computes the same 627 measure and calculation-group/RLS values (GT-6,
-`reference/groundtruth/README.md`). Still open:
-`doc.saveAs` (conversions still refuse dirty documents), `lineageTag` generation for new
-objects, `doc/changed`
+`reference/groundtruth/README.md`). `doc.saveAs` writes the current document as a new PBIP
+project from any source (`pbi-core::save_as_project`: the full writer, then a reread that becomes
+the new save baseline with the session's object ids) and moves the document there, so later
+saves are in-place saves of the new project; a PBIX's data and a PBIP's local cache are not
+carried over (a warning; loaded data stays in memory), and `convert.pbip`/`convert.pbit` now
+write the edited document. Acceptance criterion 5 passes for the model structure (tables,
+columns, measures, partitions, relationships, roles), pages, filters and theme of all four
+committed samples (`samples_save_as_pbip_with_an_equal_structure` in
+`crates/pbi-core/tests/save_in_place.rs`), and the PBIP half of 6 passes (Acme with a rename,
+saved as, reopened and refreshed through the blob map, gives every value of `expected.json`:
+`crates/pbi-ops/tests/e2e.rs::save_as_project_keeps_the_expected_values`). Still open:
+`lineageTag` generation for new objects, `doc/changed`
 notifications, dependent recalculation after measure edits, table, column, hierarchy and
 relationship create and delete, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures

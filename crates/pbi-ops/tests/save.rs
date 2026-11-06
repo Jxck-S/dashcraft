@@ -1,7 +1,8 @@
 //! `doc.save` through `Registry::execute` on a temporary PBIP project:
 //! only changed files are written, renames follow into the report files
 //! and back byte for byte, a reopen shows the saved document, and files
-//! changed on disk are a conflict until `overwrite`.
+//! changed on disk are a conflict until `overwrite`. `doc.saveAs` writes a
+//! new project from any source and moves the document there.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -11,7 +12,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use common::{MINI_TOTAL, Runner, mini_pbip, tmp_dir};
+use common::{MINI_TOTAL, MS_PBIX, Runner, fixture, mini_pbip, ms_expected, tmp_dir};
 use pbi_ops::OpErrorCode;
 use serde_json::{Value, json};
 
@@ -283,4 +284,229 @@ async fn only_pbip_projects_save_in_place() {
         .await
         .unwrap_err();
     assert_eq!(err.code, OpErrorCode::Unsupported, "{err:?}");
+    assert!(err.message.contains("doc.saveAs"), "{err:?}");
+
+    // Save As makes it a project that saves in place.
+    let out = r
+        .run(
+            "doc.saveAs",
+            json!({"docId": doc, "outDir": dir.path().join("project")}),
+        )
+        .await;
+    assert_eq!(out["previousFormat"], "semanticModelFolder", "{out}");
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    let total = measures["measures"][0]["id"].as_u64().unwrap();
+    r.run(
+        "model.object.setDescription",
+        json!({"docId": doc, "objectId": total, "text": "Sum of all amounts"}),
+    )
+    .await;
+    let saved = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(strings(&saved["written"]), [SALES_TMDL], "{saved}");
+}
+
+/// The files of `out["files"]`, sorted.
+fn sorted(v: &Value) -> Vec<&str> {
+    let mut files = strings(v);
+    files.sort_unstable();
+    files
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn save_as_moves_the_document_to_a_new_project() {
+    let dir = tmp_dir("save-as-");
+    let source = dir.path().join("source");
+    let pbip = mini_pbip(&source);
+    let original = files(&source);
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    let first = total_expression(&r, &doc).await;
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    let total = measures["measures"][0]["id"].as_u64().unwrap();
+    r.run(
+        "model.setMeasureExpression",
+        json!({"docId": doc, "measureId": total, "expression": "SUM(Sales[Amount]) * 2"}),
+    )
+    .await;
+    r.run(
+        "model.object.rename",
+        json!({"docId": doc, "table": "Sales", "newName": "Sales Data"}),
+    )
+    .await;
+
+    let copy = dir.path().join("copy");
+    let out = r
+        .run("doc.saveAs", json!({"docId": doc, "outDir": copy}))
+        .await;
+    assert_eq!(
+        (
+            &out["pbipFile"],
+            &out["previousFormat"],
+            &out["revision"],
+            &out["dirty"],
+            &out["warnings"]
+        ),
+        (
+            &json!("Mini.pbip"),
+            &json!("pbip"),
+            &json!(2),
+            &json!(false),
+            &json!([])
+        ),
+        "{out}"
+    );
+    let written = files(&copy);
+    assert_eq!(
+        sorted(&out["files"]),
+        written.keys().map(String::as_str).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        out["bytes"],
+        json!(written.values().map(Vec::len).sum::<usize>())
+    );
+    assert!(
+        written.contains_key(SALES_DATA_TMDL) && !written.contains_key(SALES_TMDL),
+        "{:?}",
+        written.keys()
+    );
+    let project_dir = out["projectDir"].as_str().unwrap();
+    assert!(
+        Path::new(project_dir).is_absolute() && !project_dir.starts_with(r"\\?\"),
+        "{project_dir}"
+    );
+    assert_eq!(files(&source), original, "the source is untouched");
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(
+        (&history["dirty"], &history["canUndo"]),
+        (&json!(false), &json!(true)),
+        "the history survives the Save As"
+    );
+    let list = r.run("doc.list", json!({})).await;
+    assert_eq!(
+        (
+            &list["documents"][0]["path"],
+            &list["documents"][0]["format"]
+        ),
+        (
+            &json!(copy.join("Mini.pbip").to_string_lossy()),
+            &json!("pbip")
+        ),
+        "{list}"
+    );
+
+    // Later saves write to the new project only.
+    r.run(
+        "report.visual.move",
+        json!({"docId": doc, "page": "Overview", "visual": "total", "x": 20}),
+    )
+    .await;
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(strings(&out["written"]), [TOTAL_CARD], "{out}");
+    assert_eq!(out["projectDir"], json!(project_dir));
+    assert_eq!(files(&source), original);
+
+    // A fresh workspace opens the new project with the edits.
+    let fresh = Runner::new();
+    let reopened = fresh.open(json!({"path": copy.join("Mini.pbip")})).await;
+    assert_eq!(
+        total_expression(&fresh, &reopened).await,
+        "SUM('Sales Data'[Amount]) * 2"
+    );
+    assert_eq!(
+        scalar(&fresh, &reopened, "[Total]").await,
+        json!(2 * MINI_TOTAL)
+    );
+    let card: Value = serde_json::from_slice(&files(&copy)[TOTAL_CARD]).unwrap();
+    assert_eq!(card["position"]["x"], json!(20));
+
+    // Undo reaches back past the Save As, and the undo is saved there too.
+    for _ in 0..3 {
+        r.run("doc.undo", json!({"docId": doc})).await;
+    }
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(strings(&out["deleted"]), [SALES_DATA_TMDL], "{out}");
+    let fresh = Runner::new();
+    let reopened = fresh.open(json!({"path": copy.join("Mini.pbip")})).await;
+    assert_eq!(total_expression(&fresh, &reopened).await, first);
+    assert_eq!(
+        scalar(&fresh, &reopened, "[Total]").await,
+        json!(MINI_TOTAL)
+    );
+
+    // A folder with files needs overwrite.
+    let err = r
+        .try_run("doc.saveAs", json!({"docId": doc, "outDir": source}))
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::Io, "{err:?}");
+    assert_eq!(files(&source), original);
+    let out = r
+        .run(
+            "doc.saveAs",
+            json!({"docId": doc, "outDir": source, "overwrite": true}),
+        )
+        .await;
+    assert_eq!(out["dirty"], false, "{out}");
+    let list = r.run("doc.list", json!({})).await;
+    assert_eq!(
+        list["documents"][0]["path"],
+        json!(source.join("Mini.pbip").to_string_lossy())
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn save_as_from_a_pbix_keeps_the_loaded_data() {
+    let (Some(pbix), Some(facts)) = (fixture(MS_PBIX), ms_expected(MS_PBIX)) else {
+        return;
+    };
+    let tables = facts["model"]["tables"].as_array().unwrap();
+    let largest = tables
+        .iter()
+        .max_by_key(|t| t["rows"].as_u64().unwrap())
+        .unwrap();
+    let count = format!("COUNTROWS('{}')", largest["name"].as_str().unwrap());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbix})).await;
+    assert_eq!(scalar(&r, &doc, &count).await, largest["rows"]);
+
+    let dir = tmp_dir("save-as-pbix-");
+    let project = dir.path().join("project");
+    let out = r
+        .run("doc.saveAs", json!({"docId": doc, "outDir": project}))
+        .await;
+    assert_eq!(out["previousFormat"], "pbix", "{out}");
+    let warnings = out["warnings"].to_string();
+    assert!(warnings.contains("imported data"), "{warnings}");
+    assert!(
+        project.join(out["pbipFile"].as_str().unwrap()).is_file(),
+        "{out}"
+    );
+    assert_eq!(
+        scalar(&r, &doc, &count).await,
+        largest["rows"],
+        "the loaded data stays in memory"
+    );
+    let list = r.run("doc.list", json!({})).await;
+    let summary = &list["documents"][0];
+    assert_eq!(
+        (&summary["format"], &summary["embeddedData"]),
+        (&json!("pbip"), &json!(false)),
+        "{summary}"
+    );
+    let again = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(
+        (&again["written"], &again["deleted"]),
+        (&json!([]), &json!([])),
+        "nothing changed since the Save As: {again}"
+    );
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .run(
+            "doc.open",
+            json!({"path": project.join(out["pbipFile"].as_str().unwrap()), "autoRefresh": false}),
+        )
+        .await;
+    assert_eq!(reopened["tables"], json!(tables.len()), "{reopened}");
+    assert_eq!(reopened["format"], "pbip");
 }

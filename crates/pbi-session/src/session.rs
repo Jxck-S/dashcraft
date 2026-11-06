@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use arrow::record_batch::RecordBatch;
@@ -77,6 +77,8 @@ struct Inner {
     state: RwLock<State>,
     refresh_lock: tokio::sync::Mutex<()>,
     saved: Mutex<SavedState>,
+    /// Reader options of the open, reused to read back a Save As.
+    open_options: pbi_core::OpenOptions,
 }
 
 /// The project as last opened or saved: the baseline of the next in-place
@@ -163,6 +165,30 @@ pub struct SaveReport {
     pub revision: u64,
 }
 
+/// What [`Session::save_as`] did.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveAsReport {
+    /// The project folder written.
+    pub project_dir: PathBuf,
+    /// The `.pbip` file, relative to `project_dir`.
+    pub pbip_file: String,
+    /// Files written, relative to `project_dir`.
+    pub written: Vec<String>,
+    /// Bytes written.
+    pub bytes: u64,
+    /// Format of the document before the Save As.
+    pub previous_format: pbi_model::SourceFormat,
+    /// The source had imported data (PBIX VertiPaq storage) that the project
+    /// does not carry: refresh it from its sources.
+    pub data_not_carried: bool,
+    /// The source project had a local data cache (`.pbi/cache.abf`) that was
+    /// not copied.
+    pub cache_not_copied: bool,
+    /// The revision saved.
+    pub revision: u64,
+}
+
 impl Session {
     /// Opens a file or folder (PBIP, PBIX, PBIT, `.bim`, TMDL, ABF, …) with
     /// [`pbi_core::open_path`]. No data is loaded until
@@ -230,6 +256,7 @@ impl Session {
                     view: None,
                 }),
                 refresh_lock: tokio::sync::Mutex::new(()),
+                open_options: options.open,
             }),
         })
     }
@@ -724,6 +751,95 @@ impl Session {
             document,
         });
         Ok(report)
+    }
+
+    /// The opened document with the current edits: what a save writes
+    /// ([`pbi_core::edited_document`]). Exports use it to include unsaved
+    /// edits.
+    ///
+    /// # Errors
+    /// [`SessionError::Open`] with [`pbi_core::CoreError::Save`] when the
+    /// reports have changes that cannot be written yet.
+    pub fn edited_opened(&self) -> Result<OpenedDocument, SessionError> {
+        let baseline = Arc::clone(
+            &self
+                .inner
+                .saved
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .opened,
+        );
+        Ok(pbi_core::edited_document(&baseline, &self.document())?)
+    }
+
+    /// Saves the current document, edits included, as a new PBIP project
+    /// in `out_dir` ([`pbi_core::save_as_project`]) and continues editing
+    /// it there: later [`save`](Self::save)s write to the new project, the
+    /// revision is marked saved and the undo history is kept. Works from
+    /// any source format; a PBIX's imported data and a PBIP's local data
+    /// cache are not carried over (the loaded data stays in memory).
+    ///
+    /// # Errors
+    /// [`SessionError::Open`] with [`pbi_core::CoreError::Save`] (`out_dir`
+    /// not empty without `overwrite`, or report changes that cannot be
+    /// written yet; nothing written), [`pbi_core::CoreError::PartialSave`]
+    /// or an I/O or reader error.
+    pub async fn save_as(
+        &self,
+        out_dir: impl AsRef<Path>,
+        overwrite: bool,
+    ) -> Result<SaveAsReport, SessionError> {
+        let handle = crate::refresh::runtime()?;
+        let _refresh = self.inner.refresh_lock.lock().await;
+        let baseline = Arc::clone(
+            &self
+                .inner
+                .saved
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .opened,
+        );
+        let current = self.document();
+        let previous_format = current.source.format.clone();
+        let data_not_carried = self.is_pbix();
+        let cache_not_copied = self.cache_info().is_some();
+        let out_dir = out_dir.as_ref().to_path_buf();
+        let options = self.inner.open_options;
+        let dir = out_dir.clone();
+        let outcome = handle
+            .spawn_blocking(move || {
+                pbi_core::save_as_project(&baseline, &current, &dir, overwrite, &options)
+            })
+            .await??;
+        let mut opened = self.write_opened();
+        let mut saved = self
+            .inner
+            .saved
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        let mut history = self
+            .inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        history.mark_saved();
+        let saved_doc = Arc::new(outcome.saved);
+        saved.opened = Arc::clone(&saved_doc);
+        saved.fingerprint = Some(outcome.fingerprint);
+        *opened = Arc::new(OpenedState {
+            document: Arc::new(saved_doc.document.clone()),
+            opened: saved_doc,
+        });
+        Ok(SaveAsReport {
+            project_dir: out_dir,
+            pbip_file: outcome.pbip_file,
+            written: outcome.written,
+            bytes: outcome.bytes,
+            previous_format,
+            data_not_carried,
+            cache_not_copied,
+            revision: history.revision(),
+        })
     }
 
     pub(crate) fn refresh_lock(&self) -> &tokio::sync::Mutex<()> {

@@ -63,8 +63,9 @@ impl Default for DocOptions {
 /// generation, canvas view state, ordering lock).
 pub struct DocEntry {
     id: String,
-    path: PathBuf,
-    shown_path: String,
+    /// Where the document lives: `(path after the path policy, path as the
+    /// caller gave it)`. A Save As moves it.
+    location: RwLock<(PathBuf, String)>,
     session: Session,
     options: DocOptions,
     /// Bumped by every data change (refresh, CSV load, derived columns).
@@ -80,7 +81,7 @@ impl fmt::Debug for DocEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DocEntry")
             .field("id", &self.id)
-            .field("path", &self.path)
+            .field("path", &self.path())
             .field("generation", &self.generation())
             .finish_non_exhaustive()
     }
@@ -93,16 +94,33 @@ impl DocEntry {
         &self.id
     }
 
-    /// The path the document was opened from (after the path policy).
+    /// The path the document was opened from or last saved as (after the
+    /// path policy).
     #[must_use]
-    pub fn path(&self) -> &Path {
-        &self.path
+    pub fn path(&self) -> PathBuf {
+        self.location
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .0
+            .clone()
     }
 
     /// The path as the caller gave it.
     #[must_use]
-    pub fn shown_path(&self) -> &str {
-        &self.shown_path
+    pub fn shown_path(&self) -> String {
+        self.location
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .1
+            .clone()
+    }
+
+    /// Moves the document to `path` (after a Save As).
+    pub(crate) fn relocate(&self, path: PathBuf, shown_path: String) {
+        *self
+            .location
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = (path, shown_path);
     }
 
     /// The data session.
@@ -380,8 +398,7 @@ impl Workspace {
         let n = self.next_id.fetch_add(1, Ordering::Relaxed);
         let entry = Arc::new(DocEntry {
             id: format!("d{n}"),
-            path,
-            shown_path,
+            location: RwLock::new((path, shown_path)),
             session,
             options,
             generation: AtomicU64::new(0),

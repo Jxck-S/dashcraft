@@ -113,6 +113,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`doc.redo`](#docredo) | Reapplies the latest undone document edit. | M A |
 | [`doc.history`](#dochistory) | Returns the document revision, dirty state and undo/redo availability. | A |
 | [`doc.save`](#docsave) | Saves the edits into the opened PBIP project, writing only changed files; files changed on disk since the open are a conflict unless overwrite. | M A W |
+| [`doc.saveAs`](#docsaveas) | Saves the document, edits included, as a new PBIP project from any format and continues editing there: later doc.save writes to it; imported data is not carried over. | M L A W |
 | [`doc.lint`](#doclint) | Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report. | A |
 | [`data.refresh`](#datarefresh) | Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status. | M L A |
 | [`data.tables`](#datatables) | Loaded rows, columns and last refresh status of every table, the derived columns and the local data cache. | A |
@@ -140,8 +141,8 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.state`](#canvasstate) | The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. | A |
 | [`export.table`](#exporttable) | Writes one table's data as CSV or Parquet (with model metadata); loads the data on first use. | L A W |
 | [`export.model`](#exportmodel) | The model documentation as JSON (model doc) or a Markdown data dictionary, inline or to a file; no data needed. | A W |
-| [`convert.pbip`](#convertpbip) | Writes the document as a PBIP project (TMDL + PBIR) into a folder. | L A W |
-| [`convert.pbit`](#convertpbit) | Writes a PBIT template (model schema and one report, no data). | L A W |
+| [`convert.pbip`](#convertpbip) | Writes the document, unsaved edits included, as a PBIP project (TMDL + PBIR) into a folder; the open document keeps its source (doc.saveAs moves it). | L A W |
+| [`convert.pbit`](#convertpbit) | Writes a PBIT template (model schema and one report, no data), unsaved edits included. | L A W |
 | [`text.parsePeople`](#textparsepeople) | Parses one people-picker cell (a Python-style list of dicts) into `First Last` names (the "Parse people field" transform). | A |
 | [`text.previewPeople`](#textpreviewpeople) | Parses every cell of a text column as a people list: outcome counts and distinct samples with their parsed form (before data.addDerivedColumn). | A |
 
@@ -1560,7 +1561,7 @@ Examples:
 
 ### `convert.pbip`
 
-**Save as PBIP.** Writes the document as a PBIP project (TMDL + PBIR) into a folder.
+**Save as PBIP.** Writes the document, unsaved edits included, as a PBIP project (TMDL + PBIR) into a folder; the open document keeps its source (doc.saveAs moves it).
 
 _long-running, agent-safe, writes files; since 0.2.0._
 
@@ -1586,7 +1587,7 @@ Examples:
 
 ### `convert.pbit`
 
-**Export a PBIT template.** Writes a PBIT template (model schema and one report, no data).
+**Export a PBIT template.** Writes a PBIT template (model schema and one report, no data), unsaved edits included.
 
 _long-running, agent-safe, writes files; since 0.2.0._
 
@@ -2079,3 +2080,35 @@ Examples:
 
 - Save the edits: `{"docId":"d1"}`
 - Save over external changes: `{"docId":"d1","overwrite":true}`
+
+### `doc.saveAs`
+
+**Save As.** Saves the document, edits included, as a new PBIP project from any format and continues editing there: later doc.save writes to it; imported data is not carried over.
+
+_mutates the document, long-running, agent-safe, writes files; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `outDir` | string | The new project folder (created if missing; must be empty unless `overwrite`). |
+| `overwrite` (optional) | boolean | Write into a non-empty folder (files with the same paths are replaced, others kept). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `projectDir` | string | The new project folder. |
+| `pbipFile` | string | The project's `.pbip` file, relative to `projectDir`. |
+| `files` | string[] | Files written, relative to `projectDir`. |
+| `bytes` | integer |  |
+| `previousFormat` | string | The format the document had before (`pbix`, `pbit`, `pbip`, …). |
+| `revision` | integer | The revision saved. |
+| `dirty` | boolean | Whether the document has edits after the save (always `false`). |
+| `warnings` | string[] | What the new project does not carry over (imported data, a local data cache). |
+
+Examples:
+
+- Save as a new project: `{"docId":"d1","outDir":"target/tmp/acme-copy"}`
+- Into an existing folder: `{"docId":"d1","outDir":"target/tmp/acme-copy","overwrite":true}`

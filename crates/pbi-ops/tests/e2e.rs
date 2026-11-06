@@ -359,20 +359,39 @@ async fn model_edit_commands_publish_revisions_and_history() {
     assert_eq!(final_measure["expression"], "84");
     assert_eq!(final_measure["description"], "Grouped edit");
 
+    // Conversions write the edited document without saving it.
     let pbip_conversion = runner
-        .try_run(
+        .run(
             "convert.pbip",
             json!({"docId": doc, "outDir": dir.path().join("converted-pbip")}),
         )
         .await;
-    assert!(pbip_conversion.is_err());
-    let pbit_conversion = runner
-        .try_run(
+    assert!(
+        pbip_conversion["files"].as_array().unwrap().len() > 3,
+        "{pbip_conversion}"
+    );
+    runner
+        .run(
             "convert.pbit",
             json!({"docId": doc, "outPath": dir.path().join("converted.pbit")}),
         )
         .await;
-    assert!(pbit_conversion.is_err());
+    let template = runner
+        .open(json!({"path": dir.path().join("converted.pbit"), "autoRefresh": false}))
+        .await;
+    let converted = runner
+        .run("model.measures", json!({"docId": template}))
+        .await;
+    let total = converted["measures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|measure| measure["name"] == "Total")
+        .unwrap();
+    assert_eq!(
+        (&total["expression"], &total["description"]),
+        (&json!("84"), &json!("Grouped edit"))
+    );
 
     let close_without_discard = runner.try_run("doc.close", json!({"docId": doc})).await;
     assert!(close_without_discard.is_err());
@@ -1027,6 +1046,72 @@ async fn renaming_line_amount_keeps_the_expected_values() {
     }
     let render = r
         .run("render.page", json!({"docId": doc, "report": "Stores"}))
+        .await;
+    assert_eq!(render["ok"], true, "{}", render["visuals"]);
+    let card = exp.card("Stores", "Store Performance", "kpis", "Total Sales");
+    assert!(
+        render["svg"]
+            .as_str()
+            .unwrap()
+            .contains(&format!(">{card}<")),
+        "no {card} on the page"
+    );
+}
+
+/// Acceptance for `doc.saveAs`: the example with a column rename, saved as a new
+/// project, reopened in a fresh workspace and refreshed through the blob map, gives
+/// every expected value.
+#[tokio::test(flavor = "multi_thread")]
+async fn save_as_project_keeps_the_expected_values() {
+    let (Some(pbip), Some(map), Some(exp)) = (fixture(PBIP), fixture(BLOB_MAP), expected()) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    r.run(
+        "model.object.rename",
+        json!({"docId": doc, "table": "Orders", "column": "Line Amount", "newName": "Line Total"}),
+    )
+    .await;
+    let dir = tmp_dir("pbi-ops-save-as-");
+    let out = r
+        .run("doc.saveAs", json!({"docId": doc, "outDir": dir.path()}))
+        .await;
+    assert_eq!(
+        (&out["previousFormat"], &out["warnings"]),
+        (&json!("pbip"), &json!([])),
+        "{out}"
+    );
+
+    let fresh = Runner::new();
+    let saved = fresh
+        .open(json!({
+            "path": dir.path().join(out["pbipFile"].as_str().unwrap()),
+            "blobMap": map,
+            "source": "query",
+            "autoRefresh": false
+        }))
+        .await;
+    let measures = fresh.run("model.measures", json!({"docId": saved})).await;
+    let text = measures.to_string();
+    assert!(
+        text.contains("[Line Total]") && !text.contains("[Line Amount]"),
+        "the rename is saved"
+    );
+    let refresh = fresh.run("data.refresh", json!({"docId": saved})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    for (name, rows) in exp.row_counts() {
+        assert_eq!(table(&refresh["tables"], name)["rows"], rows, "{name}");
+    }
+    let all = fresh.run("measures.values", json!({"docId": saved})).await;
+    assert_eq!(all["ok"], true);
+    for (name, _, formatted) in exp.measures() {
+        assert_eq!(measure(&all, name)["formatted"], formatted, "{name}");
+    }
+    let render = fresh
+        .run("render.page", json!({"docId": saved, "report": "Stores"}))
         .await;
     assert_eq!(render["ok"], true, "{}", render["visuals"]);
     let card = exp.card("Stores", "Store Performance", "kpis", "Total Sales");
@@ -1774,15 +1859,40 @@ async fn exports_and_conversions_write_files() {
         .await;
     assert_eq!(json_doc["json"]["schemaVersion"], 1);
 
+    // Conversions include unsaved edits and leave the document where it is.
+    const NOTE: &str = "Edited before the conversion";
+    r.run(
+        "model.object.setDescription",
+        json!({"docId": doc, "table": "Orders", "text": NOTE}),
+    )
+    .await;
     let project = dir.path().join("project");
     let pbip_out = r
         .run("convert.pbip", json!({"docId": doc, "outDir": project}))
         .await;
     assert!(pbip_out["files"].as_array().unwrap().len() > 10);
-    assert!(
-        project.join("AcmeOutfitters.pbip").exists()
-            || pbip_out["files"].to_string().contains(".pbip")
-    );
+    let pbip_file = pbip_out["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .find(|f| f.ends_with(".pbip"))
+        .unwrap();
+    let converted = r
+        .open(json!({"path": project.join(pbip_file), "autoRefresh": false}))
+        .await;
+    let model = r
+        .run(
+            "export.model",
+            json!({"docId": converted, "format": "json"}),
+        )
+        .await;
+    assert!(model.to_string().contains(NOTE), "the edit is converted");
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(history["dirty"], true, "conversion is not a save");
+    let list = r.run("doc.list", json!({})).await;
+    assert_eq!(list["documents"][0]["format"], "pbip");
+    assert_eq!(list["documents"][0]["path"], json!(pbip));
     let e = r
         .try_run("convert.pbip", json!({"docId": doc, "outDir": project}))
         .await
@@ -1805,6 +1915,16 @@ async fn exports_and_conversions_write_files() {
         .await;
     assert_eq!(reopened["format"], "pbit");
     assert_eq!(reopened["reports"].as_array().unwrap().len(), 1);
+    let template = r
+        .run(
+            "export.model",
+            json!({"docId": reopened["docId"], "format": "json"}),
+        )
+        .await;
+    assert!(
+        template.to_string().contains(NOTE),
+        "the edit is in the PBIT"
+    );
     assert_eq!(
         reopened["reports"][0]["pages"],
         stores["pages"].as_array().unwrap().len(),
