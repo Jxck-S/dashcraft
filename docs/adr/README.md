@@ -13,5 +13,9 @@
 | [0009](0009-naming-dashcraft.md) | Public product name DashCraft (formerly pbiview): `dashcraft` binary with a `pbiview` alias, `DASHCRAFT_*` variables, app identifier `io.github.jxck-s.dashcraft`, `NOTICE` | Accepted (name chosen "for now"; reversible); §2, §4, §5 superseded by ADR-0010 |
 | [0010](0010-dashcraft-everywhere.md) | DashCraft everywhere: no `pbiview` aliases or internal names (`dashcraft-cli`, `dashcraft-app`, `DASHCRAFT_*`, `dashcraft.*` keys) | Accepted |
 | [0011](0011-desktop-ground-truth.md) | Ground-truth recordings from Power BI Desktop: black-box DAX queries over ADOMD.NET, committed corpora and recordings, a value-by-value comparison test and a deviation ledger that only shrinks | Accepted |
+| [0012](0012-revisioned-document-state.md) | Revisioned document state and edit transactions | Accepted |
+| [0013](0013-save-conflicts-and-recovery.md) | Save, external changes and recovery | Accepted |
+| [0014](0014-serialization-contract.md) | Serialization contract and generated identifiers | Accepted |
+| [0015](0015-accessibility-target.md) | Accessibility target and verification | Accepted |
 
 New ADRs use the next number and the sections Status, Context, Decision, Alternatives considered, Consequences. To change a decision, write a new ADR and mark the old one "Superseded by ADR-NNNN". Don't rewrite history.
