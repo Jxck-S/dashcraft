@@ -137,6 +137,7 @@ mod session;
 pub mod transforms;
 
 pub use cache::{CACHE_ENTRY, CacheInfo};
+pub use created::InferredColumn;
 pub use dependents::{Dependent, Dependents, delete_dependents, object_dependents};
 pub use derived::{
     DERIVED_ANNOTATION, DERIVED_KIND_ANNOTATION, DerivedColumn, DerivedColumnInfo, DerivedKind,

@@ -1445,3 +1445,99 @@ fn hierarchies_are_created_and_deleted_with_exact_inverses() {
         Err(CommandError::WrongKind { .. })
     ));
 }
+
+#[test]
+fn calculated_tables_are_created_with_fresh_ids_and_deleted_by_undo() {
+    use crate::semantic::{Partition, PartitionMode, PartitionSource, Table};
+    let mut doc = sample_document();
+    let original = doc.clone();
+    let from_expression = |name: &str| Column {
+        name: name.into(),
+        data_type: DataType::String,
+        is_name_inferred: true,
+        kind: ColumnKind::CalculatedTableColumn {
+            source_column: format!("[{name}]"),
+        },
+        ..Column::default()
+    };
+    let table = |name: &str, columns: Vec<Column>, source: PartitionSource| Table {
+        name: name.into(),
+        lineage_tag: Some("tag".into()),
+        columns,
+        partitions: vec![Partition {
+            name: name.into(),
+            mode: PartitionMode::Import,
+            source,
+            ..Partition::default()
+        }],
+        ..Table::default()
+    };
+    let dax = || PartitionSource::Calculated {
+        expression: "VALUES(Stores[Region])".into(),
+    };
+    let id = CreateTable::created_id(&doc);
+    let mut history = History::new();
+    let events = history
+        .execute(
+            &mut doc,
+            CreateTable {
+                table: table(
+                    "Regions",
+                    vec![
+                        from_expression("Region"),
+                        Column::calculated("Upper", DataType::String, "UPPER(Regions[Region])"),
+                    ],
+                    dax(),
+                ),
+                index: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(events, [ChangeEvent::ObjectAdded { id }]);
+    assert_eq!(history.undo_label(), Some("Create table 'Regions'"));
+    let created = doc.model.as_ref().unwrap().tables.last().unwrap().clone();
+    assert_eq!((created.id, created.name.as_str()), (id, "Regions"));
+    let ids: Vec<_> = created
+        .columns
+        .iter()
+        .map(|c| c.id)
+        .chain(created.partitions.iter().map(|p| p.id))
+        .collect();
+    assert_eq!(
+        ids,
+        [ObjectId(id.0 + 1), ObjectId(id.0 + 2), ObjectId(id.0 + 3)]
+    );
+    assert!(doc.ids.peek() > ObjectId(id.0 + 3));
+    let after = doc.clone();
+    history.undo(&mut doc).unwrap();
+    assert_same_content(&doc, &original);
+    history.redo(&mut doc).unwrap();
+    assert_eq!(doc, after, "redo restores the table with the same IDs");
+
+    let before = doc.clone();
+    let mut refuse = |t: Table| {
+        let error = CreateTable {
+            table: t,
+            index: Some(0),
+        }
+        .apply(&mut doc)
+        .unwrap_err();
+        assert_eq!(doc, before);
+        error.to_string()
+    };
+    let one = || vec![from_expression("Region")];
+    assert!(refuse(table("stores", one(), dax())).contains("already"));
+    assert!(refuse(table("regions", one(), dax())).contains("already"));
+    let m = PartitionSource::M {
+        expression: "let Source = 1 in Source".into(),
+    };
+    assert!(refuse(table("T", one(), m)).contains("only calculated tables"));
+    assert!(refuse(table("T", Vec::new(), dax())).contains("has no columns"));
+    let twice = vec![from_expression("Region"), from_expression("region")];
+    assert!(refuse(table("T", twice, dax())).contains("already"));
+    let data = vec![Column::data("Region", DataType::String)];
+    assert!(refuse(table("T", data, dax())).contains("come from its expression"));
+    let mut with_measure = table("T", one(), dax());
+    with_measure.measures.push(Measure::new("M", "1"));
+    assert!(refuse(with_measure).contains("after the table"));
+}
