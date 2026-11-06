@@ -599,7 +599,9 @@ the hierarchy and each level get a random `lineageTag` and are saved in place, l
 without ordinals as Desktop writes them; a delete lists the report fields on the hierarchy's
 levels (`hierarchy_dependents`) and undo restores the same ids
 (`hierarchy_create_and_delete_through_the_registry`,
-`created_and_deleted_hierarchies_save_and_reopen`). Still open:
+`created_and_deleted_hierarchies_save_and_reopen`); Desktop opens and refreshes three saved hierarchies (one on a
+table without any, one with a calculated-column level) with the same levels in order and answers
+all 643 recorded cases on the edited model as DashCraft does (GT-6 s18). Still open:
 the app's change events (M6.8), dependent recalculation after measure edits, calculated table
 create, data column delete (with M editing), hierarchy and level edits, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures

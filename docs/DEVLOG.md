@@ -23,7 +23,11 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   `hierarchy_dependents_are_the_report_fields_on_its_levels`: the Product Detail matrix on
   `Products[Product Hierarchy]`; `e2e.rs::hierarchy_create_and_delete_through_the_registry`;
   `save.rs::created_and_deleted_hierarchies_save_and_reopen`: only `Stores.tmdl` written, the
-  exact block where Geography was, reopen). Registry 68 → 70 commands.
+  exact block where Geography was, reopen). Registry 68 → 70 commands. GT-6 with Desktop 2.159
+  (s18: Geography deleted, three hierarchies created, one on a table without any and one with a
+  calculated-column level): Desktop opens and refreshes the saved project and lists the
+  hierarchies with their levels in order on the right columns; its 643 answers equal the
+  committed recordings and DashCraft matches all of them.
 ### M6 calculated column create (M6.5)
 
 - **What:** `pbi-model` gets `CreateColumn` (calculated columns only; refuses calculation groups,
