@@ -115,6 +115,141 @@ impl Client {
             }
         }
     }
+
+    /// The response to `id` and every notification before it.
+    async fn exchange(&mut self, id: u64) -> (Vec<Value>, Value) {
+        let mut notes = Vec::new();
+        loop {
+            let msg = self.next().await;
+            if msg.get("method").is_some() {
+                notes.push(msg);
+            } else if msg["id"] == id {
+                return (notes, msg);
+            } else {
+                panic!("unexpected message while waiting for {id}: {msg}");
+            }
+        }
+    }
+}
+
+/// The `doc/changed` notifications among `notes`.
+fn doc_changed(notes: &[Value]) -> Vec<Value> {
+    notes
+        .iter()
+        .filter(|n| n["method"] == "doc/changed")
+        .map(|n| n["params"].clone())
+        .collect()
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn committed_edits_send_doc_changed_before_the_response() {
+    let dir = tmp_dir("pbi-ops-rpc-changed-");
+    let pbip = mini_pbip(dir.path());
+    let mut c = Client::start(Registry::default_catalog());
+    c.request(1, "doc.open", json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    let (notes, _) = c.exchange(1).await;
+    assert!(doc_changed(&notes).is_empty(), "opening is not a change");
+
+    let create =
+        json!({"docId": "d1", "table": "Sales", "name": "Twice", "expression": "[Total] * 2"});
+    c.request(2, "model.measure.create", create.clone()).await;
+    let (notes, created) = c.exchange(2).await;
+    let id = created["result"]["measureId"].as_u64().unwrap();
+    assert_eq!(
+        doc_changed(&notes),
+        [json!({
+            "docId": "d1",
+            "command": "model.measure.create",
+            "revision": 1,
+            "dirty": true,
+            "changes": [{"objectId": id, "kind": "added"}],
+        })]
+    );
+
+    // No-op and failed edits announce nothing.
+    c.request(
+        3,
+        "model.measure.update",
+        json!({"docId": "d1", "measureId": id, "expression": "[Total] * 2"}),
+    )
+    .await;
+    let (notes, same) = c.exchange(3).await;
+    assert_eq!(same["result"]["changed"], false);
+    assert!(doc_changed(&notes).is_empty());
+    c.request(4, "model.measure.create", create).await;
+    let (notes, failed) = c.exchange(4).await;
+    assert!(failed.get("error").is_some(), "{failed}");
+    assert!(doc_changed(&notes).is_empty());
+
+    c.request(
+        5,
+        "model.object.rename",
+        json!({"docId": "d1", "objectId": id, "newName": "Double"}),
+    )
+    .await;
+    let (notes, _) = c.exchange(5).await;
+    let renamed = doc_changed(&notes);
+    assert_eq!(renamed.len(), 1);
+    assert_eq!(renamed[0]["revision"], 2);
+    assert!(
+        renamed[0]["changes"].as_array().unwrap().contains(&json!({
+            "objectId": id, "kind": "renamed", "oldName": "Twice", "newName": "Double"
+        })),
+        "{renamed:?}"
+    );
+
+    // Each committed step of a batch is announced, also when a later step
+    // fails.
+    c.request(
+        6,
+        "commands.batch",
+        json!({"steps": [
+            {"id": "model.object.setDescription", "params": {"docId": "d1", "objectId": id, "text": "Two times"}},
+            {"id": "model.measure.update", "params": {"docId": "d1", "measureId": id, "formatString": "0.0"}},
+            {"id": "model.measure.delete", "params": {"docId": "d1", "measureId": u64::MAX}},
+        ]}),
+    )
+    .await;
+    let (notes, _) = c.exchange(6).await;
+    let steps: Vec<(Value, Value)> = doc_changed(&notes)
+        .iter()
+        .map(|n| (n["command"].clone(), n["revision"].clone()))
+        .collect();
+    assert_eq!(
+        steps,
+        [
+            (json!("model.object.setDescription"), json!(3)),
+            (json!("model.measure.update"), json!(4)),
+        ]
+    );
+
+    // A request without an id is announced too.
+    c.send(r#"{"jsonrpc":"2.0","method":"doc.undo","params":{"docId":"d1"}}"#)
+        .await;
+    let undone = c.next().await;
+    assert_eq!(undone["method"], "doc/changed");
+    assert_eq!(undone["params"]["command"], "doc.undo");
+    assert_eq!(undone["params"]["revision"], 5);
+    assert_eq!(undone["params"]["changes"][0]["kind"], "changed");
+
+    // A save that clears the dirty flag is announced; a save with nothing
+    // to write is not.
+    c.request(7, "doc.save", json!({"docId": "d1"})).await;
+    let (notes, saved) = c.exchange(7).await;
+    assert_eq!(saved["result"]["dirty"], false, "{saved}");
+    assert_eq!(
+        doc_changed(&notes),
+        [
+            json!({"docId": "d1", "command": "doc.save", "revision": 5, "dirty": false, "changes": []})
+        ]
+    );
+    c.request(8, "doc.save", json!({"docId": "d1"})).await;
+    let (notes, _) = c.exchange(8).await;
+    assert!(doc_changed(&notes).is_empty());
+
+    c.tx.shutdown().await.unwrap();
+    c.server.await.unwrap().unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]

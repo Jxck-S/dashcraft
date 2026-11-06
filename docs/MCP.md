@@ -76,7 +76,7 @@ Newline-delimited JSON-RPC 2.0 over stdio (no batches).
 | `tools/call` | Runs concurrently; mutating calls on the same `docId` run in arrival order |
 | `notifications/cancelled` | Cancels the call's `CancellationToken`; no response follows (as the spec requires) |
 | `notifications/progress` | Sent for calls with `_meta.progressToken`: `progress` 0–100 (`total: 100`), strictly increasing, with the command's message (refresh steps, rows per table) |
-| `logging/setLevel`, `notifications/message` | After `setLevel`: `debug` per finished call, `warning`/`error` per failed call (logger `dashcraft`) |
+| `logging/setLevel`, `notifications/message` | After `setLevel`: `debug` per finished call, `warning`/`error` per failed call, `info` per committed edit with `data: {"event": "doc/changed", "docId", "command", "revision", "dirty", "changes": [{"objectId", "kind", "oldName"?, "newName"?}], "path"?}` (also when a save clears the dirty flag; none for no-op or failed edits). Logger `dashcraft` |
 | `2026-07-28` (stateless) | `server/discover`; requests carrying `_meta["io.modelcontextprotocol/protocolVersion"]` are served statelessly (`resultType: "complete"`, `_meta` server info, `ttlMs`/`cacheScope` on `tools/list`, per-request `io.modelcontextprotocol/logLevel`); an unknown version gets `-32022` with the supported list |
 
 Not offered: resources, prompts, completions, sampling, elicitation, tasks.

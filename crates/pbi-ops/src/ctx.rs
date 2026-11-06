@@ -1,5 +1,5 @@
 //! [`Ctx`]: what a command run gets besides its parameters — cancellation,
-//! a progress sink and who is calling.
+//! a progress sink, a document-change sink and who is calling.
 
 use std::fmt;
 use std::sync::Arc;
@@ -47,11 +47,64 @@ pub struct ProgressEvent {
 /// cheap and non-blocking.
 pub type ProgressSink = Arc<dyn Fn(ProgressEvent) + Send + Sync>;
 
+/// A committed change of an open document (ADR-0012): an edit, undo or
+/// redo that published a new revision, or a save that cleared the dirty
+/// flag or moved the document. Failed and no-op edits report none.
+/// `dashcraft serve` sends it as a `doc/changed` notification.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DocChangedEvent {
+    /// The document id (`d1`, …).
+    pub doc_id: String,
+    /// The command that committed the change (`model.measure.create`,
+    /// `doc.undo`, `doc.save`, …).
+    pub command: String,
+    /// The document revision after the change.
+    pub revision: u64,
+    /// Whether the document has unsaved edits after the change.
+    pub dirty: bool,
+    /// The objects changed, in order (empty for saves).
+    pub changes: Vec<ObjectChange>,
+    /// The document's new path (Save As only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+/// One object of a [`DocChangedEvent`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectChange {
+    /// The object's stable id (as in `model.measures`, `changedObjectIds`).
+    pub object_id: u64,
+    pub kind: ObjectChangeKind,
+    /// The name before a rename.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub old_name: Option<String>,
+    /// The name after a rename.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub new_name: Option<String>,
+}
+
+/// What happened to an object.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum ObjectChangeKind {
+    Added,
+    Changed,
+    Renamed,
+    Removed,
+}
+
+/// Receives [`DocChangedEvent`]s; called from the command's task right
+/// after the change is committed, keep it cheap and non-blocking.
+pub type DocChangedSink = Arc<dyn Fn(DocChangedEvent) + Send + Sync>;
+
 /// The context of one command run. Cheap to clone.
 #[derive(Clone, Default)]
 pub struct Ctx {
     cancel: CancellationToken,
     progress: Option<ProgressSink>,
+    doc_changed: Option<DocChangedSink>,
     caller: CallerKind,
     command: Option<&'static str>,
     registry: Option<Registry>,
@@ -64,6 +117,7 @@ impl fmt::Debug for Ctx {
             .field("command", &self.command)
             .field("cancelled", &self.cancel.is_cancelled())
             .field("progress", &self.progress.is_some())
+            .field("doc_changed", &self.doc_changed.is_some())
             .finish_non_exhaustive()
     }
 }
@@ -97,6 +151,23 @@ impl Ctx {
     #[must_use]
     pub fn with_progress_sink(mut self, sink: Option<ProgressSink>) -> Self {
         self.progress = sink;
+        self
+    }
+
+    /// Sends committed document changes to `sink`.
+    #[must_use]
+    pub fn with_doc_changed(
+        mut self,
+        sink: impl Fn(DocChangedEvent) + Send + Sync + 'static,
+    ) -> Self {
+        self.doc_changed = Some(Arc::new(sink));
+        self
+    }
+
+    /// Sends committed document changes to `sink` (shared).
+    #[must_use]
+    pub fn with_doc_changed_sink(mut self, sink: Option<DocChangedSink>) -> Self {
+        self.doc_changed = sink;
         self
     }
 
@@ -158,6 +229,19 @@ impl Ctx {
     #[must_use]
     pub fn progress_sink(&self) -> Option<&ProgressSink> {
         self.progress.as_ref()
+    }
+
+    /// The document-change sink, if any.
+    #[must_use]
+    pub fn doc_changed_sink(&self) -> Option<&DocChangedSink> {
+        self.doc_changed.as_ref()
+    }
+
+    /// Reports a committed document change (no-op without a sink).
+    pub fn doc_changed(&self, event: DocChangedEvent) {
+        if let Some(sink) = &self.doc_changed {
+            sink(event);
+        }
     }
 
     /// Reports progress (no-op without a sink).

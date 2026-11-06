@@ -66,7 +66,10 @@ pub use command::{
     BoxFuture, CallFn, Category, Command, CommandMeta, CommandSpec, output_schema, params_schema,
     parse_params,
 };
-pub use ctx::{CallerKind, Ctx, ProgressEvent, ProgressSink};
+pub use ctx::{
+    CallerKind, Ctx, DocChangedEvent, DocChangedSink, ObjectChange, ObjectChangeKind,
+    ProgressEvent, ProgressSink,
+};
 pub use error::{OpError, OpErrorCode};
 pub use path_policy::PathPolicy;
 pub use registry::{CommandInfo, ExampleInfo, Registry};
