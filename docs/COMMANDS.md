@@ -112,6 +112,8 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.column.create`](#modelcolumncreate) | Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given. | M A |
 | [`model.column.delete`](#modelcolumndelete) | Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. | M A |
 | [`model.table.delete`](#modeltabledelete) | Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. | M A |
+| [`model.hierarchy.create`](#modelhierarchycreate) | Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. | M A |
+| [`model.hierarchy.delete`](#modelhierarchydelete) | Deletes a user hierarchy with its levels as one undoable edit and lists the report fields that used it; dryRun only lists them. | M A |
 | [`model.dependencies`](#modeldependencies) | Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. | A |
 | [`report.visual.move`](#reportvisualmove) | Moves a visual on its page as one undoable edit (visual groups not yet). | M A |
 | [`report.visual.resize`](#reportvisualresize) | Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet). | M A |
@@ -2086,8 +2088,8 @@ Result:
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
 | `objectId` | integer |  |
-| `kind` | string | `column` or `table`. |
-| `table` | string | The table, or the column's table. |
+| `kind` | string | `column`, `table` or `hierarchy`. |
+| `table` | string | The table, or the column's or hierarchy's table. |
 | `name` | string |  |
 | `dryRun` | boolean |  |
 | `dependents` | DependentOut[] | What refers to the object and breaks once it is deleted (DAX, report fields). A table's own measures, columns and expressions go with it and are not listed. |
@@ -2123,8 +2125,8 @@ Result:
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
 | `objectId` | integer |  |
-| `kind` | string | `column` or `table`. |
-| `table` | string | The table, or the column's table. |
+| `kind` | string | `column`, `table` or `hierarchy`. |
+| `table` | string | The table, or the column's or hierarchy's table. |
 | `name` | string |  |
 | `dryRun` | boolean |  |
 | `dependents` | DependentOut[] | What refers to the object and breaks once it is deleted (DAX, report fields). A table's own measures, columns and expressions go with it and are not listed. |
@@ -2135,6 +2137,79 @@ Examples:
 
 - What a table delete breaks: `{"docId":"d1","table":"Stores","dryRun":true}`
 - Delete by id: `{"docId":"d1","tableId":3}`
+
+### `model.hierarchy.create`
+
+**Create a hierarchy.** Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `table` | string | The hierarchy's table. |
+| `name` | string | The hierarchy name: not a column, measure or hierarchy of `table`. |
+| `levels` | LevelParam[] | The levels, top level first: different columns of `table`. |
+| `displayFolder` (optional) | string \| null |  |
+| `description` (optional) | string \| null |  |
+| `isHidden` (optional) | boolean |  |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `hierarchyId` | integer |  |
+| `table` | string |  |
+| `name` | string |  |
+| `levelIds` | integer[] | The levels' ids, top level first. |
+
+Examples:
+
+- Region over store: `{"docId":"d1","table":"Stores","name":"Places","levels":[{"column":"Region"},{"column":"Store Name","name":"Store"}]}`
+
+### `model.hierarchy.delete`
+
+**Delete a hierarchy.** Deletes a user hierarchy with its levels as one undoable edit and lists the report fields that used it; dryRun only lists them.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `hierarchyId` (optional) | integer \| null | The hierarchy's id (instead of `table` and `hierarchy`). |
+| `table` (optional) | string \| null | The hierarchy's table. |
+| `hierarchy` (optional) | string \| null | The hierarchy's name. |
+| `dryRun` (optional) | boolean | Only list the report fields that use the hierarchy; the document is unchanged. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `objectId` | integer |  |
+| `kind` | string | `column`, `table` or `hierarchy`. |
+| `table` | string | The table, or the column's or hierarchy's table. |
+| `name` | string |  |
+| `dryRun` | boolean |  |
+| `dependents` | DependentOut[] | What refers to the object and breaks once it is deleted (DAX, report fields). A table's own measures, columns and expressions go with it and are not listed. |
+| `removed` | string[] | `model.table.delete`: what is deleted with the table (relationships that join it, role row filters on it). |
+| `warnings` | string[] | References that cannot be confirmed (DAX that does not parse, ambiguous unqualified names, M queries naming a table). |
+
+Examples:
+
+- What uses a hierarchy: `{"docId":"d1","table":"Stores","hierarchy":"Geography","dryRun":true}`
+- Delete by id: `{"docId":"d1","hierarchyId":57}`
 
 ### `report.visual.move`
 

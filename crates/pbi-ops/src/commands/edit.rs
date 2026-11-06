@@ -7,11 +7,11 @@
 
 use pbi_model::{
     Annotation, Cardinality, ChangeEvent, Column, ColumnRef, CommandGroup, CreateColumn,
-    CreateMeasure, CreateRelationship, CrossFilter, DataType, DeleteColumn, DeleteMeasure,
-    DeleteRelationship, DeleteTable, HistoryResult, Measure, ObjectId, ObjectPath, Position,
-    Relationship, SecurityFilteringBehavior, SetDescription, SetMeasureExpression,
-    SetMeasureProperties, SetRelationshipProperties, SetVisualPosition, SummarizeBy, Visual,
-    names_eq,
+    CreateHierarchy, CreateMeasure, CreateRelationship, CrossFilter, DataType, DeleteColumn,
+    DeleteHierarchy, DeleteMeasure, DeleteRelationship, DeleteTable, Hierarchy, HistoryResult,
+    Level, Measure, ObjectId, ObjectPath, Position, Relationship, SecurityFilteringBehavior,
+    SetDescription, SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties,
+    SetVisualPosition, SummarizeBy, Visual, names_eq,
 };
 use pbi_session::{
     RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error, preview_rename,
@@ -1319,7 +1319,8 @@ impl Command for ModelColumnCreate {
     }
 }
 
-/// Result of `model.column.delete` and `model.table.delete`.
+/// Result of `model.column.delete`, `model.table.delete` and
+/// `model.hierarchy.delete`.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectDeleteOut {
@@ -1328,9 +1329,9 @@ pub struct ObjectDeleteOut {
     pub dirty: bool,
     pub changed_object_ids: Vec<u64>,
     pub object_id: u64,
-    /// `column` or `table`.
+    /// `column`, `table` or `hierarchy`.
     pub kind: String,
-    /// The table, or the column's table.
+    /// The table, or the column's or hierarchy's table.
     pub table: String,
     pub name: String,
     pub dry_run: bool,
@@ -1346,7 +1347,7 @@ pub struct ObjectDeleteOut {
     pub warnings: Vec<String>,
 }
 
-/// Deletes `id` (a column or table) with `command`, or with `dryRun` checks
+/// Deletes `id` (a column, table or hierarchy) with `command`, or with `dryRun` checks
 /// the delete on a copy of the document; lists what breaks.
 async fn delete_object(
     entry: &DocEntry,
@@ -1404,9 +1405,18 @@ async fn delete_object(
                 }
                 ("table", t.name.clone(), t.name.clone(), removed)
             }
+            ObjectPath::Hierarchy { table, hierarchy } => {
+                let t = model.tables.get(table).ok_or_else(|| {
+                    OpError::not_found(format!("no hierarchy with id {}", id.get()))
+                })?;
+                let h = t.hierarchies.get(hierarchy).ok_or_else(|| {
+                    OpError::not_found(format!("no hierarchy with id {}", id.get()))
+                })?;
+                ("hierarchy", t.name.clone(), h.name.clone(), Vec::new())
+            }
             _ => {
                 return Err(OpError::invalid_params(format!(
-                    "object {} is not a column or table",
+                    "object {} is not a column, table or hierarchy",
                     id.get()
                 )));
             }
@@ -1608,6 +1618,283 @@ impl Command for ModelTableDelete {
         delete_object(&entry, ctx, id, DeleteTable { table: id }, params.dry_run).await
     }
 }
+/// A hierarchy level: a column of the hierarchy's table.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LevelParam {
+    /// The level's column.
+    pub column: String,
+    /// The level name; the column name when omitted.
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+struct NewHierarchy {
+    table: String,
+    name: String,
+    levels: Vec<LevelParam>,
+    display_folder: Option<String>,
+    description: Option<String>,
+    is_hidden: bool,
+}
+
+/// The command that creates `new`, with lineage tags for the hierarchy and
+/// its levels as Power BI Desktop writes them.
+fn create_hierarchy(session: &Session, new: NewHierarchy) -> Result<CreateHierarchy, OpError> {
+    let table = model_object(session, None, Some(&new.table), None, None)?;
+    let levels = new
+        .levels
+        .into_iter()
+        .map(|l| Level {
+            name: l.name.unwrap_or_else(|| l.column.clone()),
+            column: l.column,
+            lineage_tag: session.new_lineage_tag(),
+            ..Level::default()
+        })
+        .collect();
+    Ok(CreateHierarchy {
+        table,
+        hierarchy: Hierarchy {
+            name: new.name,
+            description: new.description.filter(|s| !s.is_empty()),
+            lineage_tag: session.new_lineage_tag(),
+            is_hidden: new.is_hidden,
+            display_folder: new.display_folder.filter(|s| !s.is_empty()),
+            levels,
+            ..Hierarchy::default()
+        },
+        index: None,
+    })
+}
+
+/// Result of `model.hierarchy.create`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct HierarchyCreateOut {
+    pub changed: bool,
+    pub revision: u64,
+    pub dirty: bool,
+    pub changed_object_ids: Vec<u64>,
+    pub hierarchy_id: u64,
+    pub table: String,
+    pub name: String,
+    /// The levels' ids, top level first.
+    pub level_ids: Vec<u64>,
+}
+
+/// `model.hierarchy.create`.
+#[derive(Debug)]
+pub struct ModelHierarchyCreate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CreateHierarchyParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The hierarchy's table.
+    pub table: String,
+    /// The hierarchy name: not a column, measure or hierarchy of `table`.
+    pub name: String,
+    /// The levels, top level first: different columns of `table`.
+    pub levels: Vec<LevelParam>,
+    #[serde(default)]
+    pub display_folder: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub is_hidden: bool,
+}
+
+impl Command for ModelHierarchyCreate {
+    type Params = CreateHierarchyParams;
+    type Output = HierarchyCreateOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.hierarchy.create",
+            title: "Create a hierarchy",
+            summary: "Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[(
+                "Region over store",
+                r#"{"docId": "d1", "table": "Stores", "name": "Places", "levels": [{"column": "Region"}, {"column": "Store Name", "name": "Store"}]}"#,
+            )],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        resolve::require_model(&entry)?;
+        let session = entry.session();
+        let command = create_hierarchy(
+            session,
+            NewHierarchy {
+                table: params.table,
+                name: params.name,
+                levels: params.levels,
+                display_folder: params.display_folder,
+                description: params.description,
+                is_hidden: params.is_hidden,
+            },
+        )?;
+        let result = session.execute_document_command(command).await?;
+        let id = result
+            .events
+            .iter()
+            .find_map(|e| match e {
+                ChangeEvent::ObjectAdded { id } => Some(*id),
+                _ => None,
+            })
+            .ok_or_else(|| OpError::internal("the new hierarchy has no id"))?;
+        let (table, name, level_ids) = {
+            let document = session.document();
+            match document.locate(id) {
+                Some(ObjectPath::Hierarchy { table, hierarchy }) => document
+                    .model
+                    .as_ref()
+                    .and_then(|m| m.tables.get(table))
+                    .and_then(|t| {
+                        let h = t.hierarchies.get(hierarchy)?;
+                        Some((
+                            t.name.clone(),
+                            h.name.clone(),
+                            h.levels.iter().map(|l| l.id.get()).collect(),
+                        ))
+                    })
+                    .unwrap_or_default(),
+                _ => Default::default(),
+            }
+        };
+        let edit = DocumentEditOut::committed(ctx, &entry, &result);
+        Ok(HierarchyCreateOut {
+            changed: edit.changed,
+            revision: edit.revision,
+            dirty: edit.dirty,
+            changed_object_ids: edit.changed_object_ids,
+            hierarchy_id: id.get(),
+            table,
+            name,
+            level_ids,
+        })
+    }
+}
+
+/// A hierarchy: `hierarchyId`, or `table` and `hierarchy`.
+fn hierarchy_target(
+    session: &Session,
+    hierarchy_id: Option<u64>,
+    table: Option<&str>,
+    hierarchy: Option<&str>,
+) -> Result<ObjectId, OpError> {
+    match (hierarchy_id, table, hierarchy) {
+        (Some(id), None, None) => Ok(ObjectId(id)),
+        (None, Some(table), Some(hierarchy)) => {
+            let document = session.document();
+            let model = document
+                .model
+                .as_ref()
+                .ok_or_else(|| OpError::no_document("the document has no semantic model"))?;
+            let name = resolve::table_name(model, table)?;
+            let t = model
+                .table(&name)
+                .ok_or_else(|| OpError::not_found(format!("no table named '{table}'")))?;
+            t.hierarchies
+                .iter()
+                .find(|h| names_eq(&h.name, hierarchy))
+                .map(|h| h.id)
+                .ok_or_else(|| {
+                    OpError::not_found(format!(
+                        "no hierarchy '{hierarchy}' in table '{}'",
+                        t.name
+                    ))
+                    .with_data(json!({
+                        "hierarchies": t.hierarchies.iter().map(|h| h.name.as_str()).collect::<Vec<_>>()
+                    }))
+                })
+        }
+        _ => Err(OpError::invalid_params(
+            "name the hierarchy: hierarchyId, or table and hierarchy",
+        )),
+    }
+}
+
+/// `model.hierarchy.delete`.
+#[derive(Debug)]
+pub struct ModelHierarchyDelete;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeleteHierarchyParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The hierarchy's id (instead of `table` and `hierarchy`).
+    #[serde(default)]
+    pub hierarchy_id: Option<u64>,
+    /// The hierarchy's table.
+    #[serde(default)]
+    pub table: Option<String>,
+    /// The hierarchy's name.
+    #[serde(default)]
+    pub hierarchy: Option<String>,
+    /// Only list the report fields that use the hierarchy; the document is
+    /// unchanged.
+    #[serde(default)]
+    pub dry_run: bool,
+}
+
+impl Command for ModelHierarchyDelete {
+    type Params = DeleteHierarchyParams;
+    type Output = ObjectDeleteOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.hierarchy.delete",
+            title: "Delete a hierarchy",
+            summary: "Deletes a user hierarchy with its levels as one undoable edit and lists the report fields that used it; dryRun only lists them.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[
+                (
+                    "What uses a hierarchy",
+                    r#"{"docId": "d1", "table": "Stores", "hierarchy": "Geography", "dryRun": true}"#,
+                ),
+                ("Delete by id", r#"{"docId": "d1", "hierarchyId": 57}"#),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        resolve::require_model(&entry)?;
+        let id = hierarchy_target(
+            entry.session(),
+            params.hierarchy_id,
+            params.table.as_deref(),
+            params.hierarchy.as_deref(),
+        )?;
+        if !matches!(
+            entry.session().document().locate(id),
+            Some(ObjectPath::Hierarchy { .. }) | None
+        ) {
+            return Err(OpError::invalid_params(format!(
+                "object {} is not a hierarchy",
+                id.get()
+            )));
+        }
+        delete_object(
+            &entry,
+            ctx,
+            id,
+            DeleteHierarchy { hierarchy: id },
+            params.dry_run,
+        )
+        .await
+    }
+}
+
 /// `model.dependencies`.
 #[derive(Debug)]
 pub struct ModelDependencies;
@@ -2447,6 +2734,27 @@ pub enum EditOperation {
         #[serde(default)]
         table: Option<String>,
     },
+    /// Like `model.hierarchy.create`.
+    CreateHierarchy {
+        table: String,
+        name: String,
+        levels: Vec<LevelParam>,
+        #[serde(default)]
+        display_folder: Option<String>,
+        #[serde(default)]
+        description: Option<String>,
+        #[serde(default)]
+        is_hidden: bool,
+    },
+    /// Like `model.hierarchy.delete` (without `dryRun`).
+    DeleteHierarchy {
+        #[serde(default)]
+        hierarchy_id: Option<u64>,
+        #[serde(default)]
+        table: Option<String>,
+        #[serde(default)]
+        hierarchy: Option<String>,
+    },
 }
 
 /// `doc.applyEdits`.
@@ -2671,6 +2979,36 @@ impl Command for DocumentApplyEdits {
                 }),
                 EditOperation::DeleteTable { table_id, table } => group.with(DeleteTable {
                     table: table_target(session, table_id, table.as_deref())?,
+                }),
+                EditOperation::CreateHierarchy {
+                    table,
+                    name,
+                    levels,
+                    display_folder,
+                    description,
+                    is_hidden,
+                } => group.with(create_hierarchy(
+                    session,
+                    NewHierarchy {
+                        table,
+                        name,
+                        levels,
+                        display_folder,
+                        description,
+                        is_hidden,
+                    },
+                )?),
+                EditOperation::DeleteHierarchy {
+                    hierarchy_id,
+                    table,
+                    hierarchy,
+                } => group.with(DeleteHierarchy {
+                    hierarchy: hierarchy_target(
+                        session,
+                        hierarchy_id,
+                        table.as_deref(),
+                        hierarchy.as_deref(),
+                    )?,
                 }),
             };
         }

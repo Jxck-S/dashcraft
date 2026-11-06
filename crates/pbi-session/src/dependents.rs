@@ -1,4 +1,4 @@
-//! What refers to a table, column, measure or relationship.
+//! What refers to a table, column, measure, hierarchy or relationship.
 //!
 //! [`object_dependents`] lists the places that would break if the object
 //! were deleted: DAX expressions (measures, dynamic format strings,
@@ -7,13 +7,14 @@
 //! table permissions) and report fields (visual projections, sorts, filters
 //! and formatting, page and report filters). For a relationship, the
 //! dependents are the DAX expressions whose `USERELATIONSHIP` or
-//! `CROSSFILTER` calls name both of its columns.
+//! `CROSSFILTER` calls name both of its columns; for a user hierarchy, the
+//! report fields that use one of its levels (DAX cannot name a hierarchy).
 //! [`Session::object_dependents`] adds the session's derived DAX columns.
 //! References that cannot be confirmed are reported as warnings.
 
 use pbi_model::{
-    ColumnKind, ColumnRef, CommandError, Document, Model, ObjectId, ObjectPath, Relationship,
-    Rename, Visual, names_eq,
+    ColumnKind, ColumnRef, CommandError, Document, FieldExpr, Model, ObjectId, ObjectPath,
+    Relationship, Rename, Visual, names_eq,
 };
 use serde::{Deserialize, Serialize};
 
@@ -42,11 +43,13 @@ pub struct Dependents {
     pub warnings: Vec<String>,
 }
 
-/// What in `doc` refers to table, column, measure or relationship `object`
+/// What in `doc` refers to table, column, measure, hierarchy or relationship
+/// `object`
 /// (see the [module docs](self)).
 ///
 /// # Errors
-/// `object` is unknown or not a table, column, measure or relationship, or
+/// `object` is unknown or not a table, column, measure, hierarchy or
+/// relationship, or
 /// there is no model.
 pub fn object_dependents(doc: &Document, object: ObjectId) -> Result<Dependents, CommandError> {
     find(doc, object, &[], None)
@@ -145,6 +148,18 @@ fn find(
             .get(relationship)
             .ok_or(CommandError::NotFound(object))?;
         return relationship_dependents(doc, model, r, extra);
+    }
+    if let Some(ObjectPath::Hierarchy { table, hierarchy }) = doc.locate(object) {
+        let model = doc.model.as_ref().ok_or(CommandError::NoModel)?;
+        let t = model
+            .tables
+            .get(table)
+            .ok_or(CommandError::NotFound(object))?;
+        let h = t
+            .hierarchies
+            .get(hierarchy)
+            .ok_or(CommandError::NotFound(object))?;
+        return Ok(hierarchy_dependents(doc, &t.name, &h.name));
     }
     let scan = dax_scan(doc, object, extra)?;
     let mut out = Dependents {
@@ -372,6 +387,50 @@ fn names_relationship(expr: &pbi_dax::Expr, r: &Relationship) -> bool {
         }
     });
     found
+}
+
+/// Calls its argument with each field expression of a report part.
+type FieldVisit<'a> = &'a dyn Fn(&mut dyn FnMut(&FieldExpr));
+
+/// The report fields that use a level of user hierarchy `table`[`name`].
+fn hierarchy_dependents(doc: &Document, table: &str, name: &str) -> Dependents {
+    fn uses(field: &FieldExpr, table: &str, name: &str) -> bool {
+        match field {
+            FieldExpr::HierarchyLevel {
+                entity,
+                hierarchy,
+                variation: None,
+                ..
+            } => names_eq(entity, table) && names_eq(hierarchy, name),
+            FieldExpr::Aggregation { expr, .. } => uses(expr, table, name),
+            _ => false,
+        }
+    }
+    let hit = |visit: FieldVisit<'_>| {
+        let mut found = false;
+        visit(&mut |f| found |= uses(f, table, name));
+        found
+    };
+    let mut out = Dependents::default();
+    for report in &doc.reports {
+        let in_report = format!("report '{}'", report.name);
+        if hit(&|f| report.filters.iter().for_each(|x| x.visit_fields(f))) {
+            push(&mut out.dependents, &in_report, "filters");
+        }
+        for page in &report.pages {
+            let on_page = format!("page '{}' of {in_report}", page.display_name);
+            if hit(&|f| page.filters.iter().for_each(|x| x.visit_fields(f))) {
+                push(&mut out.dependents, &on_page, "filters");
+            }
+            for visual in &page.visuals {
+                if hit(&|f| visual.visit_fields(f)) {
+                    let location = format!("{} on {on_page}", visual_label(visual));
+                    push(&mut out.dependents, &location, "fields");
+                }
+            }
+        }
+    }
+    out
 }
 
 fn visual_label(visual: &Visual) -> String {
@@ -634,6 +693,32 @@ mod tests {
         assert_eq!(
             object_dependents(&d, relationship).unwrap(),
             Dependents::default()
+        );
+    }
+
+    #[test]
+    fn hierarchy_dependents_are_the_report_fields_on_its_levels() {
+        let mut d = doc();
+        let level = |hierarchy: &str| FieldExpr::HierarchyLevel {
+            entity: "orders".into(),
+            hierarchy: hierarchy.into(),
+            level: "Month".into(),
+            variation: None,
+        };
+        let page = &mut d.reports[0].pages[0];
+        page.visuals[0].projections[0].field = level("calendar");
+        page.visuals[1].projections[0].field = level("Other");
+        let calendar = d.model.as_ref().unwrap().tables[0].hierarchies[0].id;
+        assert_eq!(
+            locations(&object_dependents(&d, calendar).unwrap()),
+            [(
+                "visual 'card1' (card) on page 'Overview' of report 'Sales'",
+                "fields"
+            )]
+        );
+        assert_eq!(
+            delete_dependents(&d, calendar).unwrap(),
+            object_dependents(&d, calendar).unwrap()
         );
     }
 }

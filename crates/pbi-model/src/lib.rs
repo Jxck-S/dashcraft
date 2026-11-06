@@ -49,11 +49,11 @@ pub mod semantic;
 pub(crate) mod test_support;
 
 pub use command::{
-    Applied, ChangeEvent, Command, CommandError, CommandGroup, CreateColumn, CreateMeasure,
-    CreateRelationship, DeleteColumn, DeleteMeasure, DeleteRelationship, DeleteTable, History,
-    HistoryResult, RenameColumn, RenameMeasure, RenameTable, ReplaceObjects, SetDescription,
-    SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties, SetVisualPosition,
-    Snapshot,
+    Applied, ChangeEvent, Command, CommandError, CommandGroup, CreateColumn, CreateHierarchy,
+    CreateMeasure, CreateRelationship, DeleteColumn, DeleteHierarchy, DeleteMeasure,
+    DeleteRelationship, DeleteTable, History, HistoryResult, RenameColumn, RenameMeasure,
+    RenameTable, ReplaceObjects, SetDescription, SetMeasureExpression, SetMeasureProperties,
+    SetRelationshipProperties, SetVisualPosition, Snapshot,
 };
 pub use document::{
     Diagnostic, Document, ModelStatus, ObjectKind, ObjectPath, ObjectRef, PartInfo, Severity,

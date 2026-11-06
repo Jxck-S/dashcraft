@@ -7,6 +7,27 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 hierarchy create and delete (M6.5)
+
+- **What:** `pbi-model` gets `CreateHierarchy` and `DeleteHierarchy` (exact inverses that keep
+  the hierarchy's and levels' ids; refuses names taken by a column, measure or hierarchy of the
+  table, no levels, duplicate level names, missing or row-number columns and a column used
+  twice). `pbi-session::object_dependents` lists the report filters and visual fields on a
+  hierarchy's levels. `pbi-ops` adds `model.hierarchy.create` and `model.hierarchy.delete` and
+  the `createHierarchy` and `deleteHierarchy` edits: random `lineageTag`s on the hierarchy and
+  each level, saved in place with levels in order and no ordinals, as Desktop writes them.
+- **Why:** M6.5 core editing commands: hierarchy create and delete (a "Still open" item; no data
+  recomputation needed, hierarchies do not change the engine).
+- **Numbers:** 4 new tests (`pbi-model`
+  `hierarchies_are_created_and_deleted_with_exact_inverses`; `pbi-session`
+  `hierarchy_dependents_are_the_report_fields_on_its_levels`: the Product Detail matrix on
+  `Products[Product Hierarchy]`; `e2e.rs::hierarchy_create_and_delete_through_the_registry`;
+  `save.rs::created_and_deleted_hierarchies_save_and_reopen`: only `Stores.tmdl` written, the
+  exact block where Geography was, reopen). Registry 68 → 70 commands. GT-6 with Desktop 2.159
+  (s18: Geography deleted, three hierarchies created, one on a table without any and one with a
+  calculated-column level): Desktop opens and refreshes the saved project and lists the
+  hierarchies with their levels in order on the right columns; its 643 answers equal the
+  committed recordings and DashCraft matches all of them.
 ### M6 calculated column create (M6.5)
 
 - **What:** `pbi-model` gets `CreateColumn` (calculated columns only; refuses calculation groups,

@@ -843,6 +843,20 @@ export interface CreateColumnParams {
   isHidden?: boolean
 }
 
+export interface CreateHierarchyParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The hierarchy's table. */
+  table: string
+  /** The hierarchy name: not a column, measure or hierarchy of `table`. */
+  name: string
+  /** The levels, top level first: different columns of `table`. */
+  levels: LevelParam[]
+  displayFolder?: string | null
+  description?: string | null
+  isHidden?: boolean
+}
+
 export interface CreateMeasureParams {
   /** The document id from `doc.open` (`d1`, …). */
   docId: string
@@ -1104,6 +1118,22 @@ export interface DeleteColumnParams {
   /**
    * Only check the delete and list what refers to the column; the
    * document is unchanged.
+   */
+  dryRun?: boolean
+}
+
+export interface DeleteHierarchyParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The hierarchy's id (instead of `table` and `hierarchy`). */
+  hierarchyId?: number | null
+  /** The hierarchy's table. */
+  table?: string | null
+  /** The hierarchy's name. */
+  hierarchy?: string | null
+  /**
+   * Only list the report fields that use the hierarchy; the document is
+   * unchanged.
    */
   dryRun?: boolean
 }
@@ -1577,6 +1607,19 @@ export type EditOperation = {
   type: 'deleteTable'
   tableId?: number | null
   table?: string | null
+} | {
+  type: 'createHierarchy'
+  table: string
+  name: string
+  levels: LevelParam[]
+  displayFolder?: string | null
+  description?: string | null
+  isHidden?: boolean
+} | {
+  type: 'deleteHierarchy'
+  hierarchyId?: number | null
+  table?: string | null
+  hierarchy?: string | null
 }
 
 /** [`CapabilityLimits`] with the defaults applied. */
@@ -1885,6 +1928,19 @@ export interface HeaderPreview {
   value: string
 }
 
+/** Result of `model.hierarchy.create`. */
+export interface HierarchyCreateOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  hierarchyId: number
+  table: string
+  name: string
+  /** The levels' ids, top level first. */
+  levelIds: number[]
+}
+
 export interface HierarchyOut {
   name: string
   isHidden: boolean
@@ -1951,6 +2007,14 @@ export type KeySource = 'notRequired' | 'keychain' | 'environment' | 'missing'
 export interface LevelOut {
   name: string
   column: string
+}
+
+/** A hierarchy level: a column of the hierarchy's table. */
+export interface LevelParam {
+  /** The level's column. */
+  column: string
+  /** The level name; the column name when omitted. */
+  name?: string | null
 }
 
 /** The `lint --json` report (`schemaVersion` 1) plus `ok`. */
@@ -2254,16 +2318,19 @@ export interface MoveVisualParams {
 
 export type NoParams = { [key: string]: never }
 
-/** Result of `model.column.delete` and `model.table.delete`. */
+/**
+ * Result of `model.column.delete`, `model.table.delete` and
+ * `model.hierarchy.delete`.
+ */
 export interface ObjectDeleteOut {
   changed: boolean
   revision: number
   dirty: boolean
   changedObjectIds: number[]
   objectId: number
-  /** `column` or `table`. */
+  /** `column`, `table` or `hierarchy`. */
   kind: string
-  /** The table, or the column's table. */
+  /** The table, or the column's or hierarchy's table. */
   table: string
   name: string
   dryRun: boolean
@@ -3508,6 +3575,10 @@ export interface OpsCommands {
   'model.column.delete': { params: DeleteColumnParams; output: ObjectDeleteOut }
   /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
   'model.table.delete': { params: DeleteTableParams; output: ObjectDeleteOut }
+  /** Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. */
+  'model.hierarchy.create': { params: CreateHierarchyParams; output: HierarchyCreateOut }
+  /** Deletes a user hierarchy with its levels as one undoable edit and lists the report fields that used it; dryRun only lists them. */
+  'model.hierarchy.delete': { params: DeleteHierarchyParams; output: ObjectDeleteOut }
   /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
   'model.dependencies': { params: DependenciesParams; output: DependenciesOut }
   /** Moves a visual on its page as one undoable edit (visual groups not yet). */
@@ -3642,6 +3713,8 @@ export const OPS_META = {
   'model.column.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.column.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.table.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.hierarchy.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.hierarchy.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.dependencies': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visual.move': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visual.resize': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
@@ -3758,6 +3831,10 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelColumnDelete: (params: DeleteColumnParams, options?: O) => run('model.column.delete', params, options),
     /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
     modelTableDelete: (params: DeleteTableParams, options?: O) => run('model.table.delete', params, options),
+    /** Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. */
+    modelHierarchyCreate: (params: CreateHierarchyParams, options?: O) => run('model.hierarchy.create', params, options),
+    /** Deletes a user hierarchy with its levels as one undoable edit and lists the report fields that used it; dryRun only lists them. */
+    modelHierarchyDelete: (params: DeleteHierarchyParams, options?: O) => run('model.hierarchy.delete', params, options),
     /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
     modelDependencies: (params: DependenciesParams, options?: O) => run('model.dependencies', params, options),
     /** Moves a visual on its page as one undoable edit (visual groups not yet). */

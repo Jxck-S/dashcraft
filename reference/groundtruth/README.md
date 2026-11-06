@@ -248,6 +248,18 @@ DashCraft's results on the edited example match Desktop's on every case, every r
 columns included: 601 of 601 measures, 26 of 26 calculation-group and RLS cases, 11 of 11 tables
 and 5 of 5 metadata cases, with no ledger entry.
 
+**Hierarchy create and delete.** In the same way (`s18`), on both copies run
+`model.hierarchy.delete` of `Stores[Geography]` and `model.hierarchy.create` of `Stores[Places]`
+(Region; `Store Name` as Store), `Customers['Customer Location']` (State, City, `Customer Name` as
+Customer; Customers had no hierarchy) and `Date['Week Parts']` (Year and the calculated column
+`Day Type`), then `doc.save`. Results with Desktop 2.159: the save wrote `Stores.tmdl`,
+`Customers.tmdl` and `Date.tmdl`; Desktop opened and refreshed the project without an error and
+lists the hierarchies with their levels in order on the right columns (`INFO.HIERARCHIES`,
+`INFO.LEVELS`; Geography gone). Desktop's answers on the 643 recorded cases equal the committed
+recordings (hierarchies change no value), and DashCraft's results on the edited example match them
+all: 601 of 601 measures, 26 of 26 calculation-group and RLS cases, 11 of 11 tables and 5 of 5
+metadata cases, with no ledger entry.
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.
