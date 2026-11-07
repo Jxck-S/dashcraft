@@ -2317,6 +2317,12 @@ export interface MeasuresValuesParams {
   filters?: ColumnFilterParam[]
 }
 
+/** A visual moved or resized with its group. */
+export interface MemberPositionOut {
+  visual: string
+  position: PositionOut
+}
+
 /** Model documentation format. */
 export type ModelFormat = 'json' | 'markdown'
 
@@ -3714,6 +3720,12 @@ export interface VisualPositionOut {
    * `report.visuals`).
    */
   position: PositionOut
+  /**
+   * For a visual group: the visuals in it whose position changed with
+   * it, with their new positions (as in `report.visuals`: stored relative
+   * to their group when the file does so).
+   */
+  members: MemberPositionOut[]
 }
 
 /** Status of one visual. */
@@ -3847,9 +3859,9 @@ export interface OpsCommands {
   'model.hierarchy.delete': { params: DeleteHierarchyParams; output: ObjectDeleteOut }
   /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
   'model.dependencies': { params: DependenciesParams; output: DependenciesOut }
-  /** Moves a visual on its page as one undoable edit (visual groups not yet). */
+  /** Moves a visual or a visual group (with the visuals in it) on its page as one undoable edit. */
   'report.visual.move': { params: MoveVisualParams; output: VisualPositionOut }
-  /** Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet). */
+  /** Resizes a visual or a visual group (top-left corner fixed; the visuals in a group scale with it unless it scrolls) as one undoable edit. */
   'report.visual.resize': { params: ResizeVisualParams; output: VisualPositionOut }
   /** Applies a group of document edits atomically as one undoable history step. */
   'doc.applyEdits': { params: ApplyEditsParams; output: DocumentEditOut }
@@ -4112,9 +4124,9 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelHierarchyDelete: (params: DeleteHierarchyParams, options?: O) => run('model.hierarchy.delete', params, options),
     /** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. */
     modelDependencies: (params: DependenciesParams, options?: O) => run('model.dependencies', params, options),
-    /** Moves a visual on its page as one undoable edit (visual groups not yet). */
+    /** Moves a visual or a visual group (with the visuals in it) on its page as one undoable edit. */
     reportVisualMove: (params: MoveVisualParams, options?: O) => run('report.visual.move', params, options),
-    /** Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet). */
+    /** Resizes a visual or a visual group (top-left corner fixed; the visuals in a group scale with it unless it scrolls) as one undoable edit. */
     reportVisualResize: (params: ResizeVisualParams, options?: O) => run('report.visual.resize', params, options),
     /** Applies a group of document edits atomically as one undoable history step. */
     docApplyEdits: (params: ApplyEditsParams, options?: O) => run('doc.applyEdits', params, options),

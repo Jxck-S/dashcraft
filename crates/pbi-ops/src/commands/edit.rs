@@ -9,10 +9,10 @@ use pbi_model::{
     Annotation, Cardinality, ChangeEvent, Column, ColumnKind, ColumnRef, CommandGroup,
     CreateColumn, CreateHierarchy, CreateMeasure, CreateRelationship, CreateTable, CrossFilter,
     DataType, DeleteColumn, DeleteHierarchy, DeleteMeasure, DeleteRelationship, DeleteTable,
-    Hierarchy, HistoryResult, Level, Measure, ObjectId, ObjectPath, Partition, PartitionMode,
-    PartitionSource, Position, Relationship, SecurityFilteringBehavior, SetColumnProperties,
-    SetDescription, SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties,
-    SetTableDefinition, SetVisualPosition, SummarizeBy, Table, TableKind, Visual, names_eq,
+    Hierarchy, HistoryResult, Level, Measure, MoveVisual, ObjectId, ObjectPath, Page, Partition,
+    PartitionMode, PartitionSource, Position, Relationship, SecurityFilteringBehavior,
+    SetColumnProperties, SetDescription, SetMeasureExpression, SetMeasureProperties,
+    SetRelationshipProperties, SetTableDefinition, SummarizeBy, Table, TableKind, names_eq,
 };
 use pbi_session::{
     InferredColumn, RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error,
@@ -518,7 +518,8 @@ impl Command for ModelObjectSetDescription {
     }
 }
 
-/// The visual `visual` of `page` of `report` (see `render.visual`).
+/// The page of `report` holding the visual `visual` (see `render.visual`),
+/// and the visual's index on it.
 ///
 /// # Errors
 /// `notFound`, `noDocument`, `invalidParams`.
@@ -527,7 +528,7 @@ fn visual_target(
     report: Option<&str>,
     page: Option<&str>,
     visual: &str,
-) -> Result<Visual, OpError> {
+) -> Result<(Page, usize), OpError> {
     let ri = resolve::report_index(session, report)?;
     let report = resolve::report_at(session, ri)?;
     let pi = resolve::page_index(&report, page)?;
@@ -535,55 +536,61 @@ fn visual_target(
         .pages
         .get(pi)
         .ok_or_else(|| OpError::not_found("no such page"))?;
-    resolve::visual(page, visual).cloned()
+    let found = resolve::visual(page, visual)?;
+    let index = page
+        .visuals
+        .iter()
+        .position(|v| std::ptr::eq(v, found))
+        .ok_or_else(|| OpError::not_found("no such visual"))?;
+    Ok((page.clone(), index))
 }
 
-/// The visual's position with the given values replaced.
+/// Checks the values of a move or resize.
 ///
 /// # Errors
 /// `invalidParams` for a non-finite coordinate, a size that is not
-/// positive, nothing to change, or a visual group.
-fn moved(
-    visual: &Visual,
+/// positive, or nothing to change.
+fn check_placement(
     x: Option<f64>,
     y: Option<f64>,
     width: Option<f64>,
     height: Option<f64>,
-) -> Result<Position, OpError> {
-    if visual.is_group() {
-        return Err(OpError::unsupported(format!(
-            "'{}' is a visual group: moving or resizing groups is not supported yet; edit the visuals in it",
-            visual.name
-        )));
-    }
+) -> Result<(), OpError> {
     if [x, y, width, height].iter().all(Option::is_none) {
         return Err(OpError::invalid_params(
             "give at least one of x, y, width and height",
         ));
     }
-    let mut position = visual.position.clone();
-    for (name, value, slot) in [("x", x, &mut position.x), ("y", y, &mut position.y)] {
-        if let Some(v) = value {
-            if !v.is_finite() {
-                return Err(OpError::invalid_params(format!("{name} must be finite")));
-            }
-            *slot = v;
+    for (name, value) in [("x", x), ("y", y)] {
+        if value.is_some_and(|v| !v.is_finite()) {
+            return Err(OpError::invalid_params(format!("{name} must be finite")));
         }
     }
-    for (name, value, slot) in [
-        ("width", width, &mut position.width),
-        ("height", height, &mut position.height),
-    ] {
-        if let Some(v) = value {
-            if !(v.is_finite() && v > 0.0) {
-                return Err(OpError::invalid_params(format!(
-                    "{name} must be a positive number"
-                )));
-            }
-            *slot = v;
+    for (name, value) in [("width", width), ("height", height)] {
+        if value.is_some_and(|v| !(v.is_finite() && v > 0.0)) {
+            return Err(OpError::invalid_params(format!(
+                "{name} must be a positive number"
+            )));
         }
     }
-    Ok(position)
+    Ok(())
+}
+
+/// `position` with the given values replaced.
+fn placed(
+    position: &Position,
+    x: Option<f64>,
+    y: Option<f64>,
+    width: Option<f64>,
+    height: Option<f64>,
+) -> Position {
+    Position {
+        x: x.unwrap_or(position.x),
+        y: y.unwrap_or(position.y),
+        width: width.unwrap_or(position.width),
+        height: height.unwrap_or(position.height),
+        ..position.clone()
+    }
 }
 
 fn position_out(p: &Position) -> PositionOut {
@@ -610,6 +617,18 @@ pub struct VisualPositionOut {
     /// The visual's position after the edit (page units, as in
     /// `report.visuals`).
     pub position: PositionOut,
+    /// For a visual group: the visuals in it whose position changed with
+    /// it, with their new positions (as in `report.visuals`: stored relative
+    /// to their group when the file does so).
+    pub members: Vec<MemberPositionOut>,
+}
+
+/// A visual moved or resized with its group.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MemberPositionOut {
+    pub visual: String,
+    pub position: PositionOut,
 }
 
 async fn set_visual_position(
@@ -623,22 +642,42 @@ async fn set_visual_position(
     let entry = doc(ws, doc_id)?;
     let session = entry.session();
     let (report, page, name) = target;
-    let visual = visual_target(session, report, page, name)?;
-    let position = moved(&visual, x, y, width, height)?;
+    check_placement(x, y, width, height)?;
+    let (page, index) = visual_target(session, report, page, name)?;
+    let visual = page
+        .visuals
+        .get(index)
+        .ok_or_else(|| OpError::not_found("no such visual"))?;
+    let to = placed(&visual.position, x, y, width, height);
+    let placement = page.placement_of(index, &to);
     let result = session
-        .execute_document_command(SetVisualPosition {
+        .execute_document_command(MoveVisual {
             visual: visual.id,
-            position: position.clone(),
+            x,
+            y,
+            width,
+            height,
         })
         .await?;
     let edit = DocumentEditOut::committed(ctx, &entry, &result);
+    let members = placement
+        .iter()
+        .skip(1)
+        .filter_map(|(i, p)| {
+            page.visuals.get(*i).map(|v| MemberPositionOut {
+                visual: v.name.clone(),
+                position: position_out(p),
+            })
+        })
+        .collect();
     Ok(VisualPositionOut {
         changed: edit.changed,
         revision: edit.revision,
         dirty: edit.dirty,
         changed_object_ids: edit.changed_object_ids,
-        visual: visual.name,
-        position: position_out(&position),
+        visual: visual.name.clone(),
+        position: position_out(&to),
+        members,
     })
 }
 
@@ -675,7 +714,7 @@ impl Command for ReportVisualMove {
         CommandMeta {
             id: "report.visual.move",
             title: "Move a visual",
-            summary: "Moves a visual on its page as one undoable edit (visual groups not yet).",
+            summary: "Moves a visual or a visual group (with the visuals in it) on its page as one undoable edit.",
             category: Category::Edit,
             mutates_document: true,
             examples: &[(
@@ -736,7 +775,7 @@ impl Command for ReportVisualResize {
         CommandMeta {
             id: "report.visual.resize",
             title: "Resize a visual",
-            summary: "Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet).",
+            summary: "Resizes a visual or a visual group (top-left corner fixed; the visuals in a group scale with it unless it scrolls) as one undoable edit.",
             category: Category::Edit,
             mutates_document: true,
             examples: &[(
@@ -3854,11 +3893,19 @@ impl Command for DocumentApplyEdits {
                     width,
                     height,
                 } => {
-                    let visual =
+                    check_placement(x, y, width, height)?;
+                    let (page, index) =
                         visual_target(session, report.as_deref(), page.as_deref(), &visual)?;
-                    group.with(SetVisualPosition {
+                    let visual = page
+                        .visuals
+                        .get(index)
+                        .ok_or_else(|| OpError::not_found("no such visual"))?;
+                    group.with(MoveVisual {
                         visual: visual.id,
-                        position: moved(&visual, x, y, width, height)?,
+                        x,
+                        y,
+                        width,
+                        height,
                     })
                 }
                 EditOperation::CreateMeasure {

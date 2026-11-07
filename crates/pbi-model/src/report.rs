@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::ids::ObjectId;
 use crate::macros::string_enum;
 use crate::names::names_eq;
-use crate::props::{Annotation, Origin, PropertyBag};
+use crate::props::{Annotation, Origin, PropValue, PropertyBag};
 use crate::query::{FieldExpr, Filter, SortItem};
 use crate::serde_util::{is_false, is_null};
 
@@ -375,6 +375,135 @@ impl Page {
             .filter(move |v| v.parent_group_name.as_deref() == Some(group))
     }
 
+    /// The visual group `visual` belongs to (its `parent_group_name`), if
+    /// that is on the page. With duplicate names the last one counts.
+    pub fn parent_group(&self, visual: &Visual) -> Option<&Visual> {
+        let name = visual
+            .parent_group_name
+            .as_deref()
+            .filter(|p| *p != visual.name)?;
+        self.visuals.iter().rev().find(|v| v.name == name)
+    }
+
+    /// Where `visual` sits on the page, in page units.
+    ///
+    /// Power BI stores the visuals of a group relative to the group; a
+    /// member whose stored rectangle already lies inside its group's page
+    /// rectangle is taken as stored in page units (both occur in files).
+    /// Non-finite coordinates and negative sizes count as 0; nesting is
+    /// followed [`MAX_GROUP_DEPTH`] levels deep.
+    pub fn page_rect(&self, visual: &Visual) -> PageRect {
+        self.placement(visual, 0).0
+    }
+
+    /// `true` when `visual`'s position is stored relative to its group (see
+    /// [`Page::page_rect`]).
+    pub fn is_group_relative(&self, visual: &Visual) -> bool {
+        self.placement(visual, 0).1
+    }
+
+    fn placement(&self, visual: &Visual, depth: usize) -> (PageRect, bool) {
+        let own = PageRect::of(&visual.position);
+        let Some(group) = self
+            .parent_group(visual)
+            .filter(|_| depth < MAX_GROUP_DEPTH)
+        else {
+            return (own, false);
+        };
+        let (outer, _) = self.placement(group, depth + 1);
+        let relative = own.translate(outer.x, outer.y);
+        if outer.contains(&own) || !outer.contains(&relative) {
+            (own, false)
+        } else {
+            (relative, true)
+        }
+    }
+
+    /// Indices of the visuals inside the group at `group` (members of
+    /// nested groups included), in page order.
+    pub fn group_members(&self, group: usize) -> Vec<usize> {
+        let Some(name) = self.visuals.get(group).map(|g| g.name.as_str()) else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        for (i, visual) in self.visuals.iter().enumerate() {
+            if i == group {
+                continue;
+            }
+            let mut current = visual;
+            for _ in 0..MAX_GROUP_DEPTH {
+                let Some(parent) = self.parent_group(current) else {
+                    break;
+                };
+                if parent.name == name {
+                    out.push(i);
+                    break;
+                }
+                current = parent;
+            }
+        }
+        out
+    }
+
+    /// New positions for the visual at `index` placed at `to`, and for the
+    /// visuals in it when it is a group, as `(index, position)` pairs (the
+    /// visual first, then only the members whose position changes).
+    ///
+    /// Members keep their place in the group: moving the group moves them,
+    /// and resizing a group in scale mode (`groupMode` other than
+    /// `ScrollMode`, Power BI's default) scales their positions and sizes
+    /// about the group's top-left corner. A scroll-mode group's members keep
+    /// their size. Members stored relative to a group keep their stored
+    /// offsets (scaled); members stored in page units get new page
+    /// coordinates. Their `z`, tab order and angle are kept.
+    pub fn placement_of(&self, index: usize, to: &Position) -> Vec<(usize, Position)> {
+        let Some(visual) = self.visuals.get(index) else {
+            return Vec::new();
+        };
+        let mut out = vec![(index, to.clone())];
+        if !visual.is_group() {
+            return out;
+        }
+        let from = &visual.position;
+        let scroll =
+            visual.extra.get("groupMode").and_then(PropValue::as_str) == Some("ScrollMode");
+        let factor = |new: f64, old: f64| {
+            let f = new / old;
+            if scroll || !(old > 0.0 && f.is_finite() && f > 0.0) {
+                1.0
+            } else {
+                f
+            }
+        };
+        let (sx, sy) = (factor(to.width, from.width), factor(to.height, from.height));
+        let old = self.page_rect(visual);
+        let own = PageRect::of(from);
+        let (nx, ny) = (old.x + (to.x - own.x), old.y + (to.y - own.y));
+        for i in self.group_members(index) {
+            let Some(member) = self.visuals.get(i) else {
+                continue;
+            };
+            let p = &member.position;
+            let (x, y) = if self.is_group_relative(member) {
+                (p.x * sx, p.y * sy)
+            } else {
+                let at = PageRect::of(p);
+                (nx + (at.x - old.x) * sx, ny + (at.y - old.y) * sy)
+            };
+            let moved = Position {
+                x,
+                y,
+                width: p.width * sx,
+                height: p.height * sy,
+                ..p.clone()
+            };
+            if moved != *p {
+                out.push((i, moved));
+            }
+        }
+        out
+    }
+
     pub fn visit_fields(&self, f: &mut dyn FnMut(&FieldExpr)) {
         self.filters.iter().for_each(|x| x.visit_fields(f));
         self.visuals.iter().for_each(|v| v.visit_fields(f));
@@ -383,6 +512,49 @@ impl Page {
     pub fn visit_fields_mut(&mut self, f: &mut dyn FnMut(&mut FieldExpr)) {
         self.filters.iter_mut().for_each(|x| x.visit_fields_mut(f));
         self.visuals.iter_mut().for_each(|v| v.visit_fields_mut(f));
+    }
+}
+
+/// Deepest visual group nesting followed (untrusted-input guard).
+pub const MAX_GROUP_DEPTH: usize = 32;
+
+/// A rectangle in page units (see [`Page::page_rect`]).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct PageRect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+impl PageRect {
+    /// `position`'s rectangle; non-finite values and negative sizes count
+    /// as 0.
+    pub fn of(position: &Position) -> Self {
+        let finite = |v: f64| if v.is_finite() { v } else { 0.0 };
+        Self {
+            x: finite(position.x),
+            y: finite(position.y),
+            width: finite(position.width).max(0.0),
+            height: finite(position.height).max(0.0),
+        }
+    }
+
+    fn translate(self, dx: f64, dy: f64) -> Self {
+        Self {
+            x: self.x + dx,
+            y: self.y + dy,
+            ..self
+        }
+    }
+
+    /// `true` if `other` lies inside, with half a unit of tolerance.
+    fn contains(&self, other: &PageRect) -> bool {
+        const EPS: f64 = 0.5;
+        other.x >= self.x - EPS
+            && other.y >= self.y - EPS
+            && other.x + other.width <= self.x + self.width + EPS
+            && other.y + other.height <= self.y + self.height + EPS
     }
 }
 
@@ -593,6 +765,152 @@ mod tests {
         assert_eq!(report.start_page().unwrap().name, "p1");
         assert_eq!(report.find_page("store performance").unwrap().name, "p1");
         assert_eq!(report.visuals().count(), 3);
+    }
+
+    fn placed(name: &str, parent: Option<&str>, [x, y, width, height]: [f64; 4]) -> Visual {
+        Visual {
+            name: name.into(),
+            parent_group_name: parent.map(Into::into),
+            position: Position {
+                x,
+                y,
+                z: 7.0,
+                width,
+                height,
+                tab_order: Some(3),
+                angle: None,
+            },
+            ..Visual::default()
+        }
+    }
+
+    fn group(name: &str, parent: Option<&str>, rect: [f64; 4]) -> Visual {
+        Visual {
+            kind: VisualKind::Group,
+            ..placed(name, parent, rect)
+        }
+    }
+
+    /// Group `g` at (100, 50) holding `r` (stored relative), `a` (stored in
+    /// page units) and the nested group `n` (relative) with `m` (relative).
+    fn grouped_page() -> Page {
+        Page {
+            visuals: vec![
+                group("g", None, [100.0, 50.0, 400.0, 200.0]),
+                placed("r", Some("g"), [10.0, 20.0, 100.0, 50.0]),
+                placed("a", Some("g"), [300.0, 150.0, 100.0, 50.0]),
+                group("n", Some("g"), [20.0, 120.0, 150.0, 60.0]),
+                placed("m", Some("n"), [5.0, 5.0, 50.0, 30.0]),
+                placed("free", None, [0.0, 0.0, 10.0, 10.0]),
+            ],
+            ..Page::default()
+        }
+    }
+
+    fn rect(page: &Page, i: usize) -> [f64; 4] {
+        let r = page.page_rect(&page.visuals[i]);
+        [r.x, r.y, r.width, r.height]
+    }
+
+    #[test]
+    fn group_members_resolve_to_page_rectangles() {
+        let page = grouped_page();
+        assert_eq!(rect(&page, 1), [110.0, 70.0, 100.0, 50.0]);
+        assert_eq!(rect(&page, 2), [300.0, 150.0, 100.0, 50.0]);
+        assert_eq!(rect(&page, 3), [120.0, 170.0, 150.0, 60.0]);
+        assert_eq!(rect(&page, 4), [125.0, 175.0, 50.0, 30.0]);
+        let relative: Vec<_> = page
+            .visuals
+            .iter()
+            .map(|v| page.is_group_relative(v))
+            .collect();
+        assert_eq!(relative, [false, true, false, true, true, false]);
+        assert_eq!(page.group_members(0), [1, 2, 3, 4]);
+        assert_eq!(page.group_members(3), [4]);
+        assert!(page.group_members(5).is_empty());
+        assert!(page.group_members(99).is_empty());
+    }
+
+    #[test]
+    fn moving_a_group_moves_page_unit_members_only() {
+        let page = grouped_page();
+        let to = Position {
+            x: 140.0,
+            y: 40.0,
+            ..page.visuals[0].position.clone()
+        };
+        let out = page.placement_of(0, &to);
+        // Relative members keep their stored offsets; `a` moves by (40, -10).
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[0], (0, to));
+        assert_eq!(
+            out[1],
+            (
+                2,
+                Position {
+                    x: 340.0,
+                    y: 140.0,
+                    ..page.visuals[2].position.clone()
+                }
+            )
+        );
+    }
+
+    #[test]
+    fn resizing_a_group_scales_its_members_unless_it_scrolls() {
+        let mut page = grouped_page();
+        let to = Position {
+            width: 800.0,
+            height: 100.0,
+            ..page.visuals[0].position.clone()
+        };
+        let scaled: Vec<_> = page
+            .placement_of(0, &to)
+            .into_iter()
+            .map(|(i, p)| (i, [p.x, p.y, p.width, p.height], p.z, p.tab_order))
+            .collect();
+        assert_eq!(
+            scaled,
+            [
+                (0, [100.0, 50.0, 800.0, 100.0], 7.0, Some(3)),
+                (1, [20.0, 10.0, 200.0, 25.0], 7.0, Some(3)),
+                (2, [500.0, 100.0, 200.0, 25.0], 7.0, Some(3)),
+                (3, [40.0, 60.0, 300.0, 30.0], 7.0, Some(3)),
+                (4, [10.0, 2.5, 100.0, 15.0], 7.0, Some(3)),
+            ]
+        );
+
+        page.visuals[0]
+            .extra
+            .insert("groupMode".into(), "ScrollMode".into());
+        let moved = Position {
+            x: 0.0,
+            ..to.clone()
+        };
+        let out = page.placement_of(0, &moved);
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[1].0, 2);
+        assert_eq!(
+            [out[1].1.x, out[1].1.y, out[1].1.width, out[1].1.height],
+            [200.0, 150.0, 100.0, 50.0]
+        );
+    }
+
+    #[test]
+    fn placement_of_plain_visuals_and_cycles() {
+        let mut page = grouped_page();
+        let to = Position {
+            x: 5.0,
+            ..Position::default()
+        };
+        assert_eq!(page.placement_of(5, &to), [(5, to.clone())]);
+        assert!(page.placement_of(99, &to).is_empty());
+
+        // Groups that contain each other stay bounded.
+        page.visuals[0].parent_group_name = Some("n".into());
+        assert_eq!(page.group_members(0), [1, 2, 3, 4]);
+        let _ = page.page_rect(&page.visuals[4]);
+        assert!(!page.placement_of(0, &to).is_empty());
     }
 
     #[test]

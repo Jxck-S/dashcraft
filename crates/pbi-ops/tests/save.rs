@@ -310,6 +310,130 @@ async fn only_pbip_projects_save_in_place() {
     assert_eq!(strings(&saved["written"]), [SALES_TMDL], "{saved}");
 }
 
+const VISUALS: &str = "Mini.Report/definition/pages/overview/visuals";
+
+/// The `x`, `y`, `width` and `height` stored in a `visual.json`.
+fn rect_in(bytes: &[u8]) -> [f64; 4] {
+    let v: Value = serde_json::from_slice(bytes).unwrap();
+    ["x", "y", "width", "height"].map(|k| v["position"][k].as_f64().unwrap())
+}
+
+/// The `x`, `y`, `width` and `height` stored in a visual's file.
+fn stored_rect(root: &Path, visual: &str) -> [f64; 4] {
+    rect_in(&fs::read(root.join(format!("{VISUALS}/{visual}/visual.json"))).unwrap())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_groups_move_and_resize_with_their_members() {
+    let dir = tmp_dir("save-group-");
+    let pbip = mini_pbip(dir.path());
+    // A group around the card (stored relative to the group, as Power BI
+    // writes it) and the slicer (stored in page units).
+    let group = json!({
+        "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+        "name": "grp",
+        "position": {"x": 10, "y": 50, "z": 0, "width": 620, "height": 110},
+        "visualGroup": {"displayName": "Header", "groupMode": "ScaleMode"}
+    });
+    fs::create_dir_all(dir.path().join(format!("{VISUALS}/grp"))).unwrap();
+    fs::write(
+        dir.path().join(format!("{VISUALS}/grp/visual.json")),
+        serde_json::to_string_pretty(&group).unwrap(),
+    )
+    .unwrap();
+    for (visual, x, y) in [("total", 0.0, 10.0), ("region", 440.0, 60.0)] {
+        let path = dir.path().join(format!("{VISUALS}/{visual}/visual.json"));
+        let mut v: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        v["parentGroupName"] = json!("grp");
+        v["position"]["x"] = json!(x);
+        v["position"]["y"] = json!(y);
+        fs::write(&path, serde_json::to_string_pretty(&v).unwrap()).unwrap();
+    }
+    let original = files(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    let rendered = r.run("render.page", json!({"docId": doc})).await;
+    assert_eq!(rendered["ok"], true, "{}", rendered["visuals"]);
+
+    // Moving the group carries the slicer; the card's offsets stay.
+    let moved = r
+        .run(
+            "report.visual.move",
+            json!({"docId": doc, "visual": "grp", "x": 0, "y": 20}),
+        )
+        .await;
+    assert_eq!(moved["members"].as_array().unwrap().len(), 1, "{moved}");
+    assert_eq!(moved["members"][0]["visual"], "region");
+    assert_eq!(
+        (
+            &moved["members"][0]["position"]["x"],
+            &moved["members"][0]["position"]["y"]
+        ),
+        (&json!(430.0), &json!(30.0))
+    );
+
+    // Halving the group scales both members; then a batched move and
+    // resize of the same group compose.
+    let resized = r
+        .run(
+            "report.visual.resize",
+            json!({"docId": doc, "visual": "grp", "width": 310, "height": 55}),
+        )
+        .await;
+    let mut members: Vec<&str> = resized["members"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["visual"].as_str().unwrap())
+        .collect();
+    members.sort_unstable();
+    assert_eq!(members, ["region", "total"], "{resized}");
+    let batch = r
+        .run(
+            "doc.applyEdits",
+            json!({"docId": doc, "edits": [
+                {"type": "setVisualPosition", "visual": "grp", "x": 100},
+                {"type": "setVisualPosition", "visual": "grp", "width": 620}
+            ]}),
+        )
+        .await;
+    assert_eq!(batch["revision"], 3, "{batch}");
+
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    let mut written = strings(&out["written"]);
+    written.sort_unstable();
+    assert_eq!(
+        written,
+        ["grp", "region", "total"].map(|v| format!("{VISUALS}/{v}/visual.json")),
+        "{out}"
+    );
+    let root = dir.path();
+    assert_eq!(stored_rect(root, "grp"), [100.0, 20.0, 620.0, 55.0]);
+    assert_eq!(stored_rect(root, "total"), [0.0, 5.0, 180.0, 45.0]);
+    // 430 → 215 (halved at x 0) → 315 (moved by 100) → 530 (doubled at 100).
+    assert_eq!(stored_rect(root, "region"), [530.0, 25.0, 190.0, 45.0]);
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    let page = fresh.run("render.page", json!({"docId": reopened})).await;
+    assert_eq!(page["ok"], true, "{}", page["visuals"]);
+
+    // Three undo steps restore every position.
+    for _ in 0..3 {
+        r.run("doc.undo", json!({"docId": doc})).await;
+    }
+    r.run("doc.save", json!({"docId": doc})).await;
+    for visual in ["grp", "total", "region"] {
+        let path = format!("{VISUALS}/{visual}/visual.json");
+        assert_eq!(
+            stored_rect(root, visual),
+            rect_in(&original[&path]),
+            "{visual}"
+        );
+    }
+}
+
 /// `path` relative to the current folder (`..` up to the root, then down;
 /// both are on the same drive here).
 fn relative_to_cwd(path: &Path) -> std::path::PathBuf {

@@ -480,11 +480,19 @@ their write roots).
   measure edit re-evaluates only measure results; a calculated column or table edit recomputes it
   and its dependants in dependency order without an M refresh; the visual cache and canvas state
   stay valid where the change does not reach them.
-- [ ] **M6.5 Core editing commands.** Measures: create, update (expression, format string,
+- [x] **M6.5 Core editing commands.** Measures: create, update (expression, format string,
   description, display folder), delete; descriptions of any object; rename of tables, columns and
   measures; visual move and resize; and the `pbi-model` create and delete commands with exact
   inverses and dependency reports for tables, columns, hierarchies and relationships, exposed as
   registry commands with basic validation (editors and Desktop's full validations in M10).
+  Done: `model.measure.create`/`update`/`delete`, `model.object.setDescription`,
+  `model.object.rename` (M6.7), `model.relationship.create`/`update`/`delete`,
+  `model.column.create`/`update`/`delete`, `model.table.create`/`update`/`delete`,
+  `model.hierarchy.create`/`delete` and `report.visual.move`/`resize` (a visual group takes the
+  visuals in it along), each one undoable edit with an exact inverse; deletes list their
+  dependents first (`model.dependencies`, `dryRun`). Saved edits checked in Power BI Desktop
+  (GT-6 s13 to s20 and s23). Not covered: deleting a data column (it needs an edit of its query's
+  M) and editing a hierarchy's levels, which come with the editors (M10).
 - [ ] **M6.6 Save and Save As under the output contract.** `doc.save` writes a PBIP in place:
   only changed files, each atomically (temporary file and rename), Byte-stable and
   Preserved-from-input content untouched, new objects per ADR-0014 with the injectable identifier
@@ -702,14 +710,21 @@ strings (`renames_follow_into_report_level_measures`,
 `renames_rewrite_report_level_measures_and_save_them`). Checked in Power BI Desktop (GT-6 s22):
 three report-level measures on a card of the Desktop copy of Acme, then DashCraft renamed a table,
 a column and a measure they use; Desktop loaded the saved report, its own card query used the
-rewritten DAX, and the card values equal those before the renames. Performance scenarios P09
+rewritten DAX, and the card values equal those before the renames. Moving or resizing a visual
+group takes the visuals in it along: those stored relative to the group keep their offsets when
+it moves and scale with it when it is resized (unless it scrolls), and those stored in page units
+are moved or scaled with it; one `doc.applyEdits` can move and then resize the same group
+(`visual_groups_move_and_resize_with_their_members`). Checked in Power BI Desktop (GT-6 s23): a
+group of four cards resized to half its width and moved, once in Desktop and once in DashCraft,
+saves the same positions in all five files, and Desktop shows DashCraft's saved group and cards
+where they belong, within a pixel. Performance scenarios P09
 (edit a measure, re-render the Executive Summary page), P10 (one edit, save) and P11 (open,
 refresh from the CSVs, first page) run through `Registry::execute`
 (`crates/pbi-ops/examples/perf_ops.rs`) and are within target (43.6, 55 and 184 ms against 50,
 100 and 1000 ms on a Windows desktop; acceptance 12); the CI runner's quick run has P09 at 53 ms,
 just over its target. Still open:
 the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits,
-KPI and detail-rows expressions, moving visual groups, canvas state remapping after renames, and
+KPI and detail-rows expressions, canvas state remapping after renames, and
 the app and CLI work.
 
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,

@@ -790,6 +790,130 @@ fn assert_same_content(actual: &Document, expected: &Document) {
     assert_eq!(actual, *expected);
 }
 
+/// The sample document with the card and the bar in a group placed around
+/// them (the card stored relative to the group, the bar in page units).
+fn grouped_document() -> (Document, [ObjectId; 3]) {
+    use crate::report::{Visual, VisualKind};
+    let mut doc = sample_document();
+    let page = &mut doc.reports[0].pages[0];
+    page.visuals[1].parent_group_name = Some("grp".into());
+    page.visuals[1].position.x = 0.0;
+    page.visuals[1].position.y = 0.0;
+    page.visuals[2].parent_group_name = Some("grp".into());
+    page.visuals.push(Visual {
+        name: "grp".into(),
+        kind: VisualKind::Group,
+        position: Position {
+            x: 240.0,
+            y: 10.0,
+            z: 500.0,
+            width: 620.0,
+            height: 300.0,
+            ..Position::default()
+        },
+        ..Visual::default()
+    });
+    doc.assign_ids();
+    let ids = [1, 2, 3].map(|i| doc.reports[0].pages[0].visuals[i].id);
+    (doc, ids)
+}
+
+#[test]
+fn move_visual_takes_a_groups_members_along_and_undoes_exactly() {
+    let (mut doc, [card, bar, grp]) = grouped_document();
+    let resize = MoveVisual {
+        visual: grp,
+        x: Some(40.0),
+        y: None,
+        width: Some(310.0),
+        height: None,
+    };
+    assert_eq!(resize.label(), "Resize visual");
+    assert_round_trip(&mut doc, resize, |doc, events| {
+        let v = &doc.reports[0].pages[0].visuals;
+        let at = |i: usize| {
+            let p = &v[i].position;
+            [p.x, p.y, p.width, p.height]
+        };
+        assert_eq!(at(3), [40.0, 10.0, 310.0, 300.0]);
+        // Relative card: offsets and size scale by 0.5 horizontally.
+        assert_eq!(at(1), [0.0, 0.0, 100.0, 100.0]);
+        // Page-unit bar: 220 from the group's left edge becomes 110.
+        assert_eq!(at(2), [150.0, 10.0, 200.0, 300.0]);
+        assert_eq!(
+            events,
+            [grp, card, bar].map(|id| ChangeEvent::ObjectChanged { id })
+        );
+    });
+
+    let original = doc.clone();
+    for bad in [
+        MoveVisual {
+            visual: grp,
+            x: Some(f64::NAN),
+            y: None,
+            width: None,
+            height: None,
+        },
+        MoveVisual {
+            visual: grp,
+            x: None,
+            y: None,
+            width: Some(0.0),
+            height: None,
+        },
+        MoveVisual {
+            visual: grp,
+            x: None,
+            y: None,
+            width: None,
+            height: Some(f64::INFINITY),
+        },
+    ] {
+        assert!(matches!(
+            bad.apply(&mut doc),
+            Err(CommandError::Rejected(_))
+        ));
+        assert_eq!(doc, original);
+    }
+    assert!(matches!(
+        MoveVisual {
+            visual: measure_id(&doc, "Stores", "Active Stores"),
+            x: Some(1.0),
+            y: None,
+            width: None,
+            height: None,
+        }
+        .apply(&mut doc),
+        Err(CommandError::WrongKind { .. })
+    ));
+}
+
+#[test]
+fn batched_moves_compose() {
+    let (mut doc, [_, _, grp]) = grouped_document();
+    let step = |x, width| MoveVisual {
+        visual: grp,
+        x,
+        y: None,
+        width,
+        height: None,
+    };
+    let mut history = History::new();
+    history
+        .execute(
+            &mut doc,
+            CommandGroup::new("Move and resize")
+                .with(step(Some(300.0), None))
+                .with(step(None, Some(1240.0))),
+        )
+        .unwrap();
+    let p = &doc.reports[0].pages[0].visuals[3].position;
+    assert_eq!((p.x, p.width), (300.0, 1240.0));
+    // Bar: 220 from the group's edge, doubled, after the move.
+    assert_eq!(doc.reports[0].pages[0].visuals[2].position.x, 740.0);
+}
+
 #[test]
 fn create_measure_round_trips_and_never_reuses_ids() {
     let mut doc = sample_document();

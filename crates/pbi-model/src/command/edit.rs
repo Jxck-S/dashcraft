@@ -2,9 +2,11 @@
 
 use std::mem;
 
-use super::{Applied, ChangeEvent, Command, CommandError, expect_kind, model_mut};
+use super::{Applied, ChangeEvent, Command, CommandError, CommandGroup, expect_kind, model_mut};
 use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
+#[cfg(doc)]
+use crate::report::Page;
 use crate::report::Position;
 use crate::semantic::{ColumnKind, DataType, Model, SummarizeBy, Table};
 
@@ -326,5 +328,87 @@ impl Command for SetVisualPosition {
 
     fn label(&self) -> String {
         "Move visual".to_owned()
+    }
+}
+
+/// Moves and/or resizes a visual or visual group to the given values (the
+/// others are kept), evaluated against the document it is applied to. A
+/// group takes the visuals in it along (see [`Page::placement_of`]); the
+/// inverse restores every changed position exactly.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MoveVisual {
+    pub visual: ObjectId,
+    pub x: Option<f64>,
+    pub y: Option<f64>,
+    pub width: Option<f64>,
+    pub height: Option<f64>,
+}
+
+impl Command for MoveVisual {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let ObjectPath::Visual {
+            report,
+            page,
+            visual,
+        } = expect_kind(doc, self.visual, ObjectKind::Visual)?
+        else {
+            return Err(CommandError::NotFound(self.visual));
+        };
+        let slot = doc
+            .reports
+            .get_mut(report)
+            .and_then(|r| r.pages.get_mut(page))
+            .ok_or(CommandError::NotFound(self.visual))?;
+        let mut to = slot
+            .visuals
+            .get(visual)
+            .ok_or(CommandError::NotFound(self.visual))?
+            .position
+            .clone();
+        for (name, value, target) in [("x", self.x, &mut to.x), ("y", self.y, &mut to.y)] {
+            if let Some(v) = value {
+                if !v.is_finite() {
+                    return Err(CommandError::Rejected(format!("{name} must be finite")));
+                }
+                *target = v;
+            }
+        }
+        for (name, value, target) in [
+            ("width", self.width, &mut to.width),
+            ("height", self.height, &mut to.height),
+        ] {
+            if let Some(v) = value {
+                if !(v.is_finite() && v > 0.0) {
+                    return Err(CommandError::Rejected(format!(
+                        "{name} must be a positive number"
+                    )));
+                }
+                *target = v;
+            }
+        }
+        let mut inverse = CommandGroup::new(self.label());
+        let mut events = Vec::new();
+        for (i, position) in slot.placement_of(visual, &to) {
+            let Some(v) = slot.visuals.get_mut(i) else {
+                continue;
+            };
+            let old = mem::replace(&mut v.position, position);
+            if old != v.position {
+                events.push(ChangeEvent::ObjectChanged { id: v.id });
+            }
+            inverse = inverse.with(SetVisualPosition {
+                visual: v.id,
+                position: old,
+            });
+        }
+        Ok(Applied::new(inverse, events))
+    }
+
+    fn label(&self) -> String {
+        if self.width.is_some() || self.height.is_some() {
+            "Resize visual".to_owned()
+        } else {
+            "Move visual".to_owned()
+        }
     }
 }

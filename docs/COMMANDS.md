@@ -118,8 +118,8 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.hierarchy.create`](#modelhierarchycreate) | Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. | M A |
 | [`model.hierarchy.delete`](#modelhierarchydelete) | Deletes a user hierarchy with its levels as one undoable edit and lists the report fields that used it; dryRun only lists them. | M A |
 | [`model.dependencies`](#modeldependencies) | Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. | A |
-| [`report.visual.move`](#reportvisualmove) | Moves a visual on its page as one undoable edit (visual groups not yet). | M A |
-| [`report.visual.resize`](#reportvisualresize) | Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet). | M A |
+| [`report.visual.move`](#reportvisualmove) | Moves a visual or a visual group (with the visuals in it) on its page as one undoable edit. | M A |
+| [`report.visual.resize`](#reportvisualresize) | Resizes a visual or a visual group (top-left corner fixed; the visuals in a group scale with it unless it scrolls) as one undoable edit. | M A |
 | [`doc.applyEdits`](#docapplyedits) | Applies a group of document edits atomically as one undoable history step. | M A |
 | [`doc.undo`](#docundo) | Undoes the latest document edit. | M A |
 | [`doc.redo`](#docredo) | Reapplies the latest undone document edit. | M A |
@@ -2349,7 +2349,7 @@ Examples:
 
 ### `report.visual.move`
 
-**Move a visual.** Moves a visual on its page as one undoable edit (visual groups not yet).
+**Move a visual.** Moves a visual or a visual group (with the visuals in it) on its page as one undoable edit.
 
 _mutates the document, agent-safe; since 0.2.0._
 
@@ -2374,6 +2374,7 @@ Result:
 | `changedObjectIds` | integer[] |  |
 | `visual` | string | The visual's name. |
 | `position` | PositionOut | The visual's position after the edit (page units, as in `report.visuals`). |
+| `members` | MemberPositionOut[] | For a visual group: the visuals in it whose position changed with it, with their new positions (as in `report.visuals`: stored relative to their group when the file does so). |
 
 Examples:
 
@@ -2381,7 +2382,7 @@ Examples:
 
 ### `report.visual.resize`
 
-**Resize a visual.** Resizes a visual (top-left corner fixed) as one undoable edit (visual groups not yet).
+**Resize a visual.** Resizes a visual or a visual group (top-left corner fixed; the visuals in a group scale with it unless it scrolls) as one undoable edit.
 
 _mutates the document, agent-safe; since 0.2.0._
 
@@ -2406,6 +2407,7 @@ Result:
 | `changedObjectIds` | integer[] |  |
 | `visual` | string | The visual's name. |
 | `position` | PositionOut | The visual's position after the edit (page units, as in `report.visuals`). |
+| `members` | MemberPositionOut[] | For a visual group: the visuals in it whose position changed with it, with their new positions (as in `report.visuals`: stored relative to their group when the file does so). |
 
 Examples:
 
