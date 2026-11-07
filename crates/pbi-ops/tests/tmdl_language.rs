@@ -2,7 +2,8 @@
 //! keywords with a suggestion, values, unresolved references across the files of a model
 //! folder, positions, warnings that keep `ok`, bad parameters, and no error on the
 //! Acme Outfitters model), `tmdl.complete` and `tmdl.hover` (keywords, values and names across
-//! the files of the folder, positions, declarations, bad parameters).
+//! the files of the folder, positions, declarations, bad parameters), and `tmdl.format`
+//! (layout, options, syntax errors, the example model unchanged, bad parameters).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -321,6 +322,70 @@ async fn complete_and_hover_reject_bad_parameters() {
             err.code,
             pbi_ops::OpErrorCode::InvalidParams,
             "{id} {params}: {err:?}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn format_lays_out_a_file_and_reports_syntax_errors() {
+    let r = Runner::new();
+    let messy = "table Stores\n  lineageTag:s1\n  column  Region\n    dataType :string\n  measure Count=COUNTROWS(Stores)\n";
+    let want = "table Stores\n\tlineageTag: s1\n\n\tcolumn Region\n\t\tdataType: string\n\n\tmeasure Count = COUNTROWS(Stores)\n";
+    let out = r.run("tmdl.format", json!({ "text": messy })).await;
+    assert_eq!(out, json!({"ok": true, "text": want, "changed": true}));
+    let out = r.run("tmdl.format", json!({ "text": want })).await;
+    assert_eq!(out, json!({"ok": true, "text": want, "changed": false}));
+
+    let out = r
+        .run(
+            "tmdl.format",
+            json!({"text": want, "indentWidth": 2, "lineEnding": "crlf"}),
+        )
+        .await;
+    assert_eq!(
+        out["text"],
+        "table Stores\r\n  lineageTag: s1\r\n\r\n  column Region\r\n    dataType: string\r\n\r\n  measure Count = COUNTROWS(Stores)\r\n"
+    );
+
+    let broken = "table Stores\n\t\tcolumn Region\n";
+    let out = r.run("tmdl.format", json!({ "text": broken })).await;
+    assert_eq!(out["ok"], false);
+    assert_eq!(out["text"], broken);
+    assert_eq!(out["changed"], false);
+    assert_eq!(out["diagnostic"]["code"], "TMDL110");
+    assert_eq!(out["diagnostic"]["start"]["line"], 2);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn format_leaves_the_example_model_unchanged() {
+    let Some(dir) = fixture(&format!("{ACME}/AcmeOutfitters.SemanticModel/definition")) else {
+        return;
+    };
+    let r = Runner::new();
+    for file in folder(&dir) {
+        let out = r.run("tmdl.format", json!({ "text": file["text"] })).await;
+        assert_eq!(out["changed"], false, "{}", file["path"]);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn format_rejects_bad_parameters() {
+    let r = Runner::new();
+    for params in [
+        json!({"text": "table T\n", "indentWidth": 0}),
+        json!({"text": "table T\n", "indentWidth": 17}),
+        json!({"text": "table T\n", "lineEnding": "cr"}),
+        json!({"text": "table T\n", "useTabs": true}),
+        json!({}),
+    ] {
+        let err = r
+            .try_run("tmdl.format", params.clone())
+            .await
+            .expect_err("bad parameters");
+        assert_eq!(
+            err.code,
+            pbi_ops::OpErrorCode::InvalidParams,
+            "{params}: {err:?}"
         );
     }
 }

@@ -7,6 +7,39 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.4c TMDL formatter
+
+- **What:** `pbi_tmdl::service::format` (`service/format.rs`) with `FormatOptions` (tabs or
+  1–16 spaces, kept or chosen line ending) and `FormatError::{Syntax, Unstable}`; the service
+  re-exports `IndentStyle` and `LineEnding`. It re-emits the CST: each structural line indented
+  by its depth and spaced as the writer spaces it, indented expression blocks two levels below
+  their line (one for a shallow nameless property, as Desktop writes KPI expressions) with the
+  common prefix replaced and relative indentation and inner trailing white space kept, fenced
+  blocks moved with their closing fence, comments and `///` lines at the node's level. Blank
+  lines: one before named objects and the first `ref` line, none before `keyword: value`
+  properties, flags and same-type `ref` lines; kept as written before nameless objects, `ref`
+  runs of another type and perspective members, where Desktop and TOM disagree or vary. The
+  output is parsed again and its shape (keywords, names, operators, values, expressions,
+  descriptions, comments, children) must equal the input's, else `Unstable`. New command
+  `tmdl.format` (`indentWidth`, `lineEnding`; `ok: false` with the TMDL110 diagnostic on a
+  syntax error). The `tmdl_service` fuzz target and the mutation test also format (idempotent;
+  the mutation test also requires the same model).
+- **Why:** M7.4 (DESKTOP-PLAN): "formatting that matches the writer"; the TMDL view and external
+  editors need a formatter that leaves Desktop's files alone.
+- **Numbers:** 88 → 89 registry commands. Ground truth: all 58 files saved by Desktop and the
+  TOM library (Acme, `tmdl-probe`, dax-lab, GT-4 s24 before and after, CRLF kept) and all 53
+  files `write_model` writes for those models format to themselves; each of the 58 with its
+  layout damaged (every structural line respaced with trailing white space, blank lines doubled
+  or removed, deep blocks indented two more levels, LF for CRLF) formats back to the saved
+  bytes, and each goes to four spaces (stable) and back to the original. The first run found
+  the two places where TOM and Desktop differ (blank lines between `ref` types, before
+  perspective members). Mutation test (3,000 cases): 1,733 of 1,735 parsing files formatted, the
+  2 others declined (a header value continued by a block as the first indented line, which
+  space indentation cannot express); 20,000 release cases (seed 11): 11,666 of 11,686 formatted,
+  20 declined, no other failure. Tests: `format.rs` 7 unit
+  tests, `groundtruth.rs` 9 (3 new), `tmdl_language.rs` 10 (3 new).
+- **Open:** M7.5 (formula bar IntelliSense), M7.6 (`dashcraft lsp`).
+
 ### M7.4b TMDL completion and hover
 
 - **What:** `pbi_tmdl::service::{complete, hover}` (`service/complete.rs`) over a tolerant
@@ -37,6 +70,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   `database` was, and booleans had no hover. Tests: `complete.rs` 8 unit tests, `outline.rs` 3,
   `groundtruth.rs` 6 (2 new), `tmdl_language.rs` 7 (3 new); a 20,000-case mutation run found no
   completion or hover outside its file.
+- **Commit:** `387188e` (PR #60).
 - **Open:** M7.4c (`tmdl.format`), M7.5, M7.6.
 
 ### M7.4a TMDL diagnostics

@@ -4298,6 +4298,29 @@ export interface TmdlFileIn {
   text: string
 }
 
+export interface TmdlFormatOut {
+  /** The text parses (else `text` is the input unchanged and `diagnostic` says why). */
+  ok: boolean
+  /** The formatted text; every line ends with a line ending. */
+  text: string
+  /** `text` differs from the input. */
+  changed: boolean
+  /** The syntax error (`TMDL110`) when `ok` is false. */
+  diagnostic?: TmdlDiagnosticOut | null
+}
+
+export interface TmdlFormatParams {
+  /** One `.tmdl` file's text. */
+  text: string
+  /**
+   * Indent with this many spaces per level (1 to 16); absent: with tabs, as Power BI
+   * Desktop does.
+   */
+  indentWidth?: number | null
+  /** The line ending of every line; absent: the text's first one (`lf` when it has none). */
+  lineEnding?: TmdlLineEnding | null
+}
+
 /** The word under the cursor. */
 export interface TmdlHoverInfo {
   kind: TmdlItemKind
@@ -4340,6 +4363,9 @@ export interface TmdlHoverParams {
 
 /** What a suggestion or a hovered word is. */
 export type TmdlItemKind = 'table' | 'column' | 'measure' | 'hierarchy' | 'object' | 'property' | 'value' | 'objectType' | 'name'
+
+/** A line ending. */
+export type TmdlLineEnding = 'lf' | 'crlf'
 
 /** One line of a data point tooltip. */
 export interface TooltipLineOut {
@@ -4755,6 +4781,8 @@ export interface OpsCommands {
   'tmdl.complete': { params: TmdlCompleteParams; output: TmdlCompleteOut }
   /** Describes the TMDL word at a cursor: a keyword's forms, value and level, an enumeration value, or the object a reference names and where it is declared. */
   'tmdl.hover': { params: TmdlHoverParams; output: TmdlHoverOut }
+  /** Lays out a TMDL file as Power BI Desktop writes it: indentation, spacing, blank lines, expression blocks; only white space changes, checked by reading the result back. */
+  'tmdl.format': { params: TmdlFormatParams; output: TmdlFormatOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4888,6 +4916,7 @@ export const OPS_META = {
   'tmdl.diagnostics': { category: 'tmdl', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'tmdl.complete': { category: 'tmdl', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'tmdl.hover': { category: 'tmdl', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'tmdl.format': { category: 'tmdl', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -5065,6 +5094,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     tmdlComplete: (params: TmdlCompleteParams, options?: O) => run('tmdl.complete', params, options),
     /** Describes the TMDL word at a cursor: a keyword's forms, value and level, an enumeration value, or the object a reference names and where it is declared. */
     tmdlHover: (params: TmdlHoverParams, options?: O) => run('tmdl.hover', params, options),
+    /** Lays out a TMDL file as Power BI Desktop writes it: indentation, spacing, blank lines, expression blocks; only white space changes, checked by reading the result back. */
+    tmdlFormat: (params: TmdlFormatParams, options?: O) => run('tmdl.format', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */

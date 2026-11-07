@@ -1,6 +1,9 @@
 //! The TMDL language service (M7.4): `tmdl.diagnostics`, `tmdl.complete` and `tmdl.hover`.
 
-use pbi_core::tmdl_service::{self, FileText, ItemKind, Source, TmdlDiagnostic};
+use pbi_core::tmdl_service::{
+    self, FileText, FormatError, FormatOptions, IndentStyle, ItemKind, LineEnding,
+    MAX_INDENT_WIDTH, Source, TmdlDiagnostic,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -405,5 +408,111 @@ impl Command for TmdlHover {
             }),
         });
         Ok(TmdlHoverOut { hover })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `tmdl.format`.
+#[derive(Debug)]
+pub struct TmdlFormat;
+
+/// A line ending.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum TmdlLineEnding {
+    /// `\n`.
+    Lf,
+    /// `\r\n`, as Power BI Desktop writes on Windows.
+    Crlf,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TmdlFormatParams {
+    /// One `.tmdl` file's text.
+    pub text: String,
+    /// Indent with this many spaces per level (1 to 16); absent: with tabs, as Power BI
+    /// Desktop does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub indent_width: Option<usize>,
+    /// The line ending of every line; absent: the text's first one (`lf` when it has none).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_ending: Option<TmdlLineEnding>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TmdlFormatOut {
+    /// The text parses (else `text` is the input unchanged and `diagnostic` says why).
+    pub ok: bool,
+    /// The formatted text; every line ends with a line ending.
+    pub text: String,
+    /// `text` differs from the input.
+    pub changed: bool,
+    /// The syntax error (`TMDL110`) when `ok` is false.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diagnostic: Option<TmdlDiagnosticOut>,
+}
+
+impl Command for TmdlFormat {
+    type Params = TmdlFormatParams;
+    type Output = TmdlFormatOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "tmdl.format",
+            title: "Format TMDL",
+            summary: "Lays out a TMDL file as Power BI Desktop writes it: indentation, spacing, blank lines, expression blocks; only white space changes, checked by reading the result back.",
+            category: Category::Tmdl,
+            examples: &[
+                (
+                    "A table file",
+                    r#"{"text": "table Stores\n  lineageTag:s1\n  column  Region\n    dataType :string\n  measure Count=COUNTROWS(Stores)\n"}"#,
+                ),
+                (
+                    "Two-space indentation, CRLF",
+                    r#"{"text": "table Stores\n\tcolumn Region\n\t\tdataType: string\n", "indentWidth": 2, "lineEnding": "crlf"}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(_ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let indent = match p.indent_width {
+            None => IndentStyle::Tabs,
+            Some(0) => {
+                return Err(OpError::invalid_params(
+                    "indentWidth is 0; give 1 to 16 spaces, or leave it out for tabs",
+                ));
+            }
+            Some(n) => {
+                let n = bounded("indentWidth", n, usize::from(MAX_INDENT_WIDTH))?;
+                IndentStyle::Spaces(u8::try_from(n).unwrap_or(MAX_INDENT_WIDTH))
+            }
+        };
+        let options = FormatOptions {
+            indent,
+            line_ending: p.line_ending.map(|e| match e {
+                TmdlLineEnding::Lf => LineEnding::Lf,
+                TmdlLineEnding::Crlf => LineEnding::CrLf,
+            }),
+        };
+        match tmdl_service::format(&p.text, &options) {
+            Ok(text) => Ok(TmdlFormatOut {
+                ok: true,
+                changed: text != p.text,
+                text,
+                diagnostic: None,
+            }),
+            Err(FormatError::Syntax(d)) => Ok(TmdlFormatOut {
+                ok: false,
+                changed: false,
+                diagnostic: Some(TmdlDiagnosticOut::new(&p.text, *d)),
+                text: p.text,
+            }),
+            Err(e @ FormatError::Unstable) => Err(OpError::internal(e.to_string())),
+        }
     }
 }

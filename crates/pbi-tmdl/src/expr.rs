@@ -31,7 +31,7 @@
 use crate::lexer::leading_ws_len;
 
 /// Longest common tab/space prefix of the non-blank `lines`.
-fn common_ws_prefix<'a>(lines: &[&'a str]) -> &'a str {
+pub(crate) fn common_ws_prefix<'a>(lines: &[&'a str]) -> &'a str {
     let mut prefix: Option<&'a str> = None;
     for line in lines {
         if line.trim().is_empty() {
