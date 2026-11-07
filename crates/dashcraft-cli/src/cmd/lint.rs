@@ -1,15 +1,16 @@
 //! `dashcraft lint`: the broken-reference linter (rules in
-//! `crates/pbi-core/src/lint/RULES.md`).
+//! `crates/pbi-core/src/lint/RULES.md`); the `doc.open` and `doc.lint`
+//! commands.
 
 use std::io::Write;
 use std::path::PathBuf;
 
-use pbi_core::lint::{Finding, LintOptions, LintReport, lint, severity_rank};
-use pbi_model::{Diagnostic, Severity};
+use pbi_ops::commands::lint::{FindingOut, LintOut};
+use pbi_ops::inspect_model::OriginOut;
 use serde_json::{Value, json};
 
-use crate::common::{Context, ReadArgs, Status, open_document, print_json, with_stdout};
-use crate::inspect_model::SCHEMA_VERSION;
+use crate::common::{Context, ReadArgs, Status, print_json, with_stdout};
+use crate::ops::{Ops, typed};
 
 /// Lowest severity that makes `lint` exit with code 2.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
@@ -21,11 +22,12 @@ pub enum Deny {
 }
 
 impl Deny {
-    fn severity(self) -> Severity {
+    /// The `doc.lint` `deny` parameter.
+    fn param(self) -> &'static str {
         match self {
-            Deny::Errors => Severity::Error,
-            Deny::Warnings => Severity::Warning,
-            Deny::Infos => Severity::Info,
+            Deny::Errors => "error",
+            Deny::Warnings => "warning",
+            Deny::Infos => "info",
         }
     }
 }
@@ -54,57 +56,61 @@ pub struct LintArgs {
 }
 
 pub fn run(args: &LintArgs, ctx: &Context) -> anyhow::Result<Status> {
-    let doc = open_document(&args.path, &args.read.open_options())?;
-    let opts = LintOptions {
-        disabled_rules: args.disabled.clone(),
-        layout: !args.no_layout,
-        ..LintOptions::default()
-    };
-    let report = lint(&doc, &opts);
+    let ops = Ops::new()?;
+    let doc = ops.open(&args.path, &args.read)?;
+    let mut value = ops.execute(
+        "doc.lint",
+        json!({
+            "docId": doc.doc_id,
+            "disable": args.disabled,
+            "layout": !args.no_layout,
+            "deny": args.deny.param(),
+        }),
+    )?;
     // Reader errors (unloadable model, broken report) hide what the linter
-    // could not check, so they fail the run too.
-    let reader_errors: Vec<&Diagnostic> = doc
-        .document
-        .diagnostics
-        .iter()
-        .filter(|d| d.severity == Severity::Error)
-        .collect();
-    let shown = args.path.to_string_lossy().into_owned();
+    // could not check, so they fail the run too (`ok` covers both).
+    let out: LintOut = typed(&value)?;
     if args.json || args.pretty {
-        print_json(&json_out(&shown, &report, &reader_errors), args.pretty)?;
+        // The `lint --json` schema has no `ok`: the exit status says it.
+        if let Value::Object(map) = &mut value {
+            map.shift_remove("ok");
+        }
+        print_json(&value, args.pretty)?;
     } else {
-        with_stdout(|w| write_text(w, &shown, &report, &reader_errors))?;
-        for note in &report.summary.notes {
+        with_stdout(|w| write_text(w, &out))?;
+        for note in &out.summary.notes {
             ctx.note(note);
         }
     }
-    let failed = report.fails(args.deny.severity()) || !reader_errors.is_empty();
-    Ok(if failed {
-        Status::ErrorDiagnostics
-    } else {
+    Ok(if out.ok {
         Status::Ok
+    } else {
+        Status::ErrorDiagnostics
     })
 }
 
-fn json_out(path: &str, report: &LintReport, reader_errors: &[&Diagnostic]) -> Value {
-    json!({
-        "schemaVersion": SCHEMA_VERSION,
-        "path": path,
-        "summary": report.summary,
-        "findings": report.findings,
-        "readerErrors": reader_errors,
-    })
-}
-
-fn severity_label(s: Severity) -> &'static str {
-    match s {
-        Severity::Error => "error",
-        Severity::Warning => "warning",
-        Severity::Info => "info",
+/// Higher for worse severities.
+fn severity_rank(severity: &str) -> u8 {
+    match severity {
+        "error" => 2,
+        "warning" => 1,
+        _ => 0,
     }
 }
 
-fn location(f: &Finding) -> String {
+/// `path:line#pointer`, as the reader diagnostics' origins print.
+fn origin_text(o: &OriginOut) -> String {
+    let mut out = o.path.clone();
+    if let Some(line) = o.line {
+        out.push_str(&format!(":{line}"));
+    }
+    if let Some(pointer) = &o.pointer {
+        out.push_str(&format!("#{pointer}"));
+    }
+    out
+}
+
+fn location(f: &FindingOut) -> String {
     let Some(o) = &f.origin else {
         return String::new();
     };
@@ -129,21 +135,29 @@ fn plural(n: usize, one: &str) -> String {
     }
 }
 
-fn write_text(
-    w: &mut dyn Write,
-    path: &str,
-    report: &LintReport,
-    reader_errors: &[&Diagnostic],
-) -> std::io::Result<()> {
-    for (file, findings) in report.by_file() {
+/// Consecutive findings of the same file (they are sorted by file).
+fn by_file(findings: &[FindingOut]) -> Vec<(&str, Vec<&FindingOut>)> {
+    let mut out: Vec<(&str, Vec<&FindingOut>)> = Vec::new();
+    for f in findings {
+        let path = f.origin.as_ref().map_or("", |o| o.path.as_str());
+        match out.last_mut() {
+            Some((p, list)) if *p == path => list.push(f),
+            _ => out.push((path, vec![f])),
+        }
+    }
+    out
+}
+
+fn write_text(w: &mut dyn Write, out: &LintOut) -> std::io::Result<()> {
+    for (file, findings) in by_file(&out.findings) {
         writeln!(w, "{}", if file.is_empty() { "(no file)" } else { file })?;
         let mut sorted = findings;
-        sorted.sort_by_key(|f| std::cmp::Reverse(severity_rank(f.severity)));
+        sorted.sort_by_key(|f| std::cmp::Reverse(severity_rank(&f.severity)));
         for f in sorted {
             writeln!(
                 w,
                 "  {} {} {}{}",
-                severity_label(f.severity),
+                f.severity,
                 f.rule,
                 location(f),
                 f.message
@@ -153,24 +167,25 @@ fn write_text(
             }
         }
     }
-    if !reader_errors.is_empty() {
+    if !out.reader_errors.is_empty() {
         writeln!(w, "reader errors (some checks could not run):")?;
-        for d in reader_errors {
+        for d in &out.reader_errors {
             let at = d
                 .origin
                 .as_ref()
-                .map(|o| format!(" ({o})"))
+                .map(|o| format!(" ({})", origin_text(o)))
                 .unwrap_or_default();
             writeln!(w, "  error {} {}{at}", d.code, d.message)?;
         }
     }
-    let s = &report.summary;
-    if report.findings.is_empty() && reader_errors.is_empty() {
-        writeln!(w, "{path}: no problems found")
+    let s = &out.summary;
+    if out.findings.is_empty() && out.reader_errors.is_empty() {
+        writeln!(w, "{}: no problems found", out.path)
     } else {
         writeln!(
             w,
-            "{path}: {}, {}, {}",
+            "{}: {}, {}, {}",
+            out.path,
             plural(s.errors, "error"),
             plural(s.warnings, "warning"),
             plural(s.infos, "info")

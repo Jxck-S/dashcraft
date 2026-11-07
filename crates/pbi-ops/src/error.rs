@@ -260,6 +260,24 @@ impl From<CoreError> for OpError {
     }
 }
 
+/// The error of opening or detecting `shown` (the path as given), read at
+/// `path` (after the path policy): `cannot open <shown>: no such file or
+/// directory`, `…: refused: …` or `…: not a supported Power BI format (…):
+/// …`, the messages `dashcraft` has always printed. An I/O error on another
+/// file (a part of a project) names that file.
+pub(crate) fn open_error(shown: &std::path::Path, path: &std::path::Path, e: CoreError) -> OpError {
+    let e = match e {
+        CoreError::Io {
+            path: failed,
+            source,
+        } if failed == path => match source.kind() {
+            std::io::ErrorKind::NotFound => OpError::not_found("no such file or directory"),
+            _ => OpError::io(source.to_string()),
+        },
+        other => other.into(),
+    };
+    e.context(format!("cannot open {}", shown.display()))
+}
 impl From<SessionError> for OpError {
     fn from(e: SessionError) -> Self {
         let message = e.to_string();
@@ -390,6 +408,47 @@ mod tests {
         }
         .into();
         assert_eq!(e.code, OpErrorCode::Unsupported);
+    }
+
+    #[test]
+    fn open_errors_name_the_input_once() {
+        let missing = std::path::Path::new("missing.pbip");
+        let io = |path: &str, kind| CoreError::Io {
+            path: path.into(),
+            source: std::io::Error::from(kind),
+        };
+        let e = open_error(
+            missing,
+            missing,
+            io("missing.pbip", std::io::ErrorKind::NotFound),
+        );
+        assert_eq!(e.code, OpErrorCode::NotFound);
+        assert_eq!(
+            e.message,
+            "cannot open missing.pbip: no such file or directory"
+        );
+        // A part of the project: that file is named.
+        let e = open_error(
+            missing,
+            missing,
+            io("missing/definition.pbism", std::io::ErrorKind::NotFound),
+        );
+        assert_eq!(
+            e.message,
+            "cannot open missing.pbip: missing/definition.pbism: no such file or directory"
+        );
+        let e = open_error(
+            missing,
+            missing,
+            CoreError::Unsupported {
+                format: "unknown".into(),
+                hint: "try a .pbip".into(),
+            },
+        );
+        assert_eq!(
+            e.message,
+            "cannot open missing.pbip: not a supported Power BI format (unknown): try a .pbip"
+        );
     }
 
     #[test]

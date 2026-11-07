@@ -35,7 +35,7 @@ use pbi_model::{
     TableKind, Visual, dax_column_ref, dax_table_ref,
 };
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Current schema version.
 pub const SCHEMA_VERSION: u32 = 1;
@@ -49,7 +49,7 @@ pub struct BuildOptions {
 }
 
 /// Root object of `inspect --json`.
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Inspect {
     pub schema_version: u32,
@@ -79,7 +79,7 @@ pub struct Inspect {
     pub connector: Option<ConnectorOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SourceOut {
     /// The path as given on the command line.
@@ -93,7 +93,7 @@ pub struct SourceOut {
     pub package_version: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DetectionOut {
     /// Detected format kind: `pbip`, `pbipSemanticModelFolder`,
@@ -108,7 +108,7 @@ pub struct DetectionOut {
     pub signals: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelStatusOut {
     /// `local`, `remote` (e.g. `byConnection`) or `missing`.
@@ -117,7 +117,7 @@ pub struct ModelStatusOut {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelOut {
     pub name: String,
@@ -141,7 +141,7 @@ pub struct ModelOut {
 }
 
 /// Schema summary of a PBIP local data cache (`.pbi/cache.abf`).
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CacheAbfOut {
     /// Path relative to the opened folder.
@@ -160,7 +160,7 @@ pub struct CacheAbfOut {
     pub compatibility_level: Option<i64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelSourceOut {
     /// `tmdl`, `tmsl` or `abf`.
@@ -169,7 +169,7 @@ pub struct ModelSourceOut {
     pub folder: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TableOut {
     pub name: String,
@@ -186,7 +186,7 @@ pub struct TableOut {
     pub hierarchies: Vec<HierarchyOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ColumnOut {
     pub name: String,
@@ -215,7 +215,7 @@ pub struct ColumnOut {
     pub data_category: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MeasureOut {
     pub name: String,
@@ -231,7 +231,7 @@ pub struct MeasureOut {
     pub display_folder: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PartitionOut {
     pub name: String,
@@ -253,7 +253,7 @@ pub struct PartitionOut {
     pub expression_source: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct HierarchyOut {
     pub name: String,
@@ -263,14 +263,14 @@ pub struct HierarchyOut {
     pub levels: Vec<LevelOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LevelOut {
     pub name: String,
     pub column: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RelationshipOut {
     pub name: String,
@@ -289,14 +289,14 @@ pub struct RelationshipOut {
     pub security_filtering_behavior: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ColumnRefOut {
     pub table: String,
     pub column: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ExpressionOut {
     pub name: String,
@@ -317,7 +317,7 @@ pub struct ExpressionOut {
     pub expression: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RoleOut {
     pub name: String,
@@ -328,7 +328,7 @@ pub struct RoleOut {
     pub table_permissions: Vec<TablePermissionOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TablePermissionOut {
     pub table: String,
@@ -337,7 +337,7 @@ pub struct TablePermissionOut {
     pub filter_expression: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportOut {
     pub name: String,
@@ -355,7 +355,7 @@ pub struct ReportOut {
     pub pages: Vec<PageOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DatasetReferenceOut {
     /// `byPath`, `byConnection` (remote), `embedded` (PBIX/PBIT) or `none`.
@@ -372,7 +372,7 @@ pub struct DatasetReferenceOut {
     pub database_name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PageOut {
     /// Internal name (PBIR folder name / ID).
@@ -387,7 +387,7 @@ pub struct PageOut {
     pub visuals: Vec<VisualOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VisualOut {
     /// Internal name (PBIR folder name / ID).
@@ -408,7 +408,7 @@ pub struct VisualOut {
     pub filters: Vec<FilterOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PositionOut {
     pub x: f64,
@@ -421,7 +421,7 @@ pub struct PositionOut {
 }
 
 /// A field reference (column, measure, aggregation, hierarchy level, …).
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FieldRefOut {
     /// `column`, `measure`, `aggregation`, `hierarchyLevel`, `literal` or
@@ -447,7 +447,7 @@ pub struct FieldRefOut {
 }
 
 /// A field bound to a visual data role.
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FieldOut {
     /// Data role, e.g. `Values`, `Category`, `Y`.
@@ -462,7 +462,7 @@ pub struct FieldOut {
     pub display_name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FilterOut {
     pub name: String,
@@ -483,7 +483,7 @@ pub struct FilterOut {
     pub how_created: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DiagnosticOut {
     /// `error`, `warning` or `info`.
@@ -495,7 +495,7 @@ pub struct DiagnosticOut {
     pub origin: Option<OriginOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OriginOut {
     /// File relative to the opened folder/archive.
@@ -508,7 +508,7 @@ pub struct OriginOut {
 }
 
 /// Totals over `model`, `extraModels` and `reports`.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Counts {
     pub tables: usize,
@@ -533,7 +533,7 @@ pub struct Counts {
 // Format-specific sections
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VpaxStatsOut {
     /// `DaxModel.json` or `DaxVpaView.json`.
@@ -554,7 +554,7 @@ pub struct VpaxStatsOut {
     pub relationships: Vec<VpaxRelationshipOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VpaxTableOut {
     pub name: String,
@@ -567,7 +567,7 @@ pub struct VpaxTableOut {
     pub columns: Vec<VpaxColumnOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VpaxColumnOut {
     pub name: String,
@@ -585,7 +585,7 @@ pub struct VpaxColumnOut {
     pub is_hidden: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VpaxRelationshipOut {
     pub from: ColumnRefOut,
@@ -595,7 +595,7 @@ pub struct VpaxRelationshipOut {
     pub invalid_rows: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PaginatedReportOut {
     /// RDL schema, e.g. `2016/01`.
@@ -614,7 +614,7 @@ pub struct PaginatedReportOut {
     pub truncated: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RdlDataSourceOut {
     pub name: String,
@@ -629,7 +629,7 @@ pub struct RdlDataSourceOut {
     pub integrated_security: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RdlDataSetOut {
     pub name: String,
@@ -647,7 +647,7 @@ pub struct RdlDataSetOut {
     pub filters: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RdlFieldOut {
     pub name: String,
@@ -660,7 +660,7 @@ pub struct RdlFieldOut {
     pub type_name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RdlQueryParameterOut {
     pub name: String,
@@ -669,7 +669,7 @@ pub struct RdlQueryParameterOut {
     pub value: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RdlParameterOut {
     pub name: String,
@@ -689,7 +689,7 @@ pub struct RdlParameterOut {
     pub valid_values: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RdlSectionOut {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -701,7 +701,7 @@ pub struct RdlSectionOut {
     pub footer: Vec<RdlItemOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RdlItemOut {
     /// `tablix`, `textbox`, `chart`, `image`, `rectangle`, `subreport`, …
@@ -717,7 +717,7 @@ pub struct RdlItemOut {
     pub children: Vec<RdlItemOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MashupOut {
     /// `script`, `template`, `dataflowGen2` or `dataflowCdm`.
@@ -735,7 +735,7 @@ pub struct MashupOut {
     pub connections: Vec<MashupConnectionOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MashupQueryOut {
     pub name: String,
@@ -749,7 +749,7 @@ pub struct MashupQueryOut {
     pub syntax_error: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DataflowEntityOut {
     pub name: String,
@@ -759,7 +759,7 @@ pub struct DataflowEntityOut {
     pub partitions: Vec<DataflowPartitionOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DataflowPartitionOut {
     pub name: String,
@@ -770,7 +770,7 @@ pub struct DataflowPartitionOut {
     pub refresh_time: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MashupConnectionOut {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -779,7 +779,7 @@ pub struct MashupConnectionOut {
     pub path: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomVisualOut {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -804,7 +804,7 @@ pub struct CustomVisualOut {
     pub script_bytes: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VisualDataRoleOut {
     pub name: String,
@@ -814,7 +814,7 @@ pub struct VisualDataRoleOut {
     pub kind: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectorOut {
     pub files: Vec<String>,
@@ -822,7 +822,7 @@ pub struct ConnectorOut {
     pub sources: Vec<ConnectorSourceOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectorSourceOut {
     pub path: String,
@@ -833,7 +833,7 @@ pub struct ConnectorSourceOut {
     pub error: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectorMemberOut {
     pub name: String,

@@ -4,12 +4,12 @@
 use pbi_core::detect::{DatasetReference, Detection, ModelFlavour, ReportFlavour};
 use pbi_core::reader::source_format_of;
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::inspect_model::{DetectionOut, SCHEMA_VERSION, detection_out};
 
 /// `detect --json` output.
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DetectOut {
     pub schema_version: u32,
@@ -23,7 +23,7 @@ pub struct DetectOut {
 
 /// Structure found while detecting (paths relative to the input folder,
 /// the `.pbip` folder or the archive root).
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemsOut {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -33,7 +33,7 @@ pub struct ItemsOut {
     pub other_items: Vec<OtherItemOut>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelItemOut {
     pub path: String,
@@ -44,7 +44,7 @@ pub struct ModelItemOut {
     pub display_name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportItemOut {
     pub path: String,
@@ -58,7 +58,7 @@ pub struct ReportItemOut {
     pub display_name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OtherItemOut {
     pub path: String,

@@ -240,6 +240,107 @@ fn run_batch_interpolates_earlier_results() {
     assert_eq!(json_out(&o).as_array().unwrap().len(), 3);
 }
 
+/// Every file under `dir` (relative path → bytes).
+fn files(dir: &std::path::Path) -> std::collections::BTreeMap<PathBuf, Vec<u8>> {
+    let mut out = std::collections::BTreeMap::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(d) = stack.pop() {
+        for entry in std::fs::read_dir(&d).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                stack.push(path);
+            } else {
+                let rel = path.strip_prefix(dir).unwrap().to_path_buf();
+                out.insert(rel, std::fs::read(&path).unwrap());
+            }
+        }
+    }
+    out
+}
+
+#[test]
+fn run_save_writes_only_the_edited_file() {
+    if !has(PBIP) {
+        return;
+    }
+    let dir = tempfile::Builder::new()
+        .prefix("dashcraft-save-")
+        .tempdir_in(env!("CARGO_TARGET_TMPDIR"))
+        .unwrap();
+    let acme = dir.path().join("acme");
+    common::copy_dir(&reference_root().join(common::ACME), &acme);
+    let pbip = acme.join("AcmeOutfitters.pbip");
+    let pbip = pbip.to_str().unwrap();
+    let before = files(&acme);
+    let orders = PathBuf::from("AcmeOutfitters.SemanticModel/definition/tables/Orders.tmdl");
+
+    // A failing batch step: nothing is saved.
+    let steps = dir.path().join("steps.json");
+    std::fs::write(
+        &steps,
+        json!([
+            {"id": "model.object.setDescription", "params": {"table": "Orders", "measure": "Total Sales", "text": "Not saved"}},
+            {"id": "report.pages", "params": {"report": "Nope"}}
+        ])
+        .to_string(),
+    )
+    .unwrap();
+    let o = dashcraft(&[
+        "run",
+        "--batch",
+        steps.to_str().unwrap(),
+        "--doc",
+        pbip,
+        "--save",
+    ]);
+    assert_exit(&o, 1);
+    assert!(!stderr(&o).contains("saved"), "{}", stderr(&o));
+    assert_eq!(files(&acme), before);
+
+    let o = dashcraft(&[
+        "run",
+        "model.object.setDescription",
+        "--doc",
+        pbip,
+        "-p",
+        "table=Orders",
+        "-p",
+        "measure=Total Sales",
+        "-p",
+        "text=Sum of the order lines.",
+        "--save",
+    ]);
+    assert_exit(&o, 0);
+    assert_eq!(json_out(&o)["changed"], true);
+    let err = stderr(&o);
+    assert!(
+        err.contains("dashcraft: saved ") && err.contains("wrote ") && err.contains("Orders.tmdl"),
+        "{err}"
+    );
+    let after = files(&acme);
+    assert_eq!(after.len(), before.len());
+    let changed: Vec<&PathBuf> = after
+        .iter()
+        .filter(|(path, bytes)| before.get(*path) != Some(*bytes))
+        .map(|(path, _)| path)
+        .collect();
+    assert_eq!(changed, [&orders]);
+    let text = String::from_utf8(after[&orders].clone()).unwrap();
+    assert!(text.contains("/// Sum of the order lines."), "{text}");
+
+    // Nothing left to save; a non-PBIP input cannot be saved in place.
+    let o = dashcraft(&["run", "doc.history", "--doc", pbip, "--save"]);
+    assert_exit(&o, 0);
+    assert!(stderr(&o).contains("no changes to write"), "{}", stderr(&o));
+    assert_eq!(files(&acme), after);
+    if has(common::MS_PBIX) {
+        let o = dashcraft(&["run", "doc.history", "--doc", common::MS_PBIX, "--save"]);
+        assert_exit(&o, 1);
+        assert!(stderr(&o).contains("[unsupported]"), "{}", stderr(&o));
+    }
+    let o = dashcraft(&["run", "doc.list", "--save"]);
+    assert_exit(&o, 1);
+}
 /// A running `dashcraft serve`.
 struct Server {
     child: std::process::Child,

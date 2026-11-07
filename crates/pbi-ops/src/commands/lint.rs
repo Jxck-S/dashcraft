@@ -58,7 +58,7 @@ pub struct DocLintParams {
 }
 
 /// Counts per severity and rule.
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LintSummaryOut {
     pub errors: usize,
@@ -67,12 +67,12 @@ pub struct LintSummaryOut {
     /// Findings per rule id.
     pub by_rule: std::collections::BTreeMap<String, usize>,
     /// Checks that were skipped and why.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub notes: Vec<String>,
 }
 
 /// One finding.
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FindingOut {
     /// Rule id, e.g. `LINT002` (see `crates/pbi-core/src/lint/RULES.md`).
@@ -83,13 +83,17 @@ pub struct FindingOut {
     /// Source file (container-relative) plus JSON pointer or line.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub origin: Option<OriginOut>,
+    /// The offending object's id (visual, measure, relationship, …), as in
+    /// `model.dependencies` and the edit commands.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub object: Option<u64>,
     /// A fix hint.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suggestion: Option<String>,
 }
 
 /// The `lint --json` report (`schemaVersion` 1) plus `ok`.
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LintOut {
     pub schema_version: u32,
@@ -170,6 +174,7 @@ impl Command for DocLint {
                         line: o.line,
                         pointer: o.pointer.clone(),
                     }),
+                    object: f.object.map(|o| o.get()),
                     suggestion: f.suggestion.clone(),
                 })
                 .collect(),

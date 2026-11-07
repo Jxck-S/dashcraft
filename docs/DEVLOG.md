@@ -7,6 +7,25 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 CLI as registry wrappers (M6.10)
+
+- **What:** `dashcraft detect`, `inspect` and `lint` run `doc.detect`, `doc.open` + `doc.inspect`
+  and `doc.lint` through a small registry (`crates/dashcraft-cli/src/ops.rs`, current-thread
+  runtime) and only print the result; the text writers deserialize the command outputs.
+  `dashcraft run --save` saves the `--doc` project after a successful command or batch.
+  `pbi-ops`: `open_error` names a missing input once, `doc.lint` findings carry `object` (the
+  object id), the output types derive `Deserialize`. `pbi-core`: the PBIP fingerprint scan
+  checks its caps from the directory listing before reading and stamps files on up to 8 threads.
+  Paths that are not valid Unicode are now refused by these subcommands (parameters are JSON).
+- **Why:** M6.10, the ADR-0007 migration plan; GAPS §9 "CLI over the registry" 3.2 → 3.4.
+- **Numbers:** outputs and exit codes byte-identical before and after on 374 runs (17 inputs,
+  from Acme in five shapes to broken, junk and missing files, × 22 flag sets). Release, median
+  of 21: Acme `inspect` 45 → 58 ms, `lint` 45 → 58 ms, `detect` 13 → 15 ms; Regional Sales
+  `inspect` 63 → 78 ms. The extra time is `doc.open` itself (session document clone 1–5 ms,
+  project fingerprint, runtime); the scan went 8.8 → 5.8 ms on Acme, which also speeds up the
+  save conflict check. 4 new tests (2 `e2e`, 1 `error` unit, 1 CLI `run --save`).
+- **Open:** `refresh`, `measures`, `export`, `render` and `convert` as wrappers; sharing the
+  opened document (`Arc`) to drop the clone in `Session::from_opened`.
 ### M6 registry fuzzing (M6.11)
 
 - **What:** `crates/pbi-ops/tests/property.rs`: every catalog command called through

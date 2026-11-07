@@ -108,7 +108,7 @@ Taken from the crates' `Cargo.toml` files (normal dependencies). Every crate exc
 | `pbi-render` | Theme, layout, text, visual queries, DataView, built-in visuals, scene, SVG, PNG, golden-image comparison | `query_page_data`, `render_report_page`, `render_interactive_page`, `svg::to_svg`, `png`, `golden` |
 | `pbi-ops` | Command registry: every capability as a typed, JSON-Schema-described command (`doc.open`, `measures.values`, `render.page`, `canvas.click`, …) shared by the CLI, the RPC server, the app and agents; workspace of open documents, path policy, batches, JSON-lines RPC; the shared `inspect`/`detect` JSON schemas | `Registry`, `Command`, `Workspace`, `Ctx`, `OpError`, `PathPolicy`, `rpc::serve` |
 | `pbi-ai` | Opt-in AI layer ([ADR-0008](adr/0008-ai-layer.md)): `ai.*` registry commands, provider adapters (OpenAI-compatible, Azure OpenAI, Ollama), settings, per-provider consent, keychain-only keys; the only crate with network and keychain access | `register`, `ai_catalog`, `store_api_key` |
-| `dashcraft-cli` | The `dashcraft` binary and its stable JSON schemas; `src/lib.rs` holds the program (`run_main`), `src/bin/dashcraft.rs` the entry point | `inspect`, `lint`, `refresh`, `measures`, `export`, `render`, `commands`, `run`, `serve`, `mcp`, `ai`, … |
+| `dashcraft-cli` | The `dashcraft` binary and its stable JSON schemas; `src/lib.rs` holds the program (`run_main`), `src/bin/dashcraft.rs` the entry point; `detect`, `inspect` and `lint` run registry commands through `src/ops.rs` | `inspect`, `lint`, `refresh`, `measures`, `export`, `render`, `commands`, `run`, `serve`, `mcp`, `ai`, … |
 | `dashcraft-app` | Tauri back end (`dashcraft-app`): the `ops_execute` / `ops_cancel` bridge to the registry, app-only views and DTOs, recent files, blob map | `ops.rs`, `commands.rs`, `views.rs` |
 
 ## Command registry
@@ -130,7 +130,7 @@ flowchart LR
 - The `Workspace` keeps open documents by `docId` with their `Session`, a data generation and the canvas state of each page (ADR-0006 semantics, adapted from the app). Data commands load a document's data on first use.
 - Every file path goes through the workspace's `PathPolicy` (unrestricted for the CLI; read/write roots with symlink and `..` escape checks for agents and `dashcraft serve --read-root/--write-root`).
 - Errors are `OpError { code, message, data }` with stable string codes mapped to JSON-RPC codes and CLI exit codes.
-- Surfaces: `dashcraft commands`, `dashcraft run` (single commands and batches with `${name.field}` interpolation), `dashcraft serve` (JSON-RPC 2.0 over stdin/stdout with progress notifications and `$/cancel`), `dashcraft mcp` (the agent-safe commands as MCP tools, [MCP.md](MCP.md)) and the app (`ops_execute`, with a TypeScript client generated from the schemas). All are thin adapters (ADR-0007).
+- Surfaces: `dashcraft commands`, `dashcraft run` (single commands and batches with `${name.field}` interpolation, `--save` after edits), `dashcraft serve` (JSON-RPC 2.0 over stdin/stdout with progress notifications and `$/cancel`), `dashcraft mcp` (the agent-safe commands as MCP tools, [MCP.md](MCP.md)), the app (`ops_execute`, with a TypeScript client generated from the schemas) and the `detect`, `inspect` and `lint` subcommands (byte-identical to their output before the registry). All are thin adapters (ADR-0007).
 - Metadata drives the adapters: for example `invokes_other_commands` (set on `commands.batch`) makes the MCP server give a command the union of the reachable tools' hints instead of its own.
 
 ## Desktop-ready design points

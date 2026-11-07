@@ -5,7 +5,7 @@
 //! error (`invalidParams`, `notFound`, `io`, …); 2 when the input was read
 //! but its data or expressions have errors: a `query` error, or a result
 //! with `"ok": false` (failed tables, ⚠ measures, failed visuals, lint
-//! findings).
+//! findings). With `--save`, a failed save exits with the save's code.
 
 use std::fs;
 use std::io::Read;
@@ -15,11 +15,13 @@ use std::process::ExitCode;
 use anyhow::{Context as _, anyhow, bail};
 use clap::ArgAction;
 use pbi_ops::batch::{BatchStep, run_batch};
+use pbi_ops::commands::edit::DocumentSaveOut;
 use pbi_ops::{CallerKind, Ctx, OpError, Registry, Workspace};
 use serde_json::{Map, Value, json};
 
 use crate::common::{Context, Status, print_json, prog};
 use crate::data::runtime;
+use crate::ops::path_param;
 
 #[derive(Debug, clap::Args)]
 pub struct RunArgs {
@@ -55,6 +57,12 @@ pub struct RunArgs {
     /// Stop a batch at the first failing step.
     #[arg(long, value_name = "BOOL", default_value_t = true, action = ArgAction::Set)]
     pub stop_on_error: bool,
+    /// When the command (every batch step) succeeds, save the --doc project
+    /// in place (`doc.save`: only changed files are written; files changed
+    /// on disk since the open are a conflict). The saved files are listed
+    /// on stderr.
+    #[arg(long, requires = "doc")]
+    pub save: bool,
     /// Pretty-print the JSON.
     #[arg(long)]
     pub pretty: bool,
@@ -147,6 +155,40 @@ fn report_error(e: &OpError) {
     }
 }
 
+/// `doc.save` of the `--doc` document (`--save`): `None` when saved.
+async fn save(
+    registry: &Registry,
+    ws: &Workspace,
+    doc_id: &str,
+    op_ctx: &Ctx,
+    ctx: &Context,
+) -> Option<RunStatus> {
+    let params = json!({ "docId": doc_id });
+    match registry
+        .call::<DocumentSaveOut>(ws, "doc.save", params, op_ctx)
+        .await
+    {
+        Ok(out) => {
+            let mut changes = Vec::new();
+            if !out.written.is_empty() {
+                changes.push(format!("wrote {}", out.written.join(", ")));
+            }
+            if !out.deleted.is_empty() {
+                changes.push(format!("deleted {}", out.deleted.join(", ")));
+            }
+            if changes.is_empty() {
+                changes.push("no changes to write".to_owned());
+            }
+            ctx.note(format!("saved {}: {}", out.project_dir, changes.join("; ")));
+            None
+        }
+        Err(e) => {
+            report_error(&e);
+            Some(RunStatus::Failed(e.exit_code()))
+        }
+    }
+}
+
 fn reports_not_ok(value: &Value) -> bool {
     value.get("ok") == Some(&Value::Bool(false))
 }
@@ -202,9 +244,9 @@ pub fn run(args: &RunArgs, ctx: &Context) -> anyhow::Result<RunStatus> {
     rt.block_on(async {
         let mut doc_summary = None;
         if let Some(path) = &args.doc {
-            let mut open = json!({ "path": path });
+            let mut open = json!({ "path": path_param(path)? });
             if let Some(map) = &args.blob_map {
-                open["blobMap"] = json!(map);
+                open["blobMap"] = json!(path_param(map)?);
             }
             match registry.execute(&ws, "doc.open", open, &op_ctx).await {
                 Ok(summary) => doc_summary = Some(summary),
@@ -243,6 +285,12 @@ pub fn run(args: &RunArgs, ctx: &Context) -> anyhow::Result<RunStatus> {
                 report_error(e);
                 return Ok(RunStatus::Failed(e.exit_code()));
             }
+            if args.save
+                && let Some(id) = &doc_id
+                && let Some(failed) = save(&registry, &ws, id, &op_ctx, ctx).await
+            {
+                return Ok(failed);
+            }
             let not_ok = results
                 .iter()
                 .any(|r| r.result.as_ref().is_some_and(reports_not_ok));
@@ -265,6 +313,12 @@ pub fn run(args: &RunArgs, ctx: &Context) -> anyhow::Result<RunStatus> {
         match registry.execute(&ws, command, params, &op_ctx).await {
             Ok(value) => {
                 print_json(&value, args.pretty)?;
+                if args.save
+                    && let Some(id) = &doc_id
+                    && let Some(failed) = save(&registry, &ws, id, &op_ctx, ctx).await
+                {
+                    return Ok(failed);
+                }
                 Ok(RunStatus::Done(if reports_not_ok(&value) {
                     Status::ErrorDiagnostics
                 } else {
@@ -292,6 +346,7 @@ mod tests {
             blob_map: None,
             batch: None,
             stop_on_error: true,
+            save: false,
             pretty: false,
         }
     }
