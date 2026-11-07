@@ -253,7 +253,13 @@ results and DTOs. Locations below refer to the Desktop shell above.
     `dax.diagnostics`); typing a name, `[` or `'`, or Ctrl+Space, lists suggestions
     (`dax.complete`; ↑ ↓ PgUp PgDn choose, Enter or Tab insert, Esc closes); `(` and `,`, or
     Ctrl+Shift+Space, show the parameters (`dax.signatureHelp`); pointing at a name, or Ctrl+K
-    Ctrl+I, describes it (`dax.hover`); Shift+Alt+F formats (`dax.format`).
+    Ctrl+I, describes it (`dax.hover`); Shift+Alt+F formats (`dax.format`). Desktop's formula
+    editor keys (M7.5b): Tab and Shift+Tab, Ctrl+] and Ctrl+[ indent and outdent, Ctrl+M makes
+    Tab move focus, Shift+Enter keeps the indentation, Ctrl+Shift+Enter inserts a line above,
+    Alt+↑ ↓ move and Shift+Alt+↑ ↓ copy lines, Ctrl+Shift+K deletes them, Ctrl+L selects
+    the line, Ctrl+X and Ctrl+C without a selection take the line, Ctrl+Shift+\\ jumps to the
+    matching bracket, Shift+Alt+→ ← expand and shrink the selection, Ctrl+↑ ↓ and
+    Alt+PgUp PgDn scroll.
   - **Properties pane**: Description (tables, columns, measures), Display folder and Format string
     (columns, measures). Enter commits (Ctrl+Enter in Description), as does leaving the field;
     Esc cancels; an empty field clears the property.
@@ -270,9 +276,10 @@ results and DTOs. Locations below refer to the Desktop shell above.
   - The TMDL view shows a project's files with the unsaved edits, as Save would write them.
   - Checks: `cargo test -p dashcraft-app` (`edits_save_and_close_through_the_registry`),
     `npm run check` (`tests/editing.test.ts`, `tests/daxEditor.test.ts`), and on Windows the UI
-    smoke, IntelliSense (`formula-intellisense.mjs`) and accessibility scripts of
-    [`scripts/app-checks/`](../scripts/app-checks/) against a debug build
-    ([results](../docs/accessibility/m6-editing.md)).
+    smoke, IntelliSense (`formula-intellisense.mjs`), editor keys (`formula-keys.mjs`) and
+    accessibility scripts of [`scripts/app-checks/`](../scripts/app-checks/) against a debug
+    build (results: [M6](../docs/accessibility/m6-editing.md),
+    [M7](../docs/accessibility/m7-formula-bar.md)).
 - **Remote models** (`byConnection` / live connection): a banner "Remote model — not available
   offline"; pages, visuals and fields are still shown.
 

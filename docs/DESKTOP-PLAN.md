@@ -398,7 +398,8 @@ acceptance criteria, the surfaces that must pass this checklist:
 
 The first editing surface (M6: Save, Undo and Redo, the formula bar, Properties edits) is the
 first to meet it. Each milestone records its results in [accessibility/](accessibility/), starting
-with [m6-editing.md](accessibility/m6-editing.md). The automated part of A1–A5 runs from
+with [m6-editing.md](accessibility/m6-editing.md) and
+[m7-formula-bar.md](accessibility/m7-formula-bar.md). The automated part of A1–A5 runs from
 [scripts/app-checks/](../scripts/app-checks/). M25 adds the semantics of the canvas and rendered
 visuals; M31.8 is the independent audit.
 
@@ -962,8 +963,9 @@ optional language server.
     themselves; each saved file with its layout damaged (respaced lines, trailing white space,
     doubled and removed blank lines, expression blocks indented further, LF for CRLF) formats
     back to Desktop's bytes, and to four spaces and back.
-- [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,
-  calculation items, format string expressions and RLS filters; commit and cancel; multi-line.
+- [x] **M7.5 Formula bar with IntelliSense** (2026-11-07; A6 waits for a person, as for M6) for
+  measures, calculated columns and tables, calculation items, format string expressions and RLS
+  filters; commit and cancel; multi-line.
   The editor is one component (`app/src/components/DaxEditor.svelte`) that takes where the DAX
   starts in its text, so the calculation item, dynamic format string and RLS filter editors
   (M10.4, M11.1, M11.4: their edit commands and selections come there) reuse it as it is.
@@ -980,9 +982,19 @@ optional language server.
     documentation of Desktop's formula editor. Ranges stay aligned while typing and late
     answers are dropped; edits keep the editor's own undo. Checked in the app by
     `scripts/app-checks/formula-intellisense.mjs` (20 checks on Windows / WebView2).
-  - [ ] M7.5b Desktop's editor keys (Ctrl+M for Tab moving focus, indent and outdent, line
-    moves, copies and deletes, select line, matching bracket, insert line above and below) and
-    accessibility checklist A1–A6 for the formula bar with completion lists and squiggles.
+  - [x] M7.5b (2026-11-07) Desktop's formula editor keys, from Microsoft's table of them: Tab and
+    Shift+Tab indent and outdent (Ctrl+] and Ctrl+[ too), Ctrl+M makes Tab move focus (said in
+    the accessible description and announced), Shift+Enter breaks the line keeping its
+    indentation, Ctrl+Shift+Enter inserts a line above, Alt+↑ ↓ move and Shift+Alt+↑ ↓ copy the
+    lines, Ctrl+Shift+K deletes them, Ctrl+L selects the line, Ctrl+X and Ctrl+C without a
+    selection cut and copy it, Ctrl+Shift+\ jumps to the matching bracket (strings and comments
+    skipped), Shift+Alt+→ ← expand and shrink the selection, Ctrl+↑ ↓ and Alt+PgUp PgDn scroll;
+    each edit is one step of the editor's own undo. Not done: extra cursors, column selection,
+    Ctrl+G and Ctrl+U (the editor has one caret). Accessibility A1–A5 pass with the suggestion
+    list, parameter info, a description and squiggles open
+    ([accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md)); A6 waits for a person.
+    Checked in the app by `scripts/app-checks/formula-keys.mjs` (43 checks on Windows /
+    WebView2) and by 10 new tests in `app/tests/daxEditor.test.ts`.
 - [ ] **M7.6 Optional `dashcraft lsp`.** A Language Server Protocol adapter over the same
   commands for `.dax`, `.m` and `.tmdl` files in external editors.
 

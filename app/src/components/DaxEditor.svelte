@@ -1,3 +1,8 @@
+<script lang="ts" module>
+  /** Ctrl+M's "Tab moves focus", shared by the editors of the window. */
+  const tabFocus = { on: false }
+</script>
+
 <script lang="ts">
   import { onMount, untrack } from 'svelte'
   import Icon from './Icon.svelte'
@@ -6,14 +11,27 @@
   import type { DaxCompletionItemOut, DaxCompletionKind, DaxSignatureOut } from '../lib/ops.gen'
   import {
     completionEdit,
+    copyLines,
+    deleteLines,
     editorCommand,
+    expandSelection,
+    indentLines,
+    lineAbove,
+    lineBreak,
     lineColumn,
+    lineText,
+    matchingBracket,
     moveActive,
+    moveLines,
     offsetAt,
+    outdentLines,
     segments,
+    selectedLines,
+    selectLine,
     shiftOffset,
     shiftSpans,
     signatureParts,
+    tabEdit,
     textDelta,
     TOKEN_COLORS,
     triggers,
@@ -21,6 +39,8 @@
     type DaxService,
     type EditorCommand,
     type MarkSpan,
+    type Selection,
+    type TextEdit,
     type TokenSpan,
   } from '../lib/daxEditor'
 
@@ -28,9 +48,11 @@
   // `dax.tokens` and `dax.diagnostics`; typing a name, `[` or `'` (or Ctrl+Space) lists
   // `dax.complete`'s suggestions (↑ ↓ choose, Enter or Tab insert, Esc close); `(` and `,` (or
   // Ctrl+Shift+Space) show the function's parameters; pointing at a name (or Ctrl+K Ctrl+I) shows
-  // its description and the problems there; Shift+Alt+F formats with `dax.format`. Only the part
-  // of the text from `start(text)` on is DAX (the formula bar's `Name =` comes before it). Other
-  // keys go to `onkeydown`.
+  // its description and the problems there; Shift+Alt+F formats with `dax.format`. Desktop's
+  // line keys (`editorCommand`) edit through the editor's own undo; Tab indents until Ctrl+M
+  // makes it move focus. Only the part of the text from `start(text)` on is DAX (the formula
+  // bar's `Name =` comes before it). Other keys, and Shift+Enter after its line break, go to
+  // `onkeydown`.
   let {
     value = $bindable(),
     rows,
@@ -67,6 +89,7 @@
   const signatureId = `dax-signature-${uid}`
   const problemId = `dax-problem-${uid}`
   const statusId = `dax-status-${uid}`
+  const keysId = `dax-keys-${uid}`
 
   let editor = $state<HTMLTextAreaElement | null>(null)
   let gutter = $state<HTMLDivElement | null>(null)
@@ -89,6 +112,12 @@
   let analysisTimer: ReturnType<typeof setTimeout> | undefined
   let hoverTimer: ReturnType<typeof setTimeout> | undefined
   let analysisSeq = 0
+  // Ctrl+M, for every editor of the window as in Desktop.
+  let tabMovesFocus = $state(tabFocus.on)
+  // Shift+Alt+→ results, for Shift+Alt+← to go back.
+  let expansions: Selection[] = []
+  // Ctrl+C or Ctrl+X without a selection: the line, its deletion and the cursor to go back to.
+  let lineClip: { text: string; edit: TextEdit; caret: Selection } | null = null
 
   const lines = $derived(value.split('\n'))
   const segs = $derived(segments(value, tokens, problems))
@@ -102,7 +131,8 @@
     const more = problems.length > 1 ? ` (${problems.length} problems)` : ''
     return `${problem.severity === 'error' ? 'Error' : 'Warning'} at line ${line + 1}, column ${column + 1}: ${problem.message}${more}`
   })
-  const describedBy = $derived([describedby, problemText ? problemId : null, signature ? signatureId : null].filter(Boolean).join(' ') || undefined)
+  const keysText = $derived(readonly ? '' : tabMovesFocus ? 'Tab moves focus; Ctrl+M makes Tab indent.' : 'Tab indents; Ctrl+M makes Tab move focus.')
+  const describedBy = $derived([describedby, problemText ? problemId : null, signature ? signatureId : null, keysText ? keysId : null].filter(Boolean).join(' ') || undefined)
 
   const KIND_ICONS: Record<DaxCompletionKind, IconName> = {
     function: 'code',
@@ -309,6 +339,37 @@
     }
   }
 
+  function select(sel: Selection) {
+    if (!editor) return
+    editor.setSelectionRange(sel.start, sel.end)
+    caret = sel.start
+  }
+
+  /** Applies a line edit as typing would and selects what it says. */
+  function applyEdit(edit: TextEdit | null) {
+    if (!edit || !editor) return
+    closePopups()
+    expansions = []
+    if (edit.text === '' && edit.from < edit.to) {
+      editor.focus()
+      editor.setSelectionRange(edit.from, edit.to)
+      applying = true
+      try {
+        if (!document.execCommand('delete')) {
+          editor.setRangeText('', edit.from, edit.to, 'end')
+          editor.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+      } finally {
+        applying = false
+      }
+    } else if (edit.from !== edit.to || edit.text) replace(edit.from, edit.to, edit.text)
+    select(edit.selection)
+  }
+
+  function selection(): Selection {
+    return { start: editor?.selectionStart ?? 0, end: editor?.selectionEnd ?? 0 }
+  }
+
   function accept(index: number) {
     const c = completion
     const item = c?.items[index]
@@ -348,11 +409,133 @@
     onformat?.()
   }
 
-  function run(command: EditorCommand) {
-    if (command === 'suggest') void requestCompletion(true)
-    else if (command === 'parameterHints') void requestSignature()
-    else if (command === 'hover' && editor) void showTip(editor.selectionStart, null)
-    else if (command === 'format') void format()
+  /** Runs a command; false when it does not apply here (the key then does what it would). */
+  function run(command: EditorCommand): boolean {
+    if (!editor) return false
+    const text = current()
+    const sel = selection()
+    const editing = !readonly
+    switch (command) {
+      case 'suggest':
+        if (editing) void requestCompletion(true)
+        return true
+      case 'parameterHints':
+        if (editing) void requestSignature()
+        return true
+      case 'hover':
+        void showTip(sel.start, null)
+        return true
+      case 'format':
+        if (editing) void format()
+        return true
+      case 'toggleTabFocus':
+        tabMovesFocus = tabFocus.on = !tabMovesFocus
+        status = tabMovesFocus ? 'Tab now moves focus' : 'Tab now inserts indentation'
+        return true
+      case 'tab':
+      case 'shiftTab':
+        if (!editing || tabMovesFocus) return false
+        applyEdit(command === 'tab' ? tabEdit(text, sel) : outdentLines(text, sel))
+        return true
+      case 'lineBreak':
+      case 'lineAbove':
+      case 'indentLines':
+      case 'outdentLines':
+      case 'deleteLines':
+      case 'moveLinesUp':
+      case 'moveLinesDown':
+      case 'copyLinesUp':
+      case 'copyLinesDown':
+        if (editing) applyEdit(lineEdit(command, text, sel))
+        return true
+      case 'selectLine':
+        select(selectLine(text, sel))
+        return true
+      case 'jumpToBracket': {
+        const to = matchingBracket(text, sel.start)
+        if (to !== null) select({ start: to, end: to })
+        return true
+      }
+      case 'expandSelection': {
+        const last = expansions[expansions.length - 1]
+        if (!last || last.start !== sel.start || last.end !== sel.end) expansions = [sel]
+        const wider = expandSelection(text, sel)
+        if (wider) {
+          expansions = [...expansions, wider]
+          select(wider)
+        }
+        return true
+      }
+      case 'shrinkSelection': {
+        const last = expansions[expansions.length - 1]
+        if (last && last.start === sel.start && last.end === sel.end && expansions.length > 1) {
+          expansions = expansions.slice(0, -1)
+          select(expansions[expansions.length - 1])
+        }
+        return true
+      }
+      case 'scrollLineUp':
+      case 'scrollLineDown':
+      case 'scrollPageUp':
+      case 'scrollPageDown': {
+        const page = Math.max(LINE, editor.clientHeight - LINE)
+        const by = command === 'scrollLineUp' ? -LINE : command === 'scrollLineDown' ? LINE : command === 'scrollPageUp' ? -page : page
+        editor.scrollTop += by
+        return true
+      }
+    }
+  }
+
+  function lineEdit(command: EditorCommand, text: string, sel: Selection): TextEdit | null {
+    switch (command) {
+      case 'lineBreak':
+        return lineBreak(text, sel)
+      case 'lineAbove':
+        return lineAbove(text, sel)
+      case 'indentLines':
+        return indentLines(text, sel)
+      case 'outdentLines':
+        return outdentLines(text, sel)
+      case 'deleteLines':
+        return text ? deleteLines(text, sel) : null
+      case 'moveLinesUp':
+        return moveLines(text, sel, -1)
+      case 'moveLinesDown':
+        return moveLines(text, sel, 1)
+      case 'copyLinesUp':
+        return copyLines(text, sel, -1)
+      case 'copyLinesDown':
+        return copyLines(text, sel, 1)
+      default:
+        return null
+    }
+  }
+
+  /** Ctrl+C and Ctrl+X without a selection take the whole line, as in Desktop. */
+  function lineClipboard(event: KeyboardEvent) {
+    lineClip = null
+    if (!editor || !(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return
+    const key = event.key.toLowerCase()
+    const cut = key === 'x' || event.code === 'KeyX'
+    if (!(cut || key === 'c' || event.code === 'KeyC') || (cut && readonly)) return
+    const text = current()
+    const sel = selection()
+    if (sel.start !== sel.end || !text) return
+    const line = lineText(text, sel)
+    const lines = selectedLines(text, sel)
+    lineClip = { ...line, caret: sel }
+    // The default copy or cut then runs on this selection; `clip` writes the line instead.
+    editor.setSelectionRange(lines.start, Math.min(text.length, lines.end + 1))
+  }
+
+  function clip(event: ClipboardEvent) {
+    const pending = lineClip
+    lineClip = null
+    if (!pending || !event.clipboardData) return
+    event.preventDefault()
+    event.clipboardData.setData('text/plain', pending.text)
+    if (event.type === 'cut') setTimeout(() => applyEdit(pending.edit))
+    else select(pending.caret)
   }
 
   function closePopups() {
@@ -380,15 +563,17 @@
         return
       }
     }
+    lineClipboard(event)
     const command = editorCommand(event, chord)
     chord = command === 'chord'
     if (command === 'chord') {
       event.preventDefault()
       return
     }
-    if (command) {
+    if (command && run(command)) {
       event.preventDefault()
-      if (!readonly) run(command)
+      // The formula bar grows when a line is added.
+      if (command === 'lineBreak' || command === 'lineAbove') onkeydown?.(event)
       return
     }
     if (event.key === 'Escape' && (signature || tip)) {
@@ -486,11 +671,14 @@
       onmousemove={pointerMove}
       onmouseleave={pointerLeave}
       onblur={blur}
+      oncopy={clip}
+      oncut={clip}
     ></textarea>
   </div>
 </div>
 <span class="visually-hidden" id={problemId}>{problemText}</span>
 <span class="visually-hidden" id={statusId} role="status">{status}</span>
+<span class="visually-hidden" id={keysId}>{keysText}</span>
 
 {#if completion}
   {@const p = pointOf(completion.start)}

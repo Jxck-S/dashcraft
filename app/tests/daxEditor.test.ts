@@ -5,23 +5,59 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  bracketPairs,
   CODE_BACKGROUND,
   completionEdit,
+  copyLines,
+  deleteLines,
   editorCommand,
+  expandSelection,
+  indentLines,
+  lineAbove,
+  lineBreak,
   lineColumn,
+  lineText,
+  matchingBracket,
   moveActive,
+  moveLines,
   offsetAt,
+  outdentLines,
   segments,
+  selectLine,
   shiftOffset,
   shiftSpans,
   signatureParts,
+  tabEdit,
   textDelta,
   TOKEN_COLORS,
   triggers,
   utf16Index,
   withFormatted,
   type KeyLike,
+  type Selection,
+  type TextEdit,
 } from '../src/lib/daxEditor.ts'
+
+/** Text with the selection marked: `|` a cursor, `«…»` a selection. */
+function marked(source: string): { text: string; sel: Selection } {
+  const caret = source.indexOf('|')
+  if (caret >= 0) return { text: source.replace('|', ''), sel: { start: caret, end: caret } }
+  const start = source.indexOf('«')
+  const end = source.indexOf('»') - 1
+  return { text: source.replace('«', '').replace('»', ''), sel: { start, end } }
+}
+
+function show(text: string, sel: Selection): string {
+  if (sel.start === sel.end) return `${text.slice(0, sel.start)}|${text.slice(sel.start)}`
+  return `${text.slice(0, sel.start)}«${text.slice(sel.start, sel.end)}»${text.slice(sel.end)}`
+}
+
+/** Applies a line command to marked text and shows the result the same way. */
+function edit(source: string, command: (text: string, sel: Selection) => TextEdit | null): string | null {
+  const { text, sel } = marked(source)
+  const e = command(text, sel)
+  return e ? show(text.slice(0, e.from) + e.text + text.slice(e.to), e.selection) : null
+}
 
 test('textDelta finds the edit between two texts', () => {
   assert.deepEqual(textDelta('SUM(x)', 'SUMX(x)'), { start: 3, removed: 0, inserted: 1 })
@@ -194,6 +230,135 @@ test('the editor keys are those of Desktop’s formula editor', () => {
   assert.equal(editorCommand(key('i', { ctrlKey: true })), null)
   assert.equal(editorCommand(key(' ')), null)
   assert.equal(editorCommand(key('f', { altKey: true })), null)
+  // Line keys, from Microsoft's table for the formula editor.
+  assert.equal(editorCommand(key('Tab')), 'tab')
+  assert.equal(editorCommand(key('Tab', { shiftKey: true })), 'shiftTab')
+  assert.equal(editorCommand(key('Tab', { ctrlKey: true })), null)
+  assert.equal(editorCommand(key('m', { ctrlKey: true })), 'toggleTabFocus')
+  assert.equal(editorCommand(key('Enter', { shiftKey: true })), 'lineBreak')
+  assert.equal(editorCommand(key('Enter', { shiftKey: true, ctrlKey: true })), 'lineAbove')
+  assert.equal(editorCommand(key('Enter')), null)
+  assert.equal(editorCommand(key(']', { ctrlKey: true })), 'indentLines')
+  assert.equal(editorCommand(key('[', { ctrlKey: true })), 'outdentLines')
+  assert.equal(editorCommand(key('K', { ctrlKey: true, shiftKey: true })), 'deleteLines')
+  assert.equal(editorCommand(key('ArrowUp', { altKey: true })), 'moveLinesUp')
+  assert.equal(editorCommand(key('ArrowDown', { altKey: true })), 'moveLinesDown')
+  assert.equal(editorCommand(key('ArrowUp', { altKey: true, shiftKey: true })), 'copyLinesUp')
+  assert.equal(editorCommand(key('ArrowDown', { altKey: true, shiftKey: true })), 'copyLinesDown')
+  assert.equal(editorCommand(key('l', { ctrlKey: true })), 'selectLine')
+  assert.equal(editorCommand(key('|', { ctrlKey: true, shiftKey: true, code: 'Backslash' })), 'jumpToBracket')
+  assert.equal(editorCommand(key('ArrowRight', { altKey: true, shiftKey: true })), 'expandSelection')
+  assert.equal(editorCommand(key('ArrowLeft', { altKey: true, shiftKey: true })), 'shrinkSelection')
+  assert.equal(editorCommand(key('ArrowUp', { ctrlKey: true })), 'scrollLineUp')
+  assert.equal(editorCommand(key('PageDown', { altKey: true })), 'scrollPageDown')
+  assert.equal(editorCommand(key('ArrowUp')), null)
+})
+
+test('Tab and Shift+Tab indent like Desktop’s editor', () => {
+  assert.equal(edit('M = |SUM(x)', tabEdit), 'M =     |SUM(x)')
+  assert.equal(edit('ab|c', tabEdit), 'ab  |c')
+  assert.equal(edit('a«bc»d', tabEdit), 'a   |d')
+  assert.equal(edit('«a\nb»', tabEdit), '«    a\n    b»')
+  assert.equal(edit('    a|\nb', (t, s) => outdentLines(t, s)), 'a|\nb')
+  assert.equal(edit('  |a', (t, s) => outdentLines(t, s)), '|a')
+  assert.equal(edit('\t|a', (t, s) => outdentLines(t, s)), '|a')
+  assert.equal(edit('|a', (t, s) => outdentLines(t, s)), '|a')
+})
+
+test('Ctrl+] and Ctrl+[ indent and outdent the selected lines', () => {
+  assert.equal(edit('x\na|b\ny', (t, s) => indentLines(t, s)), 'x\n    a|b\ny')
+  // A selection that ends at a line's start leaves that line alone; empty lines stay empty.
+  assert.equal(edit('«a\n\nb\n»c', (t, s) => indentLines(t, s)), '«    a\n\n    b\n»c')
+  assert.equal(edit('«    a\n  b»', (t, s) => outdentLines(t, s)), '«a\nb»')
+  assert.equal(edit('    a«b\n    c»d', (t, s) => outdentLines(t, s)), 'a«b\nc»d')
+})
+
+test('Shift+Enter and Ctrl+Shift+Enter insert a line with the indentation', () => {
+  assert.equal(edit('    SUM(|x)', lineBreak), '    SUM(\n    |x)')
+  assert.equal(edit('a«b»c', lineBreak), 'a\n|c')
+  assert.equal(edit('M =\n    SU|M(x)', lineAbove), 'M =\n    |\n    SUM(x)')
+  assert.equal(edit('a|b', lineAbove), '|\nab')
+})
+
+test('Ctrl+Shift+K deletes the lines and keeps the column', () => {
+  assert.equal(edit('one\ntw|o\nthree', deleteLines), 'one\nth|ree')
+  assert.equal(edit('one\nthree|', deleteLines), 'one|')
+  assert.equal(edit('«a\nb»\nc', deleteLines), '|c')
+  assert.equal(edit('on|ly', deleteLines), '|')
+})
+
+test('Alt+↑ ↓ move and Shift+Alt+↑ ↓ copy the lines', () => {
+  assert.equal(edit('a\nb|b\nc', (t, s) => moveLines(t, s, -1)), 'b|b\na\nc')
+  assert.equal(edit('a\nb|b\nc', (t, s) => moveLines(t, s, 1)), 'a\nc\nb|b')
+  assert.equal(edit('a|\nb', (t, s) => moveLines(t, s, -1)), null)
+  assert.equal(edit('a\nb|', (t, s) => moveLines(t, s, 1)), null)
+  assert.equal(edit('«a\nb\n»c', (t, s) => moveLines(t, s, 1)), 'c\n«a\nb»')
+  assert.equal(edit('a\n«b\n»c', (t, s) => moveLines(t, s, -1)), '«b\n»a\nc')
+  assert.equal(edit('a\nb|b\nc', (t, s) => copyLines(t, s, 1)), 'a\nbb\nb|b\nc')
+  assert.equal(edit('a\nb|b\nc', (t, s) => copyLines(t, s, -1)), 'a\nb|b\nbb\nc')
+})
+
+test('Ctrl+L selects the line, then the next', () => {
+  const once = marked('a\nb|c\nd\ne')
+  const first = selectLine(once.text, once.sel)
+  assert.equal(show(once.text, first), 'a\n«bc\n»d\ne')
+  assert.equal(show(once.text, selectLine(once.text, first)), 'a\n«bc\nd\n»e')
+  const last = marked('a\nb|')
+  assert.equal(show(last.text, selectLine(last.text, last.sel)), 'a\n«b»')
+})
+
+test('Ctrl+C and Ctrl+X without a selection take the line', () => {
+  const { text, sel } = marked('a\nb|c\nd')
+  const line = lineText(text, sel)
+  assert.equal(line.text, 'bc\n')
+  assert.equal(edit('a\nb|c\nd', (t, s) => lineText(t, s).edit), 'a\nd|')
+})
+
+test('brackets pair outside strings, comments and quoted names', () => {
+  assert.deepEqual(bracketPairs('SUM(\'T(x\'[A]) // ( \n'), [[3, 12], [9, 11]])
+  assert.deepEqual(bracketPairs('IF(")", {1})'), [[2, 11], [8, 10]])
+  assert.deepEqual(bracketPairs('[a]]b]'), [[0, 5]])
+  assert.deepEqual(bracketPairs('/* ( */ (x'), [])
+  assert.deepEqual(bracketPairs('-- (\n(x)'), [[5, 7]])
+})
+
+test('Ctrl+Shift+\\ jumps to the matching bracket', () => {
+  const text = 'CALCULATE(SUM(x), y)'
+  assert.equal(matchingBracket(text, 9), 19)
+  assert.equal(matchingBracket(text, 10), 19)
+  assert.equal(matchingBracket(text, 19), 9)
+  assert.equal(matchingBracket(text, 20), 9)
+  // Inside a pair, not next to a bracket: its closing bracket.
+  assert.equal(matchingBracket(text, 17), 19)
+  // Outside every pair: the next bracket.
+  assert.equal(matchingBracket('ab (c)', 1), 3)
+  assert.equal(matchingBracket('abc', 1), null)
+})
+
+test('Shift+Alt+→ widens the selection step by step', () => {
+  const text = 'M = CALCULATE(SUM(Sales[Amount]), "a b")'
+  let sel: Selection = { start: 26, end: 26 }
+  const steps: string[] = []
+  for (let i = 0; i < 12; i++) {
+    const next = expandSelection(text, sel)
+    if (!next) break
+    steps.push(text.slice(next.start, next.end))
+    sel = next
+  }
+  assert.deepEqual(steps, [
+    'Amount',
+    '[Amount]',
+    'Sales[Amount]',
+    '(Sales[Amount])',
+    'SUM(Sales[Amount])',
+    'SUM(Sales[Amount]), "a b"',
+    '(SUM(Sales[Amount]), "a b")',
+    'CALCULATE(SUM(Sales[Amount]), "a b")',
+    'M = CALCULATE(SUM(Sales[Amount]), "a b")',
+  ])
+  assert.equal(expandSelection(text, sel), null)
+  const inString = expandSelection(text, { start: 35, end: 35 })
+  assert.equal(inString && text.slice(inString.start, inString.end), 'a')
 })
 
 test('formatting keeps the name and puts a multi-line expression on the next line', () => {

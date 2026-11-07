@@ -314,11 +314,311 @@ export function utf16Index(text: string, bytes: number): number {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Line editing (Desktop's formula editor keys)
+// ---------------------------------------------------------------------------------------------
+
+/** A selection as `selectionStart`/`selectionEnd` give it (`start <= end`). */
+export interface Selection {
+  start: number
+  end: number
+}
+
+/** Replace `[from, to)` with `text` (as typing would), then select `selection`. */
+export interface TextEdit {
+  from: number
+  to: number
+  text: string
+  selection: Selection
+}
+
+/** One indentation step: four spaces, as `dax.format` and Desktop's editor indent. */
+export const INDENT = '    '
+
+function lineStartOf(text: string, offset: number): number {
+  return text.lastIndexOf('\n', offset - 1) + 1
+}
+
+function lineEndOf(text: string, offset: number): number {
+  const i = text.indexOf('\n', offset)
+  return i < 0 ? text.length : i
+}
+
+function leadingSpace(line: string): string {
+  return /^[ \t]*/.exec(line)?.[0] ?? ''
+}
+
+/**
+ * The lines a selection touches, from the start of the first to the end of the last (without
+ * its line break). A selection that ends at the start of a line leaves that line out.
+ */
+export function selectedLines(text: string, sel: Selection): { start: number; end: number } {
+  const start = lineStartOf(text, sel.start)
+  const last = sel.end > sel.start && text[sel.end - 1] === '\n' ? sel.end - 1 : sel.end
+  return { start, end: lineEndOf(text, Math.max(start, last)) }
+}
+
+/**
+ * Rewrites the selected lines with `rewrite` (line → new line and how far a column moves) and
+ * maps the selection: a column follows its text; a selection that starts a line keeps it.
+ */
+function rewriteLines(text: string, sel: Selection, rewrite: (line: string, many: boolean) => { line: string; shift: number }): TextEdit {
+  const { start, end } = selectedLines(text, sel)
+  const lines = text.slice(start, end).split('\n')
+  const out = lines.map((l) => rewrite(l, lines.length > 1))
+  const map = (offset: number, keepLineStart: boolean): number => {
+    let old = start
+    let now = start
+    for (let i = 0; i < lines.length; i++) {
+      const lineEnd = old + lines[i].length
+      if (offset <= lineEnd || i === lines.length - 1) {
+        const column = Math.max(0, Math.min(lines[i].length, offset - old))
+        if (keepLineStart && column === 0) return now
+        return now + Math.max(0, Math.min(out[i].line.length, column + out[i].shift))
+      }
+      old = lineEnd + 1
+      now += out[i].line.length + 1
+    }
+    return now
+  }
+  const collapsed = sel.start === sel.end
+  const startAt = map(sel.start, !collapsed)
+  const endAt = sel.end > end ? sel.end + out.reduce((n, o, i) => n + o.line.length - lines[i].length, 0) : map(sel.end, false)
+  return { from: start, to: end, text: out.map((o) => o.line).join('\n'), selection: { start: startAt, end: collapsed ? startAt : endAt } }
+}
+
+/** Ctrl+]: indents the selected lines one step (empty lines too when only one is selected). */
+export function indentLines(text: string, sel: Selection, unit = INDENT): TextEdit {
+  return rewriteLines(text, sel, (line, many) => (many && line.length === 0 ? { line, shift: 0 } : { line: unit + line, shift: unit.length }))
+}
+
+/** Ctrl+[ and Shift+Tab: removes one step of indentation (a tab or up to `unit`'s spaces). */
+export function outdentLines(text: string, sel: Selection, unit = INDENT): TextEdit {
+  return rewriteLines(text, sel, (line) => {
+    const lead = leadingSpace(line)
+    let cut = 0
+    if (lead.startsWith('\t')) cut = 1
+    else while (cut < unit.length && cut < lead.length && lead[cut] === ' ') cut++
+    return { line: line.slice(cut), shift: -cut }
+  })
+}
+
+/**
+ * Tab: a selection over several lines indents them; otherwise the selection is replaced by
+ * spaces up to the next tab stop.
+ */
+export function tabEdit(text: string, sel: Selection, unit = INDENT): TextEdit {
+  const lines = selectedLines(text, sel)
+  if (sel.start !== sel.end && text.slice(lines.start, lines.end).includes('\n')) return indentLines(text, sel, unit)
+  const column = visualColumn(text.slice(lineStartOf(text, sel.start), sel.start), unit.length)
+  const spaces = ' '.repeat(unit.length - (column % unit.length))
+  const caret = sel.start + spaces.length
+  return { from: sel.start, to: sel.end, text: spaces, selection: { start: caret, end: caret } }
+}
+
+/** Shift+Enter: a line break at the cursor that keeps the line's indentation. */
+export function lineBreak(text: string, sel: Selection): TextEdit {
+  const lineStart = lineStartOf(text, sel.start)
+  const indent = leadingSpace(text.slice(lineStart, sel.start))
+  const caret = sel.start + 1 + indent.length
+  return { from: sel.start, to: sel.end, text: `\n${indent}`, selection: { start: caret, end: caret } }
+}
+
+/** Ctrl+Shift+Enter: an empty line above the cursor's line, with its indentation. */
+export function lineAbove(text: string, sel: Selection): TextEdit {
+  const lineStart = lineStartOf(text, sel.start)
+  const indent = leadingSpace(text.slice(lineStart, lineEndOf(text, lineStart)))
+  const caret = lineStart + indent.length
+  return { from: lineStart, to: lineStart, text: `${indent}\n`, selection: { start: caret, end: caret } }
+}
+
+/** Ctrl+Shift+K: deletes the selected lines; the cursor keeps its column on the next line. */
+export function deleteLines(text: string, sel: Selection): TextEdit {
+  const { start, end } = selectedLines(text, sel)
+  const column = sel.start - lineStartOf(text, sel.start)
+  const from = end < text.length ? start : Math.max(0, start - 1)
+  const to = end < text.length ? end + 1 : end
+  const rest = text.slice(0, from) + text.slice(to)
+  const lineStart = end < text.length ? from : lineStartOf(rest, from)
+  const caret = Math.min(lineEndOf(rest, lineStart), lineStart + column)
+  return { from, to, text: '', selection: { start: caret, end: caret } }
+}
+
+/** Alt+↑ / Alt+↓: moves the selected lines past the line above or below (null at the edge). */
+export function moveLines(text: string, sel: Selection, direction: -1 | 1): TextEdit | null {
+  const { start, end } = selectedLines(text, sel)
+  const block = text.slice(start, end)
+  if (direction < 0) {
+    if (start === 0) return null
+    const prevStart = lineStartOf(text, start - 1)
+    const prev = text.slice(prevStart, start - 1)
+    const by = prev.length + 1
+    return { from: prevStart, to: end, text: `${block}\n${prev}`, selection: { start: sel.start - by, end: sel.end - by } }
+  }
+  if (end >= text.length) return null
+  const nextEnd = lineEndOf(text, end + 1)
+  const next = text.slice(end + 1, nextEnd)
+  const by = next.length + 1
+  return { from: start, to: nextEnd, text: `${next}\n${block}`, selection: { start: sel.start + by, end: Math.min(text.length, sel.end + by) } }
+}
+
+/** Shift+Alt+↑ / Shift+Alt+↓: copies the selected lines above or below; the copy is selected. */
+export function copyLines(text: string, sel: Selection, direction: -1 | 1): TextEdit {
+  const { start, end } = selectedLines(text, sel)
+  const block = text.slice(start, end)
+  if (direction < 0) return { from: start, to: start, text: `${block}\n`, selection: { ...sel } }
+  const by = block.length + 1
+  return { from: end, to: end, text: `\n${block}`, selection: { start: sel.start + by, end: sel.end + by } }
+}
+
+/** Ctrl+L: selects the cursor's line with its line break; again, the next line too. */
+export function selectLine(text: string, sel: Selection): Selection {
+  const { start, end } = selectedLines(text, sel)
+  const whole = { start, end: Math.min(text.length, end + 1) }
+  if (whole.start === sel.start && whole.end === sel.end && whole.end < text.length) {
+    return { start, end: Math.min(text.length, lineEndOf(text, whole.end) + 1) }
+  }
+  return whole
+}
+
+/** The text of the selected lines, with a line break, for Ctrl+C and Ctrl+X without a selection. */
+export function lineText(text: string, sel: Selection): { text: string; edit: TextEdit } {
+  const { start, end } = selectedLines(text, sel)
+  return { text: `${text.slice(start, end)}\n`, edit: deleteLines(text, sel) }
+}
+
+interface Scanned {
+  /** `()`, `{}` and `[]` pairs, by opening offset. */
+  pairs: Array<[number, number]>
+  /** Strings and quoted table names: the offsets of the two quotes. */
+  quoted: Array<[number, number]>
+}
+
+/** Brackets and quoted text of DAX, outside comments (a quote or bracket in a string is text). */
+function scanDax(text: string): Scanned {
+  const pairs: Array<[number, number]> = []
+  const quoted: Array<[number, number]> = []
+  const stack: Array<[string, number]> = []
+  const closing: Record<string, string> = { ')': '(', '}': '{' }
+  const closeOf = (from: number, quote: string): number => {
+    let j = from + 1
+    while (j < text.length) {
+      if (text[j] !== quote) j++
+      else if (text[j + 1] === quote) j += 2
+      else return j
+    }
+    return -1
+  }
+  let i = 0
+  while (i < text.length) {
+    const ch = text[i]
+    const next = text[i + 1]
+    if ((ch === '/' && next === '/') || (ch === '-' && next === '-')) {
+      i = lineEndOf(text, i)
+    } else if (ch === '/' && next === '*') {
+      const close = text.indexOf('*/', i + 2)
+      i = close < 0 ? text.length : close + 2
+    } else if (ch === '"' || ch === "'" || ch === '[') {
+      const close = closeOf(i, ch === '[' ? ']' : ch)
+      if (close < 0) break
+      ;(ch === '[' ? pairs : quoted).push([i, close])
+      i = close + 1
+    } else {
+      if (ch === '(' || ch === '{') stack.push([ch, i])
+      else if (ch === ')' || ch === '}') {
+        const top = stack[stack.length - 1]
+        if (top && top[0] === closing[ch]) {
+          stack.pop()
+          pairs.push([top[1], i])
+        }
+      }
+      i++
+    }
+  }
+  pairs.sort((x, y) => x[0] - y[0])
+  return { pairs, quoted }
+}
+
+/** The bracket pairs `()`, `{}` and `[]` of DAX text, outside strings, comments and quoted names. */
+export function bracketPairs(text: string): Array<[number, number]> {
+  return scanDax(text).pairs
+}
+
+/**
+ * Ctrl+Shift+\: from a bracket next to the cursor to its partner (before it); elsewhere to the
+ * closing bracket of the innermost pair around the cursor, else the next bracket.
+ */
+export function matchingBracket(text: string, caret: number): number | null {
+  const pairs = bracketPairs(text)
+  for (const at of [caret, caret - 1]) {
+    for (const [open, close] of pairs) {
+      if (open === at) return close
+      if (close === at) return open
+    }
+  }
+  let inner: [number, number] | null = null
+  for (const p of pairs) if (p[0] < caret && caret <= p[1] && (!inner || p[0] > inner[0])) inner = p
+  if (inner) return inner[1]
+  let next: number | null = null
+  for (const [open, close] of pairs) for (const at of [open, close]) if (at >= caret && (next === null || at < next)) next = at
+  return next
+}
+
+/**
+ * Shift+Alt+→: the smallest larger range around the selection: the word, string or name at the
+ * cursor, the inside of a bracket pair, the pair, the line, then everything.
+ */
+export function expandSelection(text: string, sel: Selection): Selection | null {
+  const candidates: Selection[] = []
+  const word = /[\p{L}\p{N}_.]/u
+  let ws = sel.start
+  let we = sel.end
+  while (ws > 0 && word.test(text[ws - 1])) ws--
+  while (we < text.length && word.test(text[we])) we++
+  candidates.push({ start: ws, end: we })
+  const { pairs, quoted } = scanDax(text)
+  for (const [open, close] of [...pairs, ...quoted]) {
+    candidates.push({ start: open + 1, end: close }, { start: open, end: close + 1 })
+  }
+  const lines = selectedLines(text, sel)
+  candidates.push({ start: lineStartOf(text, sel.start) + leadingSpace(text.slice(lines.start, lines.end)).length, end: lines.end }, lines, { start: 0, end: text.length })
+  let best: Selection | null = null
+  for (const c of candidates) {
+    if (c.start > sel.start || c.end < sel.end || c.end - c.start <= sel.end - sel.start) continue
+    if (!best || c.end - c.start < best.end - best.start) best = c
+  }
+  return best
+}
+
+// ---------------------------------------------------------------------------------------------
 // Keys
 // ---------------------------------------------------------------------------------------------
 
 /** The editor's own commands (the list's navigation keys are handled while it is open). */
-export type EditorCommand = 'suggest' | 'parameterHints' | 'hover' | 'format'
+export type EditorCommand =
+  | 'suggest'
+  | 'parameterHints'
+  | 'hover'
+  | 'format'
+  | 'tab'
+  | 'shiftTab'
+  | 'toggleTabFocus'
+  | 'lineBreak'
+  | 'lineAbove'
+  | 'indentLines'
+  | 'outdentLines'
+  | 'deleteLines'
+  | 'moveLinesUp'
+  | 'moveLinesDown'
+  | 'copyLinesUp'
+  | 'copyLinesDown'
+  | 'selectLine'
+  | 'jumpToBracket'
+  | 'expandSelection'
+  | 'shrinkSelection'
+  | 'scrollLineUp'
+  | 'scrollLineDown'
+  | 'scrollPageUp'
+  | 'scrollPageDown'
 
 export interface KeyLike {
   key: string
@@ -330,19 +630,52 @@ export interface KeyLike {
 }
 
 /**
- * The command of a key press, as Desktop's formula editor and DAX query view have them:
- * Ctrl+Space suggestions, Ctrl+Shift+Space parameter info, Ctrl+K Ctrl+I the description at the
- * cursor (`chord` is true after Ctrl+K), Shift+Alt+F format.
+ * The command of a key press, as Microsoft documents Desktop's formula editor ("Formula editor in
+ * Power BI Desktop") and its DAX query view: Ctrl+Space suggestions, Ctrl+Shift+Space parameter
+ * info, Ctrl+K Ctrl+I the description at the cursor (`chord` is true after Ctrl+K), Shift+Alt+F
+ * format; Tab and Shift+Tab indent, Ctrl+M makes Tab move focus instead; Shift+Enter and
+ * Ctrl+Shift+Enter insert a line; Ctrl+] and Ctrl+[ indent and outdent; Ctrl+Shift+K deletes,
+ * Alt+↑ ↓ moves and Shift+Alt+↑ ↓ copies the lines; Ctrl+L selects the line; Ctrl+Shift+\ jumps
+ * to the matching bracket; Shift+Alt+→ ← expand and shrink the selection; Ctrl+↑ ↓ and
+ * Alt+PgUp PgDn scroll.
  */
 export function editorCommand(event: KeyLike, chord = false): EditorCommand | 'chord' | null {
   const mod = event.ctrlKey || event.metaKey
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key
   const code = event.code ?? ''
-  if (mod && !event.altKey && (key === ' ' || code === 'Space')) return event.shiftKey ? 'parameterHints' : 'suggest'
-  if (event.shiftKey && event.altKey && !mod && (key === 'f' || code === 'KeyF')) return 'format'
-  if (mod && !event.shiftKey && !event.altKey) {
+  const { shiftKey: shift, altKey: alt } = event
+  if (mod && !alt && (key === ' ' || code === 'Space')) return shift ? 'parameterHints' : 'suggest'
+  if (shift && alt && !mod) {
+    if (key === 'f' || code === 'KeyF') return 'format'
+    if (key === 'ArrowUp') return 'copyLinesUp'
+    if (key === 'ArrowDown') return 'copyLinesDown'
+    if (key === 'ArrowRight') return 'expandSelection'
+    if (key === 'ArrowLeft') return 'shrinkSelection'
+  }
+  if (alt && !shift && !mod) {
+    if (key === 'ArrowUp') return 'moveLinesUp'
+    if (key === 'ArrowDown') return 'moveLinesDown'
+    if (key === 'PageUp') return 'scrollPageUp'
+    if (key === 'PageDown') return 'scrollPageDown'
+  }
+  if (key === 'Tab' && !mod && !alt) return shift ? 'shiftTab' : 'tab'
+  if (key === 'Enter' && !alt) {
+    if (shift && !mod) return 'lineBreak'
+    if (shift && mod) return 'lineAbove'
+  }
+  if (mod && shift && !alt) {
+    if (key === 'k' || code === 'KeyK') return 'deleteLines'
+    if (code === 'Backslash' || key === '\\' || key === '|') return 'jumpToBracket'
+  }
+  if (mod && !shift && !alt) {
     if (chord && (key === 'i' || code === 'KeyI')) return 'hover'
     if (key === 'k' || code === 'KeyK') return 'chord'
+    if (key === 'm' || code === 'KeyM') return 'toggleTabFocus'
+    if (key === 'l' || code === 'KeyL') return 'selectLine'
+    if (key === ']' || code === 'BracketRight') return 'indentLines'
+    if (key === '[' || code === 'BracketLeft') return 'outdentLines'
+    if (key === 'ArrowUp') return 'scrollLineUp'
+    if (key === 'ArrowDown') return 'scrollLineDown'
   }
   return null
 }
