@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "suite": "m-arity",
+  "title": "The error Power BI Desktop raises when each M library function gets too few or too many arguments",
+  "fixture": "any",
+  "requiresTables": [],
+  "cases": [
+    {
+      "id": "arity",
+      "query": "// The m-arity ground-truth case (scripts/groundtruth/gen_corpus.py): for every function of Power BI\n// Desktop's M standard library (evaluated with the library as #shared), the error Desktop raises\n// when the function is called with one argument fewer than it requires (when it requires any) and\n// with one more than it accepts. Every argument is null: the count is checked before the function\n// runs. Names and error messages only: no documentation text is recorded.\n\nlet\n    Probe = (f as function, n as number) as text =>\n        let\n            r = try Function.Invoke(f, List.Repeat({null}, n))\n        in\n            if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else \"ok\",\n    Describe = (n as text) as list =>\n        let\n            f = Record.Field(#shared, n),\n            t = Value.Type(f),\n            required = Type.FunctionRequiredParameters(t),\n            accepted = Record.FieldCount(Type.FunctionParameters(t))\n        in\n            {n, if required = 0 then null else Probe(f, required - 1), Probe(f, accepted + 1)},\n    Functions = List.Select(\n        List.Sort(Record.FieldNames(#shared), Comparer.Ordinal),\n        (n) => (try Record.Field(#shared, n) is function otherwise false)\n    )\nin\n    List.Transform(Functions, Describe)\n"
+    }
+  ],
+  "language": "m"
+}

@@ -7,6 +7,35 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.3b M diagnostics and Desktop's name binding
+
+- **What:** `pbi-m` binds names when a query is compiled, as Power BI Desktop does: `refs.rs` scopes
+  let and record initializers exclusively (a step does not see itself), lists calls of free names
+  and the free names of a section; the new `binding.rs` decides what is unknown (library names,
+  custom-connector names) and holds Desktop's messages; `eval_source` and shared-query compilation
+  reject an unknown name before evaluating anything, and the `SelfOnly` lookup fallback is gone.
+  `Expression.Evaluate` joins the library; `#shared` lists the whole catalog; the arity error drops
+  the function name. `pbi_m::service::diagnostics` (syntax, `unknownName` with a suggestion,
+  `argumentCount`, `unsupported` and `extensionName` warnings, an `Environment` of model names)
+  backs the new `m.diagnostics` command (category `m`; `pbi_session::{m_service, m_environment}`).
+- **Why:** M7.3b (DESKTOP-PLAN), GAPS §2: the M editor needs diagnostics, and the evaluator was
+  more lenient than Desktop (it ran queries Desktop refuses).
+- **Desktop check:** partition queries of a temporary table, refreshed through TMSL, showed that an
+  unknown name anywhere (unused step, `try`, function body, untaken branch, type) fails the whole
+  query with "The name 'X' wasn't recognized.  Make sure it's spelled correctly." (two spaces),
+  that a misspelled library name gives the same message, and that the arity message never names
+  the function. The M recorder evaluates cases with `Expression.Evaluate(case, Library)`, whose
+  message differs ("[l,c-l,c] The name 'X' doesn't exist in the current context."); the M
+  ground-truth test now evaluates its cases the same way. 29 new `m-functions` cases (`names/*`,
+  `arity/*`) and the suite `m-arity` (`scripts/groundtruth/m-arity.m`: one argument too few and
+  too many for each of the 941 functions).
+- **Numbers:** `m-functions` 239 → 268 expressions, 267 match, 1 by design; `m-arity`: 941
+  functions, the language service's messages all match and so do the evaluator's 761 calls of
+  implemented functions; `m.diagnostics` finds no false error in the 44 queries of Acme and the
+  committed samples; 6 unit tests in `service/diagnostics.rs`, 3 in `refs.rs`, 3 registry tests in
+  `crates/pbi-ops/tests/m_language.rs`.
+- **Open:** M7.3c (`m.hover`, `m.signatureHelp`, `m.complete`), M7.3d (`m.format`).
+
 ### M7.3 M library growth, part 2
 
 - **What:** `pbi-m` gains 49 `Table.*` functions in two new modules. `stdlib/table_ops.rs` has the

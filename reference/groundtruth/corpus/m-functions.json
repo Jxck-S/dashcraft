@@ -960,6 +960,122 @@
     {
       "id": "language/as-error",
       "query": "\"a40\" as number"
+    },
+    {
+      "id": "names/unknown",
+      "query": "Undefined1"
+    },
+    {
+      "id": "names/unknown-unused-step",
+      "query": "let a = Undefined2 in 2"
+    },
+    {
+      "id": "names/unknown-in-try",
+      "query": "try Undefined3 otherwise 3"
+    },
+    {
+      "id": "names/unknown-in-untaken-branch",
+      "query": "if true then 4 else Undefined4"
+    },
+    {
+      "id": "names/unknown-in-function-body",
+      "query": "let f = (x) => Undefined5 + x in 5"
+    },
+    {
+      "id": "names/unknown-in-each",
+      "query": "let f = each Undefined6 in 6"
+    },
+    {
+      "id": "names/unknown-in-catch",
+      "query": "try Undefined7 catch (e) => e[Message]"
+    },
+    {
+      "id": "names/unknown-in-type",
+      "query": "type table [a = Undefined8]"
+    },
+    {
+      "id": "names/unknown-library-member",
+      "query": "Table.RowCnt"
+    },
+    {
+      "id": "names/case-sensitive",
+      "query": "text.upper(\"a\")"
+    },
+    {
+      "id": "names/sibling-fields",
+      "query": "[a = 1, b = a + 1][b]"
+    },
+    {
+      "id": "names/exclusive-let",
+      "query": "let a = 1, r = let a = a + 1 in a in r"
+    },
+    {
+      "id": "names/exclusive-record",
+      "query": "let a = 1 in [a = a + 1][a]"
+    },
+    {
+      "id": "names/self-reference",
+      "query": "let x9 = x9 in x9"
+    },
+    {
+      "id": "names/self-reference-unused",
+      "query": "let x10 = x10 in 10"
+    },
+    {
+      "id": "names/recursion-without-at",
+      "query": "let f11 = (n) => if n = 0 then 1 else n * f11(n - 1) in f11(3)"
+    },
+    {
+      "id": "names/inclusive-cycle",
+      "query": "let x12 = @x12 + 1 in x12"
+    },
+    {
+      "id": "names/let-cycle",
+      "query": "let a13 = b13, b13 = a13 in a13"
+    },
+    {
+      "id": "names/let-cycle-unused",
+      "query": "let a14 = b14, b14 = a14 in 14"
+    },
+    {
+      "id": "names/step-shadows-library",
+      "query": "let Text.Upper = (x) => x & \"!\" in Text.Upper(\"a\", \"b\", \"c\")"
+    },
+    {
+      "id": "names/parameter-shadows-library",
+      "query": "((List.Sum) => List.Sum)(15)"
+    },
+    {
+      "id": "names/each-underscore",
+      "query": "List.Transform({1, 2}, each _ + 1)"
+    },
+    {
+      "id": "arity/too-few",
+      "query": "Text.Upper()"
+    },
+    {
+      "id": "arity/too-many",
+      "query": "Text.Upper(\"a\", \"en-US\", 3)"
+    },
+    {
+      "id": "arity/unused",
+      "query": "let f = () => Text.Upper() in 16"
+    },
+    {
+      "id": "arity/in-try",
+      "query": "try Text.Lower(\"a\", \"b\", \"c\") otherwise 17"
+    },
+    {
+      "id": "arity/exact",
+      "query": "Number.Round(1.25, 1, RoundingMode.Up)"
+    },
+    {
+      "id": "arity/local-function",
+      "query": "let f = (a, optional b) => a in f(1, 2, 3, 4)"
+    },
+    {
+      "id": "arity/each",
+      "query": "(each _)(1, 2)"
     }
   ],
   "language": "m"

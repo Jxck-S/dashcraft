@@ -213,8 +213,20 @@ fn encode(v: &Value) -> Result<Json, MError> {
     })
 }
 
+/// Evaluates a case as the recorder does (`scripts/groundtruth/GroundTruth.psm1`):
+/// `Expression.Evaluate(case, Library)` with the dotted names of `#shared` as the environment, the
+/// case written into an M text literal with its quotes doubled. A case that does not parse is a
+/// syntax error (Desktop raises `[l,c-l,c] Token ... expected.`; the messages are not compared).
 fn evaluate(engine: &Engine, query: &str) -> Outcome {
-    let result = engine.evaluate(query).and_then(|v| encode(&v));
+    if let Err(e) = pbi_m::parse_expression(query) {
+        return Outcome::Syntax(e.to_string());
+    }
+    let probe = format!(
+        "let Library = Record.SelectFields(#shared, List.Select(Record.FieldNames(#shared), \
+         each Text.Contains(_, \".\"))) in Expression.Evaluate(\"{}\", Library)",
+        query.replace('"', "\"\"")
+    );
+    let result = engine.evaluate(&probe).and_then(|v| encode(&v));
     match result {
         Ok(json) => Outcome::Value(json),
         Err(e @ MError::Syntax { .. }) => Outcome::Syntax(e.to_string()),

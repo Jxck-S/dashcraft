@@ -1527,13 +1527,13 @@ mod tests {
         for (object, new_name, message) in [
             (
                 files,
-                "Source",
-                "cannot rename 'Files' to 'Source': the M query of table 'Orders' refers to 'Files' where 'Source' is one of its own steps, parameters or fields",
+                "Clean",
+                "cannot rename 'Files' to 'Clean': the M query of table 'Orders' refers to 'Files' where 'Clean' is one of its own steps, parameters or fields",
             ),
             (
                 orders,
-                "Rows",
-                "cannot rename 'Orders' to 'Rows': the M query of table 'Summary' refers to 'Orders' where 'Rows' is one of its own steps, parameters or fields",
+                "Count",
+                "cannot rename 'Orders' to 'Count': the M query of table 'Summary' refers to 'Orders' where 'Count' is one of its own steps, parameters or fields",
             ),
             (
                 files,
@@ -1555,14 +1555,16 @@ mod tests {
             assert!(matches!(err, CommandError::Rejected(_)), "{err}");
             assert_eq!(d, original);
         }
-        // A let step is in scope in every step of its let…
+        // A step is not in scope in its own initializer, so the reference
+        // still means the query, as in Power BI Desktop…
         RenameObject {
             object: files,
-            new_name: "Clean".into(),
+            new_name: "Source".into(),
         }
         .apply(&mut d)
-        .unwrap_err();
-        // …but a step of a query that does not refer to the old name is no
+        .unwrap();
+        assert!(partition(&d, "Orders").contains("Source = Csv.Document(Source)"));
+        // …and a step of a query that does not refer to the old name is no
         // obstacle.
         let mut d = original.clone();
         RenameObject {

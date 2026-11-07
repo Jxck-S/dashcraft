@@ -40,8 +40,9 @@ ready-to-edit ledger entries to `target/tmp/groundtruth/<suite>.proposed.json`.
 | `dax-lab-tables` | dax-lab | 5 | The dax-lab tables |
 | `dax-arity` | dax-lab | 929 | Every function of the DAX catalog (`crates/pbi-dax/src/service/catalog.txt`) with too few, the fewest, the most and too many arguments; no values, only whether Desktop accepts the call. Checked in `pbi-dax` (`catalog_argument_counts_match_power_bi_desktop`), not by `groundtruth.rs` |
 | `samples-*` | Microsoft samples | 286 | Metadata, row counts, column aggregates, small tables and every measure of three MIT PBIX samples (VertiPaq decoding against Desktop) |
-| `m-functions` | any | 239 | M expressions: literals, operators, `try` and errors, and every family of DashCraft's M library (text, numbers and their formats, rounding, dates and times, lists, records, tables, splitters, CSV, binary). Compared by `crates/pbi-m/tests/groundtruth.rs` |
+| `m-functions` | any | 268 | M expressions: literals, operators, `try` and errors, name binding (`names/*`: unknown names wherever they are, exclusive scoping, `@` recursion, cycles, case) and argument counts (`arity/*`), and every family of DashCraft's M library (text, numbers and their formats, rounding, dates and times, lists, records, tables, splitters, CSV, binary). Compared by `crates/pbi-m/tests/groundtruth.rs` |
 | `m-library` | any | 1 | Desktop's whole M standard library: every dotted name of `#shared` with its kind, parameters, return type, type or constant value (`scripts/groundtruth/m-library.m`). Generates `crates/pbi-m/src/service/library.txt` and is checked by `crates/pbi-m/tests/library.rs` |
+| `m-arity` | any | 1 | For each of the 941 functions of Desktop's M library, the error of a call with one argument too few and one too many (`scripts/groundtruth/m-arity.m`). Checked by `crates/pbi-m/tests/library.rs` (`argument_count_errors_match_desktop`): the language service's message from the catalog's counts, and the evaluator for the implemented functions |
 
 `cargo xtask groundtruth` prints the current counts.
 
@@ -77,7 +78,12 @@ recorder deletes afterwards. A recording case has `value` or `error`:
   only field starts with `#`;
 * `error` is `"Reason: Message"`.
 
-`crates/pbi-m/tests/groundtruth.rs` encodes DashCraft's results the same way. Numbers compare
+`crates/pbi-m/tests/groundtruth.rs` evaluates each case the same way (`Expression.Evaluate` with
+the library record) and encodes DashCraft's results the same way. Names are bound when the text
+is compiled, so an unknown name anywhere in a case fails it with `[l,c-l,c] The name 'X' doesn't
+exist in the current context.`; in a model query the same mistake reads `The name 'X' wasn't
+recognized.  Make sure it's spelled correctly.` (two spaces; checked against partition queries
+of a temporary table), which DashCraft's refresh and `m.diagnostics` report. Numbers compare
 within 1e-12 relative (Desktop computes some results as decimals), everything else exactly; an
 error anywhere in a case's value makes the whole case that error; errors compare by reason and
 message, and a Desktop syntax error (`[1,7-1,8] Token Literal expected.`) matches any DashCraft

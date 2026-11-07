@@ -103,10 +103,12 @@ fn closures_each_and_recursion() {
         eval("let fact = (n) => if n <= 1 then 1 else n * @fact(n - 1) in fact(10)"),
         n(3_628_800.0)
     );
-    // Power Query also accepts recursion without `@` in a let.
-    assert_eq!(
-        eval("let fib = (n) => if n < 2 then n else fib(n - 1) + fib(n - 2) in fib(15)"),
-        n(610.0)
+    // Scoping is exclusive: without `@` a step does not see itself, and Desktop rejects the
+    // query when it compiles (ground truth `names/recursion-without-at`).
+    let e = eval_err("let fib = (n) => if n < 2 then n else fib(n - 1) + fib(n - 2) in fib(15)");
+    assert!(
+        e.to_string().contains("The name 'fib' wasn't recognized"),
+        "{e}"
     );
     assert_eq!(eval("let f = (a, optional b) => b ?? a in f(1)"), n(1.0));
     let e = eval_err("((a) => a)(1, 2)");
@@ -228,8 +230,20 @@ fn try_does_not_hide_unsupported_functions() {
         }
         other => panic!("{other:?}"),
     }
-    let e = eval_err("Table.NotAFunction(1)");
-    assert!(matches!(&e, MError::Unsupported { function, .. } if function == "Table.NotAFunction"));
+    // A misspelled library member is an unknown name, even where it is never evaluated, as in
+    // Desktop; a dotted name outside the library (a custom connector) is unsupported where it
+    // is evaluated.
+    let e = eval_err("try Table.NotAFunction(1) otherwise 0");
+    assert!(
+        e.to_string()
+            .contains("The name 'Table.NotAFunction' wasn't recognized"),
+        "{e}"
+    );
+    let e = eval_err("MyConnector.Contents(1)");
+    assert!(
+        matches!(&e, MError::Unsupported { function, .. } if function == "MyConnector.Contents")
+    );
+    assert_eq!(eval("let a = MyConnector.Contents(1) in 2"), n(2.0));
     let e = eval_err("File.Contents(\"C:\\x.csv\")");
     assert!(e.to_string().contains("never accesses files"), "{e}");
     // Unreferenced steps are never evaluated.
@@ -606,8 +620,16 @@ fn sample_documents_evaluate_lazily() {
         )
         .unwrap_or_else(|e| panic!("{name}: {e}"))
     };
-    // Only `Records` and `Source` are needed; the other bindings are never evaluated.
-    assert_eq!(eval(&read("grammar_tour.m")), n(1.0));
+    // Only `Records` and `Source` are needed; the other bindings are never evaluated. Every
+    // name must bind, though: `Row` is a type defined by another query.
+    let mut shared = IndexMap::new();
+    shared.insert("Row".to_owned(), "type [A = text]".to_owned());
+    assert_eq!(
+        Engine::default()
+            .evaluate_query(&read("grammar_tour.m"), &shared)
+            .unwrap(),
+        n(1.0)
+    );
     // `Final = try Grouped otherwise ...`: `try` does not hide unsupported functions, so the
     // chain of steps reaches the data access of `Source`.
     let src = read("desktop_generated.m");

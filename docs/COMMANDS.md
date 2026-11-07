@@ -145,6 +145,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`dax.tokens`](#daxtokens) | What every token of a DAX text is (keyword, function, table, column, measure, variable, parameter, literal, comment) for highlighting, with declarations and unknown names marked. | A |
 | [`dax.references`](#daxreferences) | The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId. | A |
 | [`dax.format`](#daxformat) | Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded. | A |
+| [`m.diagnostics`](#mdiagnostics) | Syntax errors, unknown names, wrong argument counts and unsupported names in an M query or section, with Power BI Desktop's messages. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -178,7 +179,7 @@ Parameters:
 | Field | Type | Description |
 |---|---|---|
 | `schemas` (optional) | boolean | Include each command's parameter and result JSON Schemas. |
-| `category` (optional) | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` \| null | Only this category. |
+| `category` (optional) | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"m"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` \| null | Only this category. |
 | `agentSafe` (optional) | boolean | Only the commands offered to agents. |
 
 Result:
@@ -212,7 +213,7 @@ Result:
 | `id` | string | Stable dotted id (`doc.open`); the JSON-RPC method name. |
 | `title` | string |  |
 | `summary` | string | One line: what it does and returns. |
-| `category` | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` | What a command is about; groups the catalog. |
+| `category` | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"m"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` | What a command is about; groups the catalog. |
 | `mutatesDocument` | boolean | Changes the in-memory state of an open document (ordered per document). |
 | `longRunning` | boolean | Reports progress and can take a while. |
 | `agentSafe` | boolean | Offered to AI agents (MCP) by default. |
@@ -1205,6 +1206,34 @@ Examples:
 
 - A measure: `{"text":"calculate(sum(Sales[Amount]),filter(all(Stores),Stores[Region]=\"West\"))"}`
 - A query, narrow, lower-case keywords: `{"text":"EVALUATE SUMMARIZECOLUMNS(Stores[Region], \"Sales\", [Total Sales]) ORDER BY Stores[Region]","maxWidth":40,"keywordCase":"lower"}`
+
+## M
+
+### `m.diagnostics`
+
+**Check M.** Syntax errors, unknown names, wrong argument counts and unsupported names in an M query or section, with Power BI Desktop's messages.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` (optional) | string \| null | Check names against this document's queries and parameters (`d1`, …). Without it, a plain name that is not in the standard library may be another query and is not reported. |
+| `text` | string | The M text: a query (`let … in …`, any expression) or a section document (`section Section1; …`). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `documentRevision`? | integer \| null | The document revision whose names were used (with `docId`). |
+| `ok` | boolean | No errors (warnings allowed). |
+| `diagnostics` | MDiagnosticOut[] | In source order, at most 1000. |
+
+Examples:
+
+- A query against the model: `{"docId":"d1","text":"let Source = Table.RowCnt(Orders) in Source"}`
+- Without a document: `{"text":"let a = Text.Upper() in a"}`
 
 ## Render
 

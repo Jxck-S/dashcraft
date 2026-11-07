@@ -206,6 +206,13 @@ pub(crate) fn syntax_error(query: Option<&str>, src: &str, e: &crate::ParseError
 
 fn eval_source(it: &Interp, src: &str, shared: &IndexMap<String, String>) -> Result<Value, MError> {
     let doc = crate::parse_document(src).map_err(|e| syntax_error(None, src, &e))?;
+    let free = match &doc {
+        Document::Expression(e) => crate::refs::free_names(e),
+        Document::Section(s) => crate::refs::section_free_names(s),
+    };
+    if let Some(n) = crate::binding::first_unbound(&free, |n| shared.contains_key(n), true) {
+        return Err(crate::binding::unrecognized(n, None, src));
+    }
     let root = it.set_shared(shared);
     let text = Arc::new(SourceText {
         name: None,

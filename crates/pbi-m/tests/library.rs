@@ -3,13 +3,18 @@
 //! `src/service/library.txt` is generated from `reference/groundtruth/recordings/m-library.json`
 //! (`DASHCRAFT_BLESS=1 cargo test -p pbi-m --test library` rewrites it), and every library name
 //! DashCraft implements must exist in Desktop's library with the same kind, parameter names and
-//! counts, type and constant value.
+//! counts, type and constant value. The suite `m-arity` holds the error Desktop raises when each
+//! library function gets one argument too few or too many: the language service reports the same
+//! message from the catalog's counts, and the evaluator raises it for the implemented functions.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use std::path::PathBuf;
 
-use pbi_m::service::{LibraryKind, catalog, catalog_desktop_version, catalog_entry};
+use indexmap::IndexMap;
+use pbi_m::service::{
+    LibraryKind, argument_count_message, catalog, catalog_desktop_version, catalog_entry,
+};
 use pbi_m::{Engine, TypeValue, Value, library_names};
 use serde_json::Value as Json;
 
@@ -25,12 +30,16 @@ fn catalog_path() -> PathBuf {
 
 /// The recording, or `None` (after printing SKIP) when it is missing.
 fn recording() -> Option<Json> {
-    let path = reference_dir().join("groundtruth/recordings/m-library.json");
+    suite_recording("m-library")
+}
+
+fn suite_recording(suite: &str) -> Option<Json> {
+    let path = reference_dir().join(format!("groundtruth/recordings/{suite}.json"));
     let Ok(text) = std::fs::read_to_string(&path) else {
         println!("SKIP: {} missing", path.display());
         return None;
     };
-    Some(serde_json::from_str(&text).expect("m-library.json parses"))
+    Some(serde_json::from_str(&text).expect("the recording parses"))
 }
 
 fn recorded_entries(rec: &Json) -> Vec<Json> {
@@ -266,5 +275,83 @@ fn catalog_lookup_and_signatures() {
     assert!(
         quoted.is_some(),
         "some connector has a quoted parameter name"
+    );
+}
+
+/// What DashCraft raises for `name` called with `n` null arguments, as the recording writes it.
+fn invoke_with_nulls(engine: &Engine, name: &str, n: usize) -> String {
+    let args = vec!["null"; n].join(", ");
+    let query = format!(
+        "let r = try {name}({args}) in if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else \"ok\""
+    );
+    match engine.evaluate_query(&query, &IndexMap::new()) {
+        Ok(Value::Text(t)) => t.to_string(),
+        Ok(v) => format!("{:?}", v.kind()),
+        Err(e) => format!("error: {e}"),
+    }
+}
+
+#[test]
+fn argument_count_errors_match_desktop() {
+    let Some(rec) = suite_recording("m-arity") else {
+        return;
+    };
+    let rows = rec["cases"]
+        .as_array()
+        .and_then(|cases| cases.iter().find(|c| c["id"] == "arity"))
+        .and_then(|c| c["value"].as_array())
+        .cloned()
+        .expect("the recording has the arity case's value");
+    let functions = catalog()
+        .iter()
+        .filter(|e| matches!(e.kind, LibraryKind::Function(_)))
+        .count();
+    assert_eq!(rows.len(), functions, "one row per library function");
+    let engine = Engine::default();
+    let mut problems = Vec::new();
+    let mut evaluated = 0;
+    for row in &rows {
+        let name = row[0].as_str().expect("name");
+        let Some(LibraryKind::Function(f)) = catalog_entry(name).map(|e| &e.kind) else {
+            problems.push(format!("{name}: not a function of the catalog"));
+            continue;
+        };
+        let (min, max) = (f.required, f.params.len());
+        let implemented = library_names().contains(&name);
+        let mut probes = vec![(max + 1, &row[2])];
+        if let Some(fewer) = min.checked_sub(1) {
+            probes.push((fewer, &row[1]));
+        } else if !row[1].is_null() {
+            problems.push(format!(
+                "{name}: Desktop requires arguments, the catalog none"
+            ));
+        }
+        for (n, recorded) in probes {
+            let recorded = recorded.as_str().unwrap_or("");
+            let ours = format!("Expression.Error: {}", argument_count_message(n, min, max));
+            if ours != recorded {
+                problems.push(format!("{name}({n} args): {ours:?}, Desktop {recorded:?}"));
+            }
+            if implemented {
+                evaluated += 1;
+                let got = invoke_with_nulls(&engine, name, n);
+                if got != recorded {
+                    problems.push(format!(
+                        "{name}({n} args) evaluates to {got:?}, Desktop {recorded:?}"
+                    ));
+                }
+            }
+        }
+    }
+    assert!(evaluated > 500, "only {evaluated} calls evaluated");
+    assert!(
+        problems.is_empty(),
+        "{} argument-count errors differ from Desktop:\n{}",
+        problems.len(),
+        problems.join("\n")
+    );
+    println!(
+        "{} functions checked; {evaluated} evaluator calls give Desktop's message",
+        rows.len()
     );
 }

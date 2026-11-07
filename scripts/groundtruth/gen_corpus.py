@@ -31,6 +31,7 @@ ACME_DEF = ACME / "AcmeOutfitters.SemanticModel" / "definition"
 FUNCTIONS_RS = ROOT / "crates" / "pbi-dax" / "tests" / "functions.rs"
 CATALOG_TXT = ROOT / "crates" / "pbi-dax" / "src" / "service" / "catalog.txt"
 M_LIBRARY = ROOT / "scripts" / "groundtruth" / "m-library.m"
+M_ARITY = ROOT / "scripts" / "groundtruth" / "m-arity.m"
 OUT = ROOT / "reference" / "groundtruth" / "corpus"
 
 ACME_TABLES = [
@@ -960,6 +961,15 @@ def m_library_suite() -> dict:
     )
 
 
+def m_arity_suite() -> dict:
+    text = M_ARITY.read_text(encoding="utf-8")
+    return m_suite(
+        "m-arity",
+        "The error Power BI Desktop raises when each M library function gets too few or too many arguments",
+        [{"id": "arity", "query": text}],
+    )
+
+
 # M expressions for the m-functions suite: (id, expression). Error cases use distinct messages:
 # within one probe batch Desktop may reuse the error record of an earlier case with the same
 # message (reference/groundtruth/README.md).
@@ -1226,6 +1236,39 @@ M_FUNCTIONS = [
     ("language/meta", 'Value.Metadata(Value.ReplaceMetadata(1, [m = "x"]))'),
     ("language/is-as", '{1 is number, null is nullable text, "a" as text, 1 is any}'),
     ("language/as-error", '"a40" as number'),
+    # Names: what Desktop does with names that are not defined, M's exclusive scoping (a let step
+    # or record field cannot see itself without `@`) and cycles. Each case is its own expression:
+    # an undefined name may fail the whole expression.
+    ("names/unknown", 'Undefined1'),
+    ("names/unknown-unused-step", 'let a = Undefined2 in 2'),
+    ("names/unknown-in-try", 'try Undefined3 otherwise 3'),
+    ("names/unknown-in-untaken-branch", 'if true then 4 else Undefined4'),
+    ("names/unknown-in-function-body", 'let f = (x) => Undefined5 + x in 5'),
+    ("names/unknown-in-each", 'let f = each Undefined6 in 6'),
+    ("names/unknown-in-catch", 'try Undefined7 catch (e) => e[Message]'),
+    ("names/unknown-in-type", 'type table [a = Undefined8]'),
+    ("names/unknown-library-member", 'Table.RowCnt'),
+    ("names/case-sensitive", 'text.upper("a")'),
+    ("names/sibling-fields", '[a = 1, b = a + 1][b]'),
+    ("names/exclusive-let", 'let a = 1, r = let a = a + 1 in a in r'),
+    ("names/exclusive-record", 'let a = 1 in [a = a + 1][a]'),
+    ("names/self-reference", 'let x9 = x9 in x9'),
+    ("names/self-reference-unused", 'let x10 = x10 in 10'),
+    ("names/recursion-without-at", 'let f11 = (n) => if n = 0 then 1 else n * f11(n - 1) in f11(3)'),
+    ("names/inclusive-cycle", 'let x12 = @x12 + 1 in x12'),
+    ("names/let-cycle", 'let a13 = b13, b13 = a13 in a13'),
+    ("names/let-cycle-unused", 'let a14 = b14, b14 = a14 in 14'),
+    ("names/step-shadows-library", 'let Text.Upper = (x) => x & "!" in Text.Upper("a", "b", "c")'),
+    ("names/parameter-shadows-library", '((List.Sum) => List.Sum)(15)'),
+    ("names/each-underscore", 'List.Transform({1, 2}, each _ + 1)'),
+    # Argument counts.
+    ("arity/too-few", 'Text.Upper()'),
+    ("arity/too-many", 'Text.Upper("a", "en-US", 3)'),
+    ("arity/unused", 'let f = () => Text.Upper() in 16'),
+    ("arity/in-try", 'try Text.Lower("a", "b", "c") otherwise 17'),
+    ("arity/exact", 'Number.Round(1.25, 1, RoundingMode.Up)'),
+    ("arity/local-function", 'let f = (a, optional b) => a in f(1, 2, 3, 4)'),
+    ("arity/each", '(each _)(1, 2)'),
 ]
 
 
@@ -1257,6 +1300,7 @@ def main() -> int:
         dax_functions_suite(),
         dax_arity_suite(),
         m_library_suite(),
+        m_arity_suite(),
         m_functions_suite(),
         *sample_suites(),
     ]

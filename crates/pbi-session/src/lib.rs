@@ -120,8 +120,10 @@
 //! # Language services
 //!
 //! [`dax_service`] re-exports `pbi-dax`'s DAX language service
-//! (diagnostics against a model's names) for the layers above, which do not
-//! depend on `pbi-dax` directly.
+//! (diagnostics against a model's names) and [`m_service`] `pbi-m`'s M
+//! language service for the layers above, which do not depend on `pbi-dax`
+//! or `pbi-m` directly; [`m_environment`] lists the names a model's M
+//! queries can refer to.
 
 pub mod cache;
 mod created;
@@ -169,8 +171,10 @@ pub use options::{
 };
 pub use pbi_dax::service as dax_service;
 pub use pbi_engine::{CancellationToken, ColumnStats, PageRequest, SortSpec, Value};
+pub use pbi_m::service as m_service;
 pub use pbi_m::{Clock, FixedClock, SystemClock};
 pub use query::{MeasureValue, value_to_json};
+pub use refresh::mquery::m_environment;
 pub use report::{
     ColumnRefresh, LOAD_MANUALLY_HINT, OFFLINE_HINT, Recalculated, RefreshEvent, RefreshKind,
     RefreshReport, TableRefresh, TableStatus,

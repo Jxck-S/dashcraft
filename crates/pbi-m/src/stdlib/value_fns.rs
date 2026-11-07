@@ -4,7 +4,9 @@
 use std::sync::Arc;
 
 use super::Builder;
-use super::args::{arg, int_arg, items, list_arg, req_func, req_list, req_text, text_arg};
+use super::args::{
+    arg, int_arg, items, list_arg, record_arg, req_func, req_list, req_text, text_arg,
+};
 use super::csv::decode_bytes;
 use crate::ast::PrimitiveType;
 use crate::eval::interp::{Interp, convert_error};
@@ -68,6 +70,11 @@ pub(super) fn register(b: &mut Builder) {
         trace,
     );
     b.func("Function.Invoke", &["function", "args"], function_invoke);
+    b.func(
+        "Expression.Evaluate",
+        &["document", "?environment"],
+        expression_evaluate,
+    );
     b.func("Json.Document", &["jsonText", "?encoding"], json_document);
 
     for (name, p) in [
@@ -204,6 +211,11 @@ fn base64_decode(s: &str) -> Option<Vec<u8>> {
         }
     }
     Some(out)
+}
+
+fn expression_evaluate(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let document = req_text(args, 0)?;
+    it.evaluate_document(document, record_arg(args, 1)?)
 }
 
 fn hash_binary(it: &Interp, args: &[Value]) -> Result<Value, MError> {

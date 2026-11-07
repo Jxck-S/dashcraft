@@ -67,6 +67,27 @@ pub(crate) fn shared_queries(model: &Model) -> IndexMap<String, String> {
     shared
 }
 
+/// What an M query of `model` can refer to besides the library, for the M
+/// language service: the model's M expressions (parameters, functions,
+/// helper queries) and every table loaded by an M query, by name.
+pub fn m_environment(model: &Model) -> pbi_m::service::Environment {
+    let expressions = model
+        .expressions
+        .iter()
+        .filter(|e| e.kind == pbi_model::ExpressionKind::M)
+        .map(|e| e.name.clone());
+    let tables = model
+        .tables
+        .iter()
+        .filter(|t| {
+            t.partitions
+                .iter()
+                .any(|p| matches!(p.source, pbi_model::PartitionSource::M { .. }))
+        })
+        .map(|t| t.name.clone());
+    pbi_m::service::Environment::with_names(expressions.chain(tables))
+}
+
 /// Arrow type requested from M for a model data type (`None`: use the
 /// query's column type).
 fn m_arrow_type(dt: &DataType) -> Option<ArrowType> {

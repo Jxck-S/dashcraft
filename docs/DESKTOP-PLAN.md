@@ -895,6 +895,15 @@ optional language server.
     Desktop's 941 functions; `m-functions` 239 expressions, all match Desktop but the by-design
     decimal case. The 20 `Table.*` functions left out are fuzzy matching, keys, partition keys,
     `Table.View`, `Table.Profile` and connector internals.
+  - [x] M7.3b (2026-11-07) M diagnostics: names are bound when a query is compiled, as Desktop
+    does (an unknown name anywhere, even in an unused step or inside `try`, fails the query with
+    Desktop's message; a step does not see itself; recursion needs `@`), `Expression.Evaluate`,
+    and Desktop's argument-count message. `pbi_m::service::diagnostics` and the `m.diagnostics`
+    command report syntax errors, unknown names with a suggestion, wrong argument counts of
+    library functions, and warnings for names DashCraft cannot evaluate. Checked against Desktop:
+    29 new `m-functions` cases (268, all match but the by-design decimal case) and the
+    argument-count errors of all 941 functions (suite `m-arity`); no false errors on the 44
+    queries of Acme and the samples.
 - [ ] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of
   properties and object references, formatting that matches the writer.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,

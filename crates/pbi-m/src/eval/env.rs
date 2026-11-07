@@ -76,8 +76,8 @@ pub(crate) struct Env {
 
 pub(crate) enum Lookup {
     Found(Lazy),
-    /// Only the binding currently being defined has this name (visible without `@` as a
-    /// fallback when no outer scope or library defines it, for recursive functions).
+    /// Only the binding currently being defined has this name: in scope through `@name` only
+    /// (M scoping is exclusive), except for the implicit `_`.
     SelfOnly(Lazy),
     Missing,
 }

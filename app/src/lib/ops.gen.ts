@@ -496,7 +496,7 @@ export interface CapabilityLimits {
 export type CardinalityParam = 'one' | 'many'
 
 /** What a command is about; groups the catalog. */
-export type Category = 'meta' | 'workspace' | 'inspect' | 'lint' | 'data' | 'dax' | 'render' | 'canvas' | 'export' | 'convert' | 'transform' | 'edit' | 'ai'
+export type Category = 'meta' | 'workspace' | 'inspect' | 'lint' | 'data' | 'dax' | 'm' | 'render' | 'canvas' | 'export' | 'convert' | 'transform' | 'edit' | 'ai'
 
 /** One chat message. */
 export interface ChatMessage {
@@ -2543,6 +2543,51 @@ export interface LintSummaryOut {
   notes?: string[]
 }
 
+/** One problem in the text. */
+export interface MDiagnosticOut {
+  /**
+   * `error` (Power BI Desktop rejects the query) or `warning` (valid M
+   * that DashCraft cannot evaluate).
+   */
+  severity: string
+  /**
+   * `syntax`, `unknownName`, `argumentCount`, `unsupported` or
+   * `extensionName`.
+   */
+  code: string
+  /** Desktop's message for errors. */
+  message: string
+  /** Start of the text the problem covers. */
+  start: TextPositionOut
+  /** End (exclusive). */
+  end: TextPositionOut
+  /** A "did you mean …" correction of an unknown name. */
+  suggestion?: string | null
+}
+
+export interface MDiagnosticsOut {
+  /** The document revision whose names were used (with `docId`). */
+  documentRevision?: number | null
+  /** No errors (warnings allowed). */
+  ok: boolean
+  /** In source order, at most 1000. */
+  diagnostics: MDiagnosticOut[]
+}
+
+export interface MDiagnosticsParams {
+  /**
+   * Check names against this document's queries and parameters (`d1`, …).
+   * Without it, a plain name that is not in the standard library may be
+   * another query and is not reported.
+   */
+  docId?: string | null
+  /**
+   * The M text: a query (`let … in …`, any expression) or a section
+   * document (`section Section1; …`).
+   */
+  text: string
+}
+
 /** One M expression a query rename rewrites. */
 export interface MRewriteOut {
   /**
@@ -4341,6 +4386,8 @@ export interface OpsCommands {
   'dax.references': { params: DaxReferencesParams; output: DaxReferencesOut }
   /** Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded. */
   'dax.format': { params: DaxFormatParams; output: DaxFormatOut }
+  /** Syntax errors, unknown names, wrong argument counts and unsupported names in an M query or section, with Power BI Desktop's messages. */
+  'm.diagnostics': { params: MDiagnosticsParams; output: MDiagnosticsOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4466,6 +4513,7 @@ export const OPS_META = {
   'dax.tokens': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'dax.references': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'dax.format': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'm.diagnostics': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4627,6 +4675,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     daxReferences: (params: DaxReferencesParams, options?: O) => run('dax.references', params, options),
     /** Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded. */
     daxFormat: (params: DaxFormatParams, options?: O) => run('dax.format', params, options),
+    /** Syntax errors, unknown names, wrong argument counts and unsupported names in an M query or section, with Power BI Desktop's messages. */
+    mDiagnostics: (params: MDiagnosticsParams, options?: O) => run('m.diagnostics', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
