@@ -40,7 +40,7 @@ logos or CSS are used; the app is named "DashCraft" everywhere.
 | Ribbon collapse | chevron at the ribbon's bottom right, Ctrl+F1, double-click a tab [1] | ✅ collapsed, a tab click shows the ribbon floating |
 | File (backstage) | Home, New, Open, Save, Save as, Get data, Import, Export, Publish, Options and settings, Get help | ✅ Home, Open (browse, folder, **Recent** persisted in the app config folder), Export (PBIP, PBIT), Options and settings → **Options** (a Desktop-style Options dialog: pages on the left under Global / Current file, only ✚ **AI** implemented, the rest ⛔) and Data source settings (**Blob map…**), Get help → About, **Save** and **Save as** (a new PBIP project folder; Ctrl+Shift+S); ⛔ New, Get data, Import, Export to PDF, Publish; ✚ Close (closes the document). Closing the document or the window, or opening another file, with unsaved edits asks *Save*, *Don't save* or *Cancel* |
 | View rail | left: Report, Table, Model, DAX query, TMDL [11] | ✅ same order |
-| Formula bar | under the ribbon when a measure, calculated column or calculated table is selected | ✅ edits `Name = expression` (Enter or ✓ commits, Shift+Enter new line, Esc or ✕ cancels; a rename and the new DAX are one undo step; errors under the editor), expandable; IntelliSense (M7.5a): token colours, squiggles, suggestion list (typing or Ctrl+Space; ↑ ↓, Enter or Tab, Esc), parameter info (`(` `,` or Ctrl+Shift+Space), descriptions (pointer or Ctrl+K Ctrl+I), Shift+Alt+F format; Desktop's line-editing keys come in M7.5b; read-only for a remote model; ✚ ✦ **Explain with AI** for measures (opt-in AI) |
+| Formula bar | under the ribbon when a measure, calculated column or calculated table is selected | ✅ edits `Name = expression` (Enter or ✓ commits, Shift+Enter new line, Esc or ✕ cancels; a rename and the new DAX are one undo step; errors under the editor), expandable; IntelliSense (M7.5a): token colours, squiggles, suggestion list (typing or Ctrl+Space; ↑ ↓, Enter or Tab, Esc), parameter info (`(` `,` or Ctrl+Shift+Space), descriptions (pointer or Ctrl+K Ctrl+I), Shift+Alt+F format; Desktop's formula editor keys (M7.5b; see Keyboard); read-only for a remote model; ✚ ✦ **Explain with AI** for measures (opt-in AI) |
 | Notification bar | yellow bar under the ribbon | ✅ remote model, missing model, cached data (+ **Refresh from source**) |
 | Right panes, Report view | Filters, Visualizations, Data; Selection / Bookmarks open to their left [5][6][7] | ✅ same order; each collapses to a vertical strip with « and its title |
 | Page tabs | under the canvas: layout switch, ‹ ›, page tabs, "+" [7] | ✅ desktop / mobile switch (mobile ⛔), previous / next page (Ctrl+Page Up / Down), tabs (hidden pages greyed with the hidden icon), "+" ⛔; ✚ report picker when a PBIP holds several reports |
@@ -104,3 +104,12 @@ undo, Ctrl/⌘+Y or Ctrl/⌘+Shift+Z redo (in a text field these undo and redo i
 collapse / pin the ribbon, Alt+Q search,
 Ctrl/⌘+Page Up / Page Down previous / next page, Ctrl/⌘+wheel zoom (canvas, diagram), F5 or
 Ctrl/⌘+Enter run a DAX query, Ctrl/⌘+/ comment lines, Esc closes menus, File and dialogs.
+
+In the formula bar (M7.5, as Desktop's formula editor): Enter commits, Esc cancels, Shift+Enter
+new line (keeps the indentation), Ctrl+Shift+Enter line above; Ctrl+Space suggestions,
+Ctrl+Shift+Space parameter info, Ctrl+K Ctrl+I describe, Shift+Alt+F format; Tab and Shift+Tab,
+Ctrl+] and Ctrl+[ indent and outdent, Ctrl+M makes Tab move focus (and back); Alt+↑ ↓ move
+lines, Shift+Alt+↑ ↓ copy lines, Ctrl+Shift+K delete lines, Ctrl+L select line, Ctrl+X and
+Ctrl+C without a selection cut and copy the line, Ctrl+Shift+\\ matching bracket, Shift+Alt+→ ←
+expand and shrink the selection, Ctrl+↑ ↓ and Alt+PgUp PgDn scroll. Not supported: extra
+cursors, column selection, Ctrl+G, Ctrl+U ([details](../../docs/accessibility/m7-formula-bar.md#desktops-formula-editor-keys)).

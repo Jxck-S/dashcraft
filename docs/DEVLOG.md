@@ -7,6 +7,33 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.5b Formula editor keys and accessibility
+
+- **What:** the formula bar's DAX editor gets the keys of Microsoft's table for Power BI Desktop's
+  formula editor that one caret can do: Tab and Shift+Tab, Ctrl+] and Ctrl+[ indent and outdent;
+  Ctrl+M makes Tab move focus (shared by every formula editor in the window, in the editor's
+  accessible description and announced); Shift+Enter breaks the line keeping its indentation and
+  Ctrl+Shift+Enter inserts one above; Alt+↑ ↓ move, Shift+Alt+↑ ↓ copy and Ctrl+Shift+K
+  delete the lines; Ctrl+L selects the line (again: the next); Ctrl+X and Ctrl+C without a
+  selection take the line (the line is selected on keydown so the browser's own cut and copy run,
+  and the clipboard handler writes the line); Ctrl+Shift+\\ jumps to the matching bracket
+  (strings and comments skipped); Shift+Alt+→ ← expand and shrink the selection (word,
+  bracket contents, brackets, line, all); Ctrl+↑ ↓ and Alt+PgUp PgDn scroll. Pure helpers in
+  `app/src/lib/daxEditor.ts`, each edit applied with `insertText` so the editor's undo keeps it.
+  `scripts/app-checks/formula-keys.mjs` runs the keys and A1–A5 with the suggestion list,
+  parameter info, a description and a squiggle open; the checker helpers moved from
+  `editing-a11y.mjs` to a shared `a11y.mjs`. Results in `docs/accessibility/m7-formula-bar.md`.
+- **Why:** M7.5 (DESKTOP-PLAN), its acceptance criterion 5 (A1–A6 for the formula bar with
+  completion lists and squiggles); keys from Microsoft's *Formula editor in Power BI Desktop*.
+- **Numbers:** app node tests 35 → 45 (`daxEditor.test.ts` 15 → 25); `formula-keys.mjs` 43
+  of 43, `formula-intellisense.mjs` 20 of 20, `editing-a11y.mjs` 17 of 17 and `editing-smoke.mjs`
+  23 of 23 on Windows / WebView2. Contrast: suggestions at least 5.4:1, the selected
+  suggestion's outline 5.39:1, squiggles 5.86:1 (error) and 5.73:1 (warning), parameter info
+  6.19:1, descriptions 6.07:1; focus ring 2 px at 5.21:1. Main chunk 445 kB → 453 kB. Found by the tests: moving the last
+  lines down left the selection past the end of the text.
+- **Open:** A6 (screen-reader runs) needs a person; extra cursors, column selection, Ctrl+G and
+  Ctrl+U are not supported; M7.6 (`dashcraft lsp`).
+
 ### M7.5a Formula bar IntelliSense
 
 - **What:** a reusable DAX editor, `app/src/components/DaxEditor.svelte`, now in the formula bar
@@ -34,6 +61,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   Windows / WebView2. Main chunk 486.65 kB → 445 kB plus a 64 kB vendor chunk. Found live: the
   input handler ran before Svelte's `bind:value` updated, so requests used the previous text; the
   editor now reads the textarea itself.
+- **Commit:** `3d4ff95` (PR #62).
 - **Open:** M7.5b (Desktop's line-editing keys, Ctrl+M, A1–A6 for the completion list and
   squiggles), M7.6 (`dashcraft lsp`).
 
