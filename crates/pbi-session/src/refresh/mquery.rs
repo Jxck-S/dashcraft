@@ -68,24 +68,36 @@ pub(crate) fn shared_queries(model: &Model) -> IndexMap<String, String> {
 }
 
 /// What an M query of `model` can refer to besides the library, for the M
-/// language service: the model's M expressions (parameters, functions,
-/// helper queries) and every table loaded by an M query, by name.
+/// language service: the model's M expressions (parameters with their type,
+/// functions, helper queries) and every table loaded by an M query (with its
+/// partition query), by name, with their M text and descriptions.
 pub fn m_environment(model: &Model) -> pbi_m::service::Environment {
+    use pbi_m::service::{EnvironmentEntry, EnvironmentKind};
     let expressions = model
         .expressions
         .iter()
         .filter(|e| e.kind == pbi_model::ExpressionKind::M)
-        .map(|e| e.name.clone());
-    let tables = model
-        .tables
-        .iter()
-        .filter(|t| {
-            t.partitions
-                .iter()
-                .any(|p| matches!(p.source, pbi_model::PartitionSource::M { .. }))
-        })
-        .map(|t| t.name.clone());
-    pbi_m::service::Environment::with_names(expressions.chain(tables))
+        .map(|e| {
+            let (kind, type_name) = if e.is_parameter() {
+                (EnvironmentKind::Parameter, e.parameter_type())
+            } else {
+                (EnvironmentKind::Query, None)
+            };
+            EnvironmentEntry::new(e.name.clone(), kind, e.full_expression())
+                .with_type_name(type_name)
+                .with_description(e.description.clone())
+        });
+    let tables = model.tables.iter().filter_map(|t| {
+        let expression = t.partitions.iter().find_map(|p| match &p.source {
+            pbi_model::PartitionSource::M { expression } => Some(expression.clone()),
+            _ => None,
+        })?;
+        Some(
+            EnvironmentEntry::new(t.name.clone(), EnvironmentKind::Table, expression)
+                .with_description(t.description.clone()),
+        )
+    });
+    pbi_m::service::Environment::with_entries(expressions.chain(tables))
 }
 
 /// Arrow type requested from M for a model data type (`None`: use the

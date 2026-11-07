@@ -117,6 +117,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "m_service"
+path = "fuzz_targets/m_service.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "zip_container"
 path = "fuzz_targets/zip_container.rs"
 test = false

@@ -16,8 +16,7 @@
 //! The messages and the binding rules were checked against Desktop (`reference/groundtruth`,
 //! suites `m-functions` and `m-arity`).
 
-use std::collections::HashSet;
-
+use super::environment::Environment;
 use super::library::{LibraryKind, catalog, catalog_entry};
 use crate::ast::Document;
 use crate::binding;
@@ -82,40 +81,6 @@ pub struct Diagnostic {
     pub span: Span,
     /// A replacement for `span`: the closest known name for an unknown name.
     pub suggestion: Option<String>,
-}
-
-/// The names a query can refer to besides its own: the other queries and parameters of its
-/// model.
-#[derive(Debug, Clone, Default)]
-pub struct Environment {
-    names: Option<HashSet<String>>,
-}
-
-impl Environment {
-    /// Unknown names around the text (no model): a plain unknown name may be another query and
-    /// is not reported, while a misspelled library member (`Table.RowCnt`) still is.
-    pub fn unknown() -> Self {
-        Self { names: None }
-    }
-
-    /// Exactly `names` (queries, parameters and loaded tables of the model) besides the library.
-    pub fn with_names<I, S>(names: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<String>,
-    {
-        Self {
-            names: Some(names.into_iter().map(Into::into).collect()),
-        }
-    }
-
-    fn contains(&self, name: &str) -> bool {
-        self.names.as_ref().is_some_and(|n| n.contains(name))
-    }
-
-    fn is_known(&self) -> bool {
-        self.names.is_some()
-    }
 }
 
 /// The diagnostics of `text` (an expression or section document), sorted by position.
@@ -197,7 +162,7 @@ fn names(found: &FreeNames<'_>, env: &Environment) -> Vec<Diagnostic> {
     out
 }
 
-fn unsupported_message(name: &str) -> String {
+pub(crate) fn unsupported_message(name: &str) -> String {
     match crate::stdlib::unknown_name(name) {
         MError::Unsupported { hint, .. } if !hint.is_empty() => {
             format!("DashCraft does not evaluate '{name}'. {hint}")
@@ -243,7 +208,7 @@ pub fn argument_count_message(passed: usize, min: usize, max: usize) -> String {
 /// The closest known name: the environment, the library, then the text's own bindings.
 fn suggest(name: &str, env: &Environment, locals: &[&str]) -> Option<String> {
     let library = catalog().iter().map(|e| e.name);
-    let model = env.names.iter().flatten().map(String::as_str);
+    let model = env.entries().iter().map(|e| e.name.as_str());
     let implemented = crate::stdlib::library_names();
     closest(
         name,

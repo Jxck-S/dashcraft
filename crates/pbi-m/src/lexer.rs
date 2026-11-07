@@ -280,14 +280,7 @@ pub struct Lexed {
 
 /// Splits M source text into tokens.
 pub fn tokenize(src: &str) -> Result<Lexed, ParseError> {
-    let mut lexer = Lexer {
-        src,
-        pos: 0,
-        comments: Vec::new(),
-    };
-    if src.starts_with('\u{FEFF}') {
-        lexer.pos = '\u{FEFF}'.len_utf8();
-    }
+    let mut lexer = Lexer::new(src, false);
     let mut tokens = Vec::new();
     loop {
         let token = lexer.next_token()?;
@@ -301,6 +294,48 @@ pub fn tokenize(src: &str) -> Result<Lexed, ParseError> {
         tokens,
         comments: lexer.comments,
     })
+}
+
+/// Splits M source text into tokens without stopping at errors, for editors working on text
+/// that is being typed: an unterminated text literal, quoted identifier or block comment runs to
+/// the end of the text, an invalid character escape stays part of its literal, and any other
+/// unexpected character is skipped. Returns the tokens (ending with [`TokenKind::Eof`]) and the
+/// errors in source order; with no errors the tokens are those of [`tokenize`].
+pub fn tokenize_tolerant(src: &str) -> (Lexed, Vec<ParseError>) {
+    let mut lexer = Lexer::new(src, true);
+    let mut tokens = Vec::new();
+    loop {
+        if let Err(e) = lexer.skip_trivia() {
+            lexer.errors.push(e);
+        }
+        let start = lexer.pos;
+        match lexer.next_token() {
+            Ok(token) => {
+                let eof = token.kind == TokenKind::Eof;
+                tokens.push(token);
+                if eof {
+                    break;
+                }
+            }
+            Err(e) => {
+                lexer.errors.push(e);
+                let skip = lexer.peek_at(start).map_or(1, char::len_utf8);
+                lexer.pos = lexer.pos.max(start + skip).min(src.len());
+                while !src.is_char_boundary(lexer.pos) {
+                    lexer.pos += 1;
+                }
+            }
+        }
+    }
+    let mut errors = lexer.errors;
+    errors.sort_by_key(|e| (e.span.start, e.span.end));
+    (
+        Lexed {
+            tokens,
+            comments: lexer.comments,
+        },
+        errors,
+    )
 }
 
 /// `identifier-start-character`: letters (`Lu Ll Lt Lm Lo Nl`) and `_`.
@@ -426,9 +461,30 @@ struct Lexer<'a> {
     src: &'a str,
     pos: usize,
     comments: Vec<Comment>,
+    /// Recover from errors inside literals and comments (see [`tokenize_tolerant`]).
+    tolerant: bool,
+    errors: Vec<ParseError>,
 }
 
-impl Lexer<'_> {
+impl<'a> Lexer<'a> {
+    fn new(src: &'a str, tolerant: bool) -> Self {
+        Self {
+            src,
+            pos: if src.starts_with('\u{FEFF}') {
+                '\u{FEFF}'.len_utf8()
+            } else {
+                0
+            },
+            comments: Vec::new(),
+            tolerant,
+            errors: Vec::new(),
+        }
+    }
+
+    fn peek_at(&self, at: usize) -> Option<char> {
+        self.src.get(at..).and_then(|s| s.chars().next())
+    }
+
     fn peek(&self) -> Option<char> {
         self.src.get(self.pos..).and_then(|s| s.chars().next())
     }
@@ -471,9 +527,14 @@ impl Lexer<'_> {
                 match self.rest().find("*/") {
                     Some(i) => self.pos += i + 2,
                     None => {
-                        return Err(self
+                        let e = self
                             .err("unterminated block comment", start, start + 2)
-                            .with_expected(vec!["`*/`".to_owned()]));
+                            .with_expected(vec!["`*/`".to_owned()]);
+                        if !self.tolerant {
+                            return Err(e);
+                        }
+                        self.errors.push(e);
+                        self.pos = self.src.len();
                     }
                 }
                 self.push_comment(CommentKind::Block, start);
@@ -672,9 +733,15 @@ impl Lexer<'_> {
         let mut decoder = Utf16Joiner::default();
         loop {
             let Some(c) = self.peek() else {
-                return Err(self
+                let e = self
                     .err("unterminated text literal", start, self.pos)
-                    .with_expected(vec!["`\"`".to_owned()]));
+                    .with_expected(vec!["`\"`".to_owned()]);
+                if self.tolerant {
+                    self.errors.push(e);
+                    decoder.flush(&mut out);
+                    return Ok(out);
+                }
+                return Err(e);
             };
             match c {
                 '"' => {
@@ -687,7 +754,24 @@ impl Lexer<'_> {
                         return Ok(out);
                     }
                 }
-                '#' if self.peek_nth(1) == Some('(') => self.lex_escape(&mut out, &mut decoder)?,
+                '#' if self.peek_nth(1) == Some('(') => {
+                    if let Err(e) = self.lex_escape(&mut out, &mut decoder) {
+                        if !self.tolerant {
+                            return Err(e);
+                        }
+                        // Skip the rest of the escape; the literal goes on.
+                        self.errors.push(e);
+                        while let Some(c) = self.peek() {
+                            if c == '"' {
+                                break;
+                            }
+                            self.bump();
+                            if c == ')' {
+                                break;
+                            }
+                        }
+                    }
+                }
                 c => {
                     self.bump();
                     decoder.push_char(&mut out, c);
@@ -852,6 +936,50 @@ mod tests {
             vec![ident("a"), TokenKind::DotDot, ident("b"), TokenKind::Eof]
         );
         assert!(tokenize("#foo").is_err());
+    }
+
+    #[test]
+    fn tolerant_tokenizing_recovers_and_agrees_with_tokenize() {
+        let tolerant = |src: &str| {
+            let (lexed, errors) = tokenize_tolerant(src);
+            let kinds: Vec<TokenKind> = lexed.tokens.into_iter().map(|t| t.kind).collect();
+            let messages: Vec<String> = errors.into_iter().map(|e| e.message).collect();
+            (kinds, messages, lexed.comments.len())
+        };
+        let src = "let a = \"x\" in a // c";
+        assert_eq!(tolerant(src), (kinds(src), vec![], 1));
+        let (k, e, _) = tolerant("Table. Add #foo ? \"#(bad)ok\" \"open");
+        assert_eq!(
+            k,
+            vec![
+                ident("Table"),
+                ident("Add"),
+                TokenKind::Question,
+                TokenKind::Text("ok".to_owned()),
+                TokenKind::Text("open".to_owned()),
+                TokenKind::Eof,
+            ]
+        );
+        assert_eq!(e.len(), 4, "{e:?}");
+        let (k, e, comments) = tolerant("a /* open");
+        assert_eq!(
+            (k, e.len(), comments),
+            (vec![ident("a"), TokenKind::Eof], 1, 1)
+        );
+        let (k, _, _) = tolerant("#\"Changed Ty");
+        assert_eq!(
+            k,
+            vec![
+                TokenKind::QuotedIdentifier("Changed Ty".to_owned()),
+                TokenKind::Eof
+            ]
+        );
+        // Every prefix of a text with every kind of error still ends with Eof.
+        let messy = "let\u{e9} = #\"q\"\"#(x\" /* \u{1F600} . # $ #date(\"#(cr";
+        for end in (0..=messy.len()).filter(|i| messy.is_char_boundary(*i)) {
+            let (lexed, _) = tokenize_tolerant(&messy[..end]);
+            assert_eq!(lexed.tokens.last().map(|t| &t.kind), Some(&TokenKind::Eof));
+        }
     }
 
     #[test]

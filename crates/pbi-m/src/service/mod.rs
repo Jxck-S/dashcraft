@@ -5,14 +5,26 @@
 //!   [`LibraryEntry::implemented`] where DashCraft evaluates the name.
 //! * [`diagnostics`]: syntax errors, unknown names (with a suggestion), wrong argument counts of
 //!   library functions, and names DashCraft cannot evaluate, with Power BI Desktop's messages.
+//! * [`hover`], [`signature_help`] and [`complete`]: what a name is, the signature of the call
+//!   at a cursor, and the names that fit there. They bind names as Desktop does (the text's
+//!   steps, parameters and fields, then the model's queries in [`Environment`], then the
+//!   library) and work on text that does not parse yet.
 
+mod complete;
 mod diagnostics;
+mod environment;
+mod help;
 mod library;
+mod names;
+mod scan;
 
+pub use complete::{CompletionItem, Completions, complete};
 pub use diagnostics::{
-    Diagnostic, DiagnosticCode, Environment, MAX_DIAGNOSTICS, Severity, argument_count_message,
-    diagnostics,
+    Diagnostic, DiagnosticCode, MAX_DIAGNOSTICS, Severity, argument_count_message, diagnostics,
 };
+pub use environment::{Environment, EnvironmentEntry, EnvironmentKind};
+pub use help::{Hover, SignatureHelp, SignatureParameter, hover, signature_help};
+pub use names::NameKind;
 
 pub use library::{
     LibraryEntry, LibraryFunction, LibraryKind, LibraryParam, catalog, catalog_desktop_version,
