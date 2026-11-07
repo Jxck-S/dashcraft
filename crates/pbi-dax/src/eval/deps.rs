@@ -87,6 +87,42 @@ pub fn transitive_dependencies(
     Ok(out)
 }
 
+/// Whether DAX `expr_src` names `table` (`'T'`, `T[Column]`,
+/// `T[Measure]`), directly or in a measure it reaches (transitively). Bare
+/// `[Name]` references in `expr_src` do not count: in a calculated table's
+/// expression they name the columns of the tables it iterates
+/// (`ADDCOLUMNS(CALENDAR(…), "Year", YEAR([Date]))`).
+pub fn refers_to_table(model: &Model, table: &str, expr_src: &str) -> Result<bool> {
+    let expr = parse(expr_src)?;
+    let key = name_key(table);
+    let named = |t: &str| name_key(t) == key;
+    let direct = reference_sites(&expr).into_iter().any(|(r, _)| match r {
+        Reference::Table(t) | Reference::Column { table: t, .. } => named(&t),
+        Reference::Measure(_) | Reference::Function(_) => false,
+    });
+    if direct {
+        return Ok(true);
+    }
+    for dep in transitive_dependencies(model, None, expr_src)? {
+        let Dependency::Measure(name) = dep else {
+            continue;
+        };
+        let Some((home, measure)) = model.find_measure(&name) else {
+            continue;
+        };
+        let Ok(expr) = parse(&measure.expression) else {
+            continue;
+        };
+        if collect(model, Some(&home.name), &expr)
+            .iter()
+            .any(|d| d.table().is_some_and(named))
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 fn collect(model: &Model, home: Option<&str>, expr: &Expr) -> Vec<Dependency> {
     let mut seen = HashSet::new();
     let mut out = Vec::new();

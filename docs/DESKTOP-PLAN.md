@@ -464,7 +464,7 @@ their write roots).
   return `changed: false` without a revision, history entry or dirty flag; results carry the
   revision, the dirty flag and the `ChangeEvent`s; `serve` and `mcp` emit `doc/changed`
   notifications.
-- [ ] **M6.4 Invalidation and incremental recalculation.** Change events drive the session: a
+- [x] **M6.4 Invalidation and incremental recalculation.** Change events drive the session: a
   measure edit re-evaluates only measure results; a calculated column or table edit recomputes it
   and its dependants in dependency order without an M refresh; the visual cache and canvas state
   stay valid where the change does not reach them.
@@ -652,9 +652,17 @@ recomputed (`recalculated`: table, column, status, duration). `model.column.upda
 the values unless `dataType` is given; an automatic summarization follows the type) and any
 column's format string, display folder, description and visibility
 (`edits_recalculate_dependants_without_a_refresh` in `crates/pbi-ops/tests/e2e.rs`,
-`updated_columns_save_and_reopen` in `crates/pbi-ops/tests/save.rs`). Calculated table expression
-edits (`model.table.update`) complete M6.4; page queries still run again after any model edit
-(the visual cache re-renders only visuals whose results changed). Still open:
+`updated_columns_save_and_reopen` in `crates/pbi-ops/tests/save.rs`). `model.table.update` (and
+the `updateTable` edit) changes a calculated table's expression: columns the result still has
+(same source column, else same name) keep their ids and properties (the type follows the result
+only where it was inferred), new result columns are added like a created table's and the others
+removed; it also sets any table's description and visibility
+(`calculated_table_update_through_the_registry`, `updated_table_saves_and_reopens`). An object that
+names itself (`T[C]` in column C, `'T'` in table T, directly or through a measure) is a circular
+dependency. Checked in Power BI Desktop (GT-6 s20): after column and table expression updates it
+keeps the saved columns as written, and the values recomputed in the session without a refresh
+equal Desktop's after its refresh; all 643 recorded cases match. Page queries still run again
+after any model edit (the visual cache re-renders only visuals whose results changed). Still open:
 the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
@@ -668,7 +676,8 @@ generator), `pbi-tmdl` and `pbi-pbir` (writers for created objects), `pbi-dax` a
 
 **New registry commands.** `doc.save`, `doc.saveAs`, `doc.status`, `doc.reload`, `doc.undo`,
 `doc.redo`, `doc.history`, `doc.applyEdits`, `model.measure.create`, `model.measure.update`,
-`model.measure.delete`, `model.table.create`, `model.table.delete`, `model.column.create`,
+`model.measure.delete`, `model.table.create`, `model.table.update`, `model.table.delete`,
+`model.column.create`,
 `model.column.update`, `model.column.delete`, `model.hierarchy.create`, `model.hierarchy.delete`,
 `model.relationship.create`, `model.relationship.update`, `model.relationship.delete`,
 `model.object.rename`,

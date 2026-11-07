@@ -13,8 +13,8 @@ use std::collections::HashSet;
 use common::data::{batch, bools, dates, decimals, floats, ints, reference_root, strings, texts};
 use pbi_dax::{
     DaxError, Dependency, compute_calculated_column, compute_calculated_table, dependencies_in,
-    evaluate_measure, evaluate_query, evaluate_scalar, evaluate_table, to_record_batch,
-    transitive_dependencies,
+    evaluate_measure, evaluate_query, evaluate_scalar, evaluate_table, refers_to_table,
+    to_record_batch, transitive_dependencies,
 };
 use pbi_engine::{ColumnFilter, Engine, FilterContext, Value};
 use pbi_model::Model;
@@ -734,6 +734,21 @@ fn dependencies_resolve_against_the_model() {
         table: "Orders".into(),
         column: "Line Cost".into()
     }));
+
+    // A table names itself only through a qualified reference, directly or
+    // in a measure it reaches; bare [Column] references name the columns of
+    // the tables an expression iterates.
+    let refers = |table: &str, src: &str| refers_to_table(&f.model, table, src).unwrap();
+    assert!(!refers("Products Never Sold", never_sold));
+    assert!(refers("Orders", never_sold));
+    assert!(refers("orders", "COUNTROWS('Orders')"));
+    assert!(refers("Orders", "[Margin %]"));
+    assert!(!refers("Customers", "[Margin %]"));
+    assert!(refers("Regions", "ADDCOLUMNS(Regions, \"N\", 1)"));
+    assert!(!refers(
+        "Date",
+        "ADDCOLUMNS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 1, 2)), \"Year\", YEAR([Date]))"
+    ));
 }
 
 #[test]

@@ -53,7 +53,8 @@ pub use command::{
     CreateMeasure, CreateRelationship, CreateTable, DeleteColumn, DeleteHierarchy, DeleteMeasure,
     DeleteRelationship, DeleteTable, History, HistoryResult, RenameColumn, RenameMeasure,
     RenameTable, ReplaceObjects, SetColumnProperties, SetDescription, SetMeasureExpression,
-    SetMeasureProperties, SetRelationshipProperties, SetVisualPosition, Snapshot,
+    SetMeasureProperties, SetRelationshipProperties, SetTableDefinition, SetVisualPosition,
+    Snapshot,
 };
 pub use document::{
     Diagnostic, Document, ModelStatus, ObjectKind, ObjectPath, ObjectRef, PartInfo, Severity,

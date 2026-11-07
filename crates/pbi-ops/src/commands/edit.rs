@@ -12,10 +12,11 @@ use pbi_model::{
     Hierarchy, HistoryResult, Level, Measure, ObjectId, ObjectPath, Partition, PartitionMode,
     PartitionSource, Position, Relationship, SecurityFilteringBehavior, SetColumnProperties,
     SetDescription, SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties,
-    SetVisualPosition, SummarizeBy, Table, Visual, names_eq,
+    SetTableDefinition, SetVisualPosition, SummarizeBy, Table, TableKind, Visual, names_eq,
 };
 use pbi_session::{
-    RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error, preview_rename,
+    InferredColumn, RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error,
+    preview_rename,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -1677,7 +1678,8 @@ fn create_table(session: &Session, new: NewTable) -> Result<CreateTable, OpError
     Ok(CreateTable { table, index: None })
 }
 
-/// A column of a table created by `model.table.create`.
+/// A column of a table created or changed by `model.table.create` or
+/// `model.table.update`.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatedTableColumnOut {
@@ -1685,10 +1687,37 @@ pub struct CreatedTableColumnOut {
     pub name: String,
     /// `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`.
     pub data_type: String,
-    /// Where the values come from in the expression's result, as Power BI
-    /// Desktop writes it: `Web Sessions[Device]` (the table unquoted) or
-    /// `[Total]`.
+    /// Where the values come from: in a calculated table's expression
+    /// result, as Power BI Desktop writes it, `Web Sessions[Device]` (the
+    /// table unquoted) or `[Total]`; the query's column for a data column;
+    /// empty for a calculated column.
     pub source_column: String,
+}
+
+/// The name and columns of table `id` (empty when there is none).
+fn table_columns(session: &Session, id: ObjectId) -> (String, Vec<CreatedTableColumnOut>) {
+    let document = session.document();
+    match document.locate(id) {
+        Some(ObjectPath::Table { table }) => document
+            .model
+            .as_ref()
+            .and_then(|m| m.tables.get(table))
+            .map(|t| {
+                let columns = t
+                    .columns
+                    .iter()
+                    .map(|c| CreatedTableColumnOut {
+                        column_id: c.id.get(),
+                        name: c.name.clone(),
+                        data_type: c.data_type.as_str().to_owned(),
+                        source_column: c.source_column().unwrap_or_default().to_owned(),
+                    })
+                    .collect();
+                (t.name.clone(), columns)
+            })
+            .unwrap_or_default(),
+        _ => Default::default(),
+    }
 }
 
 /// Result of `model.table.create`.
@@ -1771,30 +1800,7 @@ impl Command for ModelTableCreate {
                 _ => None,
             })
             .ok_or_else(|| OpError::internal("the new table has no id"))?;
-        let (name, columns) = {
-            let document = session.document();
-            match document.locate(id) {
-                Some(ObjectPath::Table { table }) => document
-                    .model
-                    .as_ref()
-                    .and_then(|m| m.tables.get(table))
-                    .map(|t| {
-                        let columns = t
-                            .columns
-                            .iter()
-                            .map(|c| CreatedTableColumnOut {
-                                column_id: c.id.get(),
-                                name: c.name.clone(),
-                                data_type: c.data_type.as_str().to_owned(),
-                                source_column: c.source_column().unwrap_or_default().to_owned(),
-                            })
-                            .collect();
-                        (t.name.clone(), columns)
-                    })
-                    .unwrap_or_default(),
-                _ => Default::default(),
-            }
-        };
+        let (name, columns) = table_columns(session, id);
         let edit = DocumentEditOut::committed(ctx, &entry, &result);
         Ok(TableCreateOut {
             changed: edit.changed,
@@ -1805,6 +1811,362 @@ impl Command for ModelTableCreate {
             table_id: id.get(),
             name,
             columns,
+        })
+    }
+}
+
+/// The changes `model.table.update` makes to a table.
+#[derive(Debug, Clone, Default)]
+struct TableChanges {
+    expression: Option<String>,
+    description: Option<String>,
+    is_hidden: Option<bool>,
+}
+
+/// A calculated table's new expression and the columns it returns.
+#[derive(Debug, Clone)]
+struct NewTableDefinition {
+    expression: String,
+    columns: Vec<InferredColumn>,
+    /// A lineage tag for each of `columns`, used when it is new.
+    lineage_tags: Vec<Option<String>>,
+}
+
+/// The document command of `model.table.update`: the changes are merged
+/// with the table as it is when the command applies (after the earlier
+/// edits of a group), then checked and applied by [`SetTableDefinition`].
+#[derive(Debug, Clone)]
+struct UpdateTable {
+    table: ObjectId,
+    name: String,
+    definition: Option<NewTableDefinition>,
+    description: Option<Option<String>>,
+    is_hidden: Option<bool>,
+}
+
+impl pbi_model::Command for UpdateTable {
+    fn apply(
+        &self,
+        doc: &mut pbi_model::Document,
+    ) -> Result<pbi_model::Applied, pbi_model::CommandError> {
+        let missing = pbi_model::CommandError::NotFound(self.table);
+        let Some(ObjectPath::Table { table }) = doc.locate(self.table) else {
+            return Err(missing);
+        };
+        let mut table = doc
+            .model
+            .as_ref()
+            .and_then(|m| m.tables.get(table))
+            .ok_or(missing)?
+            .clone();
+        if let Some(description) = &self.description {
+            table.description.clone_from(description);
+        }
+        if let Some(is_hidden) = self.is_hidden {
+            table.is_hidden = is_hidden;
+        }
+        if let Some(definition) = &self.definition {
+            redefine(&mut table, definition)?;
+        }
+        SetTableDefinition { table }.apply(doc)
+    }
+
+    fn label(&self) -> String {
+        format!("Change table '{}'", self.name)
+    }
+}
+
+/// Gives calculated table `table` a new expression and the columns it
+/// returns, as Power BI Desktop does: a column the result still has (the
+/// same source column, else the same name) keeps its ID, name, lineage tag
+/// and properties and takes the new source column (and data type, when it
+/// was inferred; a column summarized automatically then sums when numeric
+/// and does not summarize otherwise); the result's other columns are added
+/// at the end; columns the result no longer has are removed. Calculated
+/// columns stay.
+fn redefine(
+    table: &mut Table,
+    definition: &NewTableDefinition,
+) -> Result<(), pbi_model::CommandError> {
+    let Some(source) = table
+        .partitions
+        .iter_mut()
+        .find_map(|p| match &mut p.source {
+            PartitionSource::Calculated { expression } => Some(expression),
+            _ => None,
+        })
+    else {
+        return Err(pbi_model::CommandError::Rejected(format!(
+            "'{}' is not a calculated table: its columns come from its query",
+            table.name
+        )));
+    };
+    source.clone_from(&definition.expression);
+    let from_expression = |c: &Column| matches!(c.kind, ColumnKind::CalculatedTableColumn { .. });
+    // The existing column each result column keeps, by source column first.
+    let mut kept: Vec<Option<usize>> = vec![None; definition.columns.len()];
+    let mut taken = vec![false; table.columns.len()];
+    for by_source in [true, false] {
+        for (k, new) in kept.iter_mut().zip(&definition.columns) {
+            if k.is_some() {
+                continue;
+            }
+            let found = table.columns.iter().enumerate().position(|(i, c)| {
+                !taken.get(i).copied().unwrap_or(true)
+                    && from_expression(c)
+                    && if by_source {
+                        c.source_column()
+                            .is_some_and(|s| names_eq(s, &new.source_column))
+                    } else {
+                        names_eq(&c.name, &new.name)
+                    }
+            });
+            if let Some(i) = found {
+                if let Some(t) = taken.get_mut(i) {
+                    *t = true;
+                }
+                *k = Some(i);
+            }
+        }
+    }
+    for (k, new) in kept.iter().zip(&definition.columns) {
+        let Some(c) = k.and_then(|i| table.columns.get_mut(i)) else {
+            continue;
+        };
+        c.kind = ColumnKind::CalculatedTableColumn {
+            source_column: new.source_column.clone(),
+        };
+        if c.is_data_type_inferred && c.data_type != new.data_type {
+            let automatic = pbi_model::props::find_annotation(&c.annotations, "SummarizationSetBy")
+                .is_some_and(|v| v.eq_ignore_ascii_case("Automatic"));
+            if automatic && new.data_type.is_numeric() != c.data_type.is_numeric() {
+                c.summarize_by = Some(if new.data_type.is_numeric() {
+                    SummarizeBy::Sum
+                } else {
+                    SummarizeBy::None
+                });
+            }
+            c.data_type = new.data_type.clone();
+        }
+    }
+    let mut i = 0;
+    table.columns.retain(|c| {
+        let keep = !from_expression(c) || taken.get(i).copied().unwrap_or(false);
+        i += 1;
+        keep
+    });
+    for ((k, new), tag) in kept
+        .iter()
+        .zip(&definition.columns)
+        .zip(&definition.lineage_tags)
+    {
+        if k.is_some() {
+            continue;
+        }
+        let numeric = new.data_type.is_numeric();
+        table.columns.push(Column {
+            name: new.name.clone(),
+            data_type: new.data_type.clone(),
+            is_name_inferred: true,
+            is_data_type_inferred: true,
+            kind: ColumnKind::CalculatedTableColumn {
+                source_column: new.source_column.clone(),
+            },
+            lineage_tag: tag.clone(),
+            summarize_by: Some(if numeric {
+                SummarizeBy::Sum
+            } else {
+                SummarizeBy::None
+            }),
+            annotations: vec![Annotation::new("SummarizationSetBy", "Automatic")],
+            ..Column::default()
+        });
+    }
+    Ok(())
+}
+
+/// The command that applies `changes` to table `id`. A new expression must
+/// parse; the columns it returns are inferred from its values over the
+/// loaded data (as for `model.table.create`).
+fn update_table(
+    session: &Session,
+    id: ObjectId,
+    changes: TableChanges,
+) -> Result<UpdateTable, OpError> {
+    let missing = || OpError::not_found(format!("no table with id {}", id.get()));
+    let (name, kind) = {
+        let document = session.document();
+        let Some(ObjectPath::Table { table }) = document.locate(id) else {
+            return Err(missing());
+        };
+        let t = document
+            .model
+            .as_ref()
+            .and_then(|m| m.tables.get(table))
+            .ok_or_else(missing)?;
+        (t.name.clone(), t.kind())
+    };
+    if changes.expression.is_none() && changes.description.is_none() && changes.is_hidden.is_none()
+    {
+        return Err(OpError::invalid_params(
+            "give at least one of expression, description, isHidden",
+        ));
+    }
+    let definition = match changes.expression {
+        Some(expression) => {
+            if kind != TableKind::CalculatedTable {
+                return Err(OpError::invalid_params(format!(
+                    "'{name}' is not a calculated table: its columns and data come from its query"
+                )));
+            }
+            if expression.trim().is_empty() {
+                return Err(OpError::invalid_params("the table expression is empty"));
+            }
+            if let Some(err) = dax_syntax_error(&expression) {
+                return Err(OpError::invalid_params(format!(
+                    "the expression does not parse: {err}"
+                )));
+            }
+            let columns = session.infer_changed_table_columns(&name, &expression)?;
+            let lineage_tags = columns.iter().map(|_| session.new_lineage_tag()).collect();
+            Some(NewTableDefinition {
+                expression,
+                columns,
+                lineage_tags,
+            })
+        }
+        None => None,
+    };
+    Ok(UpdateTable {
+        table: id,
+        name,
+        definition,
+        description: clearable(changes.description),
+        is_hidden: changes.is_hidden,
+    })
+}
+
+/// Result of `model.table.update`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TableUpdateOut {
+    pub changed: bool,
+    pub revision: u64,
+    pub dirty: bool,
+    pub changed_object_ids: Vec<u64>,
+    /// The table and what depends on it, recomputed over the loaded data,
+    /// in order (absent when none); a failed one has no values until an
+    /// edit or a refresh computes it again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recalculated: Vec<RecalculatedOut>,
+    pub table_id: u64,
+    pub name: String,
+    /// The columns after the edit, in order.
+    pub columns: Vec<CreatedTableColumnOut>,
+    /// The columns the new expression added (absent when none).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub added_columns: Vec<String>,
+    /// The columns the new expression no longer returns, removed (absent
+    /// when none).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub removed_columns: Vec<String>,
+}
+
+/// `model.table.update`.
+#[derive(Debug)]
+pub struct ModelTableUpdate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpdateTableParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The table's id (instead of `table`).
+    #[serde(default)]
+    pub table_id: Option<u64>,
+    /// The table's name.
+    #[serde(default)]
+    pub table: Option<String>,
+    /// A calculated table's new DAX expression. A column its result still
+    /// has (the same source column, else the same name) keeps its ID, name
+    /// and properties; the result's other columns are added and the ones
+    /// it no longer has are removed (refused while a relationship,
+    /// hierarchy or sort order uses one).
+    #[serde(default)]
+    pub expression: Option<String>,
+    /// The description; empty clears it.
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub is_hidden: Option<bool>,
+}
+
+impl Command for ModelTableUpdate {
+    type Params = UpdateTableParams;
+    type Output = TableUpdateOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.table.update",
+            title: "Update a table",
+            summary: "Changes a calculated table's DAX expression, its columns following the result, or a table's description or visibility; the table and what depends on it are recomputed.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[
+                (
+                    "New expression",
+                    r#"{"docId": "d1", "table": "Regions", "expression": "DISTINCT(Stores[Region])"}"#,
+                ),
+                (
+                    "Hide a table",
+                    r#"{"docId": "d1", "tableId": 42, "isHidden": true}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        // Inferring the columns needs the data: the automatic first load.
+        let entry = if params.expression.is_some() {
+            loaded_doc(ws, &params.doc_id, ctx).await?
+        } else {
+            doc(ws, &params.doc_id)?
+        };
+        resolve::require_model(&entry)?;
+        let session = entry.session();
+        let id = table_target(session, params.table_id, params.table.as_deref())?;
+        let changes = TableChanges {
+            expression: params.expression,
+            description: params.description,
+            is_hidden: params.is_hidden,
+        };
+        let command = update_table(session, id, changes)?;
+        let (_, before) = table_columns(session, id);
+        let result = session.execute_document_command(command).await?;
+        let (name, columns) = table_columns(session, id);
+        let added_columns = columns
+            .iter()
+            .filter(|c| !before.iter().any(|b| b.column_id == c.column_id))
+            .map(|c| c.name.clone())
+            .collect();
+        let removed_columns = before
+            .iter()
+            .filter(|b| !columns.iter().any(|c| c.column_id == b.column_id))
+            .map(|b| b.name.clone())
+            .collect();
+        let edit = DocumentEditOut::committed(ctx, &entry, &result);
+        Ok(TableUpdateOut {
+            changed: edit.changed,
+            revision: edit.revision,
+            dirty: edit.dirty,
+            changed_object_ids: edit.changed_object_ids,
+            recalculated: edit.recalculated,
+            table_id: id.get(),
+            name,
+            columns,
+            added_columns,
+            removed_columns,
         })
     }
 }
@@ -3264,6 +3626,22 @@ pub enum EditOperation {
         #[serde(default)]
         is_hidden: bool,
     },
+    /// Like `model.table.update`. A new expression's columns are inferred
+    /// against the document before the group, so it cannot use objects
+    /// created earlier in the group; they are merged with the table as it
+    /// is when the edit applies.
+    UpdateTable {
+        #[serde(default)]
+        table_id: Option<u64>,
+        #[serde(default)]
+        table: Option<String>,
+        #[serde(default)]
+        expression: Option<String>,
+        #[serde(default)]
+        description: Option<String>,
+        #[serde(default)]
+        is_hidden: Option<bool>,
+    },
     /// Like `model.table.delete` (without `dryRun`).
     DeleteTable {
         #[serde(default)]
@@ -3340,6 +3718,10 @@ impl Command for DocumentApplyEdits {
                     data_type: None,
                     ..
                 } | EditOperation::CreateTable { .. }
+                    | EditOperation::UpdateTable {
+                        expression: Some(_),
+                        ..
+                    }
             )
         }) {
             entry.ensure_loaded(ctx).await?;
@@ -3555,6 +3937,21 @@ impl Command for DocumentApplyEdits {
                         is_hidden,
                     },
                 )?),
+                EditOperation::UpdateTable {
+                    table_id,
+                    table,
+                    expression,
+                    description,
+                    is_hidden,
+                } => {
+                    let id = table_target(session, table_id, table.as_deref())?;
+                    let changes = TableChanges {
+                        expression,
+                        description,
+                        is_hidden,
+                    };
+                    group.with(update_table(session, id, changes)?)
+                }
                 EditOperation::DeleteTable { table_id, table } => group.with(DeleteTable {
                     table: table_target(session, table_id, table.as_deref())?,
                 }),

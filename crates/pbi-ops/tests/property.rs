@@ -284,6 +284,7 @@ async fn every_command_survives_derived_and_mutated_params() {
 #[derive(Default)]
 struct Targets {
     tables: Vec<(u64, String)>,
+    calculated_tables: Vec<u64>,
     /// `(id, table, column)`.
     columns: Vec<(u64, String, String)>,
     /// `(id, table, measure)`.
@@ -300,6 +301,9 @@ impl Targets {
         if let Some(model) = &doc.model {
             for table in &model.tables {
                 t.tables.push((table.id.0, table.name.clone()));
+                if table.calculated_expression().is_some() {
+                    t.calculated_tables.push(table.id.0);
+                }
                 for c in &table.columns {
                     t.columns.push((c.id.0, table.name.clone(), c.name.clone()));
                 }
@@ -434,7 +438,7 @@ fn table_expression(t: &Targets, rng: &mut Rng) -> String {
 /// parameters without `docId`.
 fn random_edit(t: &Targets, rng: &mut Rng) -> (&'static str, Value) {
     let filters = ["oneDirection", "bothDirections", "automatic", "sideways"];
-    match rng.below(18) {
+    match rng.below(19) {
         0 => {
             let mut p = json!({"table": t.table(rng), "name": new_name(rng),
                 "expression": measure_expression(t, rng)});
@@ -581,6 +585,20 @@ fn random_edit(t: &Targets, rng: &mut Rng) -> (&'static str, Value) {
             }
             ("model.column.update", p)
         }
+        17 => {
+            let mut p = json!({"tableId": rng.pick(&t.tables).map_or(999_999, |t| t.0)});
+            match rng.below(4) {
+                0 | 1 => {
+                    if let Some(id) = rng.pick(&t.calculated_tables) {
+                        p["tableId"] = json!(id);
+                    }
+                    p["expression"] = json!(table_expression(t, rng));
+                }
+                2 => p["isHidden"] = json!(rng.chance(50)),
+                _ => p["description"] = json!(new_name(rng)),
+            }
+            ("model.table.update", p)
+        }
         _ => {
             let edits: Vec<Value> = (0..2 + rng.below(2))
                 .map(|_| {
@@ -610,6 +628,7 @@ fn edit_type(command: &str) -> &'static str {
         "model.column.update" => "updateColumn",
         "model.column.delete" => "deleteColumn",
         "model.table.create" => "createTable",
+        "model.table.update" => "updateTable",
         "model.table.delete" => "deleteTable",
         "model.hierarchy.create" => "createHierarchy",
         "model.hierarchy.delete" => "deleteHierarchy",

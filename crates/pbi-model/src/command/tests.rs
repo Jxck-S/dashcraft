@@ -1627,3 +1627,207 @@ fn calculated_tables_are_created_with_fresh_ids_and_deleted_by_undo() {
     with_measure.measures.push(Measure::new("M", "1"));
     assert!(refuse(with_measure).contains("after the table"));
 }
+
+#[test]
+fn table_definitions_change_columns_with_exact_inverses() {
+    use crate::semantic::{PartitionSource, Table};
+    let mut doc = sample_document();
+    let id = table_id(&doc, "Unknown Store Orders");
+    let order_id = column_id(&doc, "Unknown Store Orders", "Order ID");
+    let partition = doc
+        .model
+        .as_ref()
+        .unwrap()
+        .table("Unknown Store Orders")
+        .unwrap()
+        .partitions[0]
+        .id;
+    let current = |doc: &Document| -> Table {
+        doc.model
+            .as_ref()
+            .unwrap()
+            .table("Unknown Store Orders")
+            .unwrap()
+            .clone()
+    };
+    let from_expression = |name: &str, source: &str| Column {
+        name: name.into(),
+        data_type: DataType::String,
+        is_name_inferred: true,
+        kind: ColumnKind::CalculatedTableColumn {
+            source_column: source.into(),
+        },
+        ..Column::default()
+    };
+    let set_expression = |t: &mut Table, expression: &str| {
+        t.partitions[0].source = PartitionSource::Calculated {
+            expression: expression.into(),
+        };
+    };
+
+    // Like `assert_round_trip`, but undo keeps the ID generator.
+    let round_trip = |doc: &mut Document,
+                      command: SetTableDefinition,
+                      check: &dyn Fn(&Document, &[ChangeEvent])| {
+        let original = doc.clone();
+        let mut history = History::new();
+        let events = history.execute(doc, command).unwrap();
+        check(doc, &events);
+        let after = doc.clone();
+        history.undo(doc).unwrap();
+        assert_same_content(doc, &original);
+        history.redo(doc).unwrap();
+        assert_eq!(*doc, after, "redo keeps the new columns' IDs");
+        history.undo(doc).unwrap();
+        assert_same_content(doc, &original);
+    };
+
+    // A new expression: the kept column changes type and source, a new one
+    // gets the next ID.
+    let mut changed = current(&doc);
+    set_expression(
+        &mut changed,
+        "SUMMARIZE(Orders, Orders[Order ID], Orders[Store ID])",
+    );
+    changed.columns[0].data_type = DataType::Int64;
+    changed.columns[0].kind = ColumnKind::CalculatedTableColumn {
+        source_column: "Orders[Order ID]".into(),
+    };
+    changed
+        .columns
+        .push(from_expression("Store ID", "Orders[Store ID]"));
+    changed.description = Some("Orders and their stores".into());
+    let added = doc.ids.peek();
+    round_trip(
+        &mut doc,
+        SetTableDefinition {
+            table: changed.clone(),
+        },
+        &|doc, events| {
+            assert_eq!(
+                events,
+                [
+                    ChangeEvent::ObjectChanged { id },
+                    ChangeEvent::ObjectChanged { id: order_id },
+                    ChangeEvent::ObjectAdded { id: added },
+                    ChangeEvent::ObjectChanged { id: partition },
+                ]
+            );
+            let after = current(doc);
+            assert_eq!(after.columns[1].id, added);
+            assert_eq!(
+                after.calculated_expression(),
+                changed.calculated_expression()
+            );
+            assert_eq!(
+                after.description.as_deref(),
+                Some("Orders and their stores")
+            );
+        },
+    );
+
+    // A column the expression no longer returns is removed (undo puts it
+    // back, ID included).
+    let mut replaced = current(&doc);
+    set_expression(&mut replaced, "VALUES(Orders[Store ID])");
+    replaced.columns = vec![from_expression("Store ID", "Orders[Store ID]")];
+    let store_id = doc.ids.peek();
+    round_trip(
+        &mut doc,
+        SetTableDefinition { table: replaced },
+        &|doc, events| {
+            assert_eq!(
+                events,
+                [
+                    ChangeEvent::ObjectChanged { id },
+                    ChangeEvent::ObjectAdded { id: store_id },
+                    ChangeEvent::ObjectRemoved { id: order_id },
+                    ChangeEvent::ObjectChanged { id: partition },
+                ]
+            );
+            assert!(doc.locate(order_id).is_none());
+        },
+    );
+
+    // Any table's own properties.
+    let mut stores = doc.model.as_ref().unwrap().table("Stores").unwrap().clone();
+    stores.is_hidden = true;
+    let stores_id = stores.id;
+    assert_round_trip(
+        &mut doc,
+        SetTableDefinition { table: stores },
+        |_, events| {
+            assert_eq!(events, [ChangeEvent::ObjectChanged { id: stores_id }]);
+        },
+    );
+
+    // Refusals leave the document unchanged.
+    doc.model
+        .as_mut()
+        .unwrap()
+        .relationships
+        .push(Relationship::new(
+            "d0c1e2f3-a4b5-4c6d-8e7f-000000000099",
+            ColumnRef::new("Unknown Store Orders", "Order ID"),
+            ColumnRef::new("Orders", "Order ID"),
+        ));
+    let before = doc.clone();
+    let mut refuse = |t: Table| {
+        let error = SetTableDefinition { table: t }.apply(&mut doc).unwrap_err();
+        assert_eq!(doc, before);
+        error.to_string()
+    };
+    let base = current(&before);
+    let edited = |f: &dyn Fn(&mut Table)| {
+        let mut t = base.clone();
+        f(&mut t);
+        t
+    };
+    assert!(refuse(edited(&|t| t.name = "Other".into())).contains("rename"));
+    assert!(refuse(edited(&|t| t.measures.push(Measure::new("M", "1")))).contains("own commands"));
+    assert!(
+        refuse(edited(&|t| t.partitions[0].source = PartitionSource::M {
+            expression: "1".into()
+        }))
+        .contains("partition")
+    );
+    assert!(refuse(edited(&|t| t.columns[0].name = "Renamed".into())).contains("rename"));
+    assert!(
+        refuse(edited(&|t| t
+            .columns
+            .push(Column::data("Raw", DataType::String))))
+        .contains("must come from the expression")
+    );
+    assert!(
+        refuse(edited(&|t| t
+            .columns
+            .push(from_expression("order id", "[order id]"))))
+        .contains("already")
+    );
+    assert!(refuse(edited(&|t| t.columns.clear())).contains("at least one column"));
+    let mut orders = before
+        .model
+        .as_ref()
+        .unwrap()
+        .table("Orders")
+        .unwrap()
+        .clone();
+    orders.columns.pop();
+    assert!(refuse(orders).contains("not a calculated table"));
+    let foreign = column_id(&before, "Stores", "Region");
+    assert!(
+        refuse(edited(&|t| {
+            let mut c = from_expression("Region", "[Region]");
+            c.id = foreign;
+            t.columns.push(c);
+        }))
+        .contains("not one of its columns")
+    );
+    assert!(
+        refuse(edited(&|t| {
+            set_expression(t, "VALUES(Orders[Store ID])");
+            t.columns = vec![from_expression("Store ID", "Orders[Store ID]")];
+        }))
+        .contains("used by relationship")
+    );
+}

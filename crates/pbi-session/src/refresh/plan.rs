@@ -166,7 +166,18 @@ impl Plan {
                     }
                 }
             }
-            set.remove(&node);
+            // A calculated column naming itself is circular. A calculated
+            // table is only when it names itself (or a measure it uses
+            // does): its bare `[Column]` references resolve to its own
+            // columns here but name those of the tables it iterates.
+            if let (Node::Table(_), Some(expr)) = (node, expr) {
+                let named = model.tables.get(home).is_some_and(|t| {
+                    pbi_dax::refers_to_table(model, &t.name, expr).unwrap_or(false)
+                });
+                if !named {
+                    set.remove(&node);
+                }
+            }
             deps.push(set.into_iter().filter_map(index_of).collect());
         }
         let (order, cyclic) = topo_order(&deps);
@@ -318,7 +329,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use pbi_model::{Column, ColumnRef, DataType, Partition, Relationship};
+    use pbi_model::{Column, ColumnRef, DataType, Measure, Partition, Relationship};
 
     fn calc_table(name: &str, expr: &str) -> Table {
         let mut t = Table::new(name);
@@ -409,6 +420,46 @@ mod tests {
         );
         assert_eq!(plan.sources[2], Source::Calculated);
         assert!(matches!(plan.sources[0], Source::M(_)));
+    }
+
+    #[test]
+    fn objects_naming_themselves_are_circular() {
+        let mut m = model();
+        let mut dates = calc_table(
+            "Dates",
+            "ADDCOLUMNS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 1, 31)), \"Day\", DAY([Date]))",
+        );
+        dates.columns = vec![
+            Column::data("Date", DataType::DateTime),
+            Column::data("Day", DataType::Int64),
+        ];
+        m.tables.push(dates);
+        m.tables
+            .push(calc_table("Again", "ADDCOLUMNS(Again, \"N\", 1)"));
+        let mut via_measure = calc_table("Counted", "ROW(\"N\", [Rows])");
+        via_measure
+            .measures
+            .push(Measure::new("Rows", "COUNTROWS(Counted)"));
+        m.tables.push(via_measure);
+        m.tables.push(m_table(
+            "Steps",
+            vec![
+                Column::data("N", DataType::Int64),
+                Column::calculated("Next", DataType::Int64, "Steps[Next] + 1"),
+            ],
+        ));
+        let plan = Plan::build(&m, false);
+        let cyclic: Vec<Node> = plan.cyclic.iter().map(|&c| plan.nodes[c]).collect();
+        assert_eq!(
+            cyclic,
+            vec![
+                Node::Column(3, 0),
+                Node::Column(3, 1),
+                Node::Table(5),
+                Node::Table(6),
+                Node::Column(7, 1)
+            ]
+        );
     }
 
     #[test]

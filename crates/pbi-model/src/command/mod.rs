@@ -37,6 +37,7 @@ pub use snapshot::{ReplaceObjects, Snapshot};
 pub use structure::{
     CreateColumn, CreateHierarchy, CreateMeasure, CreateRelationship, CreateTable, DeleteColumn,
     DeleteHierarchy, DeleteMeasure, DeleteRelationship, DeleteTable, SetRelationshipProperties,
+    SetTableDefinition,
 };
 
 /// A reversible edit.

@@ -2847,11 +2847,13 @@ async fn edits_recalculate_dependants_without_a_refresh() {
     ));
     assert_eq!(scalar(&r, &doc, high).await, high_before);
 
-    // Refused: a circular dependency, DAX that fails, an expression or type
-    // on a data column, nothing to change. Nothing is committed.
+    // Refused: a circular dependency (also on itself), DAX that fails, an
+    // expression or type on a data column, nothing to change. Nothing is
+    // committed.
     let revision = r.run("doc.history", json!({"docId": doc})).await["revision"].clone();
     for params in [
         json!({"table": "Customers", "column": "Lifetime Sales", "expression": "LEN(Customers[Value Tier])"}),
+        json!({"table": "Customers", "column": "Lifetime Sales", "expression": "Customers[Lifetime Sales] + 1"}),
         json!({"table": "Customers", "column": "Lifetime Sales", "expression": "Customers[Nope] + 1"}),
         json!({"table": "Customers", "column": "Lifetime Sales", "expression": "1 +"}),
         json!({"table": "Customers", "column": "Lifetime Sales", "expression": " "}),
@@ -3344,6 +3346,269 @@ async fn calculated_table_create_through_the_registry() {
         number(scalar(&r, &doc, "SUM('Device Pages'[Pages])").await),
         all
     );
+}
+
+#[tokio::test]
+async fn calculated_table_update_through_the_registry() {
+    let (Some(pbip), Some(map)) = (fixture(PBIP), fixture(BLOB_MAP)) else {
+        eprintln!("SKIP: {PBIP} missing");
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let with_doc = |params: Value| {
+        let mut params = params;
+        params["docId"] = json!(doc);
+        params
+    };
+    let update = |params: Value| r.try_run("model.table.update", with_doc(params));
+    let number = |v: Value| v.as_f64().unwrap_or_else(|| panic!("not a number: {v}"));
+    let table = |name: &'static str| {
+        let r = &r;
+        let doc = doc.clone();
+        async move {
+            let out = r.run("model.tables", json!({"docId": doc})).await;
+            out["tables"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|t| t["name"] == name)
+                .cloned()
+                .unwrap_or_else(|| panic!("no table {name}: {out}"))
+        }
+    };
+    let column = |t: &Value, name: &str| {
+        t["columns"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == name)
+            .cloned()
+            .unwrap_or_else(|| panic!("no column {name}: {t}"))
+    };
+    let names = |out: &Value| -> Vec<String> {
+        out["columns"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["name"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    let refresh = r.run("data.refresh", with_doc(json!({}))).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let never_sold = "COUNTROWS(FILTER(ALL(Products), ISEMPTY(RELATEDTABLE(Orders))))";
+    let count = number(scalar(&r, &doc, never_sold).await);
+    assert!(count > 0.0, "{count}");
+
+    // Description and visibility of a data table: no recomputation.
+    let out = update(json!({"table": "Orders", "description": "Order lines", "isHidden": true}))
+        .await
+        .unwrap();
+    let orders = out["tableId"].as_u64().unwrap();
+    assert_eq!(
+        (&out["changed"], &out["changedObjectIds"], &out["name"]),
+        (&json!(true), &json!([orders]), &json!("Orders")),
+        "{out}"
+    );
+    assert!(out.get("recalculated").is_none(), "{out}");
+    assert!(out.get("addedColumns").is_none(), "{out}");
+    let t = table("Orders").await;
+    assert_eq!(
+        (&t["description"], &t["isHidden"]),
+        (&json!("Order lines"), &json!(true)),
+        "{t}"
+    );
+    let out = update(json!({"tableId": orders, "description": "", "isHidden": false}))
+        .await
+        .unwrap();
+    assert_eq!(out["changed"], json!(true), "{out}");
+    let t = table("Orders").await;
+    assert!(t.get("description").is_none(), "{t}");
+
+    // A new expression: kept columns keep their ids and properties, the
+    // result's new column is added and the columns it no longer returns
+    // are removed; the table and its measure are computed at once.
+    let before = table("Products Never Sold").await;
+    let out = update(json!({"table": "Products Never Sold",
+        "expression": "SELECTCOLUMNS(FILTER(ALL(Products), ISEMPTY(RELATEDTABLE(Orders))), \"Product ID\", Products[Product ID], \"Product\", Products[Product Name], \"Unit Cost\", Products[Unit Cost])"}))
+    .await
+    .unwrap();
+    let id = out["tableId"].as_u64().unwrap();
+    assert_eq!(names(&out), ["Product ID", "Product", "Unit Cost"], "{out}");
+    assert_eq!(out["addedColumns"], json!(["Unit Cost"]), "{out}");
+    assert_eq!(
+        out["removedColumns"],
+        json!(["Category", "List Price"]),
+        "{out}"
+    );
+    assert_eq!(
+        out["recalculated"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| (c["objectId"].clone(), c["status"]["state"].clone()))
+            .collect::<Vec<_>>(),
+        [(json!(id), json!("ok"))],
+        "{out}"
+    );
+    let after = table("Products Never Sold").await;
+    for kept in ["Product ID", "Product"] {
+        assert_eq!(column(&after, kept), column(&before, kept), "{kept}");
+    }
+    let unit_cost = column(&after, "Unit Cost");
+    assert_eq!(
+        (
+            &unit_cost["dataType"],
+            &unit_cost["summarizeBy"],
+            &unit_cost["sourceColumn"]
+        ),
+        (
+            &column(&table("Products").await, "Unit Cost")["dataType"],
+            &json!("sum"),
+            &json!("[Unit Cost]")
+        ),
+        "{unit_cost}"
+    );
+    assert_eq!(
+        number(scalar(&r, &doc, "COUNTROWS('Products Never Sold')").await),
+        count
+    );
+    assert_eq!(
+        scalar(&r, &doc, "SUM('Products Never Sold'[Unit Cost])").await,
+        scalar(
+            &r,
+            &doc,
+            "SUMX(FILTER(ALL(Products), ISEMPTY(RELATEDTABLE(Orders))), Products[Unit Cost])"
+        )
+        .await
+    );
+    assert_eq!(
+        number(scalar(&r, &doc, "[Products Never Sold Count]").await),
+        count
+    );
+
+    // An inferred data type follows the values, and summarization with it.
+    let created = r
+        .run(
+            "model.table.create",
+            with_doc(json!({"name": "Regions", "expression": "VALUES(Stores[Region])"})),
+        )
+        .await;
+    let region = created["columns"][0]["columnId"].clone();
+    let out = update(json!({"table": "Regions",
+        "expression": "SELECTCOLUMNS(VALUES(Stores[Region]), \"Region\", LEN(Stores[Region]))"}))
+    .await
+    .unwrap();
+    assert_eq!(
+        out["columns"],
+        json!([{"columnId": region, "name": "Region", "dataType": "int64",
+            "sourceColumn": "[Region]"}]),
+        "{out}"
+    );
+    assert_eq!(
+        column(&table("Regions").await, "Region")["summarizeBy"],
+        json!("sum")
+    );
+    assert_eq!(
+        scalar(&r, &doc, "SUM(Regions[Region])").await,
+        scalar(
+            &r,
+            &doc,
+            "SUMX(VALUES(Stores[Region]), LEN(Stores[Region]))"
+        )
+        .await
+    );
+
+    // Refusals: no change, a data table's expression, a broken, empty or
+    // circular expression, a removed column still used (Date's hierarchy
+    // and sort order), a column named like a measure, an unknown table.
+    let refused = [
+        json!({"table": "Regions"}),
+        json!({"table": "Orders", "expression": "VALUES(Stores[Region])"}),
+        json!({"table": "Regions", "expression": "VALUES(Stores[Region]"}),
+        json!({"table": "Regions", "expression": " "}),
+        json!({"table": "Regions", "expression": "VALUES(Stores[Nope])"}),
+        json!({"table": "Regions", "expression": "1 + 1"}),
+        json!({"table": "Regions", "expression": "ADDCOLUMNS(Regions, \"N\", 1)"}),
+        json!({"table": "Date",
+            "expression": "CALENDAR(DATE(2024, 1, 1), DATE(2025, 12, 31))"}),
+        json!({"table": "Products Never Sold",
+            "expression": "ROW(\"Products Never Sold Count\", 1)"}),
+    ];
+    for bad in refused {
+        let e = update(bad.clone()).await.unwrap_err();
+        assert_eq!(e.code, OpErrorCode::InvalidParams, "{bad}: {}", e.message);
+        if bad["expression"]
+            .as_str()
+            .is_some_and(|x| x.contains("Regions,"))
+        {
+            assert!(e.message.contains("circular dependency"), "{}", e.message);
+        }
+        if bad["table"] == "Date" {
+            assert!(
+                e.message.contains("[Year], which is used by level 'Year'"),
+                "{}",
+                e.message
+            );
+        }
+    }
+    assert_eq!(
+        error_code(update(json!({"table": "Nope", "isHidden": true})).await),
+        OpErrorCode::NotFound
+    );
+
+    // Undo restores the columns and the values; redo changes them again
+    // with the same ids.
+    r.run("doc.undo", with_doc(json!({}))).await;
+    r.run("doc.undo", with_doc(json!({}))).await;
+    r.run("doc.undo", with_doc(json!({}))).await;
+    assert_eq!(table("Products Never Sold").await, before);
+    assert_eq!(
+        number(scalar(&r, &doc, "COUNTROWS('Products Never Sold')").await),
+        count
+    );
+    assert_eq!(
+        scalar(&r, &doc, "SUM('Products Never Sold'[List Price])").await,
+        scalar(
+            &r,
+            &doc,
+            "SUMX(FILTER(ALL(Products), ISEMPTY(RELATEDTABLE(Orders))), Products[List Price])"
+        )
+        .await
+    );
+    r.run("doc.redo", with_doc(json!({}))).await;
+    let redone = table("Products Never Sold").await;
+    assert_eq!(
+        column(&redone, "Unit Cost")["sourceColumn"],
+        json!("[Unit Cost]")
+    );
+    r.run("doc.undo", with_doc(json!({}))).await;
+
+    // In a group the expression's columns merge with the table as the
+    // earlier edits leave it.
+    let out = r
+        .run(
+            "doc.applyEdits",
+            with_doc(json!({"edits": [
+                {"type": "updateColumn", "table": "Products Never Sold",
+                    "column": "Product", "description": "The product's name"},
+                {"type": "updateTable", "tableId": id, "description": "Never ordered",
+                    "expression": "SELECTCOLUMNS(FILTER(ALL(Products), ISEMPTY(RELATEDTABLE(Orders))), \"Product ID\", Products[Product ID], \"Product\", Products[Product Name])"}
+            ]})),
+        )
+        .await;
+    assert_eq!(out["changed"], json!(true), "{out}");
+    let t = table("Products Never Sold").await;
+    assert_eq!(names(&t), ["Product ID", "Product"], "{t}");
+    assert_eq!(
+        (&t["description"], &column(&t, "Product")["description"]),
+        (&json!("Never ordered"), &json!("The product's name")),
+        "{t}"
+    );
+    r.run("doc.undo", with_doc(json!({}))).await;
+    assert_eq!(table("Products Never Sold").await, before);
 }
 
 #[tokio::test(flavor = "multi_thread")]
