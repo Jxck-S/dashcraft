@@ -922,7 +922,7 @@ optional language server.
     44 queries of Acme and the samples at two widths; the 268 `m-functions` expressions,
     formatted at the default width and at width 20 with tabs, give Desktop's recorded results
     (apart from the one by-design ledger entry).
-- [ ] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of
+- [x] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of
   properties and object references, formatting that matches the writer.
   - [x] M7.4a (2026-11-07) TMDL diagnostics checked against Microsoft's TMDL reader
     ([ADR-0029](adr/0029-tmdl-reader-ground-truth.md)): the reader (TOM 19.118.3) recorded
@@ -948,6 +948,20 @@ optional language server.
     keywords, 497 values and 48 references is offered and hovered; precision: 841 keyword
     completions written into each kind of object of Acme and dax-lab in every offered form are
     accepted by the diagnostics, which follow the reader.
+  - [x] M7.4c (2026-11-07) TMDL formatter: `pbi_tmdl::service::format` and the `tmdl.format`
+    command lay a file out as Desktop and the writer do, changing only white space: indentation
+    by depth (tabs, or 1–16 spaces), `keyword: value` and `keyword name = value` spacing, blank
+    lines before named objects and `ref` runs and none before properties, expression blocks
+    moved with their relative indentation kept, comments and `///` descriptions indented with
+    their line, one line ending (kept or chosen), the BOM kept. The result is read back and must
+    give the same tree, keywords, names, values, expressions, descriptions and comments, else
+    the text is left as it is. Where Microsoft's tools differ (Desktop puts a blank line between
+    `ref` runs of different types, TOM none; TOM writes perspective members without one) a
+    blank line is kept as written. All 58 files Desktop and TOM saved (Acme, the probe model,
+    dax-lab, GT-4 before and after) and the 53 files the writer writes for them format to
+    themselves; each saved file with its layout damaged (respaced lines, trailing white space,
+    doubled and removed blank lines, expression blocks indented further, LF for CRLF) formats
+    back to Desktop's bytes, and to four spaces and back.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,
   calculation items, format string expressions and RLS filters; commit and cancel; multi-line.
 - [ ] **M7.6 Optional `dashcraft lsp`.** A Language Server Protocol adapter over the same

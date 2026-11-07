@@ -127,6 +127,7 @@ pub fn catalog() -> Registry {
         .with::<tmdl::TmdlDiagnostics>()
         .with::<tmdl::TmdlComplete>()
         .with::<tmdl::TmdlHover>()
+        .with::<tmdl::TmdlFormat>()
         // render
         .with::<render::RenderPage>()
         .with::<render::RenderVisual>()

@@ -2,17 +2,21 @@
 //! A deterministic property test mutates the fixture files (line shuffles,
 //! swaps, deletions, duplications, truncations, junk insertion, indentation
 //! changes) and checks that parsing never panics, the CST stays lossless,
-//! the writer's output always parses, model → TMDL → model is stable, and the
-//! language service's diagnostics, completions and hovers stay inside the files.
+//! the writer's output always parses, model → TMDL → model is stable, the
+//! language service's diagnostics, completions and hovers stay inside the files,
+//! and the formatter's output formats to itself and loads to the same model.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::path::{Path, PathBuf};
 
 use pbi_model::{Model, PropValue, Severity};
-use pbi_tmdl::service::{FileText, MAX_DIAGNOSTICS, Source, complete, diagnostics, hover};
+use pbi_tmdl::service::{
+    FileText, FormatError, FormatOptions, MAX_DIAGNOSTICS, Source, complete, diagnostics, format,
+    hover,
+};
 use pbi_tmdl::{
-    SyntaxError, TmdlError, clear_origins, codes, load_model, parse_file, write_model,
+    IndentStyle, SyntaxError, TmdlError, clear_origins, codes, load_model, parse_file, write_model,
     write_model_preserving,
 };
 
@@ -358,6 +362,53 @@ fn check_completion(set: &[(String, String)], target: usize, rng: &mut Rng, iter
     }
 }
 
+/// The formatter on file `target` (as the `tmdl_service` fuzz target checks): a syntax error
+/// exactly when the file does not parse, otherwise a text that formats to itself and loads to
+/// the same model. Returns whether the formatter declined (`Unstable`).
+fn check_format(set: &[(String, String)], target: usize, rng: &mut Rng, iteration: u64) -> bool {
+    let text = &set[target].1;
+    let indent = match rng.below(4) {
+        0 => IndentStyle::Spaces(u8::try_from(1 + rng.below(8)).unwrap_or(4)),
+        _ => IndentStyle::Tabs,
+    };
+    let options = FormatOptions {
+        indent,
+        line_ending: None,
+    };
+    let parsed = parse_file("", text);
+    let out = match format(text, &options) {
+        Err(FormatError::Syntax(d)) => {
+            assert!(
+                parsed.is_err() && d.code == pbi_tmdl::service::codes::SYNTAX,
+                "iteration {iteration}: {d:?}"
+            );
+            return false;
+        }
+        Err(FormatError::Unstable) => return true,
+        Ok(out) => out,
+    };
+    assert!(
+        parsed.is_ok(),
+        "iteration {iteration}: formatted a syntax error"
+    );
+    assert_eq!(
+        format(&out, &options).as_ref(),
+        Ok(&out),
+        "iteration {iteration}: not idempotent; input {text:?}"
+    );
+    let mut formatted = set.to_vec();
+    formatted[target].1 = out;
+    let (Ok(before), Ok(after)) = (load_model(set), load_model(&formatted)) else {
+        panic!("iteration {iteration}: a formatted file does not load");
+    };
+    pretty_assertions::assert_eq!(
+        normalized(before.model),
+        normalized(after.model),
+        "iteration {iteration}: formatting changed the model; input {text:?}"
+    );
+    false
+}
+
 /// Cases and seed can be raised for longer local runs:
 /// `PBI_TMDL_PROPTEST_CASES=100000 PBI_TMDL_PROPTEST_SEED=7 cargo test -p pbi-tmdl --test robustness`.
 #[test]
@@ -377,7 +428,7 @@ fn mutated_fixtures_never_panic_and_round_trip() {
         .flatten()
         .flat_map(|(_, t)| t.lines())
         .collect();
-    let (mut ok, mut errors) = (0, 0);
+    let (mut ok, mut errors, mut unstable) = (0, 0, 0);
     for iteration in 0..cases {
         let files = &corpora[rng.below(corpora.len())];
         let mut set = files.clone();
@@ -385,6 +436,7 @@ fn mutated_fixtures_never_panic_and_round_trip() {
         set[target].1 = mutate(&mut rng, &set[target].1, &pool);
         check_diagnostics(&set, iteration);
         check_completion(&set, target, &mut rng, iteration);
+        unstable += usize::from(check_format(&set, target, &mut rng, iteration));
         let mutated = &set[target];
         match parse_file(&mutated.0, &mutated.1) {
             Ok(file) => assert_eq!(file.to_string(), mutated.1, "iteration {iteration}"),
@@ -424,5 +476,10 @@ fn mutated_fixtures_never_panic_and_round_trip() {
         );
         ok += 1;
     }
+    println!("{ok} loaded, {errors} syntax errors, {unstable} not formatted");
     assert!(ok > 100 && errors > 100, "ok {ok}, errors {errors}");
+    assert!(
+        unstable * 100 <= ok,
+        "the formatter declined {unstable} of {ok} files"
+    );
 }

@@ -325,6 +325,14 @@ fn catalog_is_generated_from_the_tom_recording() {
 
 /// The `.tmdl` files under `dir` as (path relative to `dir` with `/`, text with LF line ends).
 fn read_model(dir: &Path) -> Vec<(String, String)> {
+    read_model_raw(dir)
+        .into_iter()
+        .map(|(rel, text)| (rel, text.replace("\r\n", "\n")))
+        .collect()
+}
+
+/// The `.tmdl` files under `dir` as (path relative to `dir` with `/`, text as saved).
+fn read_model_raw(dir: &Path) -> Vec<(String, String)> {
     fn walk(root: &Path, dir: &Path, out: &mut Vec<(String, String)>) {
         let mut entries: Vec<_> = std::fs::read_dir(dir).unwrap().flatten().collect();
         entries.sort_by_key(|e| e.path());
@@ -338,9 +346,7 @@ fn read_model(dir: &Path) -> Vec<(String, String)> {
                     .unwrap()
                     .to_string_lossy()
                     .replace('\\', "/");
-                let text = std::fs::read_to_string(&path)
-                    .unwrap()
-                    .replace("\r\n", "\n");
+                let text = std::fs::read_to_string(&path).unwrap();
                 out.push((rel, text));
             }
         }
@@ -1128,4 +1134,222 @@ fn completed_keywords_are_accepted_where_offered() {
         failures.len(),
         failures.join("\n")
     );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Formatting against the files Desktop and the TOM library wrote
+
+/// The saved models and the files Desktop wrote after an edit, as saved (CRLF where Desktop
+/// wrote it).
+fn saved_files_raw() -> Vec<(String, String)> {
+    let root = reference_root();
+    let mut out = Vec::new();
+    for folder in SAVED_MODELS
+        .iter()
+        .chain(["groundtruth/gt4/s24/after"].iter())
+    {
+        let dir = root.join(folder);
+        if !dir.exists() {
+            println!("SKIP: {} missing", dir.display());
+            continue;
+        }
+        for (rel, text) in read_model_raw(&dir) {
+            out.push((format!("{folder}/{rel}"), text));
+        }
+    }
+    out
+}
+
+fn format_with(
+    text: &str,
+    indent: pbi_tmdl::IndentStyle,
+    line_ending: Option<pbi_tmdl::LineEnding>,
+) -> Result<String, pbi_tmdl::service::FormatError> {
+    let options = pbi_tmdl::service::FormatOptions {
+        indent,
+        line_ending,
+    };
+    pbi_tmdl::service::format(text, &options)
+}
+
+/// The first line where `a` and `b` differ, for failure messages.
+fn first_difference(a: &str, b: &str) -> String {
+    let (mut x, mut y) = (a.split('\n'), b.split('\n'));
+    for n in 1.. {
+        match (x.next(), y.next()) {
+            (Some(l), Some(r)) if l == r => {}
+            (None, None) => break,
+            (l, r) => return format!("line {n}: {l:?} -> {r:?}"),
+        }
+    }
+    "equal".to_owned()
+}
+
+#[test]
+fn format_leaves_saved_files_unchanged() {
+    let files = saved_files_raw();
+    let mut failures = Vec::new();
+    for (path, text) in &files {
+        match format_with(text, pbi_tmdl::IndentStyle::Tabs, None) {
+            Ok(out) if out == *text => {}
+            Ok(out) => failures.push(format!("{path}: {}", first_difference(text, &out))),
+            Err(e) => failures.push(format!("{path}: {e}")),
+        }
+    }
+    println!("{} files", files.len());
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn format_leaves_writer_output_unchanged() {
+    let mut files = 0;
+    let mut failures = Vec::new();
+    for (folder, model) in saved_models() {
+        let loaded = pbi_tmdl::load_model(&model).unwrap();
+        for (rel, text) in pbi_tmdl::write_model(&loaded.model, loaded.database.as_ref()) {
+            files += 1;
+            match format_with(&text, pbi_tmdl::IndentStyle::Tabs, None) {
+                Ok(out) if out == text => {}
+                Ok(out) => {
+                    failures.push(format!("{folder}/{rel}: {}", first_difference(&text, &out)))
+                }
+                Err(e) => failures.push(format!("{folder}/{rel}: {e}")),
+            }
+        }
+    }
+    println!("{files} files");
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// `text` with its layout damaged and its meaning kept: structural lines respaced
+/// (`keyword:value`, `keyword   name=value`) with trailing white space, blank lines doubled
+/// (and with white space), the blank lines the formatter adds back removed (before named
+/// objects and the first `ref` line), deep expression blocks indented further, LF line ends.
+fn mangle(text: &str) -> String {
+    fn walk(nodes: &[pbi_tmdl::Node], lines: &mut [String]) {
+        let mut prev: Option<&pbi_tmdl::Node> = None;
+        for node in nodes {
+            let structural = if node.is_ref() {
+                !prev.is_some_and(|p| p.is_ref())
+            } else {
+                node.name_raw().is_some()
+                    && !matches!(
+                        node.keyword(),
+                        "perspectiveColumn" | "perspectiveMeasure" | "perspectiveHierarchy"
+                    )
+            };
+            prev = Some(node);
+            let mut at_start = true;
+            for l in &node.leading {
+                let i = l.number as usize - 1;
+                if !l.is_blank() {
+                    at_start = false;
+                } else if at_start && structural {
+                    lines[i] = "\u{0}".to_owned();
+                } else {
+                    lines[i] = " \n\t".to_owned();
+                }
+            }
+            let mut header = node.line.indentation().to_owned();
+            if node.is_ref() {
+                header.push_str("ref  ");
+            }
+            header.push_str(node.keyword());
+            if let Some(name) = node.name_raw() {
+                header.push_str("   ");
+                header.push_str(name);
+            }
+            match node.operator() {
+                Some(pbi_tmdl::lexer::Operator::Colon) => header.push(':'),
+                Some(pbi_tmdl::lexer::Operator::Equals) => header.push('='),
+                None => {}
+            }
+            header.push_str(node.value_raw().unwrap_or_default());
+            header.push_str("  ");
+            lines[node.line.number as usize - 1] = header;
+            if let Some(block) = &node.block {
+                let deep = |l: &pbi_tmdl::Line| {
+                    l.indentation().chars().take_while(|c| *c == '\t').count() >= node.level() + 2
+                };
+                let shift = if block.fenced {
+                    block.lines.last().is_some_and(deep).then_some("\t")
+                } else {
+                    block
+                        .lines
+                        .iter()
+                        .find(|l| !l.is_blank())
+                        .is_some_and(deep)
+                        .then_some("\t\t")
+                };
+                if let Some(shift) = shift {
+                    for l in block.lines.iter().filter(|l| !l.is_blank()) {
+                        let i = l.number as usize - 1;
+                        lines[i] = format!("{shift}{}", lines[i]);
+                    }
+                }
+            }
+            walk(&node.children, lines);
+        }
+    }
+    let file = pbi_tmdl::parse_file("", text).unwrap();
+    let mut lines: Vec<String> = text.lines().map(str::to_owned).collect();
+    walk(&file.nodes, &mut lines);
+    for l in file.trailing.iter().filter(|l| l.is_blank()) {
+        lines[l.number as usize - 1] = " \n\t".to_owned();
+    }
+    let mut out = String::new();
+    for l in lines.iter().filter(|l| *l != "\u{0}") {
+        out.push_str(l);
+        out.push('\n');
+    }
+    out
+}
+
+#[test]
+fn format_restores_the_layout_desktop_wrote() {
+    use pbi_tmdl::{IndentStyle, LineEnding};
+    let files = saved_files_raw();
+    let mut failures = Vec::new();
+    for (path, text) in &files {
+        let ending = if text.contains("\r\n") {
+            LineEnding::CrLf
+        } else {
+            LineEnding::Lf
+        };
+        let mangled = mangle(text);
+        assert_ne!(mangled, *text, "{path}");
+        match format_with(&mangled, IndentStyle::Tabs, Some(ending)) {
+            Ok(out) if out == *text => {}
+            Ok(out) => failures.push(format!("{path}: {}", first_difference(text, &out))),
+            Err(e) => failures.push(format!("{path}: mangled: {e}")),
+        }
+        let spaces = match format_with(text, IndentStyle::Spaces(4), None) {
+            Ok(spaces) => spaces,
+            Err(e) => {
+                failures.push(format!("{path}: to spaces: {e}"));
+                continue;
+            }
+        };
+        if spaces.lines().any(|l| l.starts_with('\t')) {
+            failures.push(format!("{path}: a line still starts with a tab"));
+        }
+        match format_with(&spaces, IndentStyle::Spaces(4), None) {
+            Ok(again) if again == spaces => {}
+            Ok(again) => failures.push(format!(
+                "{path}: spaces not stable: {}",
+                first_difference(&spaces, &again)
+            )),
+            Err(e) => failures.push(format!("{path}: spaces again: {e}")),
+        }
+        match format_with(&spaces, IndentStyle::Tabs, None) {
+            Ok(back) if back == *text => {}
+            Ok(back) => failures.push(format!(
+                "{path}: back to tabs: {}",
+                first_difference(text, &back)
+            )),
+            Err(e) => failures.push(format!("{path}: back to tabs: {e}")),
+        }
+    }
+    println!("{} files", files.len());
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

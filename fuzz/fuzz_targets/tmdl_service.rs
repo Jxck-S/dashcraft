@@ -10,11 +10,17 @@
 //! and column are 1-based, and a suggestion is never empty; the result is the same on a second
 //! run. Completion and hover at a few cursors of the first file (the others as the folder):
 //! ranges inside the text on character boundaries, the prefix typed before the cursor, at most
-//! the items asked for with distinct, non-empty labels, declarations in the input files.
+//! the items asked for with distinct, non-empty labels, declarations in the input files. The
+//! formatter on the first file (tabs, or spaces for some lengths): a syntax error exactly when
+//! the file does not parse, otherwise a text that formats to itself.
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use pbi_tmdl::service::{FileText, MAX_DIAGNOSTICS, Source, complete, diagnostics, hover};
+use pbi_tmdl::IndentStyle;
+use pbi_tmdl::service::{
+    FileText, FormatError, FormatOptions, MAX_DIAGNOSTICS, Source, codes, complete, diagnostics,
+    format, hover,
+};
 
 const MAX_FILES: usize = 8;
 
@@ -91,6 +97,29 @@ fuzz_target!(|data: &[u8]| {
                     "{h:?}"
                 );
             }
+        }
+    }
+
+    let indent = match len % 3 {
+        0 => IndentStyle::Spaces(2),
+        _ => IndentStyle::Tabs,
+    };
+    let options = FormatOptions {
+        indent,
+        line_ending: None,
+    };
+    match format(text, &options) {
+        Err(FormatError::Syntax(d)) => assert!(
+            first.file().is_none() && d.code == codes::SYNTAX && d.line >= 1,
+            "{d:?}"
+        ),
+        Err(FormatError::Unstable) => {}
+        Ok(out) => {
+            assert!(first.file().is_some(), "formatted a syntax error");
+            assert!(
+                format(&out, &options).as_ref() == Ok(&out),
+                "not idempotent: {out:?}"
+            );
         }
     }
 });

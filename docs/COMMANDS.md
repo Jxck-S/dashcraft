@@ -153,6 +153,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`tmdl.diagnostics`](#tmdldiagnostics) | What Microsoft's TMDL reader rejects in TMDL files: unknown keywords, wrong forms and values, levels, duplicates and unresolved references, with the closest name. | A |
 | [`tmdl.complete`](#tmdlcomplete) | The TMDL keywords, values and object names that fit at a cursor, as Microsoft's TMDL reader accepts them there, best match first, with the text to insert. | A |
 | [`tmdl.hover`](#tmdlhover) | Describes the TMDL word at a cursor: a keyword's forms, value and level, an enumeration value, or the object a reference names and where it is declared. | A |
+| [`tmdl.format`](#tmdlformat) | Lays out a TMDL file as Power BI Desktop writes it: indentation, spacing, blank lines, expression blocks; only white space changes, checked by reading the result back. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -1436,6 +1437,34 @@ Examples:
 
 - A property keyword: `{"text":"table Stores\n\tcolumn Region\n\t\tsummarizeBy: none\n","position":{"line":3,"column":5}}`
 - A column of another file: `{"text":"relationship r1\n\tfromColumn: Orders.Store\n","position":{"line":2,"column":22},"files":[{"path":"tables/Orders.tmdl","text":"table Orders\n\tcolumn Store\n"}]}`
+
+### `tmdl.format`
+
+**Format TMDL.** Lays out a TMDL file as Power BI Desktop writes it: indentation, spacing, blank lines, expression blocks; only white space changes, checked by reading the result back.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `text` | string | One `.tmdl` file's text. |
+| `indentWidth` (optional) | integer \| null | Indent with this many spaces per level (1 to 16); absent: with tabs, as Power BI Desktop does. |
+| `lineEnding` (optional) | `"lf"` \| `"crlf"` \| null | The line ending of every line; absent: the text's first one (`lf` when it has none). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `ok` | boolean | The text parses (else `text` is the input unchanged and `diagnostic` says why). |
+| `text` | string | The formatted text; every line ends with a line ending. |
+| `changed` | boolean | `text` differs from the input. |
+| `diagnostic`? | TmdlDiagnosticOut \| null | The syntax error (`TMDL110`) when `ok` is false. |
+
+Examples:
+
+- A table file: `{"text":"table Stores\n  lineageTag:s1\n  column  Region\n    dataType :string\n  measure Count=COUNTROWS(Stores)\n"}`
+- Two-space indentation, CRLF: `{"text":"table Stores\n\tcolumn Region\n\t\tdataType: string\n","indentWidth":2,"lineEnding":"crlf"}`
 
 ## Render
 
