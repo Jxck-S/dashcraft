@@ -81,10 +81,24 @@ fn is_fatal(e: &MError) -> bool {
 
 /// `We cannot convert the value X to type T.`
 pub(crate) fn convert_error(v: &Value, target: &str) -> MError {
-    MError::expression(format!(
-        "We cannot convert the value {} to type {target}.",
-        describe(v)
-    ))
+    let v = v.plain();
+    MError::expression(match v {
+        Value::Type(_) => format!("We cannot convert Type to {target} type."),
+        Value::List(_)
+        | Value::Record(_)
+        | Value::Table(_)
+        | Value::Function(_)
+        | Value::Binary(_) => {
+            format!(
+                "We cannot convert a value of type {} to type {target}.",
+                v.kind().name()
+            )
+        }
+        _ => format!(
+            "We cannot convert the value {} to type {target}.",
+            describe(v)
+        ),
+    })
 }
 
 fn npt_conforms(t: &NullablePrimitiveType, v: &Value) -> bool {

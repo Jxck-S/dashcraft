@@ -345,12 +345,16 @@ fn compare(_: &Interp, args: &[Value]) -> Result<Value, MError> {
 
 fn type_is(_: &Interp, args: &[Value]) -> Result<Value, MError> {
     let (a, b) = (type_arg(args, 0)?, type_arg(args, 1)?);
-    let compatible = match b.base() {
+    Ok(Value::Logical(type_compatible(a, b)))
+}
+
+/// `Type.Is(a, b)`: whether values of type `a` are always compatible with type `b`.
+pub(crate) fn type_compatible(a: &TypeValue, b: &TypeValue) -> bool {
+    match b.base() {
         PrimitiveType::Any => true,
         PrimitiveType::AnyNonNull => !a.is_nullable(),
         p => a.base() == p && (b.is_nullable() || !a.is_nullable()),
-    };
-    Ok(Value::Logical(compatible))
+    }
 }
 
 fn type_is_nullable(_: &Interp, args: &[Value]) -> Result<Value, MError> {

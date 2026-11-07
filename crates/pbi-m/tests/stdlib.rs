@@ -354,7 +354,16 @@ fn table_shape_functions() {
         r#"Table.FromRecords({[a = 1, b = 2], [a = 3, b = 4]})"#,
         r#"#table({"a", "b"}, {{1, 2}, {3, 4}})"#,
     );
-    fails(r#"Table.FromRecords({[a = 1], [b = 2]})"#, "'a'");
+    // A record without a column makes its row an error, not the table (Desktop ground truth).
+    check(
+        r#"Table.RowCount(Table.FromRecords({[a = 1], [b = 2]}))"#,
+        "2",
+    );
+    fails(r#"Table.FromRecords({[a = 1], [b = 2]}){1}[a]"#, "'a'");
+    fails(
+        r#"Table.FromRecords({[a = 1]}, {"a"}, MissingField.Ignore)"#,
+        "must be either MissingField.Error or MissingField.UseNull",
+    );
     check(
         r#"Table.FromRecords({[a = 1], [b = 2]}, {"a"}, MissingField.UseNull)[a]"#,
         "{1, null}",
@@ -482,6 +491,282 @@ fn table_errors_and_fill() {
     check(
         r#"Table.FillUp(#table({"a"}, {{null}, {1}}), {"a"})[a]"#,
         "{1, 1}",
+    );
+}
+
+const JOIN_L: &str = r#"#table({"k", "v"}, {{1, "a"}, {2, "b"}, {3, "c"}})"#;
+const JOIN_R: &str = r#"#table({"k2", "w"}, {{1, "x"}, {1, "y"}, {4, "z"}})"#;
+
+#[test]
+fn table_joins() {
+    let join = |kind: &str| format!(r#"Table.Join({JOIN_L}, "k", {JOIN_R}, "k2", {kind})"#);
+    for (kind, rows) in [
+        ("JoinKind.Inner", 2),
+        ("JoinKind.LeftOuter", 4),
+        ("JoinKind.RightOuter", 3),
+        ("JoinKind.FullOuter", 5),
+    ] {
+        check(
+            &format!("Table.RowCount({})", join(kind)),
+            &rows.to_string(),
+        );
+    }
+    check(
+        &format!("List.Sort({}[k])", join("JoinKind.LeftAnti")),
+        "{2, 3}",
+    );
+    check(&format!("{}[k2]", join("JoinKind.RightAnti")), "{4}");
+    check(
+        &format!(
+            r#"Table.AddColumn(Table.NestedJoin({JOIN_L}, "k", {JOIN_R}, "k2", "n"), "c", each Table.RowCount([n]))[c]"#
+        ),
+        "{2, 0, 0}",
+    );
+    fails(
+        &format!(r#"Table.Join({JOIN_L}, "k", {JOIN_L}, "k")"#),
+        "duplicate column names",
+    );
+    fails(
+        &format!(r#"Table.Join({JOIN_L}, "k", () => {JOIN_R}, "k2")"#),
+        "We cannot convert a value of type Function to type Table.",
+    );
+    fails(
+        &format!(
+            r#"Table.RowCount(Table.Join({JOIN_L}, "k", {JOIN_R}, "k2", JoinKind.Inner, null, {{Comparer.OrdinalIgnoreCase}}))"#
+        ),
+        "key equality comparers is not supported",
+    );
+}
+
+#[test]
+fn table_group_pivot_unpivot() {
+    let t = r#"#table({"g", "v"}, {{"a", 1}, {"a", 2}, {"B", 3}, {"a", 4}, {"b", 5}})"#;
+    check(
+        &format!(r#"Table.Group({t}, "g", {{"s", each List.Sum([v])}}, GroupKind.Local)[s]"#),
+        "{3, 3, 4, 5}",
+    );
+    check(
+        &format!(
+            r#"Table.Group({t}, "g", {{"s", each List.Sum([v])}}, GroupKind.Global, Comparer.OrdinalIgnoreCase)[s]"#
+        ),
+        "{7, 8}",
+    );
+    let long = r#"#table(type table [r = text, a = text, n = Int64.Type], {{"x", "p", 1}, {"x", "q", 2}, {"y", "p", 3}})"#;
+    check(
+        &format!(r#"Table.Pivot({long}, {{"p", "q"}}, "a", "n")"#),
+        r#"#table({"r", "p", "q"}, {{"x", 1, 2}, {"y", 3, null}})"#,
+    );
+    // Pivoted columns keep the value column's type, made nullable, even when aggregated.
+    check(
+        &format!(
+            r#"Table.Schema(Table.Pivot({long}, {{"p", "q"}}, "a", "n", List.Sum))[TypeName]"#
+        ),
+        r#"{"Text.Type", "Int64.Type", "Int64.Type"}"#,
+    );
+    fails(
+        &format!(
+            r#"Table.Pivot(Table.Combine({{{long}, {long}}}), {{"p", "q"}}, "a", "n"){{0}}[p]"#
+        ),
+        "There were too many elements in the enumeration",
+    );
+    // Attribute and Value go after the columns that stay.
+    check(
+        r#"Table.Unpivot(#table({"a", "id", "b"}, {{1, "x", 2}}), {"a", "b"}, "Attribute", "Value")"#,
+        r#"#table({"id", "Attribute", "Value"}, {{"x", "a", 1}, {"x", "b", 2}})"#,
+    );
+    check(
+        r#"Table.UnpivotOtherColumns(#table({"a", "id", "b"}, {{1, "x", null}}), {"id"}, "k", "v")"#,
+        r#"#table({"id", "k", "v"}, {{"x", "a", 1}})"#,
+    );
+}
+
+#[test]
+fn table_expand_split_combine() {
+    let nested = r#"#table({"id", "t"}, {{1, #table({"x"}, {{10}, {11}})}, {2, #table({"x"}, {})}, {3, null}})"#;
+    check(
+        &format!(r#"Table.ExpandTableColumn({nested}, "t", {{"x", "q"}})"#),
+        r#"#table({"id", "x", "q"}, {{1, 10, null}, {1, 11, null}, {2, null, null}, {3, null, null}})"#,
+    );
+    fails(
+        &format!(r#"Table.ExpandTableColumn({nested}, "t", {{"x"}}, {{"id"}})"#),
+        "The field 'id' already exists in the record.",
+    );
+    check(
+        r#"Table.ExpandRecordColumn(#table({"r"}, {{[a = 1, b = 2]}, {null}}), "r", {"b"})"#,
+        r#"#table({"b"}, {{2}, {null}})"#,
+    );
+    check(
+        r#"Table.ExpandListColumn(#table({"i", "l"}, {{1, {"a", "b"}}, {2, {}}}), "l")"#,
+        r#"#table({"i", "l"}, {{1, "a"}, {1, "b"}, {2, null}})"#,
+    );
+    let split = |extra: &str| {
+        format!(
+            r#"Table.ToRows(Table.SplitColumn(#table({{"s"}}, {{{{"a,b,c"}}, {{"d"}}, {{null}}}}), "s", Splitter.SplitTextByDelimiter(","), 2, null, {extra}))"#
+        )
+    };
+    check(
+        &split("ExtraValues.List"),
+        r#"{{"a", {"b", "c"}}, {"d", {}}, {null, {}}}"#,
+    );
+    check(
+        &split("ExtraValues.Ignore"),
+        r#"{{"a", "b"}, {"d", null}, {null, null}}"#,
+    );
+    fails(
+        &format!("{}{{0}}{{0}}", split("ExtraValues.Error")),
+        "There were more columns in the result than expected.",
+    );
+    // Both combines put the new column where the last listed column was.
+    let abcd = r#"#table({"a", "b", "c", "d"}, {{"1", "2", "3", "4"}})"#;
+    check(
+        &format!(
+            r#"Table.ColumnNames(Table.CombineColumns({abcd}, {{"a", "c"}}, Combiner.CombineTextByDelimiter("+"), "ac"))"#
+        ),
+        r#"{"b", "ac", "d"}"#,
+    );
+    check(
+        &format!(
+            r#"Table.ColumnNames(Table.CombineColumnsToRecord({abcd}, "r", {{"b", "d", "a"}}))"#
+        ),
+        r#"{"r", "c"}"#,
+    );
+    check(
+        r#"Table.Transpose(#table({"a", "b"}, {{1, 2}, {3, 4}}), {"x", "y"})"#,
+        r#"#table({"x", "y"}, {{1, 3}, {2, 4}})"#,
+    );
+}
+
+#[test]
+fn table_ordering_and_partition() {
+    let t = r#"#table({"n", "s"}, {{2, "a"}, {5, "b"}, {5, "c"}, {1, "d"}})"#;
+    // Ties go to the last tied row, as in Desktop.
+    check(&format!(r#"Table.Max({t}, "n")[s]"#), r#""c""#);
+    check(&format!(r#"Table.Min({t}, "n")[s]"#), r#""d""#);
+    check(r#"Table.Max(#table({"n"}, {}), "n", 0)"#, "0");
+    // The result is sorted by rank, like Desktop.
+    check(
+        &format!(r#"Table.AddRankColumn({t}, "r", {{"n", Order.Descending}})[r]"#),
+        "{1, 1, 3, 4}",
+    );
+    check(
+        &format!(
+            r#"Table.AddRankColumn({t}, "r", {{"n", Order.Descending}}, [RankKind = RankKind.Dense])[s]"#
+        ),
+        r#"{"b", "c", "a", "d"}"#,
+    );
+    // Number.Mod semantics: negative and fractional hashes match no partition and are dropped.
+    check(
+        r#"List.Transform(Table.Partition(#table({"v"}, {{1}, {2}, {3}, {4}, {5}, {-1}, {2.5}}), "v", 2, each _), each _[v])"#,
+        "{{2, 4}, {1, 3, 5}}",
+    );
+    check(
+        r#"Table.Partition(#table({"v"}, {{1}}), "v", 0, each _)"#,
+        "{}",
+    );
+    fails(
+        r#"Table.Split(#table({"v"}, {{1}}), 0)"#,
+        "The 'pageSize' argument is out of range.",
+    );
+    fails(
+        r#"Table.Repeat(#table({"v"}, {{1}}), -1)"#,
+        "The 'count' argument is out of range.",
+    );
+    fails(
+        r#"Table.AlternateRows(#table({"v"}, {{1}}), -1, 1, 1)"#,
+        "The 'offset' argument is out of range.",
+    );
+    // An inconsistent comparer must not panic the sort.
+    check(
+        r#"Table.RowCount(Table.Sort(#table({"v"}, {{3}, {1}, {2}, {5}, {4}}), (x, y) => 1))"#,
+        "5",
+    );
+}
+
+#[test]
+fn table_row_lookups() {
+    let t = r#"#table({"a", "b"}, {{1, "x"}, {2, "Y"}, {1, "z"}})"#;
+    // Contains compares only the record's fields; PositionOf needs the whole row.
+    check(&format!("Table.Contains({t}, [a = 1])"), "true");
+    check(&format!("Table.PositionOf({t}, [a = 1])"), "-1");
+    check(
+        &format!(r#"Table.PositionOf({t}, [a = 1], Occurrence.All, "a")"#),
+        "{0, 2}",
+    );
+    check(
+        &format!(r#"Table.PositionOf({t}, [b = "y"], 0, {{"b", Comparer.OrdinalIgnoreCase}})"#),
+        "1",
+    );
+    fails(
+        &format!(r#"Table.Contains({t}, [zz = 1], "zz")"#),
+        "The field 'zz' of the record wasn't found.",
+    );
+    check(
+        &format!(r#"Table.ToRows(Table.RemoveMatchingRows({t}, {{[a = 1]}}, "a"))"#),
+        r#"{{2, "Y"}}"#,
+    );
+    // A replacement or inserted record without a column makes that row an error.
+    fails(
+        &format!(r#"Table.ReplaceMatchingRows({t}, {{{{[a = 2], [a = 6]}}}}, "a"){{1}}[a]"#),
+        "The field 'b' of the record wasn't found.",
+    );
+    check(
+        &format!(r#"Table.ReplaceMatchingRows({t}, {{{{[a = 2], [a = 6]}}}}, "a"){{0}}[b]"#),
+        r#""x""#,
+    );
+    fails(
+        &format!(r#"Table.InsertRows({t}, 0, {{[a = 10]}}){{0}}[a]"#),
+        "The field 'b' of the record wasn't found.",
+    );
+    fails(
+        &format!(r#"Table.InsertRows({t}, 4, {{[a = 10, b = "n"]}})"#),
+        "There weren't enough elements in the enumeration",
+    );
+    // FindText looks into text, lists and records, not numbers.
+    let f = r#"#table({"c"}, {{"hello"}, {{"x", {"needle"}}}, {[k = "a needle"]}, {12}})"#;
+    check(
+        &format!(r#"Table.RowCount(Table.FindText({f}, "needle"))"#),
+        "2",
+    );
+    check(&format!(r#"Table.RowCount(Table.FindText({f}, "1"))"#), "0");
+}
+
+#[test]
+fn table_metadata_and_conversion() {
+    check(
+        r#"Table.FromValue([a = 1], [DefaultColumnName = "c"])"#,
+        r#"#table({"Name", "Value"}, {{"a", 1}})"#,
+    );
+    check(
+        r#"Table.FromValue({1, 2}, [DefaultColumnName = "c"])"#,
+        r#"#table({"c"}, {{1}, {2}})"#,
+    );
+    check(
+        r#"Table.Schema(#table(type table [a = Int64.Type, b = nullable text], {}))[TypeName]"#,
+        r#"{"Int64.Type", "Text.Type"}"#,
+    );
+    check(
+        r#"Table.ColumnsOfType(#table(type table [a = number, b = text, c = nullable number], {}), {type number})"#,
+        r#"{"a"}"#,
+    );
+    check(
+        r#"Table.ColumnsOfType(#table(type table [a = number, b = text, c = nullable number], {}), {type nullable number})"#,
+        r#"{"a", "c"}"#,
+    );
+    fails(
+        r#"Table.TransformColumnTypes(#table({"a"}, {{1}}), {"a", type table})"#,
+        "The type specified wasn't recognized.",
+    );
+    fails(
+        r#"Table.TransformColumnTypes(#table({"a"}, {{1}}), {"zz", type list})"#,
+        "The type specified wasn't recognized.",
+    );
+    fails(
+        r#"Table.RowCount([a = 1])"#,
+        "We cannot convert a value of type Record to type Table.",
+    );
+    fails(
+        r#"Table.RowCount(type table)"#,
+        "We cannot convert Type to Table type.",
     );
 }
 

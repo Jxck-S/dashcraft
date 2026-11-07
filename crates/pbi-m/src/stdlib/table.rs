@@ -1,6 +1,5 @@
 //! `Table.*` functions and `#table`.
 
-use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hasher};
@@ -12,6 +11,7 @@ use super::args::{
 };
 use super::convert::convert_to_type;
 use super::{Builder, MissingField, missing_column};
+use crate::ast::PrimitiveType;
 use crate::eval::interp::{Interp, convert_error};
 use crate::merror::MError;
 use crate::value::format::value_to_text;
@@ -162,7 +162,7 @@ fn identity(_: &Interp, args: &[Value]) -> Result<Value, MError> {
     Ok(arg(args, 0).clone())
 }
 
-fn names(v: Vec<String>) -> Vec<Arc<str>> {
+pub(super) fn names(v: Vec<String>) -> Vec<Arc<str>> {
     v.into_iter().map(Arc::from).collect()
 }
 
@@ -170,12 +170,29 @@ fn missing_arg(args: &[Value], i: usize) -> Result<MissingField, MError> {
     MissingField::from_arg(arg(args, i))
 }
 
-fn table_value(t: TableValue) -> Result<Value, MError> {
+/// The cells of `rec` in the order of `names`. A missing field makes the whole row an error (every
+/// cell raises it when read), as Desktop does, rather than failing the table.
+pub(super) fn record_row(rec: &RecordValue, names: &[Arc<str>]) -> Vec<Lazy> {
+    match names.iter().find(|n| rec.get(n).is_none()) {
+        Some(n) => {
+            let err = Arc::new(MError::expression(format!(
+                "The field '{n}' of the record wasn't found."
+            )));
+            vec![Lazy::Error(err); names.len()]
+        }
+        None => names
+            .iter()
+            .map(|n| rec.get(n).cloned().unwrap_or(Lazy::Value(Value::Null)))
+            .collect(),
+    }
+}
+
+pub(super) fn table_value(t: TableValue) -> Result<Value, MError> {
     Ok(Value::Table(t))
 }
 
 /// Builds a table whose columns are (name, type, cells).
-fn build(
+pub(super) fn build(
     it: &Interp,
     cols: Vec<(Arc<str>, TypeValue, Arc<Vec<Lazy>>)>,
 ) -> Result<TableValue, MError> {
@@ -192,7 +209,7 @@ fn build(
     TableValue::new(names, types, cells)
 }
 
-fn columns_of(t: &TableValue) -> Vec<(Arc<str>, TypeValue, Arc<Vec<Lazy>>)> {
+pub(super) fn columns_of(t: &TableValue) -> Vec<(Arc<str>, TypeValue, Arc<Vec<Lazy>>)> {
     t.column_names()
         .iter()
         .zip(t.column_types())
@@ -201,7 +218,7 @@ fn columns_of(t: &TableValue) -> Vec<(Arc<str>, TypeValue, Arc<Vec<Lazy>>)> {
         .collect()
 }
 
-fn null_column(rows: usize) -> Arc<Vec<Lazy>> {
+pub(super) fn null_column(rows: usize) -> Arc<Vec<Lazy>> {
     Arc::new(vec![Lazy::Value(Value::Null); rows])
 }
 
@@ -255,7 +272,7 @@ fn row_cells(it: &Interp, row: &Value, width: usize, index: usize) -> Result<Vec
 }
 
 /// Column names and types from a `columns` argument: list of names, count or table type.
-fn column_spec(
+pub(super) fn column_spec(
     it: &Interp,
     v: &Value,
     default_width: usize,
@@ -285,7 +302,7 @@ fn column_spec(
     }
 }
 
-fn default_names(n: usize) -> Vec<Arc<str>> {
+pub(super) fn default_names(n: usize) -> Vec<Arc<str>> {
     (1..=n).map(|i| Arc::from(format!("Column{i}"))).collect()
 }
 
@@ -360,7 +377,7 @@ fn demote_headers(_: &Interp, args: &[Value]) -> Result<Value, MError> {
     table_value(TableValue::new(default_names(width), Vec::new(), columns)?)
 }
 
-fn condition_holds(it: &Interp, f: &FunctionValue, row: Value) -> Result<bool, MError> {
+pub(super) fn condition_holds(it: &Interp, f: &FunctionValue, row: Value) -> Result<bool, MError> {
     match it.call(f, &[row])?.plain() {
         Value::Logical(b) => Ok(*b),
         other => Err(convert_error(other, "Logical")),
@@ -381,7 +398,7 @@ fn select_rows(it: &Interp, args: &[Value]) -> Result<Value, MError> {
 }
 
 /// Parses `{old, new}` or `{{old, new}, ...}` (also used for `{col, fn[, type]}` lists).
-fn pairs(it: &Interp, v: &Value) -> Result<Vec<Vec<Value>>, MError> {
+pub(super) fn pairs(it: &Interp, v: &Value) -> Result<Vec<Vec<Value>>, MError> {
     let Value::List(l) = v.plain() else {
         return Err(convert_error(v, "List"));
     };
@@ -397,7 +414,7 @@ fn pairs(it: &Interp, v: &Value) -> Result<Vec<Vec<Value>>, MError> {
         .collect()
 }
 
-fn text_of(v: &Value) -> Result<Arc<str>, MError> {
+pub(super) fn text_of(v: &Value) -> Result<Arc<str>, MError> {
     match v.plain() {
         Value::Text(t) => Ok(t.clone()),
         other => Err(convert_error(other, "Text")),
@@ -519,6 +536,15 @@ fn transform_column_types(it: &Interp, args: &[Value]) -> Result<Value, MError> 
         let Value::Type(ty) = ty.plain() else {
             return Err(convert_error(ty, "Type"));
         };
+        if matches!(
+            ty.base(),
+            PrimitiveType::Function
+                | PrimitiveType::List
+                | PrimitiveType::Record
+                | PrimitiveType::Table
+        ) {
+            return Err(MError::expression("The type specified wasn't recognized."));
+        }
         let Some(i) = t.column_index(&name) else {
             match missing {
                 MissingField::Error => return Err(missing_column(&name)),
@@ -534,7 +560,7 @@ fn transform_column_types(it: &Interp, args: &[Value]) -> Result<Value, MError> 
     table_value(build(it, cols)?)
 }
 
-fn type_arg(args: &[Value], i: usize) -> Result<TypeValue, MError> {
+pub(super) fn type_arg(args: &[Value], i: usize) -> Result<TypeValue, MError> {
     match arg(args, i) {
         Value::Null => Ok(TypeValue::any()),
         Value::Type(t) => Ok(t.clone()),
@@ -542,7 +568,7 @@ fn type_arg(args: &[Value], i: usize) -> Result<TypeValue, MError> {
     }
 }
 
-fn check_new_name(t: &TableValue, name: &str) -> Result<(), MError> {
+pub(super) fn check_new_name(t: &TableValue, name: &str) -> Result<(), MError> {
     if t.column_index(name).is_some() {
         return Err(MError::expression(format!(
             "The field '{name}' already exists in the record."
@@ -606,7 +632,11 @@ pub(crate) fn is_ignore_case(v: &Value) -> bool {
 }
 
 /// Parses `equationCriteria`: column name(s), a comparer, or `{column, comparer}`.
-fn distinct_criteria(it: &Interp, t: &TableValue, v: &Value) -> Result<(Vec<usize>, bool), MError> {
+pub(super) fn distinct_criteria(
+    it: &Interp,
+    t: &TableValue,
+    v: &Value,
+) -> Result<(Vec<usize>, bool), MError> {
     let all = || (0..t.column_count()).collect::<Vec<_>>();
     match v.plain() {
         Value::Null => Ok((all(), false)),
@@ -805,6 +835,11 @@ fn from_rows(it: &Interp, args: &[Value]) -> Result<Value, MError> {
 fn from_records(it: &Interp, args: &[Value]) -> Result<Value, MError> {
     let records = items(it, req_list(args, 0)?)?;
     let missing = missing_arg(args, 2)?;
+    if missing == MissingField::Ignore {
+        return Err(MError::expression(
+            "The 'missingField' argument must be either MissingField.Error or MissingField.UseNull.",
+        ));
+    }
     it.check_rows(records.len())?;
     let (names, types) = match arg(args, 1) {
         Value::Null => match records.first() {
@@ -820,16 +855,15 @@ fn from_records(it: &Interp, args: &[Value]) -> Result<Value, MError> {
         let Value::Record(r) = rec else {
             return Err(convert_error(rec, "Record"));
         };
+        if missing == MissingField::Error && names.iter().any(|n| r.get(n).is_none()) {
+            rows.push(record_row(r, &names));
+            continue;
+        }
         let mut row = Vec::with_capacity(names.len());
         for n in &names {
             match r.get(n) {
                 Some(slot) => row.push(catch(slot.force(it))?),
-                None if missing != MissingField::Error => row.push(Lazy::Value(Value::Null)),
-                None => {
-                    return Err(MError::expression(format!(
-                        "The field '{n}' of the record wasn't found."
-                    )));
-                }
+                None => row.push(Lazy::Value(Value::Null)),
             }
         }
         rows.push(row);
@@ -942,7 +976,12 @@ fn transform_rows(it: &Interp, args: &[Value]) -> Result<Value, MError> {
 }
 
 /// Number of leading rows selected by a count or a condition.
-fn leading(it: &Interp, t: &TableValue, v: &Value, default: usize) -> Result<usize, MError> {
+pub(super) fn leading(
+    it: &Interp,
+    t: &TableValue,
+    v: &Value,
+    default: usize,
+) -> Result<usize, MError> {
     match v.plain() {
         Value::Null => Ok(default),
         Value::Number(_) => Ok(count_arg(std::slice::from_ref(v), 0)?.unwrap_or(default)),
@@ -1059,66 +1098,123 @@ fn sort_keys(it: &Interp, t: &TableValue, v: &Value) -> Result<Vec<SortKey>, MEr
     }
 }
 
-fn sort(it: &Interp, args: &[Value]) -> Result<Value, MError> {
-    let t = req_table(args, 0)?;
-    let keys = sort_keys(it, t, arg(args, 1))?;
-    let rows: Vec<RecordValue> = t.rows().collect();
-    // Precompute key values.
-    let mut key_values: Vec<Vec<Value>> = Vec::with_capacity(rows.len());
-    for (i, row) in rows.iter().enumerate() {
-        it.tick()?;
-        let mut kv = Vec::new();
-        for k in &keys {
-            match k {
-                SortKey::Column(c, _) => kv.push(match t.cell(i, *c) {
-                    Some(cell) => cell.force(it)?,
-                    None => Value::Null,
-                }),
-                SortKey::Key(f, _) => kv.push(it.call(f, &[Value::Record(row.clone())])?),
-                SortKey::Comparer(_) => kv.push(Value::Null),
+/// The rows of a table compared by `comparisonCriteria` (`Table.Sort`, `Table.Max`,
+/// `Table.AddRankColumn`, ...). Key values are computed once per row.
+pub(super) struct RowOrder<'a> {
+    it: &'a Interp,
+    keys: Vec<SortKey>,
+    rows: Vec<RecordValue>,
+    key_values: Vec<Vec<Value>>,
+}
+
+static NULL: Value = Value::Null;
+
+impl<'a> RowOrder<'a> {
+    pub(super) fn new(it: &'a Interp, t: &TableValue, criteria: &Value) -> Result<Self, MError> {
+        let keys = sort_keys(it, t, criteria)?;
+        let rows: Vec<RecordValue> = t.rows().collect();
+        let mut key_values: Vec<Vec<Value>> = Vec::with_capacity(rows.len());
+        for (i, row) in rows.iter().enumerate() {
+            it.tick()?;
+            let mut kv = Vec::with_capacity(keys.len());
+            for k in &keys {
+                kv.push(match k {
+                    SortKey::Column(c, _) => match t.cell(i, *c) {
+                        Some(cell) => cell.force(it)?,
+                        None => Value::Null,
+                    },
+                    SortKey::Key(f, _) => it.call(f, &[Value::Record(row.clone())])?,
+                    SortKey::Comparer(_) => Value::Null,
+                });
             }
+            key_values.push(kv);
         }
-        key_values.push(kv);
+        Ok(Self {
+            it,
+            keys,
+            rows,
+            key_values,
+        })
     }
-    let error: RefCell<Option<MError>> = RefCell::new(None);
-    let mut order: Vec<usize> = (0..rows.len()).collect();
-    order.sort_by(|&a, &b| {
-        for (ki, k) in keys.iter().enumerate() {
+
+    pub(super) fn compare(&self, a: usize, b: usize) -> Result<Ordering, MError> {
+        for (ki, k) in self.keys.iter().enumerate() {
             let o = match k {
                 SortKey::Column(_, desc) | SortKey::Key(_, desc) => {
-                    let o = sort_compare(&key_values[a][ki], &key_values[b][ki]);
+                    let key = |r: usize| {
+                        self.key_values
+                            .get(r)
+                            .and_then(|kv| kv.get(ki))
+                            .unwrap_or(&NULL)
+                    };
+                    let o = sort_compare(key(a), key(b));
                     if *desc { o.reverse() } else { o }
                 }
                 SortKey::Comparer(f) => {
-                    if error.borrow().is_some() {
-                        return Ordering::Equal;
-                    }
-                    match it.call(
-                        f,
-                        &[
-                            Value::Record(rows[a].clone()),
-                            Value::Record(rows[b].clone()),
-                        ],
-                    ) {
-                        Ok(v) => v.as_number().map_or(Ordering::Equal, |n| {
-                            n.partial_cmp(&0.0).unwrap_or(Ordering::Equal)
-                        }),
-                        Err(e) => {
-                            *error.borrow_mut() = Some(e);
-                            Ordering::Equal
-                        }
-                    }
+                    let (Some(x), Some(y)) = (self.rows.get(a), self.rows.get(b)) else {
+                        return Ok(Ordering::Equal);
+                    };
+                    let v = self
+                        .it
+                        .call(f, &[Value::Record(x.clone()), Value::Record(y.clone())])?;
+                    v.as_number().map_or(Ordering::Equal, |n| {
+                        n.partial_cmp(&0.0).unwrap_or(Ordering::Equal)
+                    })
                 }
             };
             if o != Ordering::Equal {
-                return o;
+                return Ok(o);
             }
         }
-        Ordering::Equal
-    });
-    if let Some(e) = error.into_inner() {
-        return Err(e);
+        Ok(Ordering::Equal)
     }
+
+    /// Row indices in stable order; `descending` reverses the whole ordering.
+    pub(super) fn sorted(&self, descending: bool) -> Result<Vec<usize>, MError> {
+        let mut order: Vec<usize> = (0..self.rows.len()).collect();
+        stable_sort(&mut order, |a, b| {
+            let o = self.compare(a, b)?;
+            Ok(if descending { o.reverse() } else { o })
+        })?;
+        Ok(order)
+    }
+}
+
+/// A stable bottom-up merge sort whose comparison may fail. Unlike `slice::sort_by`, it never
+/// panics when the comparison is not a total order (user comparers).
+pub(super) fn stable_sort(
+    items: &mut Vec<usize>,
+    mut cmp: impl FnMut(usize, usize) -> Result<Ordering, MError>,
+) -> Result<(), MError> {
+    let n = items.len();
+    let mut buf = items.clone();
+    let mut width = 1usize;
+    while width < n {
+        let mut start = 0;
+        while start < n {
+            let mid = start.saturating_add(width).min(n);
+            let end = mid.saturating_add(width).min(n);
+            let (mut i, mut j) = (start, mid);
+            for slot in buf.iter_mut().take(end).skip(start) {
+                let take_right = match (items.get(i), items.get(j)) {
+                    (Some(&a), Some(&b)) if i < mid && j < end => cmp(b, a)? == Ordering::Less,
+                    _ => i >= mid,
+                };
+                let source = if take_right { &mut j } else { &mut i };
+                *slot = items.get(*source).copied().unwrap_or_default();
+                *source += 1;
+            }
+            start = end;
+        }
+        std::mem::swap(items, &mut buf);
+        width = width.saturating_mul(2);
+    }
+    Ok(())
+}
+
+fn sort(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let t = req_table(args, 0)?;
+    let order = RowOrder::new(it, t, arg(args, 1))?.sorted(false)?;
     table_value(t.take_rows(&order))
 }
 
