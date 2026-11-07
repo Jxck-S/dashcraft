@@ -4,8 +4,8 @@
 use pbi_model::Severity;
 use pbi_session::{
     ColumnFilterSpec, ColumnRefresh, DerivedColumnInfo, FilterSpec, MeasureValue, OFFLINE_HINT,
-    RefreshKind, RefreshReport, Session, TableRefresh, TableStatus, UnsupportedFilter,
-    value_to_json,
+    Recalculated, RefreshKind, RefreshReport, Session, TableRefresh, TableStatus,
+    UnsupportedFilter, value_to_json,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -143,6 +143,35 @@ impl StatusOut {
                 csv_fallback: None,
                 offline: None,
             },
+        }
+    }
+}
+
+/// A calculated table or column an edit recomputed over the loaded data.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RecalculatedOut {
+    /// The calculated table's or column's id.
+    pub object_id: u64,
+    pub table: String,
+    /// The calculated column; absent for a calculated table.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub column: Option<String>,
+    pub duration_ms: u64,
+    /// A failed one has no values (the table is empty, the column has no
+    /// data) until an edit or a refresh computes it again.
+    pub status: StatusOut,
+}
+
+impl RecalculatedOut {
+    #[must_use]
+    pub fn of(r: &Recalculated) -> Self {
+        Self {
+            object_id: r.id.get(),
+            table: r.table.clone(),
+            column: r.column.clone(),
+            duration_ms: r.duration_ms,
+            status: StatusOut::of(&r.status),
         }
     }
 }

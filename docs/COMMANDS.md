@@ -110,6 +110,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.relationship.update`](#modelrelationshipupdate) | Changes a relationship's cardinality, cross-filter direction, security filtering or active state as one undoable edit; filters follow it at once. | M A |
 | [`model.relationship.delete`](#modelrelationshipdelete) | Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it. | M A |
 | [`model.column.create`](#modelcolumncreate) | Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given. | M A |
+| [`model.column.update`](#modelcolumnupdate) | Changes a calculated column's expression or data type, or a column's format, folder, description or visibility; what depends on it is recomputed over the loaded data. | M A |
 | [`model.column.delete`](#modelcolumndelete) | Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. | M A |
 | [`model.table.create`](#modeltablecreate) | Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once. | M A |
 | [`model.table.delete`](#modeltabledelete) | Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. | M A |
@@ -1705,6 +1706,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 
 Examples:
 
@@ -1736,6 +1738,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `objectId` | integer | The renamed object's id. |
 | `kind` | string | `table`, `column` or `measure`. |
 | `table` | string | The renamed table's old name, or the table of the column or measure. |
@@ -1775,6 +1778,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 
 Examples:
 
@@ -1808,6 +1812,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `measureId` | integer |  |
 | `table` | string | The measure's table. |
 | `name` | string | The measure's name. |
@@ -1847,6 +1852,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `measureId` | integer |  |
 | `table` | string | The measure's table. |
 | `name` | string | The measure's name. |
@@ -1883,6 +1889,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `measureId` | integer |  |
 | `table` | string | The measure's table. |
 | `name` | string | The measure's name. |
@@ -1922,6 +1929,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `relationshipId` | integer |  |
 | `name` | string | The relationship's name (a GUID unless one was given). |
 | `from` | ColumnParam | The from column (usually the many side). |
@@ -1967,6 +1975,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `relationshipId` | integer |  |
 | `name` | string | The relationship's name (a GUID unless one was given). |
 | `from` | ColumnParam | The from column (usually the many side). |
@@ -2008,6 +2017,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `relationshipId` | integer |  |
 | `name` | string | The relationship's name (a GUID unless one was given). |
 | `from` | ColumnParam | The from column (usually the many side). |
@@ -2054,6 +2064,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `columnId` | integer |  |
 | `table` | string |  |
 | `name` | string |  |
@@ -2063,6 +2074,47 @@ Result:
 Examples:
 
 - Add a calculated column: `{"docId":"d1","table":"Orders","name":"Margin","expression":"Orders[Line Amount] - Orders[Line Cost]","formatString":"#,0.00"}`
+
+### `model.column.update`
+
+**Update a column.** Changes a calculated column's expression or data type, or a column's format, folder, description or visibility; what depends on it is recomputed over the loaded data.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `columnId` (optional) | integer \| null | The column's id (instead of `table` and `column`). |
+| `table` (optional) | string \| null | The column's table. |
+| `column` (optional) | string \| null | The column's name. |
+| `expression` (optional) | string \| null | A calculated column's new DAX expression. Without `dataType` the data type is inferred again from its values (after the automatic first load; kept when the table has no rows loaded or every value is blank). |
+| `dataType` (optional) | `"string"` \| `"int64"` \| `"double"` \| `"decimal"` \| `"dateTime"` \| `"boolean"` \| null | A calculated column's data type. |
+| `formatString` (optional) | string \| null | The format string; empty clears it. |
+| `displayFolder` (optional) | string \| null | The display folder; empty clears it. |
+| `description` (optional) | string \| null | The description; empty clears it. |
+| `isHidden` (optional) | boolean \| null |  |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `columnId` | integer |  |
+| `table` | string |  |
+| `name` | string |  |
+| `dataType` | string | The data type after the edit: `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`. |
+| `dataTypeInferred` | boolean | Whether the data type was inferred from the values of the new expression (no `dataType` given). |
+| `recalculated`? | RecalculatedOut[] | The column and what depends on it, recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
+
+Examples:
+
+- New expression: `{"docId":"d1","table":"Orders","column":"Line Cost","expression":"Orders[Quantity] * RELATED(Products[Unit Cost]) * 1.1"}`
+- Format a column: `{"docId":"d1","columnId":42,"formatString":"#,0.00"}`
 
 ### `model.column.delete`
 
@@ -2088,6 +2140,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `objectId` | integer |  |
 | `kind` | string | `column`, `table` or `hierarchy`. |
 | `table` | string | The table, or the column's or hierarchy's table. |
@@ -2126,6 +2179,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `tableId` | integer |  |
 | `name` | string |  |
 | `columns` | CreatedTableColumnOut[] | The columns, in order, with the data types inferred from the values. |
@@ -2157,6 +2211,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `objectId` | integer |  |
 | `kind` | string | `column`, `table` or `hierarchy`. |
 | `table` | string | The table, or the column's or hierarchy's table. |
@@ -2230,6 +2285,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `objectId` | integer |  |
 | `kind` | string | `column`, `table` or `hierarchy`. |
 | `table` | string | The table, or the column's or hierarchy's table. |
@@ -2329,6 +2385,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 
 Examples:
 
@@ -2354,6 +2411,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 
 Examples:
 
@@ -2379,6 +2437,7 @@ Result:
 | `revision` | integer |  |
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 
 Examples:
 

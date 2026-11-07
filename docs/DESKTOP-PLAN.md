@@ -603,7 +603,7 @@ undoing saves the original project (`column_and_table_delete_through_the_registr
 recorded cases on the edited model as DashCraft does (GT-6 s16).
 `model.column.create` (and the `createColumn` edit) adds a calculated column: `CreateColumn`
 refuses data columns, calculation groups and names taken by a column or measure of the table;
-the session computes a created column at once over the loaded data (`created.rs`, in the same
+the session computes a created column at once over the loaded data (`recalc.rs`, in the same
 publication as the edit) and infers its data type from the values as Desktop does
 (`Session::infer_column_type`; `dataType` is required when the table has no rows loaded or every
 value is blank). Like Desktop, it gets a random `lineageTag`, numeric columns summarize by sum
@@ -626,7 +626,7 @@ all 643 recorded cases on the edited model as DashCraft does (GT-6 s18).
 (one calculated partition, no measures or hierarchies yet) with a free name and distinct column
 names; the columns come from the expression's result over the loaded data
 (`Session::infer_table_columns`: names as the result gives them, types from the values, else from
-the source column), the session computes the table in the same publication (`created.rs`; a
+the source column), the session computes the table in the same publication (`recalc.rs`; a
 document without loaded data computes it at the next refresh, a restored table gets its kept data
 back), and like Desktop the table and its columns get random `lineageTag`s, `isNameInferred`,
 `isDataTypeInferred`, the result's columns as `sourceColumn` (`Stores[Region]`, `Web Sessions[Device]`, `[Pages]`) and sum
@@ -634,8 +634,28 @@ for numeric columns; it is saved as a new table file listed in `model.tmdl`
 (`calculated_table_create_through_the_registry`, `created_table_saves_and_reopens`); Desktop opens and
 refreshes three saved calculated tables keeping every column as written (a spaced table's source
 column unquoted, `Web Sessions[Device]`, as Desktop names it), with the same rows, and answers all
-643 recorded cases on the edited model as DashCraft does (GT-6 s19). Still open:
-the app's change events (M6.8), dependent recalculation after measure edits, data column delete (with M editing), hierarchy and level edits, M references (warned about,
+643 recorded cases on the edited model as DashCraft does (GT-6 s19).
+Recalculation (M6.4, `pbi-session::recalc`): every edit, undo and redo compares the old and the
+new model and, in the same publication, recomputes over the loaded data, in dependency order, the
+calculated tables and columns it reaches: created ones and those whose expression or data type
+changed; those that use a measure whose expression changed; those that read another table when
+the relationships changed; those whose references resolve to other objects after a create or
+delete; then everything downstream, and the derived columns that use them. Renames alone recompute
+nothing, and measures need no recalculation (queries evaluate them on the captured revision), so
+after a measure edit `measures.values` returns the new values without any M progress event
+(acceptance criterion 3). A failure of the edited object refuses the edit (undo and redo never
+are); any other failure keeps the edit, drops the values that no longer match the model
+(`Engine::remove_column`, `Engine::unload_table`; a failed refresh keeps the old values instead)
+and reports the error until an edit or a refresh computes them again. Edit results list what was
+recomputed (`recalculated`: table, column, status, duration). `model.column.update` (and the
+`updateColumn` edit) changes a calculated column's expression or data type (inferred again from
+the values unless `dataType` is given; an automatic summarization follows the type) and any
+column's format string, display folder, description and visibility
+(`edits_recalculate_dependants_without_a_refresh` in `crates/pbi-ops/tests/e2e.rs`,
+`updated_columns_save_and_reopen` in `crates/pbi-ops/tests/save.rs`). Calculated table expression
+edits (`model.table.update`) complete M6.4; page queries still run again after any model edit
+(the visual cache re-renders only visuals whose results changed). Still open:
+the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits, M references (warned about,
 not rewritten), KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
 app and CLI work.
@@ -649,7 +669,7 @@ generator), `pbi-tmdl` and `pbi-pbir` (writers for created objects), `pbi-dax` a
 **New registry commands.** `doc.save`, `doc.saveAs`, `doc.status`, `doc.reload`, `doc.undo`,
 `doc.redo`, `doc.history`, `doc.applyEdits`, `model.measure.create`, `model.measure.update`,
 `model.measure.delete`, `model.table.create`, `model.table.delete`, `model.column.create`,
-`model.column.delete`, `model.hierarchy.create`, `model.hierarchy.delete`,
+`model.column.update`, `model.column.delete`, `model.hierarchy.create`, `model.hierarchy.delete`,
 `model.relationship.create`, `model.relationship.update`, `model.relationship.delete`,
 `model.object.rename`,
 `model.object.setDescription`, `model.dependencies`, `report.visual.move`, `report.visual.resize`.

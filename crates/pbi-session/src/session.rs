@@ -16,7 +16,6 @@ use pbi_model::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::created::{compute_created_columns, compute_created_tables};
 use crate::derived::{Applied, DerivedEntry, synthetic_column};
 use crate::edit::{
     ModelRenames, RenameObject, RenamePreview, preview_rename, rename_results, structure_changed,
@@ -24,8 +23,9 @@ use crate::edit::{
 use crate::error::SessionError;
 use crate::identifiers::{IdentifierGenerator, RandomIdentifiers, lineage_tags};
 use crate::options::{SessionLimits, SessionOptions};
+use crate::recalc::{Changes, recalculate, recompute_derived};
 use crate::removed::{DataPlan, RemovedData};
-use crate::report::TableRefresh;
+use crate::report::{Recalculated, TableRefresh};
 use crate::security::{ActiveView, ViewAs};
 
 /// An edit ready to publish (see [`Session::execute_document_command`]).
@@ -47,6 +47,8 @@ struct ModelEdit {
     /// deleted tables and columns).
     tables: HashMap<String, TableRefresh>,
     removed: RemovedData,
+    /// The calculated tables and columns the edit recomputed.
+    recalculated: Vec<Recalculated>,
 }
 
 /// Mutable state: the published engine, the session model, the derived
@@ -66,6 +68,8 @@ struct State {
     removed: RemovedData,
     /// "View as": the restricted engine queries read instead of `engine`.
     view: Option<ActiveView>,
+    /// What the last published edit recalculated, with its revision.
+    recalculated: (u64, Vec<Recalculated>),
 }
 
 impl State {
@@ -267,6 +271,7 @@ impl Session {
                     tables: HashMap::new(),
                     removed: RemovedData::default(),
                     view: None,
+                    recalculated: (0, Vec::new()),
                 }),
                 refresh_lock: tokio::sync::Mutex::new(()),
                 open_options: options.open,
@@ -490,7 +495,7 @@ impl Session {
         command: impl Command + 'static,
     ) -> Result<HistoryResult, CommandError> {
         let _refresh = self.inner.refresh_lock.lock().await;
-        self.edit_locked(|history, document, check| {
+        self.edit_locked(true, |history, document, check| {
             history.execute_boxed_checked(document, Box::new(command), check)
         })
     }
@@ -512,7 +517,7 @@ impl Session {
             object,
             new_name: new_name.to_owned(),
         };
-        let result = self.edit_locked(|history, document, check| {
+        let result = self.edit_locked(true, |history, document, check| {
             history.execute_boxed_checked(document, Box::new(command), check)
         })?;
         Ok((result, preview))
@@ -525,7 +530,9 @@ impl Session {
     /// or see [`execute_document_command`](Self::execute_document_command).
     pub async fn undo_document_command(&self) -> Result<HistoryResult, CommandError> {
         let _refresh = self.inner.refresh_lock.lock().await;
-        self.edit_locked(|history, document, check| history.undo_checked(document, check))
+        self.edit_locked(false, |history, document, check| {
+            history.undo_checked(document, check)
+        })
     }
 
     /// Redoes the most recently undone document edit.
@@ -535,14 +542,19 @@ impl Session {
     /// or see [`execute_document_command`](Self::execute_document_command).
     pub async fn redo_document_command(&self) -> Result<HistoryResult, CommandError> {
         let _refresh = self.inner.refresh_lock.lock().await;
-        self.edit_locked(|history, document, check| history.redo_checked(document, check))
+        self.edit_locked(false, |history, document, check| {
+            history.redo_checked(document, check)
+        })
     }
 
     /// Runs one history step (with the refresh lock held) and publishes its
     /// result: `step` gets the history, a copy of the current document and
-    /// the check that prepares the publication.
+    /// the check that prepares the publication. With `strict`, a calculated
+    /// table or column the step defines that cannot be calculated refuses
+    /// it (undo and redo are lenient: see [`crate::recalc`]).
     fn edit_locked(
         &self,
+        strict: bool,
         step: impl FnOnce(
             &mut History,
             &mut Document,
@@ -558,7 +570,7 @@ impl Session {
                 .history
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner);
-            let check = |next: &Document| self.prepare_edit(&current, next);
+            let check = |next: &Document| self.prepare_edit(&current, next, strict);
             let (result, prepared) = step(&mut history, &mut document, &check)?;
             let rebuild_view =
                 prepared.map(|p| self.publish_edit(&mut opened, document, result.revision, p));
@@ -576,6 +588,7 @@ impl Session {
         &self,
         current: &Document,
         next: &Document,
+        strict: bool,
     ) -> Result<PreparedEdit, CommandError> {
         let empty = Model::default();
         let old = current.model.as_ref().unwrap_or(&empty);
@@ -584,11 +597,13 @@ impl Session {
             return Ok(PreparedEdit { model: None });
         }
         let renames = ModelRenames::between(old, new);
+        let changes = Changes::between(old, new, &renames);
         let state = self.read();
         renames.check_derived(&state.derived)?;
         let mut tables = state.tables.clone();
         let mut removed = state.removed.clone();
-        let mut engine = if structure_changed(old, new) {
+        let synced = structure_changed(old, new);
+        let mut engine = if synced {
             let plan = DataPlan::between(old, new, &state.removed, state.engine.storage());
             let mut engine = state.engine.clone();
             let detached = engine
@@ -600,7 +615,7 @@ impl Session {
             Some(engine)
         } else {
             rename_results(&mut tables, &renames);
-            None
+            (!changes.is_empty()).then(|| state.engine.clone())
         };
         let mut derived = state.derived.clone();
         drop(state);
@@ -611,9 +626,14 @@ impl Session {
                 t.columns.push(synthetic_column(&entry.info, &entry.column));
             }
         }
-        if let Some(engine) = engine.as_mut() {
-            compute_created_tables(engine, old, new, &model, &mut tables)?;
-            compute_created_columns(engine, old, new, &model)?;
+        let mut recalculated = Vec::new();
+        if let Some(data) = engine.as_mut() {
+            recalculated = recalculate(data, old, new, &model, &changes, &mut tables, strict)?;
+            let rederived =
+                recompute_derived(data, new, &mut model, &mut derived, &recalculated, &changes);
+            if !synced && recalculated.is_empty() && !rederived {
+                engine = None;
+            }
         }
         Ok(PreparedEdit {
             model: Some(ModelEdit {
@@ -622,6 +642,7 @@ impl Session {
                 derived,
                 tables,
                 removed,
+                recalculated,
             }),
         })
     }
@@ -642,7 +663,9 @@ impl Session {
         let document = Arc::new(next_opened.document.clone());
         let mut state = self.write();
         let model_changed = prepared.model.is_some();
+        state.recalculated = (revision, Vec::new());
         if let Some(edit) = prepared.model {
+            state.recalculated.1 = edit.recalculated;
             if let Some(engine) = edit.engine {
                 state.engine = engine;
             }
@@ -657,6 +680,21 @@ impl Session {
             document,
         });
         model_changed
+    }
+
+    /// The calculated tables and columns the edit that produced `revision`
+    /// recomputed over the loaded data, in computation order (empty when it
+    /// recomputed nothing, or when `revision` is not the latest edit). A
+    /// failed one has an error status and no values until an edit or a
+    /// refresh computes it again.
+    #[must_use]
+    pub fn recalculated(&self, revision: u64) -> Vec<Recalculated> {
+        let state = self.read();
+        if state.recalculated.0 == revision {
+            state.recalculated.1.clone()
+        } else {
+            Vec::new()
+        }
     }
 
     /// Current semantic revision.

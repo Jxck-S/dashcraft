@@ -3,7 +3,9 @@ use pretty_assertions::assert_eq;
 use super::*;
 use crate::query::{Condition, FieldExpr};
 use crate::report::Position;
-use crate::semantic::{Column, ColumnKind, ColumnRef, DataType, Measure, Relationship};
+use crate::semantic::{
+    Column, ColumnKind, ColumnRef, DataType, Measure, Relationship, SummarizeBy,
+};
 use crate::test_support::sample_document;
 
 fn table_id(doc: &Document, name: &str) -> ObjectId {
@@ -1305,6 +1307,90 @@ fn set_measure_properties_patches_only_given_fields() {
     .unwrap_err();
     assert!(matches!(err, CommandError::Rejected(m) if m.contains("dynamic format string")));
     assert_eq!(doc, original);
+}
+
+#[test]
+fn set_column_properties_patches_calculated_columns_only() {
+    let mut doc = sample_document();
+    let status = column_id(&doc, "Stores", "Sales Status");
+    assert_round_trip(
+        &mut doc,
+        SetColumnProperties {
+            column: status,
+            expression: Some("IF(ISEMPTY(RELATEDTABLE(Orders)), 0, 1)".into()),
+            data_type: Some(DataType::Int64),
+            summarize_by: Some(Some(SummarizeBy::None)),
+            display_folder: Some(Some("Flags".into())),
+            is_hidden: Some(true),
+            ..SetColumnProperties::default()
+        },
+        |doc, events| {
+            let c = doc.model.as_ref().unwrap().column("Stores", "Sales Status");
+            let c = c.unwrap();
+            assert_eq!(
+                c.expression(),
+                Some("IF(ISEMPTY(RELATEDTABLE(Orders)), 0, 1)")
+            );
+            assert_eq!(c.data_type, DataType::Int64);
+            assert_eq!(c.summarize_by, Some(SummarizeBy::None));
+            assert_eq!(c.display_folder.as_deref(), Some("Flags"));
+            assert!(c.is_hidden);
+            assert_eq!(events, [ChangeEvent::ObjectChanged { id: status }]);
+        },
+    );
+
+    let mut history = History::new();
+    let unchanged = SetColumnProperties {
+        column: status,
+        data_type: Some(DataType::String),
+        ..SetColumnProperties::default()
+    };
+    assert!(
+        !history
+            .execute_with_status(&mut doc, unchanged)
+            .unwrap()
+            .changed
+    );
+
+    let name = column_id(&doc, "Stores", "Store Name");
+    assert_round_trip(
+        &mut doc,
+        SetColumnProperties {
+            column: name,
+            description: Some(Some("The store's name.".into())),
+            ..SetColumnProperties::default()
+        },
+        |doc, _| {
+            let c = doc.model.as_ref().unwrap().column("Stores", "Store Name");
+            assert_eq!(c.unwrap().description.as_deref(), Some("The store's name."));
+        },
+    );
+    let original = doc.clone();
+    for command in [
+        SetColumnProperties {
+            column: name,
+            expression: Some("1".into()),
+            ..SetColumnProperties::default()
+        },
+        SetColumnProperties {
+            column: name,
+            data_type: Some(DataType::Int64),
+            ..SetColumnProperties::default()
+        },
+    ] {
+        let err = command.apply(&mut doc).unwrap_err();
+        assert!(matches!(err, CommandError::Rejected(m) if m.contains("not a calculated column")));
+        assert_eq!(doc, original);
+    }
+    let measure = measure_id(&doc, "Stores", "Store Count");
+    let err = SetColumnProperties {
+        column: measure,
+        is_hidden: Some(true),
+        ..SetColumnProperties::default()
+    }
+    .apply(&mut doc)
+    .unwrap_err();
+    assert!(matches!(err, CommandError::WrongKind { .. }), "{err:?}");
 }
 
 #[test]

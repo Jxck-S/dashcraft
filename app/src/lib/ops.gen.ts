@@ -500,6 +500,12 @@ export interface ColumnCreateOut {
   revision: number
   dirty: boolean
   changedObjectIds: number[]
+  /**
+   * The calculated tables and columns the edit recomputed over the
+   * loaded data, in order (absent when none); a failed one has no values
+   * until an edit or a refresh computes it again.
+   */
+  recalculated?: RecalculatedOut[]
   columnId: number
   table: string
   name: string
@@ -600,6 +606,33 @@ export interface ColumnStatsOut {
   max: JsonValue
   minFormatted: string
   maxFormatted: string
+}
+
+/** Result of `model.column.update`. */
+export interface ColumnUpdateOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  columnId: number
+  table: string
+  name: string
+  /**
+   * The data type after the edit: `string`, `int64`, `double`,
+   * `decimal`, `dateTime` or `boolean`.
+   */
+  dataType: string
+  /**
+   * Whether the data type was inferred from the values of the new
+   * expression (no `dataType` given).
+   */
+  dataTypeInferred: boolean
+  /**
+   * The column and what depends on it, recomputed over the loaded data,
+   * in order (absent when none); a failed one has no values until an
+   * edit or a refresh computes it again.
+   */
+  recalculated?: RecalculatedOut[]
 }
 
 /**
@@ -1460,6 +1493,12 @@ export interface DocumentEditOut {
   revision: number
   dirty: boolean
   changedObjectIds: number[]
+  /**
+   * The calculated tables and columns the edit recomputed over the
+   * loaded data, in order (absent when none); a failed one has no values
+   * until an edit or a refresh computes it again.
+   */
+  recalculated?: RecalculatedOut[]
 }
 
 export interface DocumentHistoryOut {
@@ -1623,6 +1662,17 @@ export type EditOperation = {
   displayFolder?: string | null
   description?: string | null
   isHidden?: boolean
+} | {
+  type: 'updateColumn'
+  columnId?: number | null
+  table?: string | null
+  column?: string | null
+  expression?: string | null
+  dataType?: DataTypeParam | null
+  formatString?: string | null
+  displayFolder?: string | null
+  description?: string | null
+  isHidden?: boolean | null
 } | {
   type: 'deleteColumn'
   columnId?: number | null
@@ -2128,6 +2178,12 @@ export interface MeasureEditOut {
   revision: number
   dirty: boolean
   changedObjectIds: number[]
+  /**
+   * The calculated tables and columns the edit recomputed over the
+   * loaded data, in order (absent when none); a failed one has no values
+   * until an edit or a refresh computes it again.
+   */
+  recalculated?: RecalculatedOut[]
   measureId: number
   /** The measure's table. */
   table: string
@@ -2363,6 +2419,12 @@ export interface ObjectDeleteOut {
   revision: number
   dirty: boolean
   changedObjectIds: number[]
+  /**
+   * The calculated tables and columns the edit recomputed over the
+   * loaded data, in order (absent when none); a failed one has no values
+   * until an edit or a refresh computes it again.
+   */
+  recalculated?: RecalculatedOut[]
   objectId: number
   /** `column`, `table` or `hierarchy`. */
   kind: string
@@ -2691,6 +2753,21 @@ export interface RdlSectionOut {
   footer: RdlItemOut[]
 }
 
+/** A calculated table or column an edit recomputed over the loaded data. */
+export interface RecalculatedOut {
+  /** The calculated table's or column's id. */
+  objectId: number
+  table: string
+  /** The calculated column; absent for a calculated table. */
+  column?: string | null
+  durationMs: number
+  /**
+   * A failed one has no values (the table is empty, the column has no
+   * data) until an edit or a refresh computes it again.
+   */
+  status: StatusOut
+}
+
 /**
  * A rectangle in page units (canvas pixels at 100% zoom without a
  * viewport).
@@ -2744,6 +2821,12 @@ export interface RelationshipEditOut {
   revision: number
   dirty: boolean
   changedObjectIds: number[]
+  /**
+   * The calculated tables and columns the edit recomputed over the
+   * loaded data, in order (absent when none); a failed one has no values
+   * until an edit or a refresh computes it again.
+   */
+  recalculated?: RecalculatedOut[]
   relationshipId: number
   /** The relationship's name (a GUID unless one was given). */
   name: string
@@ -2798,6 +2881,12 @@ export interface RenameObjectOut {
   revision: number
   dirty: boolean
   changedObjectIds: number[]
+  /**
+   * The calculated tables and columns the edit recomputed over the
+   * loaded data, in order (absent when none); a failed one has no values
+   * until an edit or a refresh computes it again.
+   */
+  recalculated?: RecalculatedOut[]
   /** The renamed object's id. */
   objectId: number
   /** `table`, `column` or `measure`. */
@@ -3303,6 +3392,12 @@ export interface TableCreateOut {
   revision: number
   dirty: boolean
   changedObjectIds: number[]
+  /**
+   * The calculated tables and columns the edit recomputed over the
+   * loaded data, in order (absent when none); a failed one has no values
+   * until an edit or a refresh computes it again.
+   */
+  recalculated?: RecalculatedOut[]
   tableId: number
   name: string
   /** The columns, in order, with the data types inferred from the values. */
@@ -3363,6 +3458,33 @@ export interface UnsupportedFilterOut {
   field?: string | null
   /** Why it was not applied. */
   reason: string
+}
+
+export interface UpdateColumnParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The column's id (instead of `table` and `column`). */
+  columnId?: number | null
+  /** The column's table. */
+  table?: string | null
+  /** The column's name. */
+  column?: string | null
+  /**
+   * A calculated column's new DAX expression. Without `dataType` the data
+   * type is inferred again from its values (after the automatic first
+   * load; kept when the table has no rows loaded or every value is
+   * blank).
+   */
+  expression?: string | null
+  /** A calculated column's data type. */
+  dataType?: DataTypeParam | null
+  /** The format string; empty clears it. */
+  formatString?: string | null
+  /** The display folder; empty clears it. */
+  displayFolder?: string | null
+  /** The description; empty clears it. */
+  description?: string | null
+  isHidden?: boolean | null
 }
 
 export interface UpdateMeasureParams {
@@ -3619,6 +3741,8 @@ export interface OpsCommands {
   'model.relationship.delete': { params: DeleteRelationshipParams; output: RelationshipEditOut }
   /** Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given. */
   'model.column.create': { params: CreateColumnParams; output: ColumnCreateOut }
+  /** Changes a calculated column's expression or data type, or a column's format, folder, description or visibility; what depends on it is recomputed over the loaded data. */
+  'model.column.update': { params: UpdateColumnParams; output: ColumnUpdateOut }
   /** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. */
   'model.column.delete': { params: DeleteColumnParams; output: ObjectDeleteOut }
   /** Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once. */
@@ -3761,6 +3885,7 @@ export const OPS_META = {
   'model.relationship.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.relationship.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.column.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.column.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.column.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.table.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.table.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
@@ -3878,6 +4003,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelRelationshipDelete: (params: DeleteRelationshipParams, options?: O) => run('model.relationship.delete', params, options),
     /** Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given. */
     modelColumnCreate: (params: CreateColumnParams, options?: O) => run('model.column.create', params, options),
+    /** Changes a calculated column's expression or data type, or a column's format, folder, description or visibility; what depends on it is recomputed over the loaded data. */
+    modelColumnUpdate: (params: UpdateColumnParams, options?: O) => run('model.column.update', params, options),
     /** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. */
     modelColumnDelete: (params: DeleteColumnParams, options?: O) => run('model.column.delete', params, options),
     /** Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once. */

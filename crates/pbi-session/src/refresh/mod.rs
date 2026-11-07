@@ -121,7 +121,7 @@ fn m_status(e: &MError) -> TableStatus {
 }
 
 /// Status of a failed DAX computation.
-fn dax_status(e: &DaxError) -> TableStatus {
+pub(crate) fn dax_status(e: &DaxError) -> TableStatus {
     TableStatus::Error {
         message: e.to_string(),
         unsupported: e.is_unsupported(),
@@ -130,7 +130,7 @@ fn dax_status(e: &DaxError) -> TableStatus {
     }
 }
 
-fn plain_error(message: impl Into<String>, csv_fallback: bool) -> TableStatus {
+pub(crate) fn plain_error(message: impl Into<String>, csv_fallback: bool) -> TableStatus {
     TableStatus::Error {
         message: message.into(),
         unsupported: false,

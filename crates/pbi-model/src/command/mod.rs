@@ -27,7 +27,10 @@ use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
 use crate::semantic::Model;
 
-pub use edit::{SetDescription, SetMeasureExpression, SetMeasureProperties, SetVisualPosition};
+pub use edit::{
+    SetColumnProperties, SetDescription, SetMeasureExpression, SetMeasureProperties,
+    SetVisualPosition,
+};
 pub use history::{History, HistoryResult};
 pub use rename::{RenameColumn, RenameMeasure, RenameTable};
 pub use snapshot::{ReplaceObjects, Snapshot};

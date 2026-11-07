@@ -1,112 +1,13 @@
-//! Data of the calculated tables and columns an edit creates.
-//!
-//! A created calculated table is computed when the edit is published, in a
-//! document whose data is loaded (otherwise the next refresh computes it).
-//! A created calculated column is computed when the edit is published, over
-//! the loaded data of its table (a table that is not loaded gets it at the
-//! next refresh). Undo and redo re-attach the kept data instead
-//! ([`crate::removed`]); only tables and columns without it are computed.
+//! Data types of calculated tables and columns before they are created or
+//! changed, inferred from their values over the loaded data (their values
+//! are computed when the edit is published: [`crate::recalc`]).
 
-use std::collections::{HashMap, HashSet};
-use std::time::Instant;
-
-use pbi_engine::{Engine, FilterContext};
-use pbi_model::names::{dax_column_ref, name_key};
-use pbi_model::{Column, CommandError, DataType, Model, ObjectId, TableKind};
+use pbi_engine::{EngineSnapshot, FilterContext};
+use pbi_model::names::{dax_column_ref, names_eq};
+use pbi_model::{Column, ColumnKind, CommandError, DataType, Model};
 
 use crate::derived::data_type_of;
-use crate::report::{RefreshKind, TableRefresh, TableStatus};
 use crate::session::Session;
-
-/// Computes the calculated tables of `new` that `old` did not have (by
-/// object id) and that have no refresh record in `tables` (a restored table
-/// gets its record and data back), in model order, and records them. Their
-/// calculated columns follow in [`compute_created_columns`]. Nothing is
-/// computed while no table has been loaded: the next refresh does it.
-/// `eval_model` is `new` with the session's derived columns.
-pub(crate) fn compute_created_tables(
-    engine: &mut Engine,
-    old: &Model,
-    new: &Model,
-    eval_model: &Model,
-    tables: &mut HashMap<String, TableRefresh>,
-) -> Result<(), CommandError> {
-    if tables.is_empty() {
-        return Ok(());
-    }
-    let existing: HashSet<ObjectId> = old.tables.iter().map(|t| t.id).collect();
-    for table in new.tables.iter().filter(|t| {
-        t.id.is_assigned() && !existing.contains(&t.id) && t.kind() == TableKind::CalculatedTable
-    }) {
-        let key = name_key(&table.name);
-        if tables.contains_key(&key) {
-            continue;
-        }
-        let start = Instant::now();
-        let batch = pbi_dax::compute_calculated_table(&engine.snapshot(), eval_model, &table.name)
-            .map_err(|e| {
-                CommandError::Rejected(format!("table '{}' cannot be calculated: {e}", table.name))
-            })?;
-        let rows = batch.num_rows();
-        engine.load_table(&table.name, batch).map_err(|e| {
-            CommandError::Rejected(format!("table '{}' cannot be stored: {e}", table.name))
-        })?;
-        tables.insert(
-            key,
-            TableRefresh {
-                name: table.name.clone(),
-                kind: RefreshKind::Calculated,
-                rows,
-                duration_ms: u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX),
-                status: TableStatus::Ok,
-                columns: Vec::new(),
-            },
-        );
-    }
-    Ok(())
-}
-/// Computes the calculated columns of `new` that `old` did not have (by
-/// object id) and that have no stored data, in model order, so a column can
-/// use one created before it in the same edit. `eval_model` is `new` with
-/// the session's derived columns.
-pub(crate) fn compute_created_columns(
-    engine: &mut Engine,
-    old: &Model,
-    new: &Model,
-    eval_model: &Model,
-) -> Result<(), CommandError> {
-    let existing: HashSet<ObjectId> = old
-        .tables
-        .iter()
-        .flat_map(|t| t.columns.iter().map(|c| c.id))
-        .collect();
-    for table in &new.tables {
-        for column in table
-            .columns
-            .iter()
-            .filter(|c| c.is_calculated() && c.id.is_assigned() && !existing.contains(&c.id))
-        {
-            let Ok(data) = engine.table(&table.name) else {
-                continue;
-            };
-            if data.has_column(&column.name) {
-                continue;
-            }
-            let what = dax_column_ref(&table.name, &column.name);
-            let array = pbi_dax::compute_calculated_column(
-                &engine.snapshot(),
-                eval_model,
-                &table.name,
-                &column.name,
-            )
-            .map_err(|e| CommandError::Rejected(format!("{what} cannot be calculated: {e}")))?;
-            engine
-                .add_column(&table.name, &column.name, array)
-                .map_err(|e| CommandError::Rejected(format!("{what} cannot be stored: {e}")))?;
-        }
-    }
-    Ok(())
-}
 
 impl Session {
     /// The data type a calculated column `name` with DAX `expression` would
@@ -142,27 +43,75 @@ impl Session {
                 existing,
             });
         }
-        if snapshot.table(&t.name).map_or(true, |d| d.row_count() == 0) {
-            return Ok(None);
-        }
         let table_name = t.name.clone();
         t.columns
             .push(Column::calculated(name, DataType::Automatic, expression));
-        let array = pbi_dax::compute_calculated_column(&snapshot, &model, &table_name, name)
-            .map_err(|e| {
-                CommandError::Rejected(format!(
-                    "{} cannot be calculated: {e}",
-                    dax_column_ref(&table_name, name)
-                ))
-            })?;
-        if array.null_count() == array.len() {
-            return Ok(None);
-        }
-        Ok(match data_type_of(array.data_type()) {
-            DataType::Variant => None,
-            other => Some(other),
-        })
+        infer_type(&snapshot, &model, &table_name, name)
     }
+
+    /// The data type the calculated column `column` of `table` would have
+    /// with DAX `expression` instead of its own, from its values over the
+    /// loaded data (as Power BI Desktop infers it when a calculated column's
+    /// formula changes). `None` when it cannot be inferred: the table or
+    /// column is unknown, the table is not loaded or empty, or every value
+    /// is blank.
+    ///
+    /// # Errors
+    /// [`CommandError::Rejected`] when the column is not a calculated column,
+    /// or with the DAX error when the expression fails on a row (a circular
+    /// dependency included).
+    pub fn infer_changed_column_type(
+        &self,
+        table: &str,
+        column: &str,
+        expression: &str,
+    ) -> Result<Option<DataType>, CommandError> {
+        let (snapshot, model) = self.base_snapshot_and_model();
+        let mut model = model.as_ref().clone();
+        let Some(t) = model.table_mut(table) else {
+            return Ok(None);
+        };
+        let table_name = t.name.clone();
+        let Some(c) = t.columns.iter_mut().find(|c| names_eq(&c.name, column)) else {
+            return Ok(None);
+        };
+        let ColumnKind::Calculated { expression: slot } = &mut c.kind else {
+            return Err(CommandError::Rejected(format!(
+                "{} is not a calculated column: its values and data type come from its query",
+                dax_column_ref(&table_name, &c.name)
+            )));
+        };
+        expression.clone_into(slot);
+        c.data_type = DataType::Automatic;
+        let column_name = c.name.clone();
+        infer_type(&snapshot, &model, &table_name, &column_name)
+    }
+}
+
+/// The data type of the calculated column `name` of `table` in `model`, from
+/// its values over `snapshot` (`None` without rows or with only blanks).
+fn infer_type(
+    snapshot: &EngineSnapshot,
+    model: &Model,
+    table: &str,
+    name: &str,
+) -> Result<Option<DataType>, CommandError> {
+    if snapshot.table(table).map_or(true, |d| d.row_count() == 0) {
+        return Ok(None);
+    }
+    let array = pbi_dax::compute_calculated_column(snapshot, model, table, name).map_err(|e| {
+        CommandError::Rejected(format!(
+            "{} cannot be calculated: {e}",
+            dax_column_ref(table, name)
+        ))
+    })?;
+    if array.null_count() == array.len() {
+        return Ok(None);
+    }
+    Ok(match data_type_of(array.data_type()) {
+        DataType::Variant => None,
+        other => Some(other),
+    })
 }
 
 /// A column of a new calculated table, from its expression's result.

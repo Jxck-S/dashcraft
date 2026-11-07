@@ -6,7 +6,7 @@ use super::{Applied, ChangeEvent, Command, CommandError, expect_kind, model_mut}
 use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
 use crate::report::Position;
-use crate::semantic::{Model, Table};
+use crate::semantic::{ColumnKind, DataType, Model, SummarizeBy, Table};
 
 pub(super) fn changed(id: ObjectId, differs: bool) -> Vec<ChangeEvent> {
     if differs {
@@ -106,6 +106,66 @@ impl Command for SetMeasureProperties {
 
     fn label(&self) -> String {
         "Edit measure".to_owned()
+    }
+}
+
+/// Patches a column's properties in one step. `None` leaves a property
+/// unchanged; `Some(None)` clears an optional one. `expression` and
+/// `data_type` apply to calculated columns only (a data column's values and
+/// type come from its query).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct SetColumnProperties {
+    pub column: ObjectId,
+    pub expression: Option<String>,
+    pub data_type: Option<DataType>,
+    pub summarize_by: Option<Option<SummarizeBy>>,
+    pub format_string: Option<Option<String>>,
+    pub display_folder: Option<Option<String>>,
+    pub description: Option<Option<String>>,
+    pub is_hidden: Option<bool>,
+}
+
+impl Command for SetColumnProperties {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let ObjectPath::Column { table, column } =
+            expect_kind(doc, self.column, ObjectKind::Column)?
+        else {
+            return Err(CommandError::NotFound(self.column));
+        };
+        let slot = model_mut(doc)?
+            .tables
+            .get_mut(table)
+            .and_then(|t| t.columns.get_mut(column))
+            .ok_or(CommandError::NotFound(self.column))?;
+        if (self.expression.is_some() || self.data_type.is_some()) && !slot.is_calculated() {
+            return Err(CommandError::Rejected(format!(
+                "column [{}] is not a calculated column: its values and data type come from its query",
+                slot.name
+            )));
+        }
+        let mut differs = false;
+        let expression = match (&mut slot.kind, &self.expression) {
+            (ColumnKind::Calculated { expression }, Some(new)) => {
+                differs |= expression != new;
+                Some(mem::replace(expression, new.clone()))
+            }
+            _ => None,
+        };
+        let inverse = SetColumnProperties {
+            column: self.column,
+            expression,
+            data_type: swap(&mut slot.data_type, &self.data_type, &mut differs),
+            summarize_by: swap(&mut slot.summarize_by, &self.summarize_by, &mut differs),
+            format_string: swap(&mut slot.format_string, &self.format_string, &mut differs),
+            display_folder: swap(&mut slot.display_folder, &self.display_folder, &mut differs),
+            description: swap(&mut slot.description, &self.description, &mut differs),
+            is_hidden: swap(&mut slot.is_hidden, &self.is_hidden, &mut differs),
+        };
+        Ok(Applied::new(inverse, changed(self.column, differs)))
+    }
+
+    fn label(&self) -> String {
+        "Edit column".to_owned()
     }
 }
 
