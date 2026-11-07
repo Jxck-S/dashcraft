@@ -2,6 +2,7 @@
 //! Shared helpers for the integration tests.
 
 pub mod data;
+pub mod generate;
 
 use std::path::{Path, PathBuf};
 

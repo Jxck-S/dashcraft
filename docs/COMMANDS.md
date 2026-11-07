@@ -144,6 +144,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`dax.complete`](#daxcomplete) | The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet. | A |
 | [`dax.tokens`](#daxtokens) | What every token of a DAX text is (keyword, function, table, column, measure, variable, parameter, literal, comment) for highlighting, with declarations and unknown names marked. | A |
 | [`dax.references`](#daxreferences) | The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId. | A |
+| [`dax.format`](#daxformat) | Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -1171,6 +1172,39 @@ Examples:
 
 - A measure of the model: `{"docId":"d1","text":"[Total Sales] / CALCULATE([Total Sales], ALL(Stores))","position":{"offset":3}}`
 - A variable, without a document: `{"text":"VAR x = 1 RETURN x + x","position":{"line":1,"column":5}}`
+
+### `dax.format`
+
+**Format DAX.** Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `text` | string | The DAX text. |
+| `kind` (optional) | `"auto"` \| `"expression"` \| `"query"` | `auto` (default), `expression` or `query`. |
+| `maxWidth` (optional) | integer | Preferred maximum line length in characters (default 80, at most 10000). Only a single long token, comment or unbreakable run makes a line longer. |
+| `indentWidth` (optional) | integer | Spaces per indentation level (default 4, at most 16), or the width a tab counts for with `useTabs`. |
+| `useTabs` (optional) | boolean | Indent with tabs instead of spaces. |
+| `keywordCase` (optional) | `"upper"` \| `"lower"` \| `"keep"` | Case of keywords (`VAR`, `RETURN`, `IN`, `TRUE`, `EVALUATE`, `DESC`, parameter types, …): `upper` (default), `lower` or `keep`. |
+| `functionCase` (optional) | `"upper"` \| `"lower"` \| `"keep"` | Case of built-in function names: `upper` (default), `lower` or `keep`. User-defined functions, tables, columns, measures and variables always keep their spelling. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `kind` | `"expression"` \| `"query"` | How the text was parsed. |
+| `ok` | boolean | The text parses (else `text` is the input unchanged and `diagnostic` says why). |
+| `text` | string | The formatted text: `\n` line breaks, no trailing line break. |
+| `changed` | boolean | `text` differs from the input. |
+| `diagnostic`? | DaxDiagnosticOut \| null | The syntax error when `ok` is false. |
+
+Examples:
+
+- A measure: `{"text":"calculate(sum(Sales[Amount]),filter(all(Stores),Stores[Region]=\"West\"))"}`
+- A query, narrow, lower-case keywords: `{"text":"EVALUATE SUMMARIZECOLUMNS(Stores[Region], \"Sales\", [Total Sales]) ORDER BY Stores[Region]","maxWidth":40,"keywordCase":"lower"}`
 
 ## Render
 

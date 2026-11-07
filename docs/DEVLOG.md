@@ -7,6 +7,34 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.2 DAX formatter
+
+- **What:** `pbi_dax::service::format` (`formatter.rs`) with `FormatOptions` (line width, indent
+  width or tabs, keyword and built-in function casing) and the `dax.format` command. Comments are
+  attached to the nearest syntax node and kept, single blank lines between `VAR`s and `DEFINE`s
+  are kept, user names and literals keep their spelling. The layout is a group-based pretty
+  printer: a call, table constructor or operator chain stays on one line when it fits, else
+  breaks one argument per line or before each operator, nested by precedence. A safety net
+  re-tokenizes and re-parses the output: if its tokens or syntax tree differ from the input's,
+  `format` returns `Unstable` (the command reports an internal error) instead of text. The
+  generator of `roundtrip.rs` moved to `tests/common/generate.rs` to be shared. The `dax_service`
+  fuzz target also formats every input with the defaults and with a narrow width taken from the
+  first byte, checking for no `Unstable` and idempotence (new seed `format_comments.dax`).
+- **Why:** M7.2 (DESKTOP-PLAN), the formatter the DAX query view and the formula bar (M7.5) need;
+  acceptance 1 for DAX.
+- **Desktop check:** the 2,902 queries of the `acme-*`, `format`, `dax-arity`, `dax-functions`
+  and `dax-lab-tables` corpora, formatted at width 40 with tabs and lower-case keywords and
+  functions (all but 2 syntax-error probes change), were run on Power BI Desktop 2.159 next to the
+  originals on the same models: 2,902 of 2,902 give the same result (2,180 identical values, 722
+  errors in both). Not committed as recordings (they repeat the corpora).
+- **Numbers:** `format.rs` 19 tests (pbi-dax): layout cases, comments, casing, indentation, CRLF,
+  syntax errors, and properties (idempotent, same significant tokens, same tree, comments kept,
+  stable under four widths, tabs and casings) over every test-data file, 1,500 generated
+  expressions and 300 queries with injected comments, and token soup. `dax_language.rs` 9 → 10
+  (pbi-ops): all 136 Acme and sample expressions and all 2,507 queries Desktop ran without error
+  format idempotently with no errors after. 79 → 80 registry commands.
+- **Open:** M7.3 (M language service and formatter).
+
 ### M7.1d DAX semantic tokens and references
 
 - **What:** `pbi_dax::service::{semantic_tokens, references}` (`symbols.rs`) over a scope analysis
@@ -27,7 +55,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   names are functions, `NAMEOF`'s component is a keyword, and a bare `[name]` is not flagged once
   the text calls an `INFO` or user-defined function (whose columns are unknown). Now 0 of 2,507.
 - **Numbers:** tests `language_service.rs` 25 → 28 (pbi-dax), `dax_language.rs` 7 → 9 and one
-  unit test (pbi-ops). 77 → 79 registry commands.
+  unit test (pbi-ops). 77 → 79 registry commands. Commit `dc01508` (PR #51).
 - **Open:** M7.2 (formatter), M7.3 (M language service).
 
 ### M7.1c DAX completion

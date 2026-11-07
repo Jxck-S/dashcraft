@@ -115,6 +115,7 @@ pub fn catalog() -> Registry {
         .with::<dax::DaxComplete>()
         .with::<dax::DaxTokens>()
         .with::<dax::DaxReferences>()
+        .with::<dax::DaxFormat>()
         // render
         .with::<render::RenderPage>()
         .with::<render::RenderVisual>()

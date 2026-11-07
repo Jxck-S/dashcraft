@@ -1,12 +1,14 @@
 //! `dax.query`, `dax.evaluateMeasure`, `measures.values`, `dax.diagnostics`,
-//! `dax.signatureHelp`, `dax.hover`, `dax.complete`.
+//! `dax.signatureHelp`, `dax.hover`, `dax.complete`, `dax.tokens`,
+//! `dax.references`, `dax.format`.
 
 use std::sync::Arc;
 use std::time::Instant;
 
 use pbi_model::{Model, Severity, names_eq};
 use pbi_session::dax_service::{
-    self, CompletionKind, HoverKind, NameDetails, Schema, SemanticKind, SourceKind, Symbol,
+    self, Casing, CompletionKind, Diagnostic, FormatError, FormatOptions, HoverKind,
+    MAX_INDENT_WIDTH, NameDetails, Schema, SemanticKind, SourceKind, Symbol,
 };
 use pbi_session::{FilterSpec, filters_from_page, filters_from_report};
 use schemars::JsonSchema;
@@ -29,6 +31,9 @@ pub const MAX_QUERY_ROWS: usize = 5000;
 
 /// Largest `maxItems` of `dax.complete`.
 pub const MAX_COMPLETION_ITEMS: usize = 1000;
+
+/// Largest `maxWidth` of `dax.format`.
+pub const MAX_FORMAT_WIDTH: usize = 10_000;
 
 fn default_max_items() -> usize {
     100
@@ -473,37 +478,55 @@ impl Command for DaxDiagnostics {
 
     async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
         let (document_revision, schema) = language_schema(ws, p.doc_id.as_deref())?;
-        let kind = match p.kind {
-            DaxTextKind::Auto => SourceKind::detect(&p.text),
-            DaxTextKind::Expression => SourceKind::Expression,
-            DaxTextKind::Query => SourceKind::Query,
-        };
+        let kind = p.kind.resolve(&p.text);
         let src = p.text.as_str();
         let diagnostics: Vec<DaxDiagnosticOut> = dax_service::diagnostics(src, kind, &schema)
             .into_iter()
-            .map(|d| DaxDiagnosticOut {
-                severity: match d.severity {
-                    Severity::Error => "error",
-                    Severity::Warning => "warning",
-                    Severity::Info => "info",
-                }
-                .to_owned(),
-                code: d.code.as_str().to_owned(),
-                message: d.message,
-                start: TextPositionOut::at(src, d.span.start),
-                end: TextPositionOut::at(src, d.span.end),
-                suggestion: d.suggestion,
-            })
+            .map(|d| DaxDiagnosticOut::new(src, d))
             .collect();
         Ok(DaxDiagnosticsOut {
             document_revision,
-            kind: match kind {
-                SourceKind::Expression => DaxCheckedKind::Expression,
-                SourceKind::Query => DaxCheckedKind::Query,
-            },
+            kind: DaxCheckedKind::of(kind),
             ok: diagnostics.iter().all(|d| d.severity != "error"),
             diagnostics,
         })
+    }
+}
+
+impl DaxTextKind {
+    fn resolve(self, text: &str) -> SourceKind {
+        match self {
+            DaxTextKind::Auto => SourceKind::detect(text),
+            DaxTextKind::Expression => SourceKind::Expression,
+            DaxTextKind::Query => SourceKind::Query,
+        }
+    }
+}
+
+impl DaxCheckedKind {
+    fn of(kind: SourceKind) -> Self {
+        match kind {
+            SourceKind::Expression => DaxCheckedKind::Expression,
+            SourceKind::Query => DaxCheckedKind::Query,
+        }
+    }
+}
+
+impl DaxDiagnosticOut {
+    fn new(src: &str, d: Diagnostic) -> Self {
+        Self {
+            severity: match d.severity {
+                Severity::Error => "error",
+                Severity::Warning => "warning",
+                Severity::Info => "info",
+            }
+            .to_owned(),
+            code: d.code.as_str().to_owned(),
+            message: d.message,
+            start: TextPositionOut::at(src, d.span.start),
+            end: TextPositionOut::at(src, d.span.end),
+            suggestion: d.suggestion,
+        }
     }
 }
 
@@ -1429,6 +1452,144 @@ impl Command for DaxReferences {
             definition,
             references,
         })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `dax.format`.
+#[derive(Debug)]
+pub struct DaxFormat;
+
+/// Letter case `dax.format` gives keywords or function names.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DaxCasing {
+    /// `CALCULATE`, `VAR`.
+    #[default]
+    Upper,
+    /// `calculate`, `var`.
+    Lower,
+    /// As written.
+    Keep,
+}
+
+impl From<DaxCasing> for Casing {
+    fn from(c: DaxCasing) -> Self {
+        match c {
+            DaxCasing::Upper => Casing::Upper,
+            DaxCasing::Lower => Casing::Lower,
+            DaxCasing::Keep => Casing::Keep,
+        }
+    }
+}
+
+fn default_format_width() -> usize {
+    80
+}
+
+fn default_indent_width() -> usize {
+    4
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DaxFormatParams {
+    /// The DAX text.
+    pub text: String,
+    /// `auto` (default), `expression` or `query`.
+    #[serde(default)]
+    pub kind: DaxTextKind,
+    /// Preferred maximum line length in characters (default 80, at most
+    /// 10000). Only a single long token, comment or unbreakable run makes a
+    /// line longer.
+    #[serde(default = "default_format_width")]
+    pub max_width: usize,
+    /// Spaces per indentation level (default 4, at most 16), or the width a
+    /// tab counts for with `useTabs`.
+    #[serde(default = "default_indent_width")]
+    pub indent_width: usize,
+    /// Indent with tabs instead of spaces.
+    #[serde(default)]
+    pub use_tabs: bool,
+    /// Case of keywords (`VAR`, `RETURN`, `IN`, `TRUE`, `EVALUATE`, `DESC`,
+    /// parameter types, …): `upper` (default), `lower` or `keep`.
+    #[serde(default)]
+    pub keyword_case: DaxCasing,
+    /// Case of built-in function names: `upper` (default), `lower` or
+    /// `keep`. User-defined functions, tables, columns, measures and
+    /// variables always keep their spelling.
+    #[serde(default)]
+    pub function_case: DaxCasing,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxFormatOut {
+    /// How the text was parsed.
+    pub kind: DaxCheckedKind,
+    /// The text parses (else `text` is the input unchanged and `diagnostic`
+    /// says why).
+    pub ok: bool,
+    /// The formatted text: `\n` line breaks, no trailing line break.
+    pub text: String,
+    /// `text` differs from the input.
+    pub changed: bool,
+    /// The syntax error when `ok` is false.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diagnostic: Option<DaxDiagnosticOut>,
+}
+
+impl Command for DaxFormat {
+    type Params = DaxFormatParams;
+    type Output = DaxFormatOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "dax.format",
+            title: "Format DAX",
+            summary: "Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded.",
+            category: Category::Dax,
+            examples: &[
+                (
+                    "A measure",
+                    r#"{"text": "calculate(sum(Sales[Amount]),filter(all(Stores),Stores[Region]=\"West\"))"}"#,
+                ),
+                (
+                    "A query, narrow, lower-case keywords",
+                    r#"{"text": "EVALUATE SUMMARIZECOLUMNS(Stores[Region], \"Sales\", [Total Sales]) ORDER BY Stores[Region]", "maxWidth": 40, "keywordCase": "lower"}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(_ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let opts = FormatOptions {
+            max_width: bounded("maxWidth", p.max_width, MAX_FORMAT_WIDTH)?,
+            indent_width: bounded("indentWidth", p.indent_width, MAX_INDENT_WIDTH)?,
+            use_tabs: p.use_tabs,
+            keyword_case: p.keyword_case.into(),
+            function_case: p.function_case.into(),
+        };
+        let kind = p.kind.resolve(&p.text);
+        match dax_service::format(&p.text, kind, &opts) {
+            Ok(text) => Ok(DaxFormatOut {
+                kind: DaxCheckedKind::of(kind),
+                ok: true,
+                changed: text != p.text,
+                text,
+                diagnostic: None,
+            }),
+            Err(FormatError::Syntax(d)) => Ok(DaxFormatOut {
+                kind: DaxCheckedKind::of(kind),
+                ok: false,
+                changed: false,
+                diagnostic: Some(DaxDiagnosticOut::new(&p.text, d)),
+                text: p.text,
+            }),
+            Err(e @ FormatError::Unstable) => Err(OpError::internal(e.to_string())),
+        }
     }
 }
 

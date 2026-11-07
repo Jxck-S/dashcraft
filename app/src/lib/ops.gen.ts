@@ -1132,6 +1132,9 @@ export interface DatasetReferenceOut {
   databaseName?: string | null
 }
 
+/** Letter case `dax.format` gives keywords or function names. */
+export type DaxCasing = 'upper' | 'lower' | 'keep'
+
 /** How a DAX text was checked. */
 export type DaxCheckedKind = 'expression' | 'query'
 
@@ -1239,6 +1242,53 @@ export interface DaxDiagnosticsParams {
   text: string
   /** `auto` (default), `expression` or `query`. */
   kind?: DaxTextKind
+}
+
+export interface DaxFormatOut {
+  /** How the text was parsed. */
+  kind: DaxCheckedKind
+  /**
+   * The text parses (else `text` is the input unchanged and `diagnostic`
+   * says why).
+   */
+  ok: boolean
+  /** The formatted text: `\n` line breaks, no trailing line break. */
+  text: string
+  /** `text` differs from the input. */
+  changed: boolean
+  /** The syntax error when `ok` is false. */
+  diagnostic?: DaxDiagnosticOut | null
+}
+
+export interface DaxFormatParams {
+  /** The DAX text. */
+  text: string
+  /** `auto` (default), `expression` or `query`. */
+  kind?: DaxTextKind
+  /**
+   * Preferred maximum line length in characters (default 80, at most
+   * 10000). Only a single long token, comment or unbreakable run makes a
+   * line longer.
+   */
+  maxWidth?: number
+  /**
+   * Spaces per indentation level (default 4, at most 16), or the width a
+   * tab counts for with `useTabs`.
+   */
+  indentWidth?: number
+  /** Indent with tabs instead of spaces. */
+  useTabs?: boolean
+  /**
+   * Case of keywords (`VAR`, `RETURN`, `IN`, `TRUE`, `EVALUATE`, `DESC`,
+   * parameter types, …): `upper` (default), `lower` or `keep`.
+   */
+  keywordCase?: DaxCasing
+  /**
+   * Case of built-in function names: `upper` (default), `lower` or
+   * `keep`. User-defined functions, tables, columns, measures and
+   * variables always keep their spelling.
+   */
+  functionCase?: DaxCasing
 }
 
 /** The name under the cursor. */
@@ -4289,6 +4339,8 @@ export interface OpsCommands {
   'dax.tokens': { params: DaxTokensParams; output: DaxTokensOut }
   /** The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId. */
   'dax.references': { params: DaxReferencesParams; output: DaxReferencesOut }
+  /** Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded. */
+  'dax.format': { params: DaxFormatParams; output: DaxFormatOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4413,6 +4465,7 @@ export const OPS_META = {
   'dax.complete': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'dax.tokens': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'dax.references': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'dax.format': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4572,6 +4625,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     daxTokens: (params: DaxTokensParams, options?: O) => run('dax.tokens', params, options),
     /** The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId. */
     daxReferences: (params: DaxReferencesParams, options?: O) => run('dax.references', params, options),
+    /** Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded. */
+    daxFormat: (params: DaxFormatParams, options?: O) => run('dax.format', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
