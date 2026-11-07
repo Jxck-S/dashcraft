@@ -54,7 +54,7 @@ What exists after M0–M5 (`v0.1.0`, `v0.2.0`) and the unreleased work, from [GA
 | Registry, MCP, AI | `pbi-ops` with 71 commands including measure create, update and delete, relationship create, update and delete, calculated column create and delete, calculated table create, table delete, hierarchy create and delete, save and Save As, object dependents, measure editing, DAX-aware rename, descriptions, visual move and resize, grouped edits and history, `run`, `serve`, `mcp`; opt-in `pbi-ai` with 9 `ai.*` commands | 2.8 |
 | App UX | Desktop-style shell: ribbon, view rail, panes, Report (interactive reading), Table, Model (read-only diagram), DAX query, TMDL (read-only) views, View as, opt-in AI; editing commands shown disabled | 1.4 |
 | Platform and packaging | CI on macOS, Windows, Linux; dmg, msi, nsis, AppImage, deb; unsigned; no auto-update | 2.7 |
-| Security and fuzzing | No `unsafe`, caps and zip-slip guards, 14 fuzz targets, `cargo-deny`; legal review of ADR-0003 pending | 3.1 |
+| Security and fuzzing | No `unsafe`, caps and zip-slip guards, 15 fuzz targets, `cargo-deny`; legal review of ADR-0003 pending | 3.1 |
 
 Editing foundation already in the libraries but not exposed: `pbi-model` commands
 (`SetMeasureExpression`, `SetDescription`, `SetVisualPosition`, `RenameTable`/`RenameColumn`/
@@ -859,7 +859,10 @@ optional language server.
   - [x] M7.1b (2026-11-07) a function catalog with DashCraft-written descriptions (all 299
     functions), argument-count diagnostics checked against Desktop (929 probes, suite
     `dax-arity`), signature help and hover; the `dax.signatureHelp` and `dax.hover` commands.
-  - [ ] M7.1c completion (`dax.complete`), P12, a language-service fuzz target.
+  - [x] M7.1c (2026-11-07) completion (`pbi_dax::service::complete`, the `dax.complete`
+    command): functions, tables, columns, measures, variables in scope, a query's `DEFINE`s and
+    keywords by context, ranked by match quality and by what the active parameter takes; P12
+    (3.0 ms p95 over 2,000 measures, target 20: acceptance 3 met); the `dax_service` fuzz target.
   - [ ] M7.1d semantic tokens, go to definition, find references (`dax.tokens`,
     `dax.references`).
 - [ ] **M7.2 DAX formatter.** Deterministic and idempotent, keeps comments, options for line

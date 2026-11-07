@@ -20,7 +20,7 @@ shift $(($# < 2 ? $# : 2))
 
 case "$target" in
   m_parse | m_eval) dict=m ;;
-  dax_parse) dict=dax ;;
+  dax_parse | dax_service) dict=dax ;;
   tmdl) dict=tmdl ;;
   tmsl | pbir_json | pbir_layout) dict=json ;;
   *) dict= ;;

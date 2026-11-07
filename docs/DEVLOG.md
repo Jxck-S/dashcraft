@@ -7,6 +7,30 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.1c DAX completion
+
+- **What:** `pbi_dax::service::complete` (`complete.rs`): completion at a cursor from the tokens
+  around it, so it works while the text does not parse. The context decides what fits: an
+  expression start (functions, tables, qualified columns, measures, variables in scope, `VAR`,
+  `RETURN`, `DEFINE`/`EVALUATE` at the start of a query), after an operand (`IN`, `VAR`, `RETURN`
+  and the query keywords), inside `[` (the table's or every column and measure), inside `'`
+  (tables and qualified columns), after `DEFINE`, `ORDER`, `START`, query `MEASURE`/`COLUMN`;
+  nothing in comments, literals or after `VAR`. Variables follow `VAR`/`RETURN` scopes and
+  parentheses; a query's `DEFINE`s count. Ranking: exact, prefix, word start, contains; the active
+  parameter's kind (`table`, `column`) first; then variables, functions and keywords, tables,
+  columns, measures. The registry gains `dax.complete` (`maxItems` default 100, at most 1,000,
+  `incomplete` when cut). P12 `dax-complete` (`perf_dax.rs`, `perf/budgets.toml`). Fuzz target
+  `dax_service` (diagnostics, signature help, hover and completion at every offset; 20 seeds from
+  the `dax_parse` seeds and the service tests).
+- **Why:** M7.1c (DESKTOP-PLAN), the completion list the formula bar (M7.5) needs; acceptance 3
+  (completion p95 within P12's target) and 4 (a language-service fuzz target in the nightly job).
+- **Numbers:** P12 3.0 ms p95 (median 1.5 ms) over 20 tables × 20 columns and 2,000 measures on a
+  12-core Windows desktop (target 20, max 50). The fuzz target ran 72,362 mutated inputs through a
+  stable-toolchain harness without a finding (nightly runs it under libFuzzer). Tests:
+  `language_service.rs` 18 → 25 (pbi-dax; one runs every service at every offset of awkward
+  texts), `dax_language.rs` 6 → 7 (pbi-ops). 76 → 77 registry commands; 14 → 15 fuzz targets.
+- **Open:** M7.1d (semantic tokens, go to definition, find references), M7.2 (formatter).
+
 ### M7.1b DAX function catalog, argument counts, signature help and hover
 
 - **What:** `pbi_dax::service` gains a function catalog (`catalog.txt`, parsed once by
@@ -31,7 +55,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   (`USERNAME` takes any number of arguments, `WINDOW` up to 10). Tests: `language_service.rs`
   10 → 18 (pbi-dax), 6 catalog unit tests, `catalog_argument_counts_accept_every_tested_expression`
   (every `functions.rs` expression), `dax_language.rs` 3 → 6 (pbi-ops). Ground truth: 2,259 →
-  3,188 recorded queries. 74 → 76 registry commands.
+  3,188 recorded queries. 74 → 76 registry commands. Commit `70e77c5` (PR #49).
 - **Open:** M7.1c (completion, P12, a language-service fuzz target), M7.1d (semantic tokens, go to
   definition, find references).
 

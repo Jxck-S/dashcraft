@@ -388,7 +388,7 @@ fn keyword_hover(span: Span, text: &str) -> Option<Hover> {
     Some(h)
 }
 
-const fn keyword_description(k: Keyword) -> &'static str {
+pub(super) const fn keyword_description(k: Keyword) -> &'static str {
     match k {
         Keyword::Var => {
             "Names a value or table so later expressions can reuse it; a RETURN ends the block."
@@ -485,7 +485,7 @@ fn clip(s: &str, max_chars: usize) -> String {
 
 /// Whether `offset` lies inside the comment `t` (a line comment includes
 /// its end, an unterminated block comment everything after it).
-fn in_comment(t: &Token, offset: usize) -> bool {
+pub(super) fn in_comment(t: &Token, offset: usize) -> bool {
     match t.kind {
         TokenKind::LineComment | TokenKind::Error(LexError::UnterminatedBlockComment) => {
             t.span.start < offset && offset <= t.span.end
@@ -495,7 +495,7 @@ fn in_comment(t: &Token, offset: usize) -> bool {
     }
 }
 
-fn floor_char_boundary(src: &str, offset: usize) -> usize {
+pub(super) fn floor_char_boundary(src: &str, offset: usize) -> usize {
     let mut i = offset.min(src.len());
     while !src.is_char_boundary(i) {
         i = i.saturating_sub(1);

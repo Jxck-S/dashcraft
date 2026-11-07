@@ -317,6 +317,7 @@ is where real bugs show up.
 | `m_parse` | M lexer, parser, printer | spans valid; `parse(print(parse(x))) == parse(x)`; printing is a fixed point |
 | `m_eval` | `pbi_m::Engine` with tiny limits and `NoBlobResolver` (NUL-separated shared queries) | no `MError::Internal` |
 | `dax_parse` | `pbi_dax::syntax` expression/query/function parsers, printers, visitor | spans valid and nested; compact and pretty printer round-trip |
+| `dax_service` | `pbi_dax::service` diagnostics (both source kinds, a small and an unknown model), signature help, hover and completion at every offset of a short text (64 spread offsets of a long one); the first byte is the completion limit | spans inside the text on char boundaries; at most `MAX_DIAGNOSTICS` diagnostics; at most the requested completion items, none empty |
 | `zip_container` | `ZipContainer` with `Limits::strict()`: raw ZIPs, or `arbitrary`-built archives with hostile names | only normalized relative paths; sorted and unique; sizes within limits; reads return the declared size; escaping lookups fail |
 | `detect` | `pbi_core::detect::detect_bytes` | |
 | `open_bytes` | `pbi_core::open_bytes` (strict limits), `inspect_json`, `pbip_files`, `pbit_bytes` | a PBIT written from an opened document opens again |

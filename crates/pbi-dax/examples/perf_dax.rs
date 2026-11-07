@@ -1,11 +1,17 @@
-//! Performance scenario P04 (`cargo xtask perf`; budgets in `perf/budgets.toml`, docs in
-//! `docs/perf.md`): DAX measures over a synthetic 1 000 000-row fact table with a 1 000-row
-//! product dimension. One iteration evaluates every measure of [`MEASURES`] once in an empty
-//! filter context: plain aggregations, `CALCULATE` with a filter through the relationship and
-//! with two fact-column filters, and a `SUMX` iterator.
+//! Performance scenarios of `pbi-dax` (`cargo xtask perf`; budgets in `perf/budgets.toml`,
+//! docs in `docs/perf.md`):
+//!
+//! - P04: DAX measures over a synthetic 1 000 000-row fact table with a 1 000-row product
+//!   dimension. One iteration evaluates every measure of [`MEASURES`] once in an empty filter
+//!   context: plain aggregations, `CALCULATE` with a filter through the relationship and with
+//!   two fact-column filters, and a `SUMX` iterator.
+//! - P12: completion on a synthetic model of 20 tables of 20 columns and 2 000 measures. One
+//!   iteration is one editor request: `Schema::from_model` plus `complete` at the end of one of
+//!   the [`COMPLETIONS`] texts, at most 100 items.
 //!
 //! ```text
 //! cargo run --release -p pbi-dax --example perf_dax -- --scenario P04 --iterations 10
+//! cargo run --release -p pbi-dax --example perf_dax -- --scenario P12 --iterations 60
 //! ```
 
 #[path = "../../../perf/harness.rs"]
@@ -19,13 +25,17 @@ use std::time::Instant;
 use arrow::array::{ArrayRef, Float64Array, Int64Array, StringArray};
 use arrow::record_batch::RecordBatch;
 use harness::{Args, Outcome, ms_since, sample};
+use pbi_dax::service::{Schema, complete};
 use pbi_engine::{Engine, FilterContext, Value};
 use pbi_model::{Column, ColumnRef, DataType, Measure, Model, Relationship, Table};
 
 fn main() -> ExitCode {
     harness::main(
         env!("CARGO_MANIFEST_DIR"),
-        &[("P04", measures_over_1m_rows)],
+        &[
+            ("P04", measures_over_1m_rows),
+            ("P12", completion_on_2000_measures),
+        ],
     )
 }
 
@@ -91,6 +101,73 @@ fn measures_over_1m_rows(args: &Args) -> Result<Outcome, String> {
         out = out.with(key, times.get(times.len() / 2).copied().unwrap_or(f64::NAN));
     }
     Ok(out)
+}
+
+const COMPLETION_TABLES: usize = 20;
+const COMPLETION_COLUMNS: usize = 20;
+const COMPLETION_MEASURES: usize = 2_000;
+
+/// Texts completed at their end, one per iteration in turn: a measure prefix, an empty table
+/// argument (everything matches; tables rank first), a function prefix after variables, a
+/// qualified column, a column argument, and a query whose `DEFINE` adds a measure.
+const COMPLETIONS: [&str; 6] = [
+    "[Measure 01",
+    "SUMX(",
+    "VAR total = [Measure 0001] RETURN CALCULATE(to",
+    "'Table 05'[Col",
+    "SUM(Col",
+    "DEFINE MEASURE 'Table 01'[New] = 1 EVALUATE ROW(\"x\", [Ne",
+];
+
+fn completion_on_2000_measures(args: &Args) -> Result<Outcome, String> {
+    let model = completion_model();
+    let mut items = 0usize;
+    let samples = sample(args.warmup, args.iterations, |i| {
+        let text = COMPLETIONS
+            .get(i % COMPLETIONS.len())
+            .copied()
+            .unwrap_or_default();
+        let schema = Schema::from_model(&model);
+        let c = complete(text, text.len(), &schema, 100);
+        if c.items.is_empty() {
+            return Err(format!("no completions for {text:?}"));
+        }
+        items += c.items.len();
+        black_box(c);
+        Ok(())
+    })?;
+    Ok(Outcome::ok(samples)
+        .with("tables", COMPLETION_TABLES)
+        .with("columns", COMPLETION_TABLES * COMPLETION_COLUMNS)
+        .with("measures", COMPLETION_MEASURES)
+        .with("items", items))
+}
+
+fn completion_model() -> Model {
+    let per_table = COMPLETION_MEASURES / COMPLETION_TABLES;
+    let tables = (1..=COMPLETION_TABLES)
+        .map(|t| {
+            let name = format!("Table {t:02}");
+            let mut table = Table::new(&name);
+            for c in 1..=COMPLETION_COLUMNS {
+                table
+                    .columns
+                    .push(Column::data(format!("Column {c:02}"), DataType::Int64));
+            }
+            for m in 1..=per_table {
+                let n = (t - 1) * per_table + m;
+                table.measures.push(Measure::new(
+                    format!("Measure {n:04}"),
+                    format!("SUM('{name}'[Column {:02}])", (m % COMPLETION_COLUMNS) + 1),
+                ));
+            }
+            table
+        })
+        .collect();
+    Model {
+        tables,
+        ..Model::default()
+    }
 }
 
 fn model() -> Model {

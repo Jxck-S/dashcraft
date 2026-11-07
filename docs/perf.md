@@ -38,7 +38,7 @@ regressed, `2` for usage or build errors.
    | Example | Scenarios |
    |---|---|
    | `crates/pbi-render/examples/perf_render.rs` | P01, P02, P03, P07, P08 |
-   | `crates/pbi-dax/examples/perf_dax.rs` | P04 |
+   | `crates/pbi-dax/examples/perf_dax.rs` | P04, P12 |
    | `crates/pbi-m/examples/perf_m.rs` | P05 |
    | `crates/pbi-vertipaq/examples/perf_vertipaq.rs` | P06 |
 | `crates/pbi-ops/examples/perf_ops.rs` | P09, P10, P11 (through `Registry::execute`, like the app) |
@@ -95,6 +95,7 @@ without it.
 | P09 | `edit-measure-requery` | through `Registry::execute`: `model.measure.update` of the example's `Total Sales` (refreshed offline from its CSVs; the text alternates, so every step commits a revision), then `canvas.render` of the Overview report's Executive Summary page (14 visuals) | committed | median | 50 / 150 |
 | P10 | `save-pbip-acme` | through `Registry::execute`: one `model.measure.update`, then `doc.save` into a copy of the example under `target/tmp/` (compares the saved and current state, writes the one changed TMDL file atomically) | committed | median | 100 / 300 |
 | P11 | `refresh-acme-end-to-end` | in a fresh process, through `Registry::execute`: `doc.open` of the example, `data.refresh` of its 11 tables from the CSVs (M, calculated columns and tables), `canvas.render` of the first page | committed | median | 1000 / 3000 |
+| P12 | `dax-complete` | `complete` (the language service behind `dax.complete`) at the end of one of six texts (a measure in brackets, a table argument, a variable in scope, a qualified column, a column argument, a query-defined measure), with the schema built from a model of 20 tables × 20 columns and 2 000 measures, at most 100 items | synthetic | p95 | 20 / 50 |
 
 Reproduce one scenario by hand (prints its JSON line; progress on stderr):
 
@@ -102,6 +103,7 @@ Reproduce one scenario by hand (prints its JSON line; progress on stderr):
 cargo run --release -p pbi-render   --example perf_render   -- --scenario P01 --iterations 60
 cargo run --release -p pbi-render   --example perf_render   -- --scenario P02 --iterations 1
 cargo run --release -p pbi-dax      --example perf_dax      -- --scenario P04
+cargo run --release -p pbi-dax      --example perf_dax      -- --scenario P12 --iterations 60
 cargo run --release -p pbi-m        --example perf_m        -- --scenario P05
 cargo run --release -p pbi-vertipaq --example perf_vertipaq -- --scenario P06
 cargo run --release -p pbi-ops      --example perf_ops      -- --scenario P09
@@ -141,6 +143,10 @@ re-render 32 ms), 55 ms for P10 and 184 ms for P11 (open 42 ms, refresh 91 ms, f
 for P09, just over its 50 ms target and well within its maximum, 33 ms for P10 and 209 ms for
 P11. Record them on the baseline machine with
 `cargo xtask perf --update-baseline --scenario P09 --scenario P10 --scenario P11`.
+
+P12 (M7.1c completion) has no baseline entry yet either; on the same Windows desktop it measured
+3.0 ms p95 (median 1.5 ms) for a completion over 2 000 measures and 400 columns, well within
+its 20 ms target.
 
 The per-scenario breakdowns (`info`) are in `target/perf/report.json` after a run.
 

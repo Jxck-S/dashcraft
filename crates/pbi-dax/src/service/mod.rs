@@ -8,18 +8,20 @@
 //!   column).
 //! - [`catalog`]: signature, parameters, argument count, return type and a
 //!   one-line description (DashCraft's words) of every supported function.
-//! - [`signature_help`] and [`hover`] at a cursor offset; both work on
-//!   tokens, so text that does not parse yet still gets answers.
+//! - [`signature_help`], [`hover`] and [`complete`] at a cursor offset; they
+//!   work on tokens, so text that does not parse yet still gets answers.
 //!
-//! The registry exposes it as `dax.diagnostics`, `dax.signatureHelp` and
-//! `dax.hover` (`pbi-ops`, through `pbi-session`).
+//! The registry exposes it as `dax.diagnostics`, `dax.signatureHelp`,
+//! `dax.hover` and `dax.complete` (`pbi-ops`, through `pbi-session`).
 
 pub mod catalog;
+mod complete;
 mod diagnostics;
 mod help;
 mod schema;
 
 pub use catalog::{FunctionInfo, FunctionParam, ReturnType};
+pub use complete::{CompletionItem, CompletionKind, Completions, complete};
 pub use diagnostics::{Diagnostic, DiagnosticCode, MAX_DIAGNOSTICS, SourceKind, diagnostics};
 pub use help::{Hover, HoverKind, SignatureHelp, hover, signature_help};
 pub use schema::{NameDetails, Schema, SchemaTable};

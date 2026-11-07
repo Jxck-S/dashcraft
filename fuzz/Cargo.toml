@@ -110,6 +110,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "dax_service"
+path = "fuzz_targets/dax_service.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "zip_container"
 path = "fuzz_targets/zip_container.rs"
 test = false

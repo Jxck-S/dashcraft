@@ -1135,6 +1135,70 @@ export interface DatasetReferenceOut {
 /** How a DAX text was checked. */
 export type DaxCheckedKind = 'expression' | 'query'
 
+export interface DaxCompleteOut {
+  /** The document revision whose model was used (with `docId`). */
+  documentRevision?: number | null
+  /**
+   * Start of the text a chosen item replaces (the name being typed; the
+   * cursor when nothing is typed yet).
+   */
+  start: TextPositionOut
+  /** End (exclusive) of the replaced text. */
+  end: TextPositionOut
+  /** The typed text the items match (`Tot` in `[Tot`). */
+  prefix: string
+  /**
+   * Best match first: the same name, then names that start with the
+   * prefix, then a word that does, then names that contain it. Empty
+   * inside a comment, string or number, and after `VAR`.
+   */
+  items: DaxCompletionItemOut[]
+  /** More items matched than `maxItems`. */
+  incomplete: boolean
+}
+
+export interface DaxCompleteParams {
+  /**
+   * Suggest the tables, columns and measures of this document's model and
+   * its report-level measures (`d1`, …). Without it only functions,
+   * keywords, variables and the query's own definitions are suggested.
+   */
+  docId?: string | null
+  /** The DAX text. */
+  text: string
+  /** The cursor. */
+  position: TextPositionIn
+  /** Most items returned, best first (default 100, at most 1000). */
+  maxItems?: number
+}
+
+/** One suggestion. */
+export interface DaxCompletionItemOut {
+  /**
+   * What a list shows: `SUM`, `Sales`, `'Product Category'[Category]`,
+   * `[Total Sales]`, a variable, `ORDER BY`.
+   */
+  label: string
+  kind: DaxCompletionKind
+  /**
+   * The text that replaces `start`..`end`: `SUM(`, `PI()`, `SUM` when a
+   * `(` already follows, the label for anything else.
+   */
+  insertText: string
+  /**
+   * `SUM(column) → number`, `column (string)`, `measure`, `table`,
+   * `variable`, `keyword`, `user-defined function`.
+   */
+  detail: string
+  /** The home table of a column or measure. */
+  table?: string | null
+  /** A function's or keyword's description, or the model description. */
+  description?: string | null
+}
+
+/** What a completion item inserts. */
+export type DaxCompletionKind = 'function' | 'table' | 'column' | 'measure' | 'variable' | 'keyword' | 'userFunction'
+
 /** One problem in the text. */
 export interface DaxDiagnosticOut {
   /** `error` or `warning` (a function DashCraft cannot evaluate yet). */
@@ -4115,6 +4179,8 @@ export interface OpsCommands {
   'dax.signatureHelp': { params: DaxSignatureHelpParams; output: DaxSignatureHelpOut }
   /** Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded. */
   'dax.hover': { params: DaxHoverParams; output: DaxHoverOut }
+  /** The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet. */
+  'dax.complete': { params: DaxCompleteParams; output: DaxCompleteOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4236,6 +4302,7 @@ export const OPS_META = {
   'dax.diagnostics': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'dax.signatureHelp': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'dax.hover': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'dax.complete': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4389,6 +4456,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     daxSignatureHelp: (params: DaxSignatureHelpParams, options?: O) => run('dax.signatureHelp', params, options),
     /** Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded. */
     daxHover: (params: DaxHoverParams, options?: O) => run('dax.hover', params, options),
+    /** The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet. */
+    daxComplete: (params: DaxCompleteParams, options?: O) => run('dax.complete', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
