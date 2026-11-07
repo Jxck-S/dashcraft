@@ -21,7 +21,9 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   (target 100; one file written), P11 184 ms (target 1000; open 42 ms, refresh of 11 tables
   91 ms, first page 30 ms). No code outside the new example changed, so P01–P08 cannot regress;
   on this machine they are all within target except P05 (365 ms against 250; 149 ms on the
-  baseline machine). GAPS §8 4.9 → 4.7 (three new rows, the end-to-end refresh gap closed).
+  baseline machine). The CI runner's quick run: P09 53 ms (over its 50 ms target, within the
+  150 ms maximum), P10 33 ms, P11 209 ms. GAPS §8 4.9 → 4.7 (three new rows, the end-to-end
+  refresh gap closed).
 - **Open:** record P09–P11 on the baseline machine; app open (P22) and webview canvas latency
   (P21) remain.
 

@@ -137,7 +137,9 @@ example and sample:
 P09–P11 (M6 editing) have no baseline entry yet. A full run on a 12-core x86-64 Windows desktop,
 about twice as slow as the baseline machine on P01–P08, measured 43.6 ms for P09 (edit 13 ms,
 re-render 32 ms), 55 ms for P10 and 184 ms for P11 (open 42 ms, refresh 91 ms, first page
-30 ms), all within target. Record them on the baseline machine with
+30 ms), all within target. The CI runner's quick run (Ubuntu, informational) measured 53 ms
+for P09, just over its 50 ms target and well within its maximum, 33 ms for P10 and 209 ms for
+P11. Record them on the baseline machine with
 `cargo xtask perf --update-baseline --scenario P09 --scenario P10 --scenario P11`.
 
 The per-scenario breakdowns (`info`) are in `target/perf/report.json` after a run.

@@ -264,7 +264,7 @@ scenarios recorded 2026-10-23 on an idle machine). Score: 5 ≤ half the target 
 | P06 `pbix-data-open` (20 / 100; the Revenue Opportunities sample PBIX, 9 tables) | ✅ | 5 | 4.5 | — |
 | P07 `busy-page-svg` (4 / 16) | ✅ | 5 | 1.6 | — |
 | P08 `example-table-scroll-step` (p95; 16 / 33; the example's Customer Detail table, 29 rows) | ✅ | 5 | 0.34 | — |
-| P09 `edit-measure-requery` (50 / 150; edit `Total Sales`, re-render the Executive Summary page, through `Registry::execute`) | ✅ | 4 | 43.6 on a Windows x86-64 desktop (no baseline entry yet) | Record on the baseline machine |
+| P09 `edit-measure-requery` (50 / 150; edit `Total Sales`, re-render the Executive Summary page, through `Registry::execute`) | ✅ | 4 | 43.6 on a Windows x86-64 desktop; 53 on the CI runner's quick run, over target (no baseline entry yet) | Record on the baseline machine |
 | P10 `save-pbip-acme` (100 / 300; one edit, `doc.save` of a copy of the example) | ✅ | 4 | 55 on the same desktop | Record on the baseline machine |
 | P11 `refresh-acme-end-to-end` (1000 / 3000; open, refresh 11 tables from the CSVs, first page, fresh process) | ✅ | 5 | 184 on the same desktop | Record on the baseline machine |
 | Scenarios for app open and canvas latency in the webview | ❌ | ? | none (P22 and P21 in [DESKTOP-PLAN.md](DESKTOP-PLAN.md)) | Add with the app milestones |

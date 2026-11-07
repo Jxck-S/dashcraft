@@ -693,7 +693,8 @@ rewritten DAX, and the card values equal those before the renames. Performance s
 (edit a measure, re-render the Executive Summary page), P10 (one edit, save) and P11 (open,
 refresh from the CSVs, first page) run through `Registry::execute`
 (`crates/pbi-ops/examples/perf_ops.rs`) and are within target (43.6, 55 and 184 ms against 50,
-100 and 1000 ms on a Windows desktop; acceptance 12). Still open:
+100 and 1000 ms on a Windows desktop; acceptance 12); the CI runner's quick run has P09 at 53 ms,
+just over its target. Still open:
 the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits,
 KPI and detail-rows expressions, moving visual groups, canvas state remapping after renames, and
 the app and CLI work.
