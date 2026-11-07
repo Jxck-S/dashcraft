@@ -1,6 +1,21 @@
+<script module lang="ts">
+  /** The editable properties of the selected measure, column or table (`model.*.update`). */
+  export interface PropertyEdit {
+    /** The object's id (`details.id`): the fields belong to this object. */
+    id: number
+    description: string | null
+    /** Shown for a measure or column; `undefined` hides the field (tables). */
+    displayFolder?: string | null
+    formatString?: string | null
+    /** Applies one changed field (`''` clears it); resolves an error message or `null`. */
+    commit: (field: 'description' | 'displayFolder' | 'formatString', value: string) => Promise<string | null>
+  }
+</script>
+
 <script lang="ts">
   import CodeView from './CodeView.svelte'
   import Icon from './Icon.svelte'
+  import PropertyField from './PropertyField.svelte'
   import type { ObjectDetailsDto, ObjectKindDto } from '../lib/bindings'
 
   let {
@@ -8,13 +23,21 @@
     loading,
     error,
     explain = null,
+    edit = null,
   }: {
     details: ObjectDetailsDto | null
     loading: boolean
     error: string | null
     /** "Explain with AI" for the selected measure (opt-in AI; disabled with a reason until it is on). */
     explain?: { enabled: boolean; title: string; run: () => void } | null
+    /** Editable fields of the selected object; read-only without. */
+    edit?: PropertyEdit | null
   } = $props()
+
+  // The edited object's fields replace their read-only rows.
+  const editing = $derived(edit && details && edit.id === details.id ? edit : null)
+  const EDITED_LABELS = ['Format string', 'Display folder']
+  const properties = $derived(editing ? (details?.properties ?? []).filter((p) => !EDITED_LABELS.includes(p.label)) : (details?.properties ?? []))
 
   const KIND_LABELS: Record<ObjectKindDto, string> = {
     model: 'Model',
@@ -57,13 +80,25 @@
       {/if}
     </header>
 
-    {#if details.description}
+    {#if editing}
+      {#key editing.id}
+        <div class="edit" role="group" aria-label={`Edit ${details.name}`}>
+          <PropertyField id="prop-description" label="Description" value={editing.description} multiline placeholder="Add a description" oncommit={(v) => editing.commit('description', v)} />
+          {#if editing.displayFolder !== undefined}
+            <PropertyField id="prop-display-folder" label="Display folder" value={editing.displayFolder} placeholder="None" oncommit={(v) => editing.commit('displayFolder', v)} />
+          {/if}
+          {#if editing.formatString !== undefined}
+            <PropertyField id="prop-format-string" label="Format string" value={editing.formatString} mono placeholder="None" oncommit={(v) => editing.commit('formatString', v)} />
+          {/if}
+        </div>
+      {/key}
+    {:else if details.description}
       <p class="description">{details.description}</p>
     {/if}
 
-    {#if details.properties.length > 0}
+    {#if properties.length > 0}
       <dl class="props">
-        {#each details.properties as p, i (i)}
+        {#each properties as p, i (i)}
           <dt>{p.label}</dt>
           <dd class:mono={p.mono} title={p.tooltip ?? undefined}>{p.value}</dd>
         {/each}
@@ -167,6 +202,13 @@
   .explain:disabled {
     color: var(--color-text-disabled);
     cursor: default;
+  }
+
+  .edit {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 2px;
   }
 
   .description {

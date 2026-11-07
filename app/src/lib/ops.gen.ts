@@ -127,6 +127,11 @@ export interface ApplyEditsParams {
    * resolved against the document before the first edit.
    */
   edits: EditOperation[]
+  /**
+   * The history step's label (`doc.history` `undoLabel` and `redoLabel`,
+   * at most 200 characters); default `Apply document edits`.
+   */
+  label?: string | null
 }
 
 /** One step of a batch. */
@@ -1508,6 +1513,11 @@ export interface DocumentEditOut {
    * until an edit or a refresh computes it again.
    */
   recalculated?: RecalculatedOut[]
+  /**
+   * `doc.applyEdits`: problems that did not stop the edits (a measure's
+   * DAX that does not parse); absent when none.
+   */
+  warnings?: string[]
 }
 
 export interface DocumentHistoryOut {

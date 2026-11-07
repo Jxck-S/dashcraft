@@ -5,8 +5,9 @@
   import { NOT_AVAILABLE } from '../../lib/shell'
 
   // TMDL view (read-only): the semantic model as TMDL scripts — the project's .tmdl files
-  // verbatim, or canonical TMDL generated from the model. A script list on the left, the
-  // script on the right; selecting a table in the Data pane opens its script.
+  // verbatim (with unsaved edits as Save writes them), or canonical TMDL generated from the
+  // model. A script list on the left, the script on the right; selecting a table in the Data
+  // pane opens its script.
   let {
     tmdl,
     error,
@@ -38,11 +39,12 @@
 <div class="tmdl-view">
   <div class="command-bar">
     <button class="cmd" disabled title={`Apply — ${NOT_AVAILABLE}`}><Icon name="play" size={14} /> Apply</button>
-    <span class="note" title={tmdl?.source === 'files' ? 'Read from the opened .tmdl files' : 'Written by DashCraft from the model (pbi-tmdl)'}>
+    <span class="note" title={tmdl?.source === 'files' ? 'Read from the opened .tmdl files' : tmdl?.source === 'edited' ? 'The opened .tmdl files with the unsaved edits, as Save writes them' : 'Written by DashCraft from the model (pbi-tmdl)'}>
       <Icon name="info" size={14} />
       {#if loading}Loading…
       {:else if !tmdl}—
       {:else if tmdl.source === 'files'}Read-only · the project's TMDL files, verbatim ({tmdl.files.length})
+      {:else if tmdl.source === 'edited'}Read-only · the project's TMDL files with unsaved edits ({tmdl.files.length})
       {:else}Read-only · TMDL generated from the model by DashCraft ({tmdl.files.length} scripts){/if}
     </span>
   </div>

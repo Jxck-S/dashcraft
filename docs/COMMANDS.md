@@ -1714,6 +1714,7 @@ Result:
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
 | `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
+| `warnings`? | string[] | `doc.applyEdits`: problems that did not stop the edits (a measure's DAX that does not parse); absent when none. |
 
 Examples:
 
@@ -1789,6 +1790,7 @@ Result:
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
 | `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
+| `warnings`? | string[] | `doc.applyEdits`: problems that did not stop the edits (a measure's DAX that does not parse); absent when none. |
 
 Examples:
 
@@ -2425,6 +2427,7 @@ Parameters:
 |---|---|---|
 | `docId` | string | The document id from `doc.open` (`d1`, …). |
 | `edits` | EditOperation[] | Edits applied atomically and undone as one history step. Names are resolved against the document before the first edit. |
+| `label` (optional) | string \| null | The history step's label (`doc.history` `undoLabel` and `redoLabel`, at most 200 characters); default `Apply document edits`. |
 
 Result:
 
@@ -2435,10 +2438,12 @@ Result:
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
 | `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
+| `warnings`? | string[] | `doc.applyEdits`: problems that did not stop the edits (a measure's DAX that does not parse); absent when none. |
 
 Examples:
 
 - Update a measure and its description: `{"docId":"d1","edits":[{"type":"setMeasureExpression","measureId":42,"expression":"SUM(Orders[Amount])"},{"type":"setDescription","objectId":42,"text":"Total amount"}]}`
+- Rename and edit a measure as one labelled step: `{"docId":"d1","label":"Edit measure 'Sales'","edits":[{"type":"renameObject","objectId":42,"newName":"Sales"},{"type":"updateMeasure","measureId":42,"expression":"SUM(Orders[Amount])"}]}`
 
 ### `doc.undo`
 
@@ -2461,6 +2466,7 @@ Result:
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
 | `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
+| `warnings`? | string[] | `doc.applyEdits`: problems that did not stop the edits (a measure's DAX that does not parse); absent when none. |
 
 Examples:
 
@@ -2487,6 +2493,7 @@ Result:
 | `dirty` | boolean |  |
 | `changedObjectIds` | integer[] |  |
 | `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
+| `warnings`? | string[] | `doc.applyEdits`: problems that did not stop the edits (a measure's DAX that does not parse); absent when none. |
 
 Examples:
 

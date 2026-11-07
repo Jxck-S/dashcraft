@@ -29,8 +29,8 @@ logos or CSS are used; the app is named "DashCraft" everywhere.
 
 | Element | Desktop location | DashCraft |
 |---|---|---|
-| Save / Undo / Redo | Quick Access Toolbar, title bar left | ⛔ (read-only viewer) |
-| File name | title bar centre, `<file> - Power BI Desktop` | ✅ `<file> - DashCraft` (also the native window title) |
+| Save / Undo / Redo | Quick Access Toolbar, title bar left | ✅ Save (Ctrl+S; a PBIX, PBIT or BIM is saved as a new PBIP project), Undo and Redo of the document's edits, their tooltips naming the step (Ctrl+Z / Ctrl+Y) |
+| File name | title bar centre, `<file> - Power BI Desktop` | ✅ `<file> - DashCraft` (also the native window title), `*` in front while there are unsaved edits |
 | Search (Alt+Q) | title bar centre [1] | ✅ ribbon commands of the current view, the views, Open, and model fields |
 | Account / Share | title bar right | omitted |
 | Ribbon tabs, Report view | File, Home, Insert, Modeling, Design, View, Optimize, Help, External tools [1][2][3] | ✅ all but External tools |
@@ -38,9 +38,9 @@ logos or CSS are used; the app is named "DashCraft" everywhere.
 | Ribbon tabs, DAX query / TMDL view | File, Home (Clipboard, Editing), Help [10][11] | ✅ |
 | Contextual tabs | Measure / Column / Table tools on selection [1] | ✅ read-only fields (Name, Home table, Data type, Format, Summarization, Data category) |
 | Ribbon collapse | chevron at the ribbon's bottom right, Ctrl+F1, double-click a tab [1] | ✅ collapsed, a tab click shows the ribbon floating |
-| File (backstage) | Home, New, Open, Save, Save as, Get data, Import, Export, Publish, Options and settings, Get help | ✅ Home, Open (browse, folder, **Recent** persisted in the app config folder), Export (PBIP, PBIT), Options and settings → **Options** (a Desktop-style Options dialog: pages on the left under Global / Current file, only ✚ **AI** implemented, the rest ⛔) and Data source settings (**Blob map…**), Get help → About; ⛔ New, Save, Save as, Get data, Import, Export to PDF, Publish; ✚ Close (closes the document) |
+| File (backstage) | Home, New, Open, Save, Save as, Get data, Import, Export, Publish, Options and settings, Get help | ✅ Home, Open (browse, folder, **Recent** persisted in the app config folder), Export (PBIP, PBIT), Options and settings → **Options** (a Desktop-style Options dialog: pages on the left under Global / Current file, only ✚ **AI** implemented, the rest ⛔) and Data source settings (**Blob map…**), Get help → About, **Save** and **Save as** (a new PBIP project folder; Ctrl+Shift+S); ⛔ New, Get data, Import, Export to PDF, Publish; ✚ Close (closes the document). Closing the document or the window, or opening another file, with unsaved edits asks *Save*, *Don't save* or *Cancel* |
 | View rail | left: Report, Table, Model, DAX query, TMDL [11] | ✅ same order |
-| Formula bar | under the ribbon when a measure, calculated column or calculated table is selected | ✅ read-only (✕ / ✓ disabled), expandable; ✚ ✦ **Explain with AI** for measures (opt-in AI) |
+| Formula bar | under the ribbon when a measure, calculated column or calculated table is selected | ✅ edits `Name = expression` (Enter or ✓ commits, Shift+Enter new line, Esc or ✕ cancels; a rename and the new DAX are one undo step; errors under the editor), expandable, plain editor (no IntelliSense yet); read-only for a remote model; ✚ ✦ **Explain with AI** for measures (opt-in AI) |
 | Notification bar | yellow bar under the ribbon | ✅ remote model, missing model, cached data (+ **Refresh from source**) |
 | Right panes, Report view | Filters, Visualizations, Data; Selection / Bookmarks open to their left [5][6][7] | ✅ same order; each collapses to a vertical strip with « and its title |
 | Page tabs | under the canvas: layout switch, ‹ ›, page tabs, "+" [7] | ✅ desktop / mobile switch (mobile ⛔), previous / next page (Ctrl+Page Up / Down), tabs (hidden pages greyed with the hidden icon), "+" ⛔; ✚ report picker when a PBIP holds several reports |
@@ -84,7 +84,7 @@ Calculations, Security (**View as** ✅, Manage roles ⛔), Sensitivity, Share.
 | Data [7][8] | search, tables → measures / columns / hierarchies, field icons (Σ, calculator, calculated column, date, geography, hierarchy), hidden fields greyed, checkboxes for the selected visual, context menu | ✅ all; "View hidden" in the ⋯ menu (the Model view starts with hidden objects shown); ✚ table data chips; context menu: Properties, Refresh data, Load CSV manually…, View data, ✚ **Explain with AI** (measures; opt-in AI), **Quick queries** (Show top 100 rows, Evaluate, Define and evaluate, Show data preview) |
 | ✚ Explain with AI | — | ✚ opened from a measure (Data pane menu, formula bar, Properties, ribbon): the measure's DAX, progress and Cancel, then the AI's summary, explanation (Markdown, rendered safely), filter context, dependencies, caveats and the locally computed references; left of the other right panes, collapsible, closable |
 | Selection [6] | layer order / tab order, visibility | ✅ read-only, click selects |
-| Properties [9] | Model view, the selected object | ✅ the existing Properties pane (properties, DAX / M / JSON, annotations, unmodelled properties, source file); ✚ also in the other views (View → Properties, or Properties in the Data pane menu) |
+| Properties [9] | Model view, the selected object | ✅ the existing Properties pane (properties, DAX / M / JSON, annotations, unmodelled properties, source file); edits the **Description** of tables, columns and measures and the **Display folder** and **Format string** of columns and measures (Enter, Ctrl+Enter in Description, or leaving the field commits; Esc cancels); ✚ also in the other views (View → Properties, or Properties in the Data pane menu) |
 | Bookmarks, Performance analyzer, Sync slicers | View → Show panes | ⛔ |
 
 ## Views
@@ -99,6 +99,8 @@ Calculations, Security (**View as** ✅, Manage roles ⛔), Sensitivity, Share.
 
 ## Keyboard
 
-Ctrl/⌘+O open, Ctrl/⌘+Shift+O open folder, Ctrl+F1 collapse / pin the ribbon, Alt+Q search,
+Ctrl/⌘+O open, Ctrl/⌘+Shift+O open folder, Ctrl/⌘+S save, Ctrl/⌘+Shift+S save as, Ctrl/⌘+Z
+undo, Ctrl/⌘+Y or Ctrl/⌘+Shift+Z redo (in a text field these undo and redo its typing), Ctrl+F1
+collapse / pin the ribbon, Alt+Q search,
 Ctrl/⌘+Page Up / Page Down previous / next page, Ctrl/⌘+wheel zoom (canvas, diagram), F5 or
 Ctrl/⌘+Enter run a DAX query, Ctrl/⌘+/ comment lines, Esc closes menus, File and dialogs.

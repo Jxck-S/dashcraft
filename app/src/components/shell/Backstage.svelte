@@ -8,9 +8,10 @@
   import { baseName } from '../../lib/format'
   import { NOT_AVAILABLE } from '../../lib/shell'
 
-  // File menu (backstage), as in Desktop: a left command column and a content page. Commands
-  // that write the opened files (Save, Publish, …) are disabled in the viewer; Export writes
-  // new files (PBIP project, PBIT template) through the registry's `convert.*` commands.
+  // File menu (backstage), as in Desktop: a left command column and a content page. Save writes
+  // the edits into the opened PBIP project and Save as into a new one (`doc.save`, `doc.saveAs`);
+  // Export writes new files (PBIP project, PBIT template) through the registry's `convert.*`
+  // commands and leaves the document as it is.
   let {
     section,
     recent,
@@ -26,6 +27,8 @@
     onchooseblobmap,
     onclearblobmap,
     onclosedoc,
+    onsave,
+    onsaveas,
     canExport = false,
     onexport,
     onoptions,
@@ -45,6 +48,10 @@
     onchooseblobmap: () => void
     onclearblobmap: () => void
     onclosedoc: () => void
+    /** File → Save (Ctrl+S): `null` disables it. */
+    onsave?: (() => void) | null
+    /** File → Save as (Ctrl+Shift+S): `null` disables it. */
+    onsaveas?: (() => void) | null
     /** The open document can be written as PBIP / PBIT (it has a local model). */
     canExport?: boolean
     onexport?: (kind: 'pbip' | 'pbit') => void
@@ -54,14 +61,14 @@
     aiEnabled?: boolean
   } = $props()
 
-  type Nav = { id: string; label: string; icon: IconName; section?: BackstageSection; enabled: boolean; onclick?: () => void }
+  type Nav = { id: string; label: string; icon: IconName; section?: BackstageSection; enabled: boolean; onclick?: () => void; title?: string }
 
   const nav = $derived<Array<Nav | null>>([
     { id: 'home', label: 'Home', icon: 'home', section: 'home', enabled: true },
     { id: 'new', label: 'New', icon: 'document', enabled: false },
     { id: 'open', label: 'Open', icon: 'open', section: 'open', enabled: true },
-    { id: 'save', label: 'Save', icon: 'save', enabled: false },
-    { id: 'saveas', label: 'Save as', icon: 'save', enabled: false },
+    { id: 'save', label: 'Save', icon: 'save', enabled: !!onsave, onclick: () => onsave?.(), title: 'Save the edits into the project (Ctrl+S)' },
+    { id: 'saveas', label: 'Save as', icon: 'save', enabled: !!onsaveas, onclick: () => onsaveas?.(), title: 'Save as a new Power BI project (PBIP) folder (Ctrl+Shift+S)' },
     null,
     { id: 'getdata', label: 'Get data', icon: 'getData', enabled: false },
     { id: 'import', label: 'Import', icon: 'importTheme', enabled: false },
@@ -127,7 +134,7 @@
           class="nav-item"
           class:active={n.section === section}
           disabled={!n.enabled}
-          title={n.enabled ? n.label : NOT_AVAILABLE}
+          title={n.enabled ? (n.title ?? n.label) : NOT_AVAILABLE}
           onclick={() => (n.section ? onsection(n.section) : n.onclick?.())}
         >
           <Icon name={n.icon} size={20} />
@@ -137,10 +144,10 @@
     {/each}
   </nav>
 
-  <main class="page">
+  <section class="page" aria-label={nav.find((n) => n?.section === section)?.label ?? 'File'}>
     {#if section === 'home'}
       <h1>Welcome to DashCraft</h1>
-      <p class="lead muted">An offline viewer for Power BI files: PBIX, PBIT, PBIP, BIM and TMDL. Nothing leaves this computer.</p>
+      <p class="lead muted">Opens Power BI files offline: PBIX, PBIT, PBIP, BIM and TMDL. Nothing leaves this computer.</p>
       <div class="tiles">
         <button class="tile" onclick={() => onopen('file')} disabled={!hasBackend} title="Open a Power BI file (Ctrl+O)">
           <Icon name="open" size={28} />
@@ -221,7 +228,7 @@
       </div>
     {:else}
       <h1>About DashCraft</h1>
-      <p><strong>DashCraft {version}</strong> — opens Power BI files offline. Read-only; no telemetry, no network.</p>
+      <p><strong>DashCraft {version}</strong> — opens Power BI files offline. Files change only when you save; no telemetry, no network.</p>
       <h2>Notice</h2>
       <p class="muted small">DashCraft is an independent project. It is not affiliated with, endorsed or sponsored by Microsoft. “Power BI” and “Microsoft” are trademarks of Microsoft Corporation, used only to describe which files DashCraft opens. DashCraft is not affiliated with storytold/ArtCraft or with other products named “DashCraft”. The full notice is the <code>NOTICE</code> file installed with the app (<code>licenses/NOTICE</code>). DashCraft is open source under the MIT License (<code>licenses/LICENSE-MIT</code>) or the Apache License, Version 2.0 (<code>licenses/LICENSE-APACHE</code>), at your option.</p>
       <h2>Third-party assets</h2>
@@ -231,7 +238,7 @@
       </ul>
       <p class="muted small">Every bundled component and its license: <code>licenses/THIRD_PARTY_NOTICES.md</code>.</p>
     {/if}
-  </main>
+  </section>
 </div>
 
 <style>

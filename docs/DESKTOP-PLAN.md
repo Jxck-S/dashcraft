@@ -392,8 +392,10 @@ acceptance criteria, the surfaces that must pass this checklist:
 | A6 Screen-reader smoke test | A scripted task on the new surface completes with VoiceOver on WKWebView (macOS), Narrator and NVDA on WebView2 (Windows) and Orca on WebKitGTK (Linux); results recorded in a checklist file |
 
 The first editing surface (M6: Save, Undo and Redo, the formula bar, Properties edits) is the
-first to meet it. M25 adds the semantics of the canvas and rendered visuals; M31.8 is the
-independent audit.
+first to meet it. Each milestone records its results in [accessibility/](accessibility/), starting
+with [m6-editing.md](accessibility/m6-editing.md). The automated part of A1–A5 runs from
+[scripts/app-checks/](../scripts/app-checks/). M25 adds the semantics of the canvas and rendered
+visuals; M31.8 is the independent audit.
 
 ### W6. Architecture, layers and dependencies
 
@@ -493,13 +495,17 @@ their write roots).
   dependents first (`model.dependencies`, `dryRun`). Saved edits checked in Power BI Desktop
   (GT-6 s13 to s20 and s23). Not covered: deleting a data column (it needs an edit of its query's
   M) and editing a hierarchy's levels, which come with the editors (M10).
-- [ ] **M6.6 Save and Save As under the output contract.** `doc.save` writes a PBIP in place:
+- [x] **M6.6 Save and Save As under the output contract.** `doc.save` writes a PBIP in place:
   only changed files, each atomically (temporary file and rename), Byte-stable and
   Preserved-from-input content untouched, new objects per ADR-0014 with the injectable identifier
   generator, refusing when newer external changes exist unless forced. `doc.saveAs` writes a PBIP
   project from any readable source (PBIP, PBIX, PBIT, `model.bim`) or a PBIT file. Saving a PBIX or
   PBIT source in place offers Save As PBIP; embedded VertiPaq data cannot be carried over (no
   encoder; a PBIT has none) and the dialog says so.
+  Done: `doc.save` and `doc.saveAs` (see *Progress* below; acceptance 1, 2, 5, 6 and 7), and in
+  the app (M6.8) File → Save of a PBIX, PBIT or `model.bim` asks *Save as a Power BI project*
+  and says that imported data is not carried over. Saving a PBIT file stays `convert.pbit`
+  (File → Export).
 - [x] **M6.7 DAX- and M-aware rename.** Renames rewrite DAX text references (measures, calculated
   columns and tables, calculation items, format string expressions, RLS filters, report-level
   measures) at token level, keeping formatting and comments; renaming a query or parameter rewrites
@@ -512,10 +518,25 @@ their write roots).
   functions (`pbi_m::rename_query`); `dryRun` lists every rewrite. Checked in Power BI Desktop
   (GT-6 s21 for M, s22 for report-level measures). Not covered: report-level measures of
   PBIR-Legacy and PBIX layouts (`modelExtensions` in the report `config`), which are not read yet.
-- [ ] **M6.8 App wiring.** Quick Access Toolbar Save, Undo and Redo with labels from the history;
+- [x] **M6.8 App wiring.** Quick Access Toolbar Save, Undo and Redo with labels from the history;
   Ctrl+S, Ctrl+Z, Ctrl+Y; unsaved marker in the title; prompt on close and quit; the formula bar
   edits measure expressions (plain editor; IntelliSense in M7.5); the Properties pane edits
   description, format string and display folder; File, Save and Save as enabled.
+  Done: every one of these runs through the registry (`doc.applyEdits` with a history `label`,
+  `doc.undo`, `doc.redo`, `doc.history`, `doc.save`, `doc.saveAs`). The toolbar's Undo and Redo
+  tooltips name the step, and Ctrl+Shift+S is Save as. The title (and window title) starts with
+  `*` while there are unsaved edits. Closing the document or the window, opening another file and
+  a conflicting save ask first, as Desktop does. The formula bar edits `Name = expression` of
+  measures, calculated columns and calculated tables, so a rename and an expression change are one
+  undo step. The Properties pane edits the description of tables, columns and measures and the
+  display folder and format string of columns and measures. A measure keeps DAX that does not
+  parse, with a warning toast (the new `warnings` field of `doc.applyEdits`); calculated columns
+  and tables refuse it under the editor. The TMDL view shows the unsaved edits
+  as Save writes them. App test `edits_save_and_close_through_the_registry`, 19 Node tests
+  (`app/tests/editing.test.ts`), and the UI smoke and accessibility scripts
+  ([scripts/app-checks/](../scripts/app-checks/), results in
+  [accessibility/m6-editing.md](accessibility/m6-editing.md): A1–A5 pass, A6 not run yet).
+  Not covered: macOS Cmd+Q and Dock Quit, which Tauri does not let an app intercept yet.
 - [x] **M6.9 Agent editing over MCP.** The `agent_safe` editing set decided in ADR-0012 is exposed
   as MCP tools in a new `edit` category (`--allow edit`), saves only inside write roots,
   [MCP.md](MCP.md) updated. AI-assisted editing is a separate, optional milestone (M28).
@@ -546,7 +567,7 @@ their write roots).
   ([ci.md](ci.md#registry-property-tests)). It found that renaming a field a visual uses and then
   deleting it made the project unsaveable; the save now reads such renames from the report.
 
-**Progress (M6.2–M6.6 partial, not ticked).** The session owns a `pbi-model::History` per open
+**Progress.** The session owns a `pbi-model::History` per open
 document and publishes each edit, undo and redo into the opened document, the session model and
 the engine in one step (prepare, then commit; report-only edits keep the engine and the canvas
 cache); queries report the revision they captured, also with "View as" and on the canvas (M6.2,
@@ -722,10 +743,10 @@ where they belong, within a pixel. Performance scenarios P09
 refresh from the CSVs, first page) run through `Registry::execute`
 (`crates/pbi-ops/examples/perf_ops.rs`) and are within target (43.6, 55 and 184 ms against 50,
 100 and 1000 ms on a Windows desktop; acceptance 12); the CI runner's quick run has P09 at 53 ms,
-just over its target. Still open:
-the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits,
-KPI and detail-rows expressions, canvas state remapping after renames, and
-the app and CLI work.
+just over its target. The app (M6.8) runs the same commands and reloads its views after each
+edit, undo, redo and Save as. Still open: data column delete (with M editing), hierarchy and
+level edits, KPI and detail-rows expressions, canvas state remapping after renames, the A6
+screen-reader runs (acceptance 13) and GT-4 (acceptance 14).
 
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,
 invalidation, recalculation), `pbi-core` (save in place, minimal-diff writes, identifier

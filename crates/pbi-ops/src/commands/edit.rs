@@ -59,6 +59,10 @@ pub struct DocumentEditOut {
     /// until an edit or a refresh computes it again.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub recalculated: Vec<RecalculatedOut>,
+    /// `doc.applyEdits`: problems that did not stop the edits (a measure's
+    /// DAX that does not parse); absent when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
 }
 
 impl DocumentEditOut {
@@ -78,6 +82,7 @@ impl DocumentEditOut {
             dirty: session.is_document_dirty(),
             changed_object_ids: result.events.iter().map(|event| event.id().get()).collect(),
             recalculated: recalculated.iter().map(RecalculatedOut::of).collect(),
+            warnings: Vec::new(),
         };
         if result.changed {
             ctx.doc_changed(DocChangedEvent {
@@ -437,6 +442,7 @@ impl Command for ModelObjectRename {
                 dirty: history.dirty,
                 changed_object_ids: Vec::new(),
                 recalculated: Vec::new(),
+                warnings: Vec::new(),
             };
             return Ok(rename_out(object, preview, unchanged, true));
         }
@@ -1234,6 +1240,7 @@ impl Command for ModelMeasureDelete {
                 dirty: history.dirty,
                 changed_object_ids: Vec::new(),
                 recalculated: Vec::new(),
+                warnings: Vec::new(),
             }
         } else {
             let result = session
@@ -2413,6 +2420,7 @@ async fn delete_object(
             dirty: history.dirty,
             changed_object_ids: Vec::new(),
             recalculated: Vec::new(),
+            warnings: Vec::new(),
         }
     } else {
         let result = session.execute_document_command(command).await?;
@@ -3453,6 +3461,7 @@ impl Command for ModelRelationshipDelete {
                 dirty: history.dirty,
                 changed_object_ids: Vec::new(),
                 recalculated: Vec::new(),
+                warnings: Vec::new(),
             }
         } else {
             let result = session
@@ -3809,7 +3818,14 @@ pub struct ApplyEditsParams {
     /// Edits applied atomically and undone as one history step. Names are
     /// resolved against the document before the first edit.
     pub edits: Vec<EditOperation>,
+    /// The history step's label (`doc.history` `undoLabel` and `redoLabel`,
+    /// at most 200 characters); default `Apply document edits`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
+
+/// The longest `doc.applyEdits` label accepted.
+const MAX_EDIT_LABEL_CHARS: usize = 200;
 
 impl Command for DocumentApplyEdits {
     type Params = ApplyEditsParams;
@@ -3822,15 +3838,30 @@ impl Command for DocumentApplyEdits {
             summary: "Applies a group of document edits atomically as one undoable history step.",
             category: Category::Edit,
             mutates_document: true,
-            examples: &[(
-                "Update a measure and its description",
-                r#"{"docId": "d1", "edits": [{"type": "setMeasureExpression", "measureId": 42, "expression": "SUM(Orders[Amount])"}, {"type": "setDescription", "objectId": 42, "text": "Total amount"}]}"#,
-            )],
+            examples: &[
+                (
+                    "Update a measure and its description",
+                    r#"{"docId": "d1", "edits": [{"type": "setMeasureExpression", "measureId": 42, "expression": "SUM(Orders[Amount])"}, {"type": "setDescription", "objectId": 42, "text": "Total amount"}]}"#,
+                ),
+                (
+                    "Rename and edit a measure as one labelled step",
+                    r#"{"docId": "d1", "label": "Edit measure 'Sales'", "edits": [{"type": "renameObject", "objectId": 42, "newName": "Sales"}, {"type": "updateMeasure", "measureId": 42, "expression": "SUM(Orders[Amount])"}]}"#,
+                ),
+            ],
             ..BASE
         }
     }
 
     async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let label = match params.label.as_deref().map(str::trim) {
+            None | Some("") => "Apply document edits",
+            Some(label) if label.chars().count() > MAX_EDIT_LABEL_CHARS => {
+                return Err(OpError::invalid_params(format!(
+                    "label: at most {MAX_EDIT_LABEL_CHARS} characters"
+                )));
+            }
+            Some(label) => label,
+        };
         let entry = doc(ws, &params.doc_id)?;
         if params.edits.iter().any(|e| {
             matches!(
@@ -3852,7 +3883,8 @@ impl Command for DocumentApplyEdits {
             entry.ensure_loaded(ctx).await?;
         }
         let session = entry.session();
-        let mut group = CommandGroup::new("Apply document edits");
+        let mut warnings = Vec::new();
+        let mut group = CommandGroup::new(label);
         for edit in params.edits {
             group = match edit {
                 EditOperation::SetMeasureExpression {
@@ -3926,7 +3958,7 @@ impl Command for DocumentApplyEdits {
                         description,
                         is_hidden,
                     };
-                    group.with(create_measure(session, new, &mut Vec::new())?)
+                    group.with(create_measure(session, new, &mut warnings)?)
                 }
                 EditOperation::UpdateMeasure {
                     measure_id,
@@ -3947,7 +3979,7 @@ impl Command for DocumentApplyEdits {
                         description,
                         is_hidden,
                     };
-                    group.with(update_measure(id, changes, &mut Vec::new())?)
+                    group.with(update_measure(id, changes, &mut warnings)?)
                 }
                 EditOperation::DeleteMeasure {
                     measure_id,
@@ -4123,7 +4155,9 @@ impl Command for DocumentApplyEdits {
             };
         }
         let result = session.execute_document_command(group).await?;
-        Ok(DocumentEditOut::committed(ctx, &entry, &result))
+        let mut out = DocumentEditOut::committed(ctx, &entry, &result);
+        out.warnings = warnings;
+        Ok(out)
     }
 }
 

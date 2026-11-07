@@ -714,6 +714,9 @@ pub struct TmdlFileDto {
 pub enum TmdlSourceDto {
     /// The opened `.tmdl` files, verbatim.
     Files,
+    /// The opened `.tmdl` files with the unsaved edits, as Save writes them (unedited files and
+    /// objects verbatim).
+    Edited,
     /// Generated from the model (TMSL, PBIX / ABF): canonical TMDL as Power BI Desktop writes it.
     Generated,
 }

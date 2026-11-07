@@ -145,7 +145,8 @@ pub async fn object_details(
 }
 
 /// TMDL view: the model as TMDL scripts (read-only). The opened `.tmdl` files verbatim when the
-/// model came from TMDL (PBIP, TMDL folder), else canonical TMDL generated from the model.
+/// model came from TMDL (PBIP, TMDL folder), with the unsaved edits as Save writes them, else
+/// canonical TMDL generated from the model.
 /// Fails with `unsupported` without a local model (remote / missing).
 #[tauri::command]
 #[specta::specta]
@@ -155,13 +156,15 @@ pub async fn tmdl_view(
 ) -> Result<TmdlViewDto, AppError> {
     let entry = document(&state, &doc_id)?;
     tauri::async_runtime::spawn_blocking(move || {
-        let opened = entry.session().opened();
+        let session = entry.session();
+        let dirty = session.is_document_dirty();
+        let opened = session.opened();
         let model = opened.document.model.as_ref().ok_or_else(|| {
             AppError::Unsupported(
                 "the document has no local semantic model (remote or missing)".to_owned(),
             )
         })?;
-        Ok(views::tmdl_view(&opened, model))
+        Ok(views::tmdl_view(&opened, model, dirty))
     })
     .await
     .map_err(worker_failed)?

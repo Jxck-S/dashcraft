@@ -105,6 +105,8 @@
   --color-text-disabled: #bdbdbd;
   --color-border: #e0e0e0;
   --color-border-strong: #d1d1d1;
+  /* Bottom border of text inputs: at least 3:1 against the pane (WCAG 1.4.11), as in Fluent 2. */
+  --color-border-accessible: #616161;
   --color-chrome: #f5f5f5; /* title bar, ribbon tabs, view rail, status bar */
   --color-ribbon: #ffffff;
   --color-pane: #ffffff;

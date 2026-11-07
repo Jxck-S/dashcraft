@@ -50,7 +50,8 @@ export const commands = {
 	objectDetails: (docId: string, id: number) => typedError<ObjectDetailsDto, AppError>(__TAURI_INVOKE("object_details", { docId, id })),
 	/**
 	 *  TMDL view: the model as TMDL scripts (read-only). The opened `.tmdl` files verbatim when the
-	 *  model came from TMDL (PBIP, TMDL folder), else canonical TMDL generated from the model.
+	 *  model came from TMDL (PBIP, TMDL folder), with the unsaved edits as Save writes them, else
+	 *  canonical TMDL generated from the model.
 	 *  Fails with `unsupported` without a local model (remote / missing).
 	 */
 	tmdlView: (docId: string) => typedError<TmdlViewDto, AppError>(__TAURI_INVOKE("tmdl_view", { docId })),
@@ -744,6 +745,11 @@ export type TmdlFileDto = {
 export type TmdlSourceDto = 
 /**  The opened `.tmdl` files, verbatim. */
 "files" | 
+/**
+ *  The opened `.tmdl` files with the unsaved edits, as Save writes them (unedited files and
+ *  objects verbatim).
+ */
+"edited" | 
 /**  Generated from the model (TMSL, PBIX / ABF): canonical TMDL as Power BI Desktop writes it. */
 "generated";
 
