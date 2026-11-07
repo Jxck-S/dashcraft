@@ -7,6 +7,38 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.4b TMDL completion and hover
+
+- **What:** `pbi_tmdl::service::{complete, hover}` (`service/complete.rs`) over a tolerant
+  outline of the text (`service/outline.rs`: structural lines, parents and expression blocks of
+  half-typed TMDL, and what the cursor is on: a keyword, a value, a name, a `ref` object type).
+  The other files of the folder are passed as `FileText`s: their tables (with columns,
+  measures, hierarchies and whether a partition is calculated), other objects and `database`
+  compatibility level are indexed as the diagnostics index them. Completion: the keywords of
+  the line's context from the catalog, at the compatibility level, without properties already
+  set by a sibling, properties after a child object, objects before a property, or a second
+  `model`/`database`, plus `ref` and the opaque `translations`; values of `bool` and enum
+  properties; references (`sortByColumn`, `fromColumn`, `defaultHierarchy`, `queryGroup`,
+  `tablePermission`, `perspectiveColumn`, `ref table`, …) resolved as `check_reference`
+  resolves them; ranked exact, prefix, word start, contains. Hover: keyword forms, value type
+  and level against the database's; enum and boolean values; a referenced object's `///`
+  description, declaration line and file. New commands `tmdl.complete` and `tmdl.hover`
+  (`path` + `files` for the folder, positions in UTF-8, UTF-16 or line/column). The fuzz
+  target `tmdl_service` and the robustness mutation test also complete and hover at several
+  cursors.
+- **Why:** M7.4 (DESKTOP-PLAN): the TMDL view and external editors need completion of
+  properties and object references.
+- **Numbers:** 86 → 88 registry commands. Recall over the Acme, `tmdl-probe`, dax-lab and GT-4
+  models (written by Desktop and TOM): 1,936 of 1,936 keywords, 497 of 497 values and 48 of 48
+  references offered at their end and hovered; precision: 841 completions written into the
+  first and last child position of each kind of object in Acme and dax-lab, in every offered
+  form, give no keyword error from the diagnostics; both tests take about 6 s (debug). Found and
+  fixed on the way: `ref culture` (TOM's spelling) was not offered, a second `model` or
+  `database` was, and booleans had no hover. Tests: `complete.rs` 8 unit tests, `outline.rs` 3,
+  `groundtruth.rs` 6 (2 new), `tmdl_language.rs` 7 (3 new); a 20,000-case mutation run found no
+  completion or hover outside its file.
+- **Open:** M7.4c (`tmdl.format`), M7.5, M7.6.
+
 ### M7.4a TMDL diagnostics
 
 - **What:** `pbi_tmdl::service` (new module): `catalog` (`catalog.txt`, generated from the
@@ -32,6 +64,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   Tests: `diagnostics.rs` 7 unit tests, `groundtruth.rs` 4, `tmdl_language.rs` 4 (pbi-ops); a
   20,000-case mutation run of the robustness test found no diagnostic outside its file.
 - **Open:** M7.4b (completion and hover from the catalog), M7.4c (`tmdl.format`), M7.5, M7.6.
+- **Commit:** `ebbf24e` (PR #59).
 
 ### M7.3d M formatter
 
