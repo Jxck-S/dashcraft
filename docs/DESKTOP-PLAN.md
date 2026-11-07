@@ -689,7 +689,11 @@ strings (`renames_follow_into_report_level_measures`,
 `renames_rewrite_report_level_measures_and_save_them`). Checked in Power BI Desktop (GT-6 s22):
 three report-level measures on a card of the Desktop copy of Acme, then DashCraft renamed a table,
 a column and a measure they use; Desktop loaded the saved report, its own card query used the
-rewritten DAX, and the card values equal those before the renames. Still open:
+rewritten DAX, and the card values equal those before the renames. Performance scenarios P09
+(edit a measure, re-render the Executive Summary page), P10 (one edit, save) and P11 (open,
+refresh from the CSVs, first page) run through `Registry::execute`
+(`crates/pbi-ops/examples/perf_ops.rs`) and are within target (43.6, 55 and 184 ms against 50,
+100 and 1000 ms on a Windows desktop; acceptance 12). Still open:
 the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits,
 KPI and detail-rows expressions, moving visual groups, canvas state remapping after renames, and
 the app and CLI work.
