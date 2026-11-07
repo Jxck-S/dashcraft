@@ -34,6 +34,8 @@
 //! * [`tokenize`] — the token stream and comments (e.g. for syntax highlighting).
 //! * [`print_expr`] / [`print_document`] / `Display` — render an AST back to M such that
 //!   `parse(print(parse(x))) == parse(x)` modulo spans ([`Expr::clear_spans`]).
+//! * [`free_names`] — the queries, parameters and functions an expression refers to;
+//!   [`rename_query`] rewrites references to one of them at token level.
 //!
 //! Errors are [`ParseError`]s with a byte [`Span`], an `expected` list and
 //! [`ParseError::render`] / [`line_col`] for `line:column` reporting. No input panics; nesting
@@ -78,6 +80,7 @@ pub mod lexer;
 pub mod merror;
 pub mod parser;
 pub mod printer;
+pub mod refs;
 pub mod span;
 pub mod stdlib;
 pub mod value;
@@ -90,6 +93,7 @@ pub use parser::{
     parse_expression,
 };
 pub use printer::{print_document, print_expr, print_type};
+pub use refs::{FreeNames, RenameError, free_names, rename_query};
 pub use span::{Span, line_col};
 
 pub use connectors::{BlobEntry, BlobResolver, MapBlobResolver, NoBlobResolver};

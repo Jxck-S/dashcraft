@@ -8,9 +8,8 @@
 //! bags (`SourceRef.Entity`, `From[].Entity`, `Column`/`Measure`
 //! `Property`, selector `metadata`).
 //!
-//! TODO: DAX (measures, calculated columns/tables, RLS filters) and M text
-//! that mention the renamed object are not rewritten yet; that needs the
-//! `pbi-dax` / `pbi-m` lexers to rewrite tokens safely.
+//! DAX and M text that mention the renamed object are rewritten by
+//! `pbi-session`, which has the `pbi-dax` and `pbi-m` lexers.
 
 use std::collections::HashMap;
 

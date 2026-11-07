@@ -1565,6 +1565,149 @@ async fn save_as_project_keeps_the_expected_values() {
     );
 }
 
+async fn expression_names(r: &Runner, doc: &str) -> Vec<String> {
+    let inspect = r.run("doc.inspect", json!({"docId": doc})).await;
+    inspect["model"]["expressions"]
+        .as_array()
+        .unwrap_or_else(|| panic!("no expressions: {inspect}"))
+        .iter()
+        .map(|e| e["name"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+/// M6.7: renaming queries rewrites the M that names them; a refresh of the
+/// renamed example gives every expected value, and undo and redo restore it.
+#[tokio::test(flavor = "multi_thread")]
+async fn query_renames_rewrite_m_and_keep_the_expected_values() {
+    let (Some(pbip), Some(map), Some(exp)) = (fixture(PBIP), fixture(BLOB_MAP), expected()) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let names = ["StorageContainerUrl", "fnCleanKey", "fnParseNames"];
+    assert_eq!(expression_names(&r, &doc).await, names);
+
+    let url = json!({"docId": doc, "expression": "StorageContainerUrl", "newName": "Storage URL"});
+    let mut dry = url.clone();
+    dry["dryRun"] = json!(true);
+    let preview = r.run("model.object.rename", dry).await;
+    assert_eq!(
+        (
+            &preview["kind"],
+            &preview["table"],
+            &preview["changed"],
+            &preview["rewrites"],
+            &preview["warnings"]
+        ),
+        (
+            &json!("expression"),
+            &json!(""),
+            &json!(false),
+            &json!([]),
+            &json!([])
+        ),
+        "{preview}"
+    );
+    let rewrites = preview["mRewrites"].as_array().unwrap();
+    // Every imported CSV table reads the container.
+    assert_eq!(rewrites.len(), 7, "{preview}");
+    for w in rewrites {
+        assert!(
+            w["location"].as_str().unwrap().starts_with("table '"),
+            "{w}"
+        );
+        assert_eq!(w["property"], "source");
+        let (before, after) = (w["before"].as_str().unwrap(), w["after"].as_str().unwrap());
+        assert_eq!(
+            after,
+            before.replace(
+                "AzureStorage.Blobs(StorageContainerUrl)",
+                "AzureStorage.Blobs(#\"Storage URL\")"
+            )
+        );
+        assert_ne!(before, after);
+    }
+    assert_eq!(expression_names(&r, &doc).await, names);
+
+    let renamed = r.run("model.object.rename", url).await;
+    assert_eq!(
+        (&renamed["changed"], &renamed["revision"]),
+        (&json!(true), &json!(1))
+    );
+    assert_eq!(renamed["mRewrites"], preview["mRewrites"]);
+    let key = r
+        .run(
+            "model.object.rename",
+            json!({"docId": doc, "expression": "fnCleanKey", "newName": "Clean Key"}),
+        )
+        .await;
+    let locations: Vec<&str> = key["mRewrites"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|w| w["location"].as_str().unwrap())
+        .collect();
+    assert_eq!(locations.len(), 4, "{key}");
+    assert!(
+        key.to_string()
+            .contains(r#"{\"customer_id\", #\"Clean Key\", type text}"#)
+    );
+    assert_eq!(
+        expression_names(&r, &doc).await,
+        ["Storage URL", "Clean Key", "fnParseNames"]
+    );
+
+    // Every query has a step named Source: the new name would capture the
+    // reference. A table rename names the query as well.
+    let capture = r
+        .try_run(
+            "model.object.rename",
+            json!({"docId": doc, "expression": "Storage URL", "newName": "Source"}),
+        )
+        .await
+        .expect_err("refused");
+    assert_eq!(capture.code, OpErrorCode::InvalidParams);
+    assert!(
+        capture
+            .message
+            .contains("where 'Source' is one of its own steps"),
+        "{}",
+        capture.message
+    );
+    let taken = json!({"docId": doc, "table": "Orders", "newName": "Clean Key"});
+    assert_eq!(
+        error_code(r.try_run("model.object.rename", taken).await),
+        OpErrorCode::InvalidParams
+    );
+    assert_eq!(
+        r.run("doc.history", json!({"docId": doc})).await["revision"],
+        2
+    );
+
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    for (name, rows) in exp.row_counts() {
+        assert_eq!(table(&refresh["tables"], name)["rows"], rows, "{name}");
+    }
+    let all = r.run("measures.values", json!({"docId": doc})).await;
+    for (name, _, formatted) in exp.measures() {
+        assert_eq!(measure(&all, name)["formatted"], formatted, "{name}");
+    }
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(expression_names(&r, &doc).await, names);
+    let inspect = r.run("doc.inspect", json!({"docId": doc})).await;
+    assert!(!inspect.to_string().contains("Clean Key"));
+    r.run("doc.redo", json!({"docId": doc})).await;
+    assert_eq!(
+        expression_names(&r, &doc).await,
+        ["Storage URL", "fnCleanKey", "fnParseNames"]
+    );
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn expected_values_through_the_registry() {
     let (Some(pbip), Some(map), Some(csv), Some(exp)) = (

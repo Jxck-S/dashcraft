@@ -201,6 +201,50 @@ fn model_object(
     }
 }
 
+/// The object a rename names: `expression` alone, or as
+/// [`model_object`].
+///
+/// # Errors
+/// As [`model_object`]; `notFound` for an unknown expression.
+fn rename_target(
+    session: &Session,
+    object_id: Option<u64>,
+    table: Option<&str>,
+    column: Option<&str>,
+    measure: Option<&str>,
+    expression: Option<&str>,
+) -> Result<ObjectId, OpError> {
+    let Some(name) = expression else {
+        if object_id.is_none() && table.is_none() {
+            return Err(OpError::invalid_params(
+                "name the object: objectId, expression, or table with an optional column or measure",
+            ));
+        }
+        return model_object(session, object_id, table, column, measure);
+    };
+    if object_id.is_some() || table.is_some() || column.is_some() || measure.is_some() {
+        return Err(OpError::invalid_params(
+            "expression names the object alone: drop objectId, table, column and measure",
+        ));
+    }
+    let document = session.document();
+    let model = document
+        .model
+        .as_ref()
+        .ok_or_else(|| OpError::no_document("the document has no semantic model"))?;
+    model
+        .expressions
+        .iter()
+        .find(|e| e.name == name)
+        .or_else(|| model.expressions.iter().find(|e| names_eq(&e.name, name)))
+        .map(|e| e.id)
+        .ok_or_else(|| {
+            OpError::not_found(format!("no expression named '{name}'")).with_data(json!({
+                "expressions": model.expressions.iter().map(|e| e.name.as_str()).collect::<Vec<_>>()
+            }))
+        })
+}
+
 /// `model.object.rename`.
 #[derive(Debug)]
 pub struct ModelObjectRename;
@@ -222,6 +266,10 @@ pub struct RenameObjectParams {
     /// A measure of `table`.
     #[serde(default)]
     pub measure: Option<String>,
+    /// A shared expression (M query, parameter or function), instead of
+    /// `table`.
+    #[serde(default)]
+    pub expression: Option<String>,
     /// The new name.
     pub new_name: String,
     /// Only report what the rename would rewrite; the document is unchanged.
@@ -242,6 +290,20 @@ pub struct DaxRewriteOut {
     pub after: String,
 }
 
+/// One M expression a query rename rewrites.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MRewriteOut {
+    /// The object holding the expression, with the names after the rename:
+    /// `table 'Orders'` (`table 'Orders' partition 'P'` when the table has
+    /// several partitions) or `expression 'Clean Key'`.
+    pub location: String,
+    /// `source` (a partition) or `expression` (a shared expression).
+    pub property: String,
+    pub before: String,
+    pub after: String,
+}
+
 /// Result of `model.object.rename`.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -257,17 +319,23 @@ pub struct RenameObjectOut {
     pub recalculated: Vec<RecalculatedOut>,
     /// The renamed object's id.
     pub object_id: u64,
-    /// `table`, `column` or `measure`.
+    /// `table`, `column`, `measure` or `expression`.
     pub kind: String,
-    /// The renamed table's old name, or the table of the column or measure.
+    /// The renamed table's old name, or the table of the column or measure
+    /// (empty for an expression).
     pub table: String,
     pub old_name: String,
     pub new_name: String,
     pub dry_run: bool,
     /// DAX expressions rewritten (or, with `dryRun`, to be rewritten).
     pub rewrites: Vec<DaxRewriteOut>,
-    /// References left as they are that may need a manual fix (M queries,
-    /// expressions that do not parse, ambiguous unqualified names).
+    /// M expressions rewritten (or to be rewritten) when a query is renamed:
+    /// a table with an M partition or a shared expression (absent when
+    /// none).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub m_rewrites: Vec<MRewriteOut>,
+    /// References left as they are that may need a manual fix (DAX or M
+    /// that does not parse, ambiguous unqualified names, refresh policies).
     pub warnings: Vec<String>,
 }
 
@@ -281,6 +349,7 @@ fn rename_out(
         RenameKind::Table => "table",
         RenameKind::Column => "column",
         RenameKind::Measure => "measure",
+        RenameKind::Expression => "expression",
     };
     RenameObjectOut {
         changed: edit.changed,
@@ -304,6 +373,16 @@ fn rename_out(
                 after: r.after,
             })
             .collect(),
+        m_rewrites: preview
+            .m_rewrites
+            .into_iter()
+            .map(|r| MRewriteOut {
+                location: r.location,
+                property: r.property,
+                before: r.before,
+                after: r.after,
+            })
+            .collect(),
         warnings: preview.warnings,
     }
 }
@@ -315,8 +394,8 @@ impl Command for ModelObjectRename {
     fn meta() -> CommandMeta {
         CommandMeta {
             id: "model.object.rename",
-            title: "Rename a table, column or measure",
-            summary: "Renames a table, column or measure as one undoable edit; references, report fields and DAX follow and the loaded data is kept. dryRun previews it.",
+            title: "Rename a table, column, measure or query",
+            summary: "Renames a table, column, measure or M query/parameter as one undoable edit; DAX, M and report references follow and loaded data is kept. dryRun previews it.",
             category: Category::Edit,
             mutates_document: true,
             examples: &[
@@ -328,6 +407,10 @@ impl Command for ModelObjectRename {
                     "Preview a table rename",
                     r#"{"docId": "d1", "table": "Orders", "newName": "Sales Orders", "dryRun": true}"#,
                 ),
+                (
+                    "Rename a query parameter",
+                    r#"{"docId": "d1", "expression": "StorageContainerUrl", "newName": "Storage URL"}"#,
+                ),
             ],
             ..BASE
         }
@@ -337,12 +420,13 @@ impl Command for ModelObjectRename {
         let entry = doc(ws, &params.doc_id)?;
         resolve::require_model(&entry)?;
         let session = entry.session();
-        let object = model_object(
+        let object = rename_target(
             session,
             params.object_id,
             params.table.as_deref(),
             params.column.as_deref(),
             params.measure.as_deref(),
+            params.expression.as_deref(),
         )?;
         if params.dry_run {
             let preview = preview_rename(&session.document(), object, &params.new_name)?;
@@ -3466,6 +3550,8 @@ pub enum EditOperation {
         column: Option<String>,
         #[serde(default)]
         measure: Option<String>,
+        #[serde(default)]
+        expression: Option<String>,
         new_name: String,
     },
     /// Moves and/or resizes a visual (`report.visual.move`,
@@ -3746,14 +3832,16 @@ impl Command for DocumentApplyEdits {
                     table,
                     column,
                     measure,
+                    expression,
                     new_name,
                 } => group.with(RenameObject {
-                    object: model_object(
+                    object: rename_target(
                         session,
                         object_id,
                         table.as_deref(),
                         column.as_deref(),
                         measure.as_deref(),
+                        expression.as_deref(),
                     )?,
                     new_name,
                 }),

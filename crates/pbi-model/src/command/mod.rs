@@ -32,7 +32,7 @@ pub use edit::{
     SetVisualPosition,
 };
 pub use history::{History, HistoryResult};
-pub use rename::{RenameColumn, RenameMeasure, RenameTable};
+pub use rename::{RenameColumn, RenameExpression, RenameMeasure, RenameTable};
 pub use snapshot::{ReplaceObjects, Snapshot};
 pub use structure::{
     CreateColumn, CreateHierarchy, CreateMeasure, CreateRelationship, CreateTable, DeleteColumn,

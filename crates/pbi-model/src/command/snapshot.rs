@@ -6,6 +6,7 @@ use std::mem;
 use super::{Applied, ChangeEvent, Command, CommandError, model_mut};
 use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
+use crate::props::Annotation;
 use crate::query::Filter;
 use crate::report::Visual;
 use crate::semantic::{Column, Measure, NamedExpression, Relationship, Role, Table};
@@ -30,6 +31,11 @@ pub enum Snapshot {
         page: ObjectId,
         filters: Vec<Filter>,
     },
+    /// The annotations of the model with this ID.
+    ModelAnnotations {
+        model: ObjectId,
+        annotations: Vec<Annotation>,
+    },
 }
 
 impl Snapshot {
@@ -45,6 +51,7 @@ impl Snapshot {
             Snapshot::Visual(x) => x.id,
             Snapshot::ReportFilters { report, .. } => *report,
             Snapshot::PageFilters { page, .. } => *page,
+            Snapshot::ModelAnnotations { model, .. } => *model,
         }
     }
 
@@ -59,6 +66,7 @@ impl Snapshot {
             Snapshot::Visual(_) => ObjectKind::Visual,
             Snapshot::ReportFilters { .. } => ObjectKind::Report,
             Snapshot::PageFilters { .. } => ObjectKind::Page,
+            Snapshot::ModelAnnotations { .. } => ObjectKind::Model,
         }
     }
 }
@@ -167,6 +175,9 @@ fn swap_in(doc: &mut Document, value: &mut Snapshot) -> Result<(), CommandError>
                 .ok_or_else(missing)?;
             mem::swap(&mut p.filters, filters);
         }
+        (ObjectPath::Model, Snapshot::ModelAnnotations { annotations, .. }) => {
+            mem::swap(&mut model_mut(doc)?.annotations, annotations);
+        }
         (path, value) => {
             return Err(CommandError::WrongKind {
                 id,
@@ -252,6 +263,15 @@ fn diff_events(old: &Snapshot, new: &Snapshot, events: &mut Vec<ChangeEvent>) {
                 filters: a,
             },
             Snapshot::PageFilters { filters: b, .. },
+        ) if a != b => {
+            events.push(ChangeEvent::ObjectChanged { id: *id });
+        }
+        (
+            Snapshot::ModelAnnotations {
+                model: id,
+                annotations: a,
+            },
+            Snapshot::ModelAnnotations { annotations: b, .. },
         ) if a != b => {
             events.push(ChangeEvent::ObjectChanged { id: *id });
         }

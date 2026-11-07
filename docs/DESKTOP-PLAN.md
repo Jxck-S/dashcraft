@@ -662,9 +662,20 @@ names itself (`T[C]` in column C, `'T'` in table T, directly or through a measur
 dependency. Checked in Power BI Desktop (GT-6 s20): after column and table expression updates it
 keeps the saved columns as written, and the values recomputed in the session without a refresh
 equal Desktop's after its refresh; all 643 recorded cases match. Page queries still run again
-after any model edit (the visual cache re-renders only visuals whose results changed). Still open:
-the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits, M references (warned about,
-not rewritten), KPI and detail-rows expressions, report-level measures
+after any model edit (the visual cache re-renders only visuals whose results changed).
+`model.object.rename` with `expression` renames an M query, parameter or function
+(`pbi-model::RenameExpression`; partitions reading it and `PBI_QueryOrder` follow) and rewrites
+the M that refers to it at token level (`pbi_m::rename_query`: free identifiers and
+`Section!member` names, `#"…"` quoting when needed, comments and layout kept); a renamed table that
+is an M query does the same. A name the M cannot follow (a step, parameter or field in scope where
+the old name is used, or a library function) is refused, M that does not parse is left unchanged
+with a warning, and the preview lists every rewrite as `mRewrites`
+(`query_renames_rewrite_m_and_keep_the_expected_values`, `renamed_queries_save_and_reopen`).
+Checked in Power BI Desktop (GT-6 s21): DashCraft renamed five queries and parameters of the
+Desktop copy of Acme (15 references in seven tables and one expression); Desktop opened and
+refreshed the saved project with the renamed expressions and rewritten partitions, and all 643
+recorded cases equal the committed recordings. Still open:
+the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits, KPI and detail-rows expressions, report-level measures
 (`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
 app and CLI work.
 

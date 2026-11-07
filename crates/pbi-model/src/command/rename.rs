@@ -1,6 +1,8 @@
 //! Rename commands. They rename the object and rewrite structured references
 //! to it (see [`crate::rewrite`]); the inverse restores every touched object
-//! exactly (via [`ReplaceObjects`]).
+//! exactly (via [`ReplaceObjects`]). Renaming a table or a shared expression
+//! also renames it in the model's `PBI_QueryOrder` annotation (Power Query's
+//! query order); DAX and M text are rewritten by `pbi-session`.
 
 use super::snapshot::{ReplaceObjects, Snapshot};
 use super::{Applied, Command, CommandError, expect_kind, model};
@@ -88,12 +90,65 @@ fn report_snapshots(doc: &Document, rename: &Rename) -> Vec<Snapshot> {
     out
 }
 
+/// Annotation listing the Power Query queries in their display order (a
+/// JSON list of names).
+const QUERY_ORDER: &str = "PBI_QueryOrder";
+
+/// Whether the table is a Power Query query (has an M partition).
+fn is_query(table: &crate::semantic::Table) -> bool {
+    table
+        .partitions
+        .iter()
+        .any(|p| matches!(p.source, crate::semantic::PartitionSource::M { .. }))
+}
+
+/// Queries share one namespace in M: a table with an M partition or a shared
+/// expression other than `id` that is already named `name`.
+fn query_name_conflict(model: &Model, id: ObjectId, name: &str) -> Option<CommandError> {
+    if let Some(e) = model
+        .expressions
+        .iter()
+        .find(|e| e.id != id && names_eq(&e.name, name))
+    {
+        return Some(conflict(name, format!("query '{}'", e.name)));
+    }
+    model
+        .tables
+        .iter()
+        .find(|t| t.id != id && is_query(t) && names_eq(&t.name, name))
+        .map(|t| conflict(name, format!("query (table) '{}'", t.name)))
+}
+
+/// The model's annotations with query `old` renamed to `new` in
+/// `PBI_QueryOrder`, if it lists `old`.
+fn query_order(model: &Model, old: &str, new: &str) -> Option<Snapshot> {
+    let index = model
+        .annotations
+        .iter()
+        .position(|a| a.name == QUERY_ORDER)?;
+    let order = model.annotations.get(index)?;
+    let names: Vec<String> = serde_json::from_str(&order.value).ok()?;
+    if !names.iter().any(|n| n == old) {
+        return None;
+    }
+    let renamed: Vec<String> = names
+        .into_iter()
+        .map(|n| if n == old { new.to_owned() } else { n })
+        .collect();
+    let mut annotations = model.annotations.clone();
+    annotations.get_mut(index)?.value = serde_json::to_string(&renamed).ok()?;
+    Some(Snapshot::ModelAnnotations {
+        model: model.id,
+        annotations,
+    })
+}
+
 fn no_op(inverse: impl Command + 'static) -> Applied {
     Applied::new(inverse, Vec::new())
 }
 
-/// Renames a table and updates relationships, role table permissions and
-/// report field references.
+/// Renames a table and updates relationships, role table permissions, the
+/// query order and report field references.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenameTable {
     pub table: ObjectId,
@@ -118,6 +173,11 @@ impl Command for RenameTable {
             .find(|t| t.id != table.id && names_eq(&t.name, &self.new_name))
         {
             return Err(conflict(&self.new_name, format!("table '{}'", other.name)));
+        }
+        if is_query(table)
+            && let Some(err) = query_name_conflict(model, table.id, &self.new_name)
+        {
+            return Err(err);
         }
         let old = table.name.clone();
         if old == self.new_name {
@@ -150,6 +210,7 @@ impl Command for RenameTable {
                 items.push(Snapshot::Role(role));
             }
         }
+        items.extend(query_order(model, &old, &self.new_name));
         items.extend(report_snapshots(doc, &rename));
         ReplaceObjects {
             label: self.label(),
@@ -160,6 +221,70 @@ impl Command for RenameTable {
 
     fn label(&self) -> String {
         format!("Rename table to '{}'", self.new_name)
+    }
+}
+
+/// Renames a shared expression (an M query, parameter or function) and
+/// updates the entity partitions sourced from it (`expressionSource`) and
+/// the query order. Names are unique among queries: shared expressions and
+/// tables with an M partition.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RenameExpression {
+    pub expression: ObjectId,
+    pub new_name: String,
+}
+
+impl Command for RenameExpression {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let ObjectPath::Expression { expression: index } =
+            expect_kind(doc, self.expression, ObjectKind::Expression)?
+        else {
+            return Err(CommandError::NotFound(self.expression));
+        };
+        validate_name(&self.new_name)?;
+        let model = model(doc)?;
+        let expression = model
+            .expressions
+            .get(index)
+            .ok_or(CommandError::NotFound(self.expression))?;
+        if let Some(err) = query_name_conflict(model, expression.id, &self.new_name) {
+            return Err(err);
+        }
+        let old = expression.name.clone();
+        if old == self.new_name {
+            return Ok(no_op(self.clone()));
+        }
+        let mut renamed = expression.clone();
+        renamed.name.clone_from(&self.new_name);
+        let mut items = vec![Snapshot::Expression(renamed)];
+        for table in &model.tables {
+            let mut t = table.clone();
+            let mut changed = false;
+            for p in &mut t.partitions {
+                if let crate::semantic::PartitionSource::Entity {
+                    expression_source: Some(source),
+                    ..
+                } = &mut p.source
+                    && names_eq(source, &old)
+                {
+                    source.clone_from(&self.new_name);
+                    changed = true;
+                }
+            }
+            if changed {
+                items.push(Snapshot::Table(t));
+            }
+        }
+        items.extend(query_order(model, &old, &self.new_name));
+        ReplaceObjects {
+            label: self.label(),
+            items,
+        }
+        .apply(doc)
+    }
+
+    fn label(&self) -> String {
+        format!("Rename query to '{}'", self.new_name)
     }
 }
 

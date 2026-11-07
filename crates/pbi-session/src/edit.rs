@@ -1,13 +1,18 @@
-//! DAX-aware document edits.
+//! DAX- and M-aware document edits.
 //!
-//! [`RenameObject`] renames a table, column or measure like the
-//! `pbi-model` rename commands (structured references in relationships,
-//! roles, hierarchies, sort-by columns and report fields follow) and also
-//! rewrites the DAX that refers to it: measures, dynamic format strings,
-//! calculated columns, calculated tables, calculation items and role
-//! filters. [`preview_rename`] reports what a rename would rewrite and what
+//! [`RenameObject`] renames a table, column, measure or shared expression
+//! like the `pbi-model` rename commands (structured references in
+//! relationships, roles, hierarchies, sort-by columns, report fields and
+//! the query order follow) and also rewrites the DAX that refers to it:
+//! measures, dynamic format strings, calculated columns, calculated tables,
+//! calculation items and role filters. Renaming a query (a table with an M
+//! partition, or a shared expression: query, parameter or function) also
+//! rewrites the M that names it in partitions and shared expressions
+//! ([`pbi_m::rename_query`]); a rename the M could not follow (the new name
+//! is a step of a query that refers to the old one, or an M library name) is
+//! refused. [`preview_rename`] reports what a rename would rewrite and what
 //! it cannot (expressions that do not parse, ambiguous unqualified
-//! references, M queries naming a renamed table) without changing anything.
+//! references, refresh policies) without changing anything.
 //!
 //! [`ModelRenames`] finds the renames between two document states (by
 //! [`ObjectId`]) so the session can rename the loaded data and its derived
@@ -21,9 +26,9 @@ use pbi_engine::StorageRename;
 use pbi_model::names::name_key;
 use pbi_model::props::PropValue;
 use pbi_model::{
-    Applied, ColumnKind, Command, CommandError, CommandGroup, Document, Model, ObjectId,
-    ObjectPath, PartitionSource, RenameColumn, RenameMeasure, RenameTable, ReplaceObjects,
-    Snapshot, names_eq,
+    Applied, ColumnKind, Command, CommandError, CommandGroup, Document, ExpressionKind, Model,
+    ObjectId, ObjectKind, ObjectPath, PartitionSource, RenameColumn, RenameExpression,
+    RenameMeasure, RenameTable, ReplaceObjects, Snapshot, names_eq,
 };
 use serde::{Deserialize, Serialize};
 
@@ -37,6 +42,8 @@ pub enum RenameKind {
     Table,
     Column,
     Measure,
+    /// A shared expression: M query, parameter or function.
+    Expression,
 }
 
 /// One DAX expression a rename rewrites.
@@ -53,24 +60,41 @@ pub struct DaxRewrite {
     pub after: String,
 }
 
+/// One M expression a query rename rewrites.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MRewrite {
+    /// The object holding the expression, with the names after the rename:
+    /// `table 'Orders'` (`table 'Orders' partition 'P'` when the table has
+    /// several partitions) or `expression 'Clean Key'`.
+    pub location: String,
+    /// `source` (a partition) or `expression` (a shared expression).
+    pub property: String,
+    pub before: String,
+    pub after: String,
+}
+
 /// What [`RenameObject`] does for one rename.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RenamePreview {
     pub kind: RenameKind,
     /// The table: the renamed table's old name, or the table of the renamed
-    /// column or measure.
+    /// column or measure (empty for an expression).
     pub table: String,
     pub old_name: String,
     pub new_name: String,
     /// DAX expressions that are rewritten.
     pub rewrites: Vec<DaxRewrite>,
+    /// M expressions that are rewritten (query renames).
+    #[serde(default)]
+    pub m_rewrites: Vec<MRewrite>,
     /// References that are not rewritten and may need a manual fix.
     pub warnings: Vec<String>,
 }
 
-/// Renames a table, column or measure and rewrites the DAX that refers to it
-/// (see the [module docs](self)). One undo step.
+/// Renames a table, column, measure or shared expression and rewrites the
+/// DAX and M that refer to it (see the [module docs](self)). One undo step.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenameObject {
     pub object: ObjectId,
@@ -81,7 +105,14 @@ impl Command for RenameObject {
     fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
         let plan = Plan::new(doc, self.object, &self.new_name)?;
         let renamed = plan.model_command().apply(doc)?;
-        let rewritten = plan.rewrite(doc);
+        let rewritten = match plan.rewrite(doc) {
+            Ok(rewritten) => rewritten,
+            Err(err) => {
+                // As below: reverting the rename just applied cannot fail.
+                let _ = renamed.inverse.apply(doc);
+                return Err(err);
+            }
+        };
         if rewritten.items.is_empty() {
             return Ok(renamed);
         }
@@ -127,7 +158,7 @@ pub fn dax_syntax_error(text: &str) -> Option<String> {
 ///
 /// # Errors
 /// The rename is invalid (unknown or unsupported object, invalid or taken
-/// name, no model).
+/// name, no model) or refused (see [`RenameObject`]).
 pub fn preview_rename(
     doc: &Document,
     object: ObjectId,
@@ -136,13 +167,14 @@ pub fn preview_rename(
     let plan = Plan::new(doc, object, new_name)?;
     let mut working = doc.clone();
     plan.model_command().apply(&mut working)?;
-    let rewritten = plan.rewrite(&working);
+    let rewritten = plan.rewrite(&working)?;
     Ok(RenamePreview {
         kind: plan.kind,
         table: plan.table.clone(),
         old_name: plan.old.clone(),
         new_name: plan.new.clone(),
         rewrites: rewritten.rewrites,
+        m_rewrites: rewritten.m_rewrites,
         warnings: rewritten.warnings.into_iter().map(|(_, w)| w).collect(),
     })
 }
@@ -151,11 +183,15 @@ pub fn preview_rename(
 struct Plan {
     kind: RenameKind,
     object: ObjectId,
-    /// The renamed table, or the table of the renamed column or measure.
+    /// The renamed table, or the table of the renamed column or measure
+    /// (`UNASSIGNED` and empty for an expression).
     table_id: ObjectId,
     table: String,
     old: String,
     new: String,
+    /// The object is a query M can refer to: a table with an M partition
+    /// or a shared M expression.
+    query: bool,
     /// Column rename: a measure has the column's old name.
     measure_named_old: bool,
     /// Column rename: another table has a column with the old name.
@@ -172,20 +208,29 @@ impl Plan {
         let model = doc.model.as_ref().ok_or(CommandError::NoModel)?;
         let path = doc.locate(object).ok_or(CommandError::NotFound(object))?;
         let missing = || CommandError::NotFound(object);
-        let (kind, t, old) = match path {
+        let (kind, t, old, query) = match path {
             ObjectPath::Table { table } => {
                 let t = model.tables.get(table).ok_or_else(missing)?;
-                (RenameKind::Table, t, t.name.clone())
+                let query = t
+                    .partitions
+                    .iter()
+                    .any(|p| matches!(p.source, PartitionSource::M { .. }));
+                (RenameKind::Table, Some(t), t.name.clone(), query)
             }
             ObjectPath::Column { table, column } => {
                 let t = model.tables.get(table).ok_or_else(missing)?;
                 let c = t.columns.get(column).ok_or_else(missing)?;
-                (RenameKind::Column, t, c.name.clone())
+                (RenameKind::Column, Some(t), c.name.clone(), false)
             }
             ObjectPath::Measure { table, measure } => {
                 let t = model.tables.get(table).ok_or_else(missing)?;
                 let m = t.measures.get(measure).ok_or_else(missing)?;
-                (RenameKind::Measure, t, m.name.clone())
+                (RenameKind::Measure, Some(t), m.name.clone(), false)
+            }
+            ObjectPath::Expression { expression } => {
+                let e = model.expressions.get(expression).ok_or_else(missing)?;
+                let query = e.kind == ExpressionKind::M;
+                (RenameKind::Expression, None, e.name.clone(), query)
             }
             other => {
                 return Err(CommandError::Unsupported {
@@ -195,16 +240,21 @@ impl Plan {
             }
         };
         let column_in = |table: &pbi_model::Table| table.column(&old).is_some();
+        let table_id = t.map_or(ObjectId::UNASSIGNED, |t| t.id);
         Ok(Plan {
             kind,
             object,
-            table_id: t.id,
-            table: t.name.clone(),
+            table_id,
+            table: t.map(|t| t.name.clone()).unwrap_or_default(),
+            query,
             measure_named_old: model
                 .tables
                 .iter()
                 .any(|x| x.measures.iter().any(|m| names_eq(&m.name, &old))),
-            other_column_named_old: model.tables.iter().any(|x| x.id != t.id && column_in(x)),
+            other_column_named_old: model
+                .tables
+                .iter()
+                .any(|x| x.id != table_id && column_in(x)),
             column_named_old: model.tables.iter().any(column_in),
             probe: false,
             old,
@@ -227,6 +277,10 @@ impl Plan {
                 measure: self.object,
                 new_name,
             }),
+            RenameKind::Expression => Box::new(RenameExpression {
+                expression: self.object,
+                new_name,
+            }),
         }
     }
 
@@ -235,7 +289,7 @@ impl Plan {
     /// column or measure.
     fn bare(&self, owner: ObjectId) -> bool {
         match self.kind {
-            RenameKind::Table => false,
+            RenameKind::Table | RenameKind::Expression => false,
             RenameKind::Column => {
                 !self.measure_named_old && (owner == self.table_id || !self.other_column_named_old)
             }
@@ -243,8 +297,9 @@ impl Plan {
         }
     }
 
-    fn change(&self, bare: bool) -> NameChange<'_> {
-        match self.kind {
+    /// The DAX name change (`None` for an expression: DAX cannot name one).
+    fn change(&self, bare: bool) -> Option<NameChange<'_>> {
+        Some(match self.kind {
             RenameKind::Table => NameChange::Table {
                 old: &self.old,
                 new: &self.new,
@@ -261,41 +316,48 @@ impl Plan {
                 new: &self.new,
                 bare,
             },
-        }
+            RenameKind::Expression => return None,
+        })
     }
 
-    /// The DAX rewrites on `doc` (after the structured rename).
-    fn rewrite(&self, doc: &Document) -> Rewritten {
+    /// The DAX and M rewrites on `doc` (after the structured rename).
+    ///
+    /// # Errors
+    /// [`CommandError::Rejected`] when the M cannot follow the rename.
+    fn rewrite(&self, doc: &Document) -> Result<Rewritten, CommandError> {
         let mut out = Rewritten::default();
         let Some(model) = doc.model.as_ref() else {
-            return out;
+            return Ok(out);
         };
+        if self.query && !self.probe && pbi_m::library_names().contains(&self.new.as_str()) {
+            return Err(CommandError::Rejected(format!(
+                "cannot rename '{}' to '{}': M queries would call the library function '{}' instead",
+                self.old, self.new, self.new
+            )));
+        }
         for table in &model.tables {
             let mut t = table.clone();
-            if self.rewrite_table(&mut t, &mut out) {
+            let mut changed =
+                self.kind != RenameKind::Expression && self.rewrite_table(&mut t, &mut out);
+            if self.query {
+                changed |= self.rewrite_m_table(&mut t, &mut out)?;
+            }
+            if changed {
                 out.items.push(Snapshot::Table(t));
             }
-            if self.kind == RenameKind::Table && table.id != self.table_id {
-                for p in &table.partitions {
-                    if let PartitionSource::M { expression } = &p.source {
-                        self.warn_m(
-                            &format!("table '{}'", table.name),
-                            expression,
-                            table.id,
-                            &mut out,
-                        );
-                    }
-                }
-            }
         }
-        if self.kind == RenameKind::Table {
-            for e in &model.expressions {
-                self.warn_m(
-                    &format!("expression '{}'", e.name),
-                    &e.expression,
-                    ObjectId::UNASSIGNED,
-                    &mut out,
-                );
+        if self.query {
+            for e in model
+                .expressions
+                .iter()
+                .filter(|e| e.kind == ExpressionKind::M)
+            {
+                let mut x = e.clone();
+                let location = format!("expression '{}'", e.name);
+                let owner = ObjectId::UNASSIGNED;
+                if self.m_text(&mut x.expression, owner, &location, "expression", &mut out)? {
+                    out.items.push(Snapshot::Expression(x));
+                }
             }
         }
         for role in &model.roles {
@@ -312,7 +374,94 @@ impl Plan {
                 out.items.push(Snapshot::Role(r));
             }
         }
-        out
+        Ok(out)
+    }
+
+    /// Rewrites the M partitions of `t` naming the renamed query; `true` if
+    /// one changed.
+    fn rewrite_m_table(
+        &self,
+        t: &mut pbi_model::Table,
+        out: &mut Rewritten,
+    ) -> Result<bool, CommandError> {
+        let (owner, name) = (t.id, t.name.clone());
+        let several = t.partitions.len() > 1;
+        let mut changed = false;
+        for p in &mut t.partitions {
+            if let PartitionSource::M { expression } = &mut p.source {
+                let location = if several {
+                    format!("table '{name}' partition '{}'", p.name)
+                } else {
+                    format!("table '{name}'")
+                };
+                changed |= self.m_text(expression, owner, &location, "source", out)?;
+            }
+        }
+        if let Some(policy) = t.extra.get("refreshPolicy")
+            && serde_json::to_string(policy).is_ok_and(|text| m_mentions(&text, &self.old))
+        {
+            let warning = if self.probe {
+                format!(
+                    "the refresh policy of table '{name}' may refer to '{}'",
+                    self.old
+                )
+            } else {
+                format!(
+                    "the refresh policy of table '{name}' mentions '{}'; it is not rewritten",
+                    self.old
+                )
+            };
+            out.warnings.push((owner, warning));
+        }
+        Ok(changed)
+    }
+
+    /// Rewrites one M expression in place; `true` if it changed. Probing,
+    /// only warns about a mention.
+    fn m_text(
+        &self,
+        text: &mut String,
+        owner: ObjectId,
+        location: &str,
+        property: &str,
+        out: &mut Rewritten,
+    ) -> Result<bool, CommandError> {
+        if self.probe {
+            if m_mentions(text, &self.old) {
+                let warning = format!("the M query of {location} refers to '{}'", self.old);
+                out.warnings.push((owner, warning));
+            }
+            return Ok(false);
+        }
+        match pbi_m::rename_query(text, &self.old, &self.new) {
+            Ok(None) => Ok(false),
+            Ok(Some(after)) => {
+                let before = mem::replace(text, after.clone());
+                out.m_rewrites.push(MRewrite {
+                    location: location.to_owned(),
+                    property: property.to_owned(),
+                    before,
+                    after,
+                });
+                Ok(true)
+            }
+            Err(pbi_m::RenameError::Parse(_)) => {
+                if m_mentions(text, &self.old) {
+                    out.warnings.push((
+                        owner,
+                        format!(
+                            "the M query of {location} does not parse; references to '{}' in it were not rewritten",
+                            self.old
+                        ),
+                    ));
+                }
+                Ok(false)
+            }
+            Err(pbi_m::RenameError::Captured { .. }) => Err(CommandError::Rejected(format!(
+                "cannot rename '{}' to '{}': the M query of {location} refers to '{}' where '{}' is one of its own steps, parameters or fields",
+                self.old, self.new, self.old, self.new
+            ))),
+        }
     }
 
     fn rewrite_table(&self, t: &mut pbi_model::Table, out: &mut Rewritten) -> bool {
@@ -381,7 +530,10 @@ impl Plan {
         out: &mut Rewritten,
     ) -> bool {
         let bare = self.bare(owner);
-        let rewritten = match rename_references(text, &self.change(bare)) {
+        let Some(change) = self.change(bare) else {
+            return false;
+        };
+        let rewritten = match rename_references(text, &change) {
             Ok(rewritten) => rewritten,
             Err(_) => {
                 if self.probe {
@@ -411,7 +563,8 @@ impl Plan {
         };
         if !bare
             && self.kind != RenameKind::Table
-            && let Ok(Some(all)) = rename_references(text, &self.change(true))
+            && let Some(change) = self.change(true)
+            && let Ok(Some(all)) = rename_references(text, &change)
             && Some(&all) != rewritten.as_ref()
         {
             let warning = if self.probe {
@@ -439,20 +592,6 @@ impl Plan {
             after,
         });
         true
-    }
-
-    fn warn_m(&self, location: &str, expression: &str, owner: ObjectId, out: &mut Rewritten) {
-        if m_mentions(expression, &self.old) {
-            let warning = if self.probe {
-                format!("the M query of {location} refers to '{}'", self.old)
-            } else {
-                format!(
-                    "the M query of {location} refers to '{}'; M references are not rewritten yet",
-                    self.old
-                )
-            };
-            out.warnings.push((owner, warning));
-        }
     }
 }
 
@@ -499,15 +638,19 @@ pub(crate) fn dax_scan(
 ) -> Result<DaxScan, CommandError> {
     // Any name other than the old one: a reference shows up as a rewrite.
     const PROBE: &str = "\u{e000}";
+    let unsupported = |kind| CommandError::Unsupported {
+        kind,
+        operation: "dependents",
+    };
     let mut plan = Plan::new(doc, object, PROBE).map_err(|err| match err {
-        CommandError::Unsupported { kind, .. } => CommandError::Unsupported {
-            kind,
-            operation: "dependents",
-        },
+        CommandError::Unsupported { kind, .. } => unsupported(kind),
         other => other,
     })?;
+    if plan.kind == RenameKind::Expression {
+        return Err(unsupported(ObjectKind::Expression));
+    }
     plan.probe = true;
-    let mut out = plan.rewrite(doc);
+    let mut out = plan.rewrite(doc)?;
     if let Some(model) = doc.model.as_ref() {
         for e in extra {
             let owner = model.table(e.table).map_or(ObjectId::UNASSIGNED, |t| t.id);
@@ -537,6 +680,7 @@ pub(crate) fn dax_scan(
 struct Rewritten {
     items: Vec<Snapshot>,
     rewrites: Vec<DaxRewrite>,
+    m_rewrites: Vec<MRewrite>,
     /// The home table of each rewrite.
     owners: Vec<ObjectId>,
     /// With the home table of the expression they are about.
@@ -935,6 +1079,220 @@ mod tests {
             preview_rename(&d, ObjectId(999_999), "X"),
             Err(CommandError::NotFound(_))
         ));
+    }
+
+    fn m_doc() -> Document {
+        let m_table = |name: &str, source: &str| {
+            let mut t = Table::new(name);
+            t.columns.push(Column::data("Key", DataType::String));
+            t.partitions.push(pbi_model::Partition {
+                name: name.to_owned(),
+                source: PartitionSource::M {
+                    expression: source.to_owned(),
+                },
+                ..pbi_model::Partition::default()
+            });
+            t
+        };
+        let orders = m_table(
+            "Orders",
+            "let\n    Source = Csv.Document(Files),\n    Clean = fnClean(Source)\nin\n    Clean",
+        );
+        let summary = m_table(
+            "Summary",
+            "let\n    Rows = Orders,\n    Count = Table.RowCount(Rows)\nin\n    #table({\"N\"}, {{Count}})",
+        );
+        let broken = m_table("Broken", "let x = Orders in");
+        let mut calc = Table::new("Orders Calc");
+        calc.partitions.push(pbi_model::Partition {
+            name: "Orders Calc".into(),
+            source: PartitionSource::Calculated {
+                expression: "Orders".into(),
+            },
+            ..pbi_model::Partition::default()
+        });
+        let mut doc = Document {
+            model: Some(Model {
+                tables: vec![orders, summary, broken, calc],
+                expressions: vec![
+                    pbi_model::NamedExpression::m(
+                        "Files",
+                        r#""C:\data" meta [IsParameterQuery=true, Type="Text"]"#,
+                    ),
+                    pbi_model::NamedExpression::m(
+                        "fnClean",
+                        "(t as table) as table => Table.Distinct(t)",
+                    ),
+                    pbi_model::NamedExpression::m("Everything", "fnClean(Orders)"),
+                ],
+                ..Model::default()
+            }),
+            ..Document::default()
+        };
+        doc.assign_ids();
+        doc
+    }
+
+    fn partition(doc: &Document, table: &str) -> String {
+        match &doc.model.as_ref().unwrap().table(table).unwrap().partitions[0].source {
+            PartitionSource::M { expression } | PartitionSource::Calculated { expression } => {
+                expression.clone()
+            }
+            _ => String::new(),
+        }
+    }
+
+    #[test]
+    fn query_renames_rewrite_m_references() {
+        let mut d = m_doc();
+        let original = d.clone();
+        let table = id(&d, |m| m.table("Orders").map(|t| t.id));
+        let preview = preview_rename(&d, table, "Sales Orders").unwrap();
+        assert_eq!(preview.kind, RenameKind::Table);
+        let rewritten: Vec<_> = preview
+            .m_rewrites
+            .iter()
+            .map(|r| (r.location.as_str(), r.property.as_str()))
+            .collect();
+        assert_eq!(
+            rewritten,
+            [
+                ("table 'Summary'", "source"),
+                ("expression 'Everything'", "expression")
+            ]
+        );
+        assert_eq!(
+            preview.warnings,
+            [
+                "the M query of table 'Broken' does not parse; references to 'Orders' in it were not rewritten"
+            ]
+        );
+        let applied = RenameObject {
+            object: table,
+            new_name: "Sales Orders".into(),
+        }
+        .apply(&mut d)
+        .unwrap();
+        assert!(partition(&d, "Summary").starts_with("let\n    Rows = #\"Sales Orders\","));
+        // DAX in a calculated table follows; the M query of the renamed table
+        // and the unparsable one stay as they were.
+        assert_eq!(partition(&d, "Orders Calc"), "'Sales Orders'");
+        assert_eq!(
+            partition(&d, "Sales Orders"),
+            partition(&original, "Orders")
+        );
+        assert_eq!(partition(&d, "Broken"), "let x = Orders in");
+        let model = d.model.as_ref().unwrap();
+        assert_eq!(
+            model.expressions[2].expression,
+            "fnClean(#\"Sales Orders\")"
+        );
+        applied.inverse.apply(&mut d).unwrap();
+        assert_eq!(d, original);
+
+        // A shared function: its callers follow, its own text does not
+        // change; a case-only rename rewrites too (M is case-sensitive).
+        let function = d.model.as_ref().unwrap().expressions[1].id;
+        for new_name in ["Clean Key", "FnClean"] {
+            let mut d = original.clone();
+            RenameObject {
+                object: function,
+                new_name: new_name.into(),
+            }
+            .apply(&mut d)
+            .unwrap();
+            let call = pbi_m::refs::identifier(new_name);
+            assert!(partition(&d, "Orders").contains(&format!("Clean = {call}(Source)")));
+            let model = d.model.as_ref().unwrap();
+            assert_eq!(model.expressions[1].name, new_name);
+            assert_eq!(
+                model.expressions[1].expression,
+                original.model.as_ref().unwrap().expressions[1].expression
+            );
+            assert_eq!(model.expressions[2].expression, format!("{call}(Orders)"));
+        }
+
+        // A calculated table is not a query: M is left alone.
+        let mut d = original.clone();
+        let calc = id(&d, |m| m.table("Orders Calc").map(|t| t.id));
+        let preview = preview_rename(&d, calc, "Orders").unwrap_err();
+        assert!(matches!(preview, CommandError::NameConflict { .. }));
+        let preview = preview_rename(&d, calc, "Copy").unwrap();
+        assert!(preview.m_rewrites.is_empty() && preview.warnings.is_empty());
+        RenameObject {
+            object: calc,
+            new_name: "Copy".into(),
+        }
+        .apply(&mut d)
+        .unwrap();
+    }
+
+    #[test]
+    fn query_renames_the_m_cannot_follow_are_refused() {
+        let mut d = m_doc();
+        let original = d.clone();
+        let files = d.model.as_ref().unwrap().expressions[0].id;
+        let orders = id(&d, |m| m.table("Orders").map(|t| t.id));
+        for (object, new_name, message) in [
+            (
+                files,
+                "Source",
+                "cannot rename 'Files' to 'Source': the M query of table 'Orders' refers to 'Files' where 'Source' is one of its own steps, parameters or fields",
+            ),
+            (
+                orders,
+                "Rows",
+                "cannot rename 'Orders' to 'Rows': the M query of table 'Summary' refers to 'Orders' where 'Rows' is one of its own steps, parameters or fields",
+            ),
+            (
+                files,
+                "Table.RowCount",
+                "cannot rename 'Files' to 'Table.RowCount': M queries would call the library function 'Table.RowCount' instead",
+            ),
+        ] {
+            let err = preview_rename(&d, object, new_name).unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                CommandError::Rejected(message.into()).to_string()
+            );
+            let err = RenameObject {
+                object,
+                new_name: new_name.into(),
+            }
+            .apply(&mut d)
+            .unwrap_err();
+            assert!(matches!(err, CommandError::Rejected(_)), "{err}");
+            assert_eq!(d, original);
+        }
+        // A let step is in scope in every step of its let…
+        RenameObject {
+            object: files,
+            new_name: "Clean".into(),
+        }
+        .apply(&mut d)
+        .unwrap_err();
+        // …but a step of a query that does not refer to the old name is no
+        // obstacle.
+        let mut d = original.clone();
+        RenameObject {
+            object: files,
+            new_name: "Count".into(),
+        }
+        .apply(&mut d)
+        .unwrap();
+        assert!(partition(&d, "Orders").contains("Csv.Document(Count)"));
+        // Finding references is DAX only; a query rename's M warnings are
+        // still reported when probing a table.
+        assert!(matches!(
+            dax_scan(&original, files, &[]),
+            Err(CommandError::Unsupported { .. })
+        ));
+        let scan = dax_scan(&original, orders, &[]).ok().unwrap();
+        assert!(
+            scan.warnings
+                .iter()
+                .any(|(_, w)| w == "the M query of table 'Summary' refers to 'Orders'")
+        );
     }
 
     #[test]
