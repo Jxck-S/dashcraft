@@ -2,7 +2,7 @@
 //! slicers; and report themes.
 
 use pbi_core::ReportSource;
-use pbi_model::{Model, Page, Report, Visual, dax_column_ref, names_eq};
+use pbi_model::{Document, Model, Page, Report, Visual, dax_column_ref, names_eq};
 use pbi_render::query::is_slicer_type;
 use pbi_render::theme::ThemeResolver;
 use pbi_session::Session;
@@ -70,8 +70,15 @@ pub fn report_index(session: &Session, name: Option<&str>) -> Result<usize, OpEr
 /// # Errors
 /// `notFound`.
 pub fn report_at(session: &Session, index: usize) -> Result<Report, OpError> {
-    session
-        .document()
+    report_in(&session.document(), index)
+}
+
+/// The report at `index` of `document` (see [`report_at`]).
+///
+/// # Errors
+/// `notFound`.
+pub fn report_in(document: &Document, index: usize) -> Result<Report, OpError> {
+    document
         .reports
         .get(index)
         .cloned()

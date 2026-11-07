@@ -382,6 +382,51 @@ async fn canvas_renders_after_view_as_show_restricted_values() {
     assert!(svg(&all).contains(&format!(">{MINI_TOTAL}<")));
 }
 
+/// A canvas render reads the report and its data at one revision and says
+/// which; edits, undo and redo under "View as" publish the restricted data
+/// with the model (M6 acceptance 8).
+#[tokio::test(flavor = "multi_thread")]
+async fn canvas_renders_carry_their_revision_under_view_as() {
+    let dir = tmp_dir("pbi-ops-security-revision-");
+    let pbip = secured_pbip(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    view_as(&r, &doc, json!({"roles": ["East"]})).await;
+    let shows = |page: &Value, revision: u64, value: i64| {
+        assert_eq!(page["documentRevision"], revision, "{page}");
+        let svg = page["svg"].as_str().unwrap();
+        assert!(svg.contains(&format!(">{value}<")), "revision {revision}");
+    };
+    shows(
+        &r.run("canvas.render", json!({"docId": doc})).await,
+        0,
+        sum(EAST),
+    );
+    let set = |expression: &str| json!({"docId": doc, "table": "Sales", "measure": "Total", "expression": expression});
+    let edited = r
+        .run("model.measure.update", set("SUM(Sales[Amount]) * 2"))
+        .await;
+    assert_eq!(edited["revision"], 1);
+    shows(
+        &r.run("canvas.render", json!({"docId": doc})).await,
+        1,
+        2 * sum(EAST),
+    );
+    r.run("doc.undo", json!({"docId": doc})).await;
+    shows(
+        &r.run("canvas.render", json!({"docId": doc})).await,
+        2,
+        sum(EAST),
+    );
+    r.run("doc.redo", json!({"docId": doc})).await;
+    shows(
+        &r.run("canvas.render", json!({"docId": doc})).await,
+        3,
+        2 * sum(EAST),
+    );
+    assert_eq!(total(&r, &doc).await, (2 * sum(EAST)).to_string());
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn agents_can_list_roles_and_view_as() {
     let registry = Registry::default_catalog();

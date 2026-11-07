@@ -453,11 +453,23 @@ their write roots).
 - [x] **M6.1 Decisions.** ADR-0012 (document state, transactions, history, agent safety),
   ADR-0013 (save and conflicts; recovery parts used in M8), ADR-0014 (output contract,
   identifiers) and ADR-0015 (accessibility target) accepted.
-- [ ] **M6.2 One revisioned document state.** Per ADR-0012, `OpenedDocument::document`,
+- [x] **M6.2 One revisioned document state.** Per ADR-0012, `OpenedDocument::document`,
   `Session::base_model`, the session model and the engine's model become views of the current
   revision; writer sources (TMDL CST, typed PBIR files, metadata parts) belong to a revision;
   engine snapshots (including the "View as" engine) are derived from a revision and its change
   set; queries capture one revision and report it.
+  Done: each edit, undo and redo replaces the opened document (its writer sources) and the
+  semantic document as one value and publishes it, under one lock, with the session model, the
+  engine derived from the change set and the "View as" engine rebuilt for them;
+  `Session::revision_snapshot` captures the document, the session model and the query snapshot
+  of one revision, and DAX queries, page renders (`render.page`) and canvas renders read from one
+  capture and report its revision (`documentRevision`). Acceptance 8 passes
+  (`crates/pbi-session/tests/robustness.rs`: `queries_return_the_revision_they_started_at`,
+  `concurrent_queries_never_mix_revisions`). The threaded test found that a query between an
+  edit and the "View as" rebuild read the new model over the previous restricted engine; the
+  rebuilt engine is now part of the publication. Saves hold the edit lock, so they write one
+  revision. Derived-column changes are a data generation, not a revision, and still rebuild the
+  "View as" engine after publishing.
 - [x] **M6.3 Transactions and history.** Each `DocEntry` owns a `History`; every editing command
   is a transaction on a working copy that commits one new revision or nothing; `doc.applyEdits`
   groups edits into one transaction and one undo step; undo and redo are transactions; no-op edits
@@ -529,7 +541,8 @@ their write roots).
 **Progress (M6.2–M6.6 partial, not ticked).** The session owns a `pbi-model::History` per open
 document and publishes each edit, undo and redo into the opened document, the session model and
 the engine in one step (prepare, then commit; report-only edits keep the engine and the canvas
-cache); queries report the revision they captured. Registry commands: `doc.applyEdits`,
+cache); queries report the revision they captured, also with "View as" and on the canvas (M6.2,
+acceptance 8). Registry commands: `doc.applyEdits`,
 `doc.undo`, `doc.redo`, `doc.history`, `model.setMeasureExpression`, `model.measure.create`,
 `model.measure.update`, `model.measure.delete`, `model.dependencies`, `model.object.rename`,
 `model.object.setDescription`, `report.visual.move` and `report.visual.resize`. Renames rewrite

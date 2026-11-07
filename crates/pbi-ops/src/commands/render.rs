@@ -397,14 +397,16 @@ async fn render(
     let visual = req.visual.clone();
     let format = req.format;
     let started = Instant::now();
-    let (bytes, rendered) = tokio::task::spawn_blocking(move || {
-        let report = resolve::report_at(&session, ri)?;
+    let (bytes, rendered, report) = tokio::task::spawn_blocking(move || {
+        // The report and its data of one revision.
+        let revision = session.revision_snapshot();
+        let report = resolve::report_in(&revision.document, ri)?;
         let page = report
             .pages
             .get(pi)
             .ok_or_else(|| OpError::not_found("no such page"))?;
         let theme = resolve::theme(&session, ri);
-        let env = QueryEnv::from_session(&session);
+        let env = QueryEnv::from_revision(&revision);
         let opts = PageRenderOptions {
             limits: QueryLimits {
                 cancel: cancel.clone(),
@@ -432,10 +434,9 @@ async fn render(
             )
             .map_err(|e| OpError::internal(format!("cannot rasterize the page: {e}")))?,
         };
-        Ok::<_, OpError>((bytes, rendered))
+        Ok::<_, OpError>((bytes, rendered, report))
     })
     .await??;
-    let report = resolve::report_at(entry.session(), ri)?;
     let page = report
         .pages
         .get(pi)

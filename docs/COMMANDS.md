@@ -1124,6 +1124,7 @@ Result:
 | `page` | string | Page internal name. |
 | `pageDisplayName` | string |  |
 | `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
 | `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
 | `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
 | `width` | number |  |
@@ -1231,6 +1232,7 @@ Result:
 | `page` | string | Page internal name. |
 | `pageDisplayName` | string |  |
 | `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
 | `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
 | `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
 | `width` | number |  |
@@ -1274,6 +1276,7 @@ Result:
 | `page` | string | Page internal name. |
 | `pageDisplayName` | string |  |
 | `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
 | `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
 | `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
 | `width` | number |  |
@@ -1318,6 +1321,7 @@ Result:
 | `page` | string | Page internal name. |
 | `pageDisplayName` | string |  |
 | `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
 | `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
 | `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
 | `width` | number |  |
@@ -1360,6 +1364,7 @@ Result:
 | `page` | string | Page internal name. |
 | `pageDisplayName` | string |  |
 | `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
 | `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
 | `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
 | `width` | number |  |
@@ -1428,6 +1433,7 @@ Result:
 | `page` | string | Page internal name. |
 | `pageDisplayName` | string |  |
 | `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
 | `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
 | `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
 | `width` | number |  |

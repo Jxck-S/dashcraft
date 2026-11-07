@@ -36,7 +36,9 @@ use std::time::Instant;
 
 use pbi_core::{OpenedDocument, ReportSource};
 use pbi_engine::{CancellationToken, EngineSnapshot, Value};
-use pbi_model::{FieldExpr, Literal, LiteralValue, Model, Page, Report, ResourceRef, Visual};
+use pbi_model::{
+    Document, FieldExpr, Literal, LiteralValue, Model, Page, Report, ResourceRef, Visual,
+};
 use pbi_render::dataview::{
     BLANK_LABEL, CellValue, ColumnMeta, DataView, FieldRefKind, ValueColumn,
 };
@@ -218,6 +220,9 @@ pub struct CanvasPageOut {
     pub page_display_name: String,
     /// Render number of this page (increasing): drop older responses.
     pub generation: u32,
+    /// The semantic document revision the report, the page and its data
+    /// were read at (one revision, even while edits commit).
+    pub document_revision: u64,
     /// The page as a standalone SVG document (deterministic; `data-hit`
     /// attributes on interactive groups).
     pub svg: String,
@@ -608,7 +613,7 @@ impl Target {
     }
 
     fn report_and_page(&self) -> Result<(Report, Page), OpError> {
-        locate(self.entry.session(), self.report, self.page)
+        locate(&self.entry.session().document(), self.report, self.page)
     }
 
     fn theme(&self) -> Arc<ThemeResolver> {
@@ -624,8 +629,8 @@ impl Target {
     }
 }
 
-fn locate(session: &Session, report: usize, page: usize) -> Result<(Report, Page), OpError> {
-    let r = resolve::report_at(session, report)?;
+fn locate(document: &Document, report: usize, page: usize) -> Result<(Report, Page), OpError> {
+    let r = resolve::report_in(document, report)?;
     let p = r
         .pages
         .get(page)
@@ -634,19 +639,18 @@ fn locate(session: &Session, report: usize, page: usize) -> Result<(Report, Page
     Ok((r, p))
 }
 
-/// Renders the target page with its current state.
+/// Renders the target page with its current state: the report, the page
+/// and the data of one document revision.
 async fn render(target: &Target) -> Result<CanvasPageOut, OpError> {
-    let session = target.entry.session().clone();
-    let env = QueryEnv::from_session(&session);
-    let job = {
-        let (_, page) = target.report_and_page()?;
-        target.entry.canvas.begin(target.key(), &page, &env)
-    };
+    let revision = target.entry.session().revision_snapshot();
+    let (report, page) = locate(&revision.document, target.report, target.page)?;
+    let env = QueryEnv::from_revision(&revision);
+    let job = target.entry.canvas.begin(target.key(), &page, &env);
     let theme = target.theme();
     let entry = Arc::clone(&target.entry);
-    let (ri, pi) = (target.report, target.page);
+    let at = revision.revision;
     tokio::task::spawn_blocking(move || {
-        let (dto, last) = run_job(&entry, env, ri, pi, &theme, &job)?;
+        let (dto, last) = run_job(&entry, env, at, (&report, &page), &theme, &job)?;
         entry.canvas.finish(&job, last)?;
         Ok(dto)
     })
@@ -665,20 +669,19 @@ async fn ensure_rendered(target: &Target) -> Result<(), OpError> {
 fn run_job(
     entry: &DocEntry,
     env: QueryEnv,
-    report_index: usize,
-    page_index: usize,
+    revision: u64,
+    (report, page): (&Report, &Page),
     theme: &ThemeResolver,
     job: &Job,
 ) -> Result<(CanvasPageOut, LastRender), OpError> {
     let started = Instant::now();
-    let (report, page) = locate(entry.session(), report_index, page_index)?;
     let limits = QueryLimits {
         cancel: job.cancel.clone(),
         ..QueryLimits::default()
     };
     let data = match &job.cached {
         Some(d) => Arc::clone(d),
-        None => Arc::new(query_page_data(&env, &report, &page, &job.state, &limits)),
+        None => Arc::new(query_page_data(&env, report, page, &job.state, &limits)),
     };
     if job.cancel.is_cancelled() {
         return Err(superseded());
@@ -691,8 +694,9 @@ fn run_job(
         limits,
     };
     let rendered =
-        render_interactive_page(&report, &page, theme, &job.state, &opts, &job.view, &data);
-    let dto = page_dto(entry, &report, &page, theme, job, &data, &rendered, started);
+        render_interactive_page(report, page, theme, &job.state, &opts, &job.view, &data);
+    let mut dto = page_dto(entry, report, page, theme, job, &data, &rendered, started);
+    dto.document_revision = revision;
     let last = LastRender {
         generation: job.generation,
         state_version: job.state_version,
@@ -781,6 +785,7 @@ fn page_dto(
         page: page.name.clone(),
         page_display_name: page.display_name.clone(),
         generation: job.generation,
+        document_revision: 0,
         svg: to_svg(scene, &SvgOptions::default()),
         overlay_svg: overlay.map(|s| to_svg(s, &SvgOptions::default())),
         width: finite(scene.width),
