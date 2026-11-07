@@ -1,11 +1,15 @@
-//! The M language service (M7.3): `m.diagnostics`, `m.hover`, `m.signatureHelp` and
-//! `m.complete`.
+//! The M language service (M7.3): `m.diagnostics`, `m.hover`, `m.signatureHelp`,
+//! `m.complete` and `m.format`.
 
-use pbi_session::m_service::{self, Diagnostic, Environment, NameKind};
+use pbi_session::m_service::{
+    self, Diagnostic, Environment, FormatError, FormatOptions, MAX_INDENT_WIDTH, NameKind,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::dax::{MAX_COMPLETION_ITEMS, TextPositionIn, TextPositionOut, default_max_items};
+use super::dax::{
+    MAX_COMPLETION_ITEMS, MAX_FORMAT_WIDTH, TextPositionIn, TextPositionOut, default_max_items,
+};
 use super::{BASE, bounded, doc};
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
@@ -551,5 +555,102 @@ impl Command for MComplete {
             items,
             incomplete: c.incomplete,
         })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `m.format`.
+#[derive(Debug)]
+pub struct MFormat;
+
+fn default_m_format_width() -> usize {
+    100
+}
+
+fn default_m_indent_width() -> usize {
+    4
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MFormatParams {
+    /// The M text: a query (`let … in …`, any expression) or a section
+    /// document (`section Section1; …`).
+    pub text: String,
+    /// Preferred maximum line length in characters (default 100, at most
+    /// 10000). Only a single long token, comment or unbreakable run makes a
+    /// line longer.
+    #[serde(default = "default_m_format_width")]
+    pub max_width: usize,
+    /// Spaces per indentation level (default 4, at most 16), or the width a
+    /// tab counts for with `useTabs`.
+    #[serde(default = "default_m_indent_width")]
+    pub indent_width: usize,
+    /// Indent with tabs instead of spaces.
+    #[serde(default)]
+    pub use_tabs: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MFormatOut {
+    /// The text parses (else `text` is the input unchanged and `diagnostic`
+    /// says why).
+    pub ok: bool,
+    /// The formatted text: `\n` line breaks, no trailing line break.
+    pub text: String,
+    /// `text` differs from the input.
+    pub changed: bool,
+    /// The syntax error when `ok` is false, with Power BI Desktop's message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diagnostic: Option<MDiagnosticOut>,
+}
+
+impl Command for MFormat {
+    type Params = MFormatParams;
+    type Output = MFormatOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "m.format",
+            title: "Format M",
+            summary: "Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated.",
+            category: Category::M,
+            examples: &[
+                (
+                    "A query",
+                    r#"{"text": "let Source = Csv.Document(File.Contents(\"orders.csv\"),[Delimiter=\",\"]), Rows = Table.RowCount(Source) in Rows"}"#,
+                ),
+                (
+                    "Narrow, two-space indentation",
+                    r#"{"text": "Table.SelectRows(Orders, each [Quantity] > 1 and [Channel] = \"Online\")", "maxWidth": 40, "indentWidth": 2}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(_ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let opts = FormatOptions {
+            max_width: bounded("maxWidth", p.max_width, MAX_FORMAT_WIDTH)?,
+            indent_width: bounded("indentWidth", p.indent_width, MAX_INDENT_WIDTH)?,
+            use_tabs: p.use_tabs,
+        };
+        match m_service::format(&p.text, &opts) {
+            Ok(text) => Ok(MFormatOut {
+                ok: true,
+                changed: text != p.text,
+                text,
+                diagnostic: None,
+            }),
+            Err(FormatError::Syntax(d)) => Ok(MFormatOut {
+                ok: false,
+                changed: false,
+                diagnostic: Some(MDiagnosticOut::new(&p.text, d)),
+                text: p.text,
+            }),
+            Err(e @ FormatError::Unstable) => Err(OpError::internal(e.to_string())),
+        }
     }
 }

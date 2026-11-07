@@ -122,6 +122,7 @@ pub fn catalog() -> Registry {
         .with::<m::MHover>()
         .with::<m::MSignatureHelp>()
         .with::<m::MComplete>()
+        .with::<m::MFormat>()
         // render
         .with::<render::RenderPage>()
         .with::<render::RenderVisual>()

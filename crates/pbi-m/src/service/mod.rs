@@ -9,10 +9,13 @@
 //!   at a cursor, and the names that fit there. They bind names as Desktop does (the text's
 //!   steps, parameters and fields, then the model's queries in [`Environment`], then the
 //!   library) and work on text that does not parse yet.
+//! * [`format`]: lays an expression or section document out deterministically, keeping its
+//!   tokens and comments, as Power BI Desktop writes queries (one `let` step per line).
 
 mod complete;
 mod diagnostics;
 mod environment;
+mod format;
 mod help;
 mod library;
 mod names;
@@ -23,6 +26,7 @@ pub use diagnostics::{
     Diagnostic, DiagnosticCode, MAX_DIAGNOSTICS, Severity, argument_count_message, diagnostics,
 };
 pub use environment::{Environment, EnvironmentEntry, EnvironmentKind};
+pub use format::{FormatError, FormatOptions, MAX_INDENT_WIDTH, format};
 pub use help::{Hover, SignatureHelp, SignatureParameter, hover, signature_help};
 pub use names::NameKind;
 

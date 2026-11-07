@@ -872,7 +872,7 @@ optional language server.
     re-parsed and must give the same tree. Acceptance 1 met for DAX: idempotent and
     tree-preserving on the 136 Acme and sample expressions and the 2,507 queries Desktop ran;
     2,902 reformatted ground-truth queries return Desktop's original results.
-- [ ] **M7.3 M language service and formatter.** In `pbi-m`: completion of library functions,
+- [x] **M7.3 M language service and formatter.** In `pbi-m`: completion of library functions,
   queries, steps and parameters (names supplied by the caller), diagnostics, hover, formatting.
   - [x] M7.3a (2026-11-07) the library catalog and Desktop conformance: Power BI Desktop's whole
     M standard library recorded from its mashup engine (suite `m-library`: 1,142 names, 941
@@ -912,6 +912,15 @@ optional language server.
     catalog (signatures, unsupported names flagged). Checked on every M query of Acme and the
     samples: all 418 free names resolve to a model or library name and complete first, all 285
     library calls get their signature, and nothing fails at any cursor of the example.
+  - [x] M7.3d (2026-11-07) M formatter: `pbi_m::service::format` and the `m.format` command lay
+    out a query or section within a line width (indentation in spaces or tabs): one `let` step
+    per line, operators leading continuation lines, `if`/`else if` chains, `try`/`otherwise`,
+    records, lists, calls, types and function bodies broken only when they do not fit. Only
+    whitespace changes: every token and comment is kept in order, and the output is re-parsed
+    and must give the same tree. Acceptance 1 met for M: idempotent and tree-preserving on the
+    44 queries of Acme and the samples at two widths; the 268 `m-functions` expressions,
+    formatted at the default width and at width 20 with tabs, give Desktop's recorded results
+    (apart from the one by-design ledger entry).
 - [ ] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of
   properties and object references, formatting that matches the writer.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,

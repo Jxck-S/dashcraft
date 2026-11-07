@@ -1,8 +1,9 @@
-//! M language service (`pbi_m::service`): diagnostics, hover, signature help
-//! and completion, as `m.diagnostics`, `m.hover`, `m.signatureHelp` and
-//! `m.complete` run them.
+//! M language service (`pbi_m::service`): diagnostics, hover, signature help,
+//! completion and formatting, as `m.diagnostics`, `m.hover`,
+//! `m.signatureHelp`, `m.complete` and `m.format` run them.
 //!
-//! The first byte picks the completion item limit; the rest is the text.
+//! The first byte picks the completion item limit and the narrow layout
+//! options; the rest is the text.
 //! Diagnostics run against a small model and an unknown one; the cursor
 //! services run at every offset of a short text and at 64 spread offsets of a
 //! long one (plus past the end).
@@ -12,7 +13,9 @@
 //! inside the signature label on character boundaries and the active
 //! parameter is one of them; at most the requested number of completion
 //! items, none with an empty label or insert text, and the completion span
-//! contains the cursor.
+//! contains the cursor; the formatter, at the default and the narrow options,
+//! never reports `Unstable`, its output formats to itself and a syntax error's
+//! span lies inside the text.
 #![no_main]
 
 use std::sync::OnceLock;
@@ -20,8 +23,8 @@ use std::sync::OnceLock;
 use libfuzzer_sys::fuzz_target;
 use pbi_m::Span;
 use pbi_m::service::{
-    Environment, EnvironmentEntry, EnvironmentKind, MAX_DIAGNOSTICS, complete, diagnostics, hover,
-    signature_help,
+    Environment, EnvironmentEntry, EnvironmentKind, FormatError, FormatOptions, MAX_DIAGNOSTICS,
+    complete, diagnostics, format, hover, signature_help,
 };
 
 const EVERY_OFFSET_UP_TO: usize = 256;
@@ -96,6 +99,20 @@ fn check_cursor(src: &str, offset: usize, env: &Environment, max_items: usize) {
     }
 }
 
+fn check_format(src: &str, options: &FormatOptions) {
+    match format(src, options) {
+        Ok(out) => {
+            let again = format(&out, options);
+            assert!(
+                again.as_deref() == Ok(out.as_str()),
+                "formatting is not idempotent ({again:?}) for {src:?} -> {out:?}"
+            );
+        }
+        Err(FormatError::Syntax(d)) => check_span(src, d.span, "format syntax error"),
+        Err(FormatError::Unstable) => panic!("the formatter changed {src:?} ({options:?})"),
+    }
+}
+
 fuzz_target!(|data: &[u8]| {
     let Some((&first, rest)) = data.split_first() else {
         return;
@@ -124,4 +141,13 @@ fuzz_target!(|data: &[u8]| {
         check_cursor(src, len + 1, model(), max_items);
     }
     check_cursor(src, usize::MAX, &unknown, max_items);
+    check_format(src, &FormatOptions::default());
+    check_format(
+        src,
+        &FormatOptions {
+            max_width: usize::from(first % 64),
+            indent_width: usize::from(first % 5),
+            use_tabs: first & 0x40 != 0,
+        },
+    );
 });
