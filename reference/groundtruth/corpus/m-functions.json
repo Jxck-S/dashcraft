@@ -1,0 +1,718 @@
+{
+  "schemaVersion": 1,
+  "suite": "m-functions",
+  "title": "M standard library functions, operators and errors evaluated by Power BI Desktop's mashup engine",
+  "fixture": "any",
+  "requiresTables": [],
+  "cases": [
+    {
+      "id": "Error.Record/reason-only",
+      "query": "Error.Record(\"r-1\")"
+    },
+    {
+      "id": "Error.Record/all-arguments",
+      "query": "Error.Record(\"r-2\", \"m-2 #{0}\", \"d-2\", {\"x\"}, \"E2\")"
+    },
+    {
+      "id": "Error.Record/null-message-with-parameters",
+      "query": "Error.Record(\"r-3\", null, null, {1})"
+    },
+    {
+      "id": "Error.Record/detail-record",
+      "query": "Error.Record(\"r-4\", \"m-4\", [a = 1])"
+    },
+    {
+      "id": "Error.Record/error-code-not-text",
+      "query": "Error.Record(\"r-5\", \"m-5\", null, null, 5)"
+    },
+    {
+      "id": "Error.Record/parameters-not-list",
+      "query": "Error.Record(\"r-6\", \"m-6\", null, 6)"
+    },
+    {
+      "id": "Error.Record/raised",
+      "query": "(try error Error.Record(\"r-7\", \"m-7 #{0}\", null, {\"p7\"}, \"E7\"))[Error]"
+    },
+    {
+      "id": "try/error-text",
+      "query": "(try error \"boom-8\")[Error]"
+    },
+    {
+      "id": "try/error-record-format",
+      "query": "(try error [Reason = \"R9\", Message = \"ignored-9\", #\"Message.Format\" = \"v9=#{0}\", #\"Message.Parameters\" = {9}, ErrorCode = 9])[Error]"
+    },
+    {
+      "id": "try/error-record-no-format",
+      "query": "(try error [Reason = \"R10\", Message = \"m-10\", #\"Message.Parameters\" = {10}])[Error]"
+    },
+    {
+      "id": "try/error-record-no-reason",
+      "query": "(try error [Message = \"m-11\"])[Error]"
+    },
+    {
+      "id": "try/error-record-no-message",
+      "query": "(try error [Reason = \"R12\"])[Error]"
+    },
+    {
+      "id": "try/error-record-detail",
+      "query": "(try error [Reason = \"R13\", Message = \"m-13\", Detail = [a = 13]])[Error]"
+    },
+    {
+      "id": "try/has-error",
+      "query": "let r = try error \"boom-14\" in [HasError = r[HasError], Reason = r[Error][Reason]]"
+    },
+    {
+      "id": "try/otherwise",
+      "query": "try error \"boom-15\" otherwise 15"
+    },
+    {
+      "id": "try/engine-error",
+      "query": "let e = (try 1 + \"a\")[Error] in [Reason = e[Reason], Message = e[Message]]"
+    },
+    {
+      "id": "error/record-message-not-text",
+      "query": "error [Reason = \"R16\", Message = 16]"
+    },
+    {
+      "id": "error/record-bad-placeholder",
+      "query": "error [Reason = \"R17\", #\"Message.Format\" = \"m-17 #{x}\"]"
+    },
+    {
+      "id": "error/record-unclosed-placeholder",
+      "query": "error [Reason = \"R18\", #\"Message.Format\" = \"m-18 #{0\"]"
+    },
+    {
+      "id": "error/text",
+      "query": "error \"boom-19\""
+    },
+    {
+      "id": "format/basic",
+      "query": "Error.Record(\"P\", \"a #{0} b #{1}\", null, {1, \"x\"})[Message]"
+    },
+    {
+      "id": "format/index-spacing",
+      "query": "Error.Record(\"P\", \"#{ 0}|#{+1}|#{00}\", null, {\"a\", \"b\"})[Message]"
+    },
+    {
+      "id": "format/literal-hashes",
+      "query": "Error.Record(\"P\", \"##{0}|#{0}}|# { } #\", null, {1})[Message]"
+    },
+    {
+      "id": "format/numbers",
+      "query": "Error.Record(\"P\", \"#{0}|#{1}|#{2}|#{3}|#{4}|#{5}|#{6}\", null, {null, true, 1.5, -0.5, 0.1 + 0.2, 1e20, 1.2345678901234568e23 + 0})[Message]"
+    },
+    {
+      "id": "literals/decimal-precision",
+      "query": "{Text.From(9007199254740993), Text.From(123456789.123456789), Text.From(123456789.123456789 + 0)}"
+    },
+    {
+      "id": "format/small-numbers",
+      "query": "Error.Record(\"P\", \"#{0}|#{1}|#{2}|#{3}\", null, {1e-7, 2.5e-5, 0.0001, 0.00012})[Message]"
+    },
+    {
+      "id": "format/special-numbers",
+      "query": "Error.Record(\"P\", \"#{0}|#{1}|#{2}|#{3}\", null, {#nan, #infinity, -#infinity, -0})[Message]"
+    },
+    {
+      "id": "format/dates-and-times",
+      "query": "Error.Record(\"P\", \"#{0}|#{1}|#{2}|#{3}\", null, {#date(2024, 1, 2), #datetime(2024, 1, 2, 3, 4, 5), #datetimezone(2024, 1, 2, 3, 4, 5, 1, 30), #time(13, 2, 59)})[Message]"
+    },
+    {
+      "id": "format/durations",
+      "query": "Error.Record(\"P\", \"#{0}|#{1}\", null, {#duration(0, 0, 0, 1.5), #duration(-1, -2, 0, 0)})[Message]"
+    },
+    {
+      "id": "format/structured",
+      "query": "Error.Record(\"P\", \"#{0}|#{1}|#{2}|#{3}|#{4}\", null, {{1}, [a = 1], #table({\"a\"}, {}), each _, type text})[Message]"
+    },
+    {
+      "id": "format/binary",
+      "query": "Error.Record(\"P\", \"#{0}\", null, {#binary({1, 2})})[Message]"
+    },
+    {
+      "id": "format/index-not-integer",
+      "query": "Error.Record(\"P\", \"f-20 #{x}\", null, {1})[Message]"
+    },
+    {
+      "id": "format/index-negative",
+      "query": "Error.Record(\"P\", \"f-21 #{-1}\", null, {1})[Message]"
+    },
+    {
+      "id": "format/index-out-of-range",
+      "query": "Error.Record(\"P\", \"f-22 #{5}\", null, {1})[Message]"
+    },
+    {
+      "id": "format/unclosed",
+      "query": "Error.Record(\"P\", \"f-23 #{0} #{\", null, {1})[Message]"
+    },
+    {
+      "id": "format/error-parameter",
+      "query": "Error.Record(\"P\", \"f-24 #{0}\", null, {error \"pe-24\"})[Message]"
+    },
+    {
+      "id": "format/unreferenced-error-parameter",
+      "query": "Error.Record(\"P\", \"f-25 #{0}\", null, {25, error \"pe-25\"})[Message]"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/csv-default",
+      "query": "Splitter.SplitTextByDelimiter(\",\")(\"a,\"\"b,c\"\",d\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/quote-none",
+      "query": "Splitter.SplitTextByDelimiter(\",\", QuoteStyle.None)(\"a,\"\"b,c\"\",d\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/quote-mid-field",
+      "query": "Splitter.SplitTextByDelimiter(\",\")(\"a,x\"\"b,c\"\",d\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/quote-after-delimiter",
+      "query": "Splitter.SplitTextByDelimiter(\",\", QuoteStyle.Csv, CsvStyle.QuoteAfterDelimiter)(\"a,x\"\"b,c\"\",\"\"d,e\"\"\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/quote-always",
+      "query": "Splitter.SplitTextByDelimiter(\",\", QuoteStyle.Csv, CsvStyle.QuoteAlways)(\"a,x\"\"b,c\"\",d\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/unclosed-quote",
+      "query": "Splitter.SplitTextByDelimiter(\",\")(\"a,\"\"b,c\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/text-after-quote",
+      "query": "Splitter.SplitTextByDelimiter(\",\")(\"\"\"a\"\"x,b\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/escaped-quote",
+      "query": "Splitter.SplitTextByDelimiter(\",\")(\"\"\"a\"\"\"\"b\"\",c\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/line-breaks",
+      "query": "Splitter.SplitTextByDelimiter(\",\")(\"a#(cr,lf)b,c\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/multi-character",
+      "query": "Splitter.SplitTextByDelimiter(\"--\")(\"a--b---c\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/null-text",
+      "query": "Splitter.SplitTextByDelimiter(\",\")(null)"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/empty-text",
+      "query": "Splitter.SplitTextByDelimiter(\",\")(\"\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/empty-delimiter",
+      "query": "Splitter.SplitTextByDelimiter(\"\")(\"s-26\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/quote-style-invalid",
+      "query": "Splitter.SplitTextByDelimiter(\",\", 2)(\"s-27\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/quote-none-with-csv-style",
+      "query": "Splitter.SplitTextByDelimiter(\",\", QuoteStyle.None, CsvStyle.QuoteAlways)(\"s-28\")"
+    },
+    {
+      "id": "Splitter.SplitTextByDelimiter/csv-style-invalid",
+      "query": "Splitter.SplitTextByDelimiter(\",\", null, 5)(\"s-29\")"
+    },
+    {
+      "id": "Splitter.SplitTextByAnyDelimiter/list-order",
+      "query": "Splitter.SplitTextByAnyDelimiter({\"--\", \"-\"})(\"a---b\")"
+    },
+    {
+      "id": "Splitter.SplitTextByAnyDelimiter/csv-default",
+      "query": "Splitter.SplitTextByAnyDelimiter({\",\", \";\"})(\"a;\"\"b,c\"\",d\")"
+    },
+    {
+      "id": "Splitter.SplitTextByAnyDelimiter/empty-list",
+      "query": "Splitter.SplitTextByAnyDelimiter({})(\"a,b\")"
+    },
+    {
+      "id": "Splitter.SplitTextByAnyDelimiter/start-at-end",
+      "query": "Splitter.SplitTextByAnyDelimiter({\",\", \";\"}, QuoteStyle.Csv, true)(\"a,b;\"\"c,d\"\",e\")"
+    },
+    {
+      "id": "Splitter.SplitTextByAnyDelimiter/start-at-end-overlap",
+      "query": "Splitter.SplitTextByAnyDelimiter({\"--\", \"-\"}, QuoteStyle.None, true)(\"a---b\")"
+    },
+    {
+      "id": "Splitter.SplitTextByAnyDelimiter/start-at-end-not-logical",
+      "query": "Splitter.SplitTextByAnyDelimiter({\",\"}, QuoteStyle.None, 1)(\"s-30\")"
+    },
+    {
+      "id": "Splitter.SplitTextByAnyDelimiter/empty-delimiter",
+      "query": "Splitter.SplitTextByAnyDelimiter({\",\", \"\"})(\"s-31\")"
+    },
+    {
+      "id": "Splitter.SplitTextByEachDelimiter/basic",
+      "query": "Splitter.SplitTextByEachDelimiter({\",\", \";\"})(\"a,b;c,d\")"
+    },
+    {
+      "id": "Splitter.SplitByNothing/basic",
+      "query": "Splitter.SplitByNothing()(\"a,b\")"
+    },
+    {
+      "id": "Splitter.SplitTextByPositions/basic",
+      "query": "Splitter.SplitTextByPositions({0, 2, 5})(\"abcdefg\")"
+    },
+    {
+      "id": "Splitter.SplitTextByLengths/basic",
+      "query": "Splitter.SplitTextByLengths({1, 3})(\"abcdefg\")"
+    },
+    {
+      "id": "Splitter.SplitTextByCharacterTransition/basic",
+      "query": "Splitter.SplitTextByCharacterTransition({\"a\"..\"z\"}, {\"0\"..\"9\"})(\"ab12cd34\")"
+    },
+    {
+      "id": "constants/TraceLevel",
+      "query": "{TraceLevel.Critical, TraceLevel.Error, TraceLevel.Warning, TraceLevel.Information, TraceLevel.Verbose}"
+    },
+    {
+      "id": "constants/QuoteStyle-CsvStyle",
+      "query": "{QuoteStyle.None, QuoteStyle.Csv, CsvStyle.QuoteAfterDelimiter, CsvStyle.QuoteAlways}"
+    },
+    {
+      "id": "constants/numbers",
+      "query": "{Number.PI, Number.E, Number.Epsilon, Number.PositiveInfinity, Number.NegativeInfinity}"
+    },
+    {
+      "id": "Text.Upper/basic",
+      "query": "Text.Upper(\"abc é\")"
+    },
+    {
+      "id": "Text.Proper/basic",
+      "query": "Text.Proper(\"hello wORLD o'neil\")"
+    },
+    {
+      "id": "Text.Trim/basic",
+      "query": "{Text.Trim(\"  a b  \"), Text.TrimStart(\"xxaxx\", \"x\"), Text.TrimEnd(\"xxaxx\", {\"x\", \"a\"})}"
+    },
+    {
+      "id": "Text.PadStart/basic",
+      "query": "{Text.PadStart(\"7\", 3, \"0\"), Text.PadEnd(\"ab\", 4), Text.PadStart(\"abcd\", 2)}"
+    },
+    {
+      "id": "Text.Middle/basic",
+      "query": "{Text.Middle(\"abcdef\", 2, 3), Text.Middle(\"abc\", 2, 10), Text.Range(\"abcdef\", 1, 2), Text.Start(\"abc\", 2), Text.End(\"abc\", 2)}"
+    },
+    {
+      "id": "Text.Replace/basic",
+      "query": "Text.Replace(\"a-b-c\", \"-\", \"+\")"
+    },
+    {
+      "id": "Text.Split/basic",
+      "query": "Text.Split(\"a,b,,c\", \",\")"
+    },
+    {
+      "id": "Text.Combine/basic",
+      "query": "{Text.Combine({\"a\", null, \"b\"}, \"-\"), Text.Combine({})}"
+    },
+    {
+      "id": "Text.Contains/basic",
+      "query": "{Text.Contains(\"Hello\", \"ell\"), Text.Contains(\"Hello\", \"ELL\"), Text.Contains(\"Hello\", \"ELL\", Comparer.OrdinalIgnoreCase)}"
+    },
+    {
+      "id": "Text.PositionOf/basic",
+      "query": "{Text.PositionOf(\"abcabc\", \"c\"), Text.PositionOf(\"abcabc\", \"c\", Occurrence.Last), Text.PositionOf(\"abcabc\", \"c\", Occurrence.All), Text.PositionOf(\"abc\", \"z\")}"
+    },
+    {
+      "id": "Text.BeforeDelimiter/basic",
+      "query": "{Text.BeforeDelimiter(\"a-b-c\", \"-\"), Text.BeforeDelimiter(\"a-b-c\", \"-\", 1), Text.AfterDelimiter(\"a-b-c\", \"-\", {0, RelativePosition.FromEnd}), Text.BetweenDelimiters(\"a(b)c\", \"(\", \")\")}"
+    },
+    {
+      "id": "Text.Select/basic",
+      "query": "{Text.Select(\"a1b2\", {\"0\"..\"9\"}), Text.Remove(\"a1b2\", {\"0\"..\"9\"})}"
+    },
+    {
+      "id": "Text.Repeat/basic",
+      "query": "{Text.Repeat(\"ab\", 3), Text.Insert(\"ac\", 1, \"b\"), Text.Length(\"héllo\"), Text.ToList(\"abc\")}"
+    },
+    {
+      "id": "Text.From/basic",
+      "query": "{Text.From(1.5), Text.From(#date(2024, 1, 2)), Text.From(true), Text.From(null), Text.From(#duration(1, 2, 3, 4))}"
+    },
+    {
+      "id": "Text.Format/basic",
+      "query": "{Text.Format(\"#{0}+#{1}\", {1, \"b\"}), Text.Format(\"#[x]!\", [x = \"hi\"])}"
+    },
+    {
+      "id": "Text.Clean/basic",
+      "query": "Text.Clean(\"a#(lf)b#(tab)c\")"
+    },
+    {
+      "id": "Text.StartsWith/basic",
+      "query": "{Text.StartsWith(\"Hello\", \"He\"), Text.EndsWith(\"Hello\", \"LO\"), Text.EndsWith(\"Hello\", \"LO\", Comparer.OrdinalIgnoreCase)}"
+    },
+    {
+      "id": "Text.NewGuid/length",
+      "query": "Text.Length(Text.NewGuid())"
+    },
+    {
+      "id": "Number.Round/banker",
+      "query": "{Number.Round(2.5), Number.Round(3.5), Number.Round(-2.5), Number.Round(2.345, 2)}"
+    },
+    {
+      "id": "Number.Round/modes",
+      "query": "{Number.Round(2.5, 0, RoundingMode.AwayFromZero), Number.Round(2.5, 0, RoundingMode.Up), Number.Round(-2.5, 0, RoundingMode.Down), Number.Round(2.5, 0, RoundingMode.TowardZero)}"
+    },
+    {
+      "id": "Number.RoundUp/basic",
+      "query": "{Number.RoundUp(1.2), Number.RoundDown(-1.2), Number.RoundUp(1.234, 2), Number.RoundTowardZero(-1.7), Number.RoundAwayFromZero(-1.2)}"
+    },
+    {
+      "id": "Number.IntegerDivide/basic",
+      "query": "{Number.IntegerDivide(7, 2), Number.IntegerDivide(-7, 2), Number.Mod(-7, 3), Number.Mod(7.5, 2)}"
+    },
+    {
+      "id": "Number.Power/basic",
+      "query": "{Number.Power(2, 10), Number.Sqrt(16), Number.Abs(-3), Number.Sign(-2), Number.Log10(1000), Number.Ln(1)}"
+    },
+    {
+      "id": "Number.From/basic",
+      "query": "{Number.From(\"1.5\"), Number.From(true), Number.From(#date(2024, 1, 2)), Number.From(#duration(1, 12, 0, 0)), Number.FromText(\"1e3\")}"
+    },
+    {
+      "id": "Number.ToText/formats",
+      "query": "{Number.ToText(1234.5, \"N2\"), Number.ToText(0.5, \"P\"), Number.ToText(255, \"X\"), Number.ToText(1234.5678, \"0.00\"), Number.ToText(1234.5, \"F1\"), Number.ToText(0.000123, \"E2\")}"
+    },
+    {
+      "id": "Number.ToText/default",
+      "query": "{Number.ToText(1.5), Number.ToText(1e21), Number.ToText(0.1 + 0.2), Number.ToText(-0)}"
+    },
+    {
+      "id": "Number.Bitwise/basic",
+      "query": "{Number.BitwiseAnd(12, 10), Number.BitwiseOr(12, 10), Number.BitwiseXor(12, 10), Number.BitwiseShiftLeft(1, 4)}"
+    },
+    {
+      "id": "Number.IsEven/basic",
+      "query": "{Number.IsEven(4), Number.IsOdd(4), Number.IsNaN(0 / 0), 1 / 0, -1 / 0}"
+    },
+    {
+      "id": "Number.FromText/invalid",
+      "query": "Number.FromText(\"n-32\")"
+    },
+    {
+      "id": "Int64.From/basic",
+      "query": "{Int64.From(2.5), Int64.From(3.5), Int64.From(\"12\"), Currency.From(1.23456), Decimal.From(\"1.25\")}"
+    },
+    {
+      "id": "List.Sum/basic",
+      "query": "{List.Sum({1, 2, null}), List.Average({1, 2, 4}), List.Max({3, 1, 2}), List.Min({3, 1, 2}), List.Count({1, null}), List.NonNullCount({1, null})}"
+    },
+    {
+      "id": "List.Sum/empty",
+      "query": "{List.Sum({}), List.Average({}), List.Max({}), List.Min({}, 0)}"
+    },
+    {
+      "id": "List.Distinct/basic",
+      "query": "{List.Distinct({1, 1, 2}), List.Distinct({\"a\", \"A\"}, Comparer.OrdinalIgnoreCase)}"
+    },
+    {
+      "id": "List.Sort/basic",
+      "query": "{List.Sort({3, 1, 2}), List.Sort({3, 1, 2}, Order.Descending), List.Sort({\"b\", \"A\", \"a\"}), List.Sort({\"b\", \"A\", \"a\"}, Comparer.OrdinalIgnoreCase)}"
+    },
+    {
+      "id": "List.Range/basic",
+      "query": "{List.Range({1..5}, 1, 2), List.FirstN({1..5}, 2), List.LastN({1..5}, 2), List.Skip({1..5}, 3), List.RemoveFirstN({1..5}, 1), List.Reverse({1, 2, 3})}"
+    },
+    {
+      "id": "List.Zip/basic",
+      "query": "List.Zip({{1, 2}, {\"a\", \"b\", \"c\"}})"
+    },
+    {
+      "id": "List.Combine/basic",
+      "query": "{List.Combine({{1}, {2, 3}}), List.Union({{1, 2}, {2, 3}}), List.Intersect({{1, 2}, {2, 3}}), List.Difference({1, 2, 3}, {2})}"
+    },
+    {
+      "id": "List.Accumulate/basic",
+      "query": "List.Accumulate({1, 2, 3}, 0, (s, c) => s + c)"
+    },
+    {
+      "id": "List.Generate/basic",
+      "query": "List.Generate(() => 0, each _ < 3, each _ + 1, each _ * 10)"
+    },
+    {
+      "id": "List.Numbers/basic",
+      "query": "{List.Numbers(1, 3, 2), List.Dates(#date(2024, 1, 30), 3, #duration(1, 0, 0, 0)), {1..3}, {\"a\"..\"c\"}}"
+    },
+    {
+      "id": "List.PositionOf/basic",
+      "query": "{List.PositionOf({1, 2, 3, 2}, 2), List.PositionOf({1, 2, 3, 2}, 2, Occurrence.All), List.Contains({1, 2}, 2), List.ContainsAny({1, 2}, {3, 2}), List.ContainsAll({1, 2}, {2, 3})}"
+    },
+    {
+      "id": "List.Select/basic",
+      "query": "{List.Select({1..6}, Number.IsEven), List.Transform({1, 2}, each _ * 2), List.RemoveNulls({1, null, 2}), List.RemoveItems({1, 2, 3}, {2})}"
+    },
+    {
+      "id": "List.Statistics/basic",
+      "query": "{List.Median({1, 3, 2, 4}), List.Mode({1, 2, 2, 3}), List.StandardDeviation({1, 2, 3, 4}), List.Product({2, 3})}"
+    },
+    {
+      "id": "List.Split/basic",
+      "query": "{List.Split({1..5}, 2), List.Alternate({1..10}, 1, 1), List.Repeat({1, 2}, 2), List.Buffer({1})}"
+    },
+    {
+      "id": "List.First/basic",
+      "query": "{List.First({}), List.First({}, \"d\"), List.Last({1, 2}), List.IsEmpty({}), List.Single({7}), List.SingleOrDefault({}, 0)}"
+    },
+    {
+      "id": "List.MatchesAll/basic",
+      "query": "{List.MatchesAll({2, 4}, Number.IsEven), List.MatchesAny({1, 3}, Number.IsEven), List.AnyTrue({false, true}), List.AllTrue({})}"
+    },
+    {
+      "id": "List.ReplaceValue/basic",
+      "query": "{List.ReplaceValue({\"a\", \"b\"}, \"a\", \"z\", Replacer.ReplaceValue), List.ReplaceValue({\"ab\", \"b\"}, \"b\", \"z\", Replacer.ReplaceText), List.InsertRange({1, 4}, 1, {2, 3}), List.ReplaceRange({1, 2, 3}, 1, 1, {9})}"
+    },
+    {
+      "id": "List.Item/out-of-range",
+      "query": "{1, 2}{5}"
+    },
+    {
+      "id": "List.Item/optional",
+      "query": "{{1, 2}{5}?, [a = 1][b]?}"
+    },
+    {
+      "id": "Date.AddMonths/end-of-month",
+      "query": "{Date.AddMonths(#date(2024, 1, 31), 1), Date.AddYears(#date(2024, 2, 29), 1), Date.AddDays(#date(2024, 2, 28), 2), Date.AddWeeks(#date(2024, 1, 1), 2)}"
+    },
+    {
+      "id": "Date.StartOfWeek/basic",
+      "query": "{Date.StartOfWeek(#date(2024, 1, 3)), Date.StartOfWeek(#date(2024, 1, 3), Day.Monday), Date.EndOfMonth(#date(2024, 2, 10)), Date.StartOfQuarter(#date(2024, 5, 10)), Date.EndOfYear(#date(2024, 5, 10))}"
+    },
+    {
+      "id": "Date.DayOfWeek/basic",
+      "query": "{Date.DayOfWeek(#date(2024, 1, 7)), Date.DayOfWeek(#date(2024, 1, 7), Day.Monday), Date.DayOfYear(#date(2024, 3, 1)), Date.WeekOfYear(#date(2024, 12, 31)), Date.WeekOfMonth(#date(2024, 1, 31)), Date.QuarterOfYear(#date(2024, 8, 1))}"
+    },
+    {
+      "id": "Date.Names/basic",
+      "query": "{Date.MonthName(#date(2024, 3, 1)), Date.DayOfWeekName(#date(2024, 3, 1)), Date.MonthName(#date(2024, 3, 1), \"fr-FR\")}"
+    },
+    {
+      "id": "Date.IsLeapYear/basic",
+      "query": "{Date.IsLeapYear(#date(2024, 1, 1)), Date.IsLeapYear(#date(1900, 1, 1)), Date.DaysInMonth(#date(2023, 2, 1))}"
+    },
+    {
+      "id": "Date.ToText/basic",
+      "query": "{Date.ToText(#date(2024, 1, 2)), Date.ToText(#date(2024, 1, 2), \"dd MMM yyyy\"), Date.ToText(#date(2024, 1, 2), [Format = \"yyyy-MM-dd\"]), DateTime.ToText(#datetime(2024, 1, 2, 13, 4, 5))}"
+    },
+    {
+      "id": "Date.FromText/basic",
+      "query": "{Date.FromText(\"2024-03-05\"), Date.FromText(\"3/5/2024\"), Date.From(45000), DateTime.From(\"2024-01-02 03:04\"), Time.From(0.75), DateTime.FromText(\"2024-01-02T03:04:05\")}"
+    },
+    {
+      "id": "Date.ToRecord/basic",
+      "query": "{Date.ToRecord(#date(2024, 1, 2)), Time.ToRecord(#time(1, 2, 3)), DateTime.Date(#datetime(2024, 1, 2, 3, 4, 5)), DateTime.Time(#datetime(2024, 1, 2, 3, 4, 5))}"
+    },
+    {
+      "id": "Date.Arithmetic/basic",
+      "query": "{#date(2024, 3, 1) - #date(2024, 2, 1), #date(2024, 1, 1) + #duration(1, 0, 0, 0), #datetime(2024, 1, 1, 0, 0, 0) - #duration(0, 1, 0, 0), #time(23, 0, 0) + #duration(0, 2, 0, 0)}"
+    },
+    {
+      "id": "Duration/basic",
+      "query": "{Duration.TotalHours(#duration(1, 2, 0, 0)), Duration.From(1.5), Duration.Days(#duration(1, 2, 3, 4)), Duration.FromText(\"1.02:03:04\"), Duration.ToText(#duration(0, 0, 0, 1.25))}"
+    },
+    {
+      "id": "DateTimeZone/basic",
+      "query": "{DateTime.AddZone(#datetime(2024, 1, 1, 0, 0, 0), 2), DateTimeZone.SwitchZone(#datetimezone(2024, 1, 1, 12, 0, 0, 2, 0), -5), DateTimeZone.RemoveZone(#datetimezone(2024, 1, 1, 12, 0, 0, 2, 0)), DateTimeZone.ZoneHours(#datetimezone(2024, 1, 1, 12, 0, 0, -3, -30))}"
+    },
+    {
+      "id": "Date.FromText/invalid",
+      "query": "Date.FromText(\"d-33\")"
+    },
+    {
+      "id": "Record/basic",
+      "query": "{Record.Field([a = 1], \"a\"), Record.FieldNames([b = 1, a = 2]), Record.AddField([a = 1], \"b\", 2), Record.Combine({[a = 1], [b = 2], [a = 3]})}"
+    },
+    {
+      "id": "Record/transform",
+      "query": "{Record.TransformFields([a = 1, b = 2], {\"a\", each _ * 10}), Record.RemoveFields([a = 1, b = 2], \"a\"), Record.RenameFields([a = 1], {\"a\", \"z\"}), Record.ReorderFields([a = 1, b = 2], {\"b\", \"a\"})}"
+    },
+    {
+      "id": "Record.ToTable/basic",
+      "query": "Record.ToTable([a = 1, b = \"x\"])"
+    },
+    {
+      "id": "Record.Field/missing",
+      "query": "Record.Field([a = 1], \"missing-34\")"
+    },
+    {
+      "id": "Table.FromRecords/basic",
+      "query": "Table.FromRecords({[a = 1, b = \"x\"], [a = 2, b = \"y\"]})"
+    },
+    {
+      "id": "Table.SelectRows/basic",
+      "query": "Table.SelectRows(Table.FromRecords({[a = 1], [a = 2], [a = 3]}), each [a] > 1)"
+    },
+    {
+      "id": "Table.AddColumn/basic",
+      "query": "Table.AddColumn(#table({\"a\"}, {{1}, {2}}), \"c\", each [a] * 2)"
+    },
+    {
+      "id": "Table.Group/basic",
+      "query": "Table.Group(#table({\"k\", \"v\"}, {{\"x\", 1}, {\"y\", 2}, {\"x\", 3}}), {\"k\"}, {{\"n\", Table.RowCount}, {\"s\", each List.Sum([v])}})"
+    },
+    {
+      "id": "Table.Group/local",
+      "query": "Table.Group(#table({\"k\", \"v\"}, {{\"x\", 1}, {\"x\", 2}, {\"y\", 3}, {\"x\", 4}}), {\"k\"}, {{\"s\", each List.Sum([v])}}, GroupKind.Local)"
+    },
+    {
+      "id": "Table.Sort/basic",
+      "query": "Table.Sort(#table({\"a\", \"b\"}, {{2, \"x\"}, {1, \"y\"}, {2, \"a\"}}), {{\"a\", Order.Descending}, \"b\"})"
+    },
+    {
+      "id": "Table.Unpivot/basic",
+      "query": "Table.UnpivotOtherColumns(#table({\"id\", \"q1\", \"q2\"}, {{1, 10, 20}, {2, null, 40}}), {\"id\"}, \"q\", \"v\")"
+    },
+    {
+      "id": "Table.Pivot/basic",
+      "query": "Table.Pivot(#table({\"id\", \"q\", \"v\"}, {{1, \"q1\", 10}, {1, \"q2\", 20}, {2, \"q1\", 30}}), {\"q1\", \"q2\"}, \"q\", \"v\", List.Sum)"
+    },
+    {
+      "id": "Table.TransformColumnTypes/basic",
+      "query": "Table.TransformColumnTypes(#table({\"a\", \"b\"}, {{\"1.5\", \"2024-01-02\"}}), {{\"a\", type number}, {\"b\", type date}})"
+    },
+    {
+      "id": "Table.TransformColumnTypes/error-cell",
+      "query": "let t = Table.TransformColumnTypes(#table({\"a\"}, {{\"x35\"}}), {{\"a\", type number}}), r = try t{0}[a] in [HasError = r[HasError], Error = Record.SelectFields(r[Error], {\"Reason\", \"Message\", \"Detail\"})]"
+    },
+    {
+      "id": "Table.NestedJoin/basic",
+      "query": "Table.ExpandTableColumn(Table.NestedJoin(#table({\"k\", \"a\"}, {{1, \"x\"}, {2, \"y\"}}), {\"k\"}, #table({\"k\", \"b\"}, {{1, \"p\"}, {1, \"q\"}}), {\"k\"}, \"j\", JoinKind.LeftOuter), \"j\", {\"b\"})"
+    },
+    {
+      "id": "Table.Join/inner",
+      "query": "Table.Join(#table({\"k\", \"a\"}, {{1, \"x\"}, {2, \"y\"}}), \"k\", #table({\"k2\", \"b\"}, {{2, \"p\"}}), \"k2\")"
+    },
+    {
+      "id": "Table.Distinct/basic",
+      "query": "{Table.Distinct(#table({\"a\"}, {{1}, {1}, {2}})), Table.FillDown(#table({\"a\"}, {{1}, {null}, {2}}), {\"a\"}), Table.FillUp(#table({\"a\"}, {{null}, {2}}), {\"a\"})}"
+    },
+    {
+      "id": "Table.PromoteHeaders/basic",
+      "query": "{Table.PromoteHeaders(#table({\"Column1\", \"Column2\"}, {{\"x\", \"y\"}, {1, 2}})), Table.DemoteHeaders(#table({\"a\"}, {{1}}))}"
+    },
+    {
+      "id": "Table.Transpose/basic",
+      "query": "Table.Transpose(#table({\"a\", \"b\"}, {{1, 2}, {3, 4}}))"
+    },
+    {
+      "id": "Table.ReplaceValue/basic",
+      "query": "Table.ReplaceValue(#table({\"a\", \"b\"}, {{\"xa\", \"x\"}}), \"x\", \"z\", Replacer.ReplaceText, {\"a\"})"
+    },
+    {
+      "id": "Table.SplitColumn/basic",
+      "query": "Table.SplitColumn(#table({\"a\"}, {{\"p-q\"}, {\"r\"}}), \"a\", Splitter.SplitTextByDelimiter(\"-\"), {\"a1\", \"a2\"})"
+    },
+    {
+      "id": "Table.Combine/basic",
+      "query": "Table.Combine({#table({\"a\"}, {{1}}), #table({\"b\"}, {{2}})})"
+    },
+    {
+      "id": "Table.Columns/basic",
+      "query": "{Table.ColumnNames(Table.RenameColumns(#table({\"a\", \"b\"}, {}), {\"a\", \"z\"})), Table.ColumnNames(Table.ReorderColumns(#table({\"a\", \"b\"}, {}), {\"b\", \"a\"})), Table.ColumnNames(Table.RemoveColumns(#table({\"a\", \"b\"}, {}), \"a\")), Table.RowCount(#table({\"a\"}, {{1}, {2}}))}"
+    },
+    {
+      "id": "Table.Max/basic",
+      "query": "{Table.Max(#table({\"a\"}, {{1}, {3}}), \"a\"), Table.First(#table({\"a\"}, {})), Table.Column(#table({\"a\"}, {{1}, {2}}), \"a\")}"
+    },
+    {
+      "id": "Table.ToRows/basic",
+      "query": "{Table.ToRows(#table({\"a\", \"b\"}, {{1, 2}})), Table.ToRecords(#table({\"a\"}, {{1}})), Table.ToColumns(#table({\"a\", \"b\"}, {{1, 2}}))}"
+    },
+    {
+      "id": "Table.AddIndexColumn/basic",
+      "query": "Table.AddIndexColumn(#table({\"a\"}, {{\"x\"}, {\"y\"}}), \"i\", 1, 10)"
+    },
+    {
+      "id": "Table.Schema/basic",
+      "query": "Table.SelectColumns(Table.Schema(#table(type table [a = number, b = text], {})), {\"Name\", \"Kind\", \"IsNullable\"})"
+    },
+    {
+      "id": "Table.SelectRows/missing-column",
+      "query": "Table.SelectRows(#table({\"a\"}, {{1}}), each [missing36] = 1)"
+    },
+    {
+      "id": "Value/basic",
+      "query": "{Value.Is(1, type number), Value.Equals(1, 1.0), Value.Compare(1, 2), Value.Type(1), Value.Type(\"x\"), Logical.FromText(\"TRUE\"), Logical.ToText(false)}"
+    },
+    {
+      "id": "Value.Metadata/basic",
+      "query": "Value.Metadata(1 meta [a = 1])"
+    },
+    {
+      "id": "Type/basic",
+      "query": "{Type.IsNullable(type nullable text), Type.NonNullable(type nullable number), Type.TableColumn(type table [a = text], \"a\"), Type.Is(type number, type any)}"
+    },
+    {
+      "id": "Binary/basic",
+      "query": "{Text.ToBinary(\"hé\"), Binary.ToText(Text.ToBinary(\"abc\"), BinaryEncoding.Hex), Binary.FromText(\"AQI=\"), Binary.Length(#binary({1, 2, 3})), Text.FromBinary(#binary({104, 105}))}"
+    },
+    {
+      "id": "Json.Document/basic",
+      "query": "Json.Document(\"{\"\"a\"\":[1,2.5,{\"\"b\"\":null}],\"\"c\"\":true}\")"
+    },
+    {
+      "id": "Json.FromValue/basic",
+      "query": "Text.FromBinary(Json.FromValue([a = {1, \"x\"}, b = null, c = #date(2024, 1, 2)]))"
+    },
+    {
+      "id": "Comparer/basic",
+      "query": "{Comparer.Ordinal(\"a\", \"B\"), Comparer.OrdinalIgnoreCase(\"a\", \"B\"), Comparer.Equals(Comparer.OrdinalIgnoreCase, \"a\", \"A\")}"
+    },
+    {
+      "id": "Lines/basic",
+      "query": "{Lines.FromText(\"a#(cr,lf)b#(lf)c\"), Lines.ToText({\"a\", \"b\"}, \"|\")}"
+    },
+    {
+      "id": "Csv.Document/basic",
+      "query": "Csv.Document(\"a,b#(lf)1,\"\"x,y\"\"#(lf)\", [Delimiter = \",\", Columns = 2, QuoteStyle = QuoteStyle.Csv])"
+    },
+    {
+      "id": "operators/arithmetic",
+      "query": "{1 + 2 * 3, 7 / 2, \"a\" & \"b\", {1} & {2}, [a = 1] & [b = 2], null + 1, 0.1 + 0.2}"
+    },
+    {
+      "id": "operators/comparison",
+      "query": "{1 < 2, \"a\" < \"B\", null = null, null < 1, #date(2024, 1, 1) < #date(2024, 1, 2), {1, 2} = {1, 2}, [a = 1, b = 2] = [b = 2, a = 1]}"
+    },
+    {
+      "id": "operators/logical",
+      "query": "{true and null, false and (error \"never-37\"), true or (error \"never-38\"), not true}"
+    },
+    {
+      "id": "syntax/error-operand",
+      "query": "false and error \"never-37b\""
+    },
+    {
+      "id": "operators/type-error",
+      "query": "1 + \"x39\""
+    },
+    {
+      "id": "language/let-each",
+      "query": "let f = each _ + 1, g = (x, optional y) => x + (if y = null then 0 else y) in {f(1), g(1), g(1, 2)}"
+    },
+    {
+      "id": "language/recursion",
+      "query": "let fact = (n) => if n <= 1 then 1 else n * @fact(n - 1) in fact(10)"
+    },
+    {
+      "id": "language/field-access",
+      "query": "let r = [a = [b = 2]] in {r[a][b], r[[a]], #table({\"x\", \"y\"}, {{1, 2}}){0}[[x]]}"
+    },
+    {
+      "id": "language/meta",
+      "query": "Value.Metadata(Value.ReplaceMetadata(1, [m = \"x\"]))"
+    },
+    {
+      "id": "language/is-as",
+      "query": "{1 is number, null is nullable text, \"a\" as text, 1 is any}"
+    },
+    {
+      "id": "language/as-error",
+      "query": "\"a40\" as number"
+    }
+  ],
+  "language": "m"
+}

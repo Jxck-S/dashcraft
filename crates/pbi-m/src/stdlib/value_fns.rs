@@ -4,11 +4,12 @@
 use std::sync::Arc;
 
 use super::Builder;
-use super::args::{arg, int_arg, items, req_func, req_list, req_text, text_arg};
+use super::args::{arg, int_arg, items, list_arg, req_func, req_list, req_text, text_arg};
 use super::csv::decode_bytes;
 use crate::ast::PrimitiveType;
 use crate::eval::interp::{Interp, convert_error};
-use crate::merror::MError;
+use crate::merror::{ErrorFields, MError};
+use crate::value::format::{duration_to_text, number_to_text};
 use crate::value::ops::{equals, sort_compare};
 use crate::value::types::type_of;
 use crate::value::{
@@ -58,7 +59,7 @@ pub(super) fn register(b: &mut Builder) {
     );
     b.func(
         "Error.Record",
-        &["reason", "?message", "?detail", "?parameters"],
+        &["reason", "?message", "?detail", "?parameters", "?errorCode"],
         error_record,
     );
     b.func(
@@ -71,7 +72,6 @@ pub(super) fn register(b: &mut Builder) {
 
     for (name, p) in [
         ("Any.Type", PrimitiveType::Any),
-        ("AnyNonNull.Type", PrimitiveType::AnyNonNull),
         ("None.Type", PrimitiveType::None),
         ("Null.Type", PrimitiveType::Null),
         ("Logical.Type", PrimitiveType::Logical),
@@ -128,9 +128,9 @@ pub(super) fn register(b: &mut Builder) {
         ("GroupKind.Global", 1.0),
         ("TraceLevel.Critical", 1.0),
         ("TraceLevel.Error", 2.0),
-        ("TraceLevel.Warning", 3.0),
-        ("TraceLevel.Information", 4.0),
-        ("TraceLevel.Verbose", 5.0),
+        ("TraceLevel.Warning", 4.0),
+        ("TraceLevel.Information", 8.0),
+        ("TraceLevel.Verbose", 16.0),
     ]);
 }
 
@@ -328,17 +328,139 @@ fn type_table_column(_: &Interp, args: &[Value]) -> Result<Value, MError> {
     }
 }
 
-fn error_record(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+/// `Error.Record`: without parameters `Message` is the message (default empty) and
+/// `Message.Format` is `null`; with parameters `Message.Format` is the message and `Message` the
+/// format with its `#{n}` placeholders filled.
+fn error_record(it: &Interp, args: &[Value]) -> Result<Value, MError> {
     let reason = req_text(args, 0)?;
+    let message = text_arg(args, 1, "Error.Record")?.unwrap_or_default();
+    let parameters = list_arg(args, 3)?;
+    let error_code = text_arg(args, 4, "Error.Record")?.map_or(Value::Null, Value::text);
+    let (message, format) = match parameters {
+        None => (Value::text(message), Value::Null),
+        Some(p) => (
+            Value::text(format_error_message(it, message, Some(p))?),
+            Value::text(message),
+        ),
+    };
     Ok(Value::Record(RecordValue::from_pairs([
         ("Reason", Value::text(reason)),
-        (
-            "Message",
-            text_arg(args, 1, "Error.Record")?.map_or(Value::Null, Value::text),
-        ),
+        ("Message", message),
         ("Detail", arg(args, 2).clone()),
+        ("Message.Format", format),
         ("Message.Parameters", arg(args, 3).clone()),
+        ("ErrorCode", error_code),
     ])?))
+}
+
+const INVALID_PLACEHOLDER: &str =
+    "Invalid placeholder or value in format string. Underlying error message: ";
+
+fn invalid_placeholder(underlying: &str) -> MError {
+    MError::Evaluation {
+        reason: "Expression.Error".into(),
+        message: format!("{INVALID_PLACEHOLDER}{underlying}"),
+        detail: None,
+        location: None,
+        fields: Some(Box::new(ErrorFields {
+            null_message: false,
+            message_format: Value::text(format!("{INVALID_PLACEHOLDER}#{{0}}")),
+            message_parameters: Value::list([Value::text(underlying)]),
+            error_code: Value::text("10582"),
+        })),
+    }
+}
+
+/// The index of a `#{n}` placeholder: an `Int32` with optional sign and surrounding spaces.
+fn placeholder_index(inner: &str) -> Result<usize, MError> {
+    match inner.trim().parse::<i32>() {
+        Ok(n) => {
+            usize::try_from(n).map_err(|_| invalid_placeholder("The index cannot be negative."))
+        }
+        Err(_) => Err(invalid_placeholder("We expected an integer value.")),
+    }
+}
+
+/// Fills the `#{n}` placeholders of an error message format with `parameters` (`None`: no
+/// parameters), as Desktop does for `Error.Record` and `error [Message.Format = ...]`. Only the
+/// parameters a placeholder refers to are evaluated.
+pub(crate) fn format_error_message(
+    it: &Interp,
+    format: &str,
+    parameters: Option<&ListValue>,
+) -> Result<String, MError> {
+    let mut out = String::new();
+    let mut rest = format;
+    while let Some(start) = rest.find("#{") {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + 2..];
+        let Some(end) = after.find('}') else {
+            return Err(MError::data_format(
+                "Text format placeholders must be closed.",
+            ));
+        };
+        let index = placeholder_index(&after[..end])?;
+        let slot = parameters
+            .and_then(|p| p.items().get(index))
+            .ok_or_else(|| {
+                invalid_placeholder(
+                    "There weren't enough elements in the enumeration to complete the operation.",
+                )
+            })?;
+        let value = match slot.force(it) {
+            Ok(v) => v,
+            Err(MError::Evaluation { message, .. }) => return Err(invalid_placeholder(&message)),
+            Err(e) => return Err(e),
+        };
+        out.push_str(&placeholder_text(it, &value)?);
+        it.check_bytes(out.len())?;
+        rest = &after[end + 1..];
+    }
+    out.push_str(rest);
+    Ok(out)
+}
+
+/// A value as an error message parameter (en-US): structured values give their kind.
+fn placeholder_text(it: &Interp, v: &Value) -> Result<String, MError> {
+    Ok(match v.plain() {
+        Value::Null => "null".into(),
+        Value::Logical(b) => b.to_string(),
+        Value::Number(n) => number_to_text(*n),
+        Value::Text(t) => t.to_string(),
+        Value::Date(d) => d.format("%m/%d/%Y").to_string(),
+        Value::DateTime(dt) => dt.format("%m/%d/%Y %H:%M:%S").to_string(),
+        Value::DateTimeZone(dt) => dt.format("%m/%d/%Y %H:%M:%S %:z").to_string(),
+        Value::Time(t) => t.format("%H:%M").to_string(),
+        Value::Duration(d) => duration_to_text(*d),
+        Value::Binary(b) => base64_encode(&b.bytes(it.opts.limits.max_binary_bytes)?),
+        Value::List(_) => "list".into(),
+        Value::Record(_) => "record".into(),
+        Value::Table(_) => "table".into(),
+        Value::Function(_) => "function".into(),
+        Value::Type(_) => "type".into(),
+        Value::Meta(m) => return placeholder_text(it, &m.value),
+    })
+}
+
+fn base64_encode(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b = [
+            chunk.first().copied().unwrap_or(0),
+            chunk.get(1).copied().unwrap_or(0),
+            chunk.get(2).copied().unwrap_or(0),
+        ];
+        let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
+        for (i, shift) in [18u32, 12, 6, 0].into_iter().enumerate() {
+            if i <= chunk.len() {
+                out.push(char::from(ALPHABET[((n >> shift) & 63) as usize]));
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
 }
 
 fn trace(it: &Interp, args: &[Value]) -> Result<Value, MError> {
@@ -394,6 +516,7 @@ fn json_document(it: &Interp, args: &[Value]) -> Result<Value, MError> {
         message: format!("We found an invalid JSON value: {e}"),
         detail: None,
         location: None,
+        fields: None,
     })?;
     json_to_value(it, &j)
 }

@@ -12,7 +12,9 @@
 //! * Errors are [`MError`]s: syntax errors with line/column, M errors (`try`-catchable),
 //!   [`MError::Unsupported`] for functions DashCraft does not evaluate (never files, databases or
 //!   the network), resolver failures, limits and cancellation.
-//! * [`library_names`] lists the implemented library functions and constants.
+//! * [`library_names`] lists the implemented library functions and constants;
+//!   [`service::catalog`] lists Power BI Desktop's whole standard library (recorded from
+//!   Desktop), for editors.
 //!
 //! See [`eval`] for semantics notes and deviations from Power Query.
 //!
@@ -81,6 +83,7 @@ pub mod merror;
 pub mod parser;
 pub mod printer;
 pub mod refs;
+pub mod service;
 pub mod span;
 pub mod stdlib;
 pub mod value;
@@ -99,7 +102,7 @@ pub use span::{Span, line_col};
 pub use connectors::{BlobEntry, BlobResolver, MapBlobResolver, NoBlobResolver};
 pub use eval::arrow::table_to_record_batch;
 pub use eval::{Clock, Engine, EvalOptions, FixedClock, Limits, SystemClock};
-pub use merror::{LimitKind, Location, MError, ResolverError, ResolverErrorKind};
+pub use merror::{ErrorFields, LimitKind, Location, MError, ResolverError, ResolverErrorKind};
 pub use stdlib::library_names;
 pub use value::{
     BinarySource, BinaryValue, FunctionValue, Lazy, ListValue, RecordValue, TableValue, TypeValue,

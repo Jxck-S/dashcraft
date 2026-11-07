@@ -5,12 +5,15 @@ use std::fmt::Write as _;
 
 use chrono::{Datelike, NaiveDate, NaiveTime, TimeDelta, Timelike};
 
+use crate::value::digits::{Digits, general_number};
 use crate::value::types::quote_name;
 use crate::value::{Lazy, Value};
 
-/// Formats a number like M's `Number.ToText`/`Text.From` with the default format: integers
-/// without a decimal point, otherwise up to 15 significant digits, switching to exponent
-/// notation (`1E+15`, `1E-05`) for very large or small magnitudes.
+/// Formats a number like M's `Number.ToText`/`Text.From` with the default format: .NET
+/// Framework's round-trip text (15 significant digits when they parse back to the number, else
+/// 17), in exponent notation below `1E-04` (`1.5E-05`) and above the `System.Decimal` range
+/// (`1E+29`); large numbers below it are written out from 15 significant digits
+/// (`1000000000000000000000`).
 pub fn number_to_text(n: f64) -> String {
     if n.is_nan() {
         return "NaN".into();
@@ -18,55 +21,10 @@ pub fn number_to_text(n: f64) -> String {
     if n.is_infinite() {
         return if n > 0.0 { "Infinity" } else { "-Infinity" }.into();
     }
-    if n == 0.0 {
-        return "0".into();
+    match Digits::round_trip(n) {
+        Some((digits, precision)) => general_number(n, &digits, precision, 'E'),
+        None => "NaN".into(),
     }
-    if n.fract() == 0.0 && n.abs() < 1e15 {
-        return format!("{}", n as i64);
-    }
-    let sci = format!("{:.14e}", n);
-    let Some((mantissa, exp)) = sci.split_once('e') else {
-        return sci;
-    };
-    let Ok(exp) = exp.parse::<i32>() else {
-        return sci;
-    };
-    let negative = mantissa.starts_with('-');
-    let digits: String = mantissa.chars().filter(char::is_ascii_digit).collect();
-    let digits = digits.trim_end_matches('0');
-    let digits = if digits.is_empty() { "0" } else { digits };
-    let mut out = String::new();
-    if negative {
-        out.push('-');
-    }
-    if !(-4..15).contains(&exp) {
-        out.push_str(&digits[..1]);
-        if digits.len() > 1 {
-            out.push('.');
-            out.push_str(&digits[1..]);
-        }
-        let _ = write!(out, "E{}{:02}", if exp < 0 { '-' } else { '+' }, exp.abs());
-        return out;
-    }
-    if exp >= 0 {
-        let int_len = usize::try_from(exp).unwrap_or(0) + 1;
-        if digits.len() <= int_len {
-            out.push_str(digits);
-            out.extend(std::iter::repeat_n('0', int_len - digits.len()));
-        } else {
-            out.push_str(&digits[..int_len]);
-            out.push('.');
-            out.push_str(&digits[int_len..]);
-        }
-    } else {
-        out.push_str("0.");
-        out.extend(std::iter::repeat_n(
-            '0',
-            usize::try_from(-exp - 1).unwrap_or(0),
-        ));
-        out.push_str(digits);
-    }
-    out
 }
 
 pub(crate) fn date_to_text(d: NaiveDate) -> String {
@@ -356,8 +314,12 @@ mod tests {
         assert_eq!(number_to_text(1.0), "1");
         assert_eq!(number_to_text(-42.0), "-42");
         assert_eq!(number_to_text(1.5), "1.5");
-        assert_eq!(number_to_text(0.1 + 0.2), "0.3");
-        assert_eq!(number_to_text(1e15), "1E+15");
+        assert_eq!(number_to_text(0.1 + 0.2), "0.30000000000000004");
+        assert_eq!(number_to_text(1.0 / 3.0), "0.33333333333333331");
+        assert_eq!(number_to_text(1e15), "1000000000000000");
+        assert_eq!(number_to_text(1e28), "10000000000000000000000000000");
+        assert_eq!(number_to_text(1e29), "1E+29");
+        assert_eq!(number_to_text(-0.0), "0");
         assert_eq!(number_to_text(123456.789), "123456.789");
         assert_eq!(number_to_text(0.0001), "0.0001");
         assert_eq!(number_to_text(0.00001), "1E-05");

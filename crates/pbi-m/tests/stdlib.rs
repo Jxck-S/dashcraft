@@ -567,8 +567,10 @@ fn text_combine_from_pad() {
     check(r#"Text.Combine({"a", "b"})"#, r#""ab""#);
     fails(r#"Text.Combine({"a", 1})"#, "Text");
     check("Text.From(1.5)", r#""1.5""#);
-    check("Text.From(0.1 + 0.2)", r#""0.3""#);
-    check("Text.From(1e20)", r#""1E+20""#);
+    check("Text.From(0.1 + 0.2)", r#""0.30000000000000004""#);
+    check("Text.From(1e20)", r#""100000000000000000000""#);
+    check("Text.From(1e29)", r#""1E+29""#);
+    check("Text.From(1.5e-5)", r#""1.5E-05""#);
     check("Text.From(true)", r#""true""#);
     check("Text.From(null)", "null");
     check("Text.From(#date(2024, 1, 31))", r#""1/31/2024""#);
@@ -726,6 +728,16 @@ fn number_functions() {
     check("Number.Round(2.5, 0, RoundingMode.AwayFromZero)", "3");
     check("Number.RoundUp(1.1)", "2");
     check("Number.RoundDown(-1.1)", "-2");
+    // Rounded in System.Decimal like Desktop: 2.345 and 0.29 are not shifted by binary error.
+    check("Number.Round(2.345, 2)", "2.34");
+    check("Number.RoundDown(0.29, 2)", "0.29");
+    // RoundingMode only breaks ties; the RoundX functions are directed.
+    check("Number.Round(2.4, 0, RoundingMode.Up)", "2");
+    check("Number.Round(-2.5, 0, RoundingMode.Up)", "-2");
+    check("Number.RoundAwayFromZero(-1.2)", "-2");
+    check("Number.RoundTowardZero(-1.79, 1)", "-1.7");
+    check(r#"Number.ToText(0.000123, "E2")"#, r#""1.23E-004""#);
+    check("Number.ToText(1/3)", r#""0.33333333333333331""#);
     check(r#"Number.ToText(1234.5, "N1")"#, r#""1,234.5""#);
     check("Number.ToText(42)", r#""42""#);
     check("Number.Abs(-3)", "3");
@@ -760,6 +772,15 @@ fn datetime_functions() {
     check(
         "DateTimeZone.SwitchZone(#datetimezone(2024, 1, 1, 12, 0, 0, 0, 0), 3)",
         "#datetimezone(2024, 1, 1, 15, 0, 0, 3, 0)",
+    );
+    // The offset is hours * 60 + minutes, signs taken separately.
+    check(
+        "DateTimeZone.ZoneMinutes(#datetimezone(2024, 1, 1, 12, 0, 0, -3, -30))",
+        "-30",
+    );
+    check(
+        "let z = #datetimezone(2024, 1, 1, 12, 0, 0, 3, -30) in {DateTimeZone.ZoneHours(z), DateTimeZone.ZoneMinutes(z)}",
+        "{2, 30}",
     );
     check(r#"Date.From("2024-01-31")"#, "#date(2024, 1, 31)");
     check(

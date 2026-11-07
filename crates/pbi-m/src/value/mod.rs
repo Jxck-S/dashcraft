@@ -10,6 +10,7 @@
 //! Values returned by [`crate::Engine`] are *resolved*: every reachable slot outside function
 //! bodies has been evaluated, so [`Lazy::resolved`] never needs the evaluator.
 
+pub(crate) mod digits;
 pub(crate) mod drop;
 pub(crate) mod format;
 pub(crate) mod ops;

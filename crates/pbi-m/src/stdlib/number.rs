@@ -2,9 +2,10 @@
 
 use super::Builder;
 use super::args::{arg, int_arg, num_arg, req_num, text_arg};
-use super::convert::{apply_facet, parse_number, round_half_even, to_logical, to_number};
+use super::convert::{apply_facet, parse_number, to_logical, to_number};
 use crate::eval::interp::{Interp, convert_error};
 use crate::merror::MError;
+use crate::value::digits::{Digits, Rounding, general_number, round_number};
 use crate::value::format::number_to_text;
 use crate::value::{Facet, Value};
 
@@ -48,8 +49,6 @@ pub(super) fn register(b: &mut Builder) {
     b.value("Number.PI", Value::Number(std::f64::consts::PI));
     b.value("Number.E", Value::Number(std::f64::consts::E));
     b.value("Number.Epsilon", Value::Number(f64::from_bits(1)));
-    b.value("Number.MaxValue", Value::Number(f64::MAX));
-    b.value("Number.MinValue", Value::Number(f64::MIN));
     b.value("Number.PositiveInfinity", Value::Number(f64::INFINITY));
     b.value("Number.NegativeInfinity", Value::Number(f64::NEG_INFINITY));
     b.value("Number.NaN", Value::Number(f64::NAN));
@@ -89,7 +88,7 @@ pub(super) fn register(b: &mut Builder) {
     b.func("Percentage.From", &["value", "?culture"], from);
     b.func("Logical.From", &["value"], logical_from);
     b.func("Logical.FromText", &["text"], logical_from_text);
-    b.func("Logical.ToText", &["logical"], logical_to_text);
+    b.func("Logical.ToText", &["logicalValue"], logical_to_text);
     b.consts(&[
         ("RoundingMode.Up", 0.0),
         ("RoundingMode.Down", 1.0),
@@ -123,6 +122,7 @@ fn from_text(_: &Interp, args: &[Value]) -> Result<Value, MError> {
                 message: "We couldn't convert to Number.".into(),
                 detail: Some(Box::new(Value::text(t))),
                 location: None,
+                fields: None,
             }),
     }
 }
@@ -142,25 +142,47 @@ fn group_thousands(int_part: &str) -> String {
     format!("{sign}{out}")
 }
 
+/// `F`/`N`/`P`-style text: the 15-digit buffer rounded half away from zero to `decimals`; a
+/// negative number that rounds to zero loses its sign (.NET Framework).
+fn fixed_text(mut d: Digits, decimals: usize, grouping: bool) -> String {
+    d.round(
+        i32::try_from(decimals).unwrap_or(i32::MAX),
+        Rounding::HalfAwayFromZero,
+    );
+    let (int, frac) = d.fixed_parts(decimals);
+    let sign = if d.negative && !d.is_zero() { "-" } else { "" };
+    let int = if grouping { group_thousands(&int) } else { int };
+    if decimals == 0 {
+        format!("{sign}{int}")
+    } else {
+        format!("{sign}{int}.{frac}")
+    }
+}
+
 fn fixed(n: f64, decimals: usize, grouping: bool) -> String {
-    let s = format!("{:.*}", decimals, round_half_away(n, decimals as i32));
-    if !grouping {
-        return s;
-    }
-    match s.split_once('.') {
-        Some((i, f)) => format!("{}.{f}", group_thousands(i)),
-        None => group_thousands(&s),
+    match Digits::of(n, 15) {
+        Some(d) => fixed_text(d, decimals, grouping),
+        None => number_to_text(n),
     }
 }
 
-fn round_half_away(n: f64, digits: i32) -> f64 {
-    let factor = 10f64.powi(digits);
-    let r = (n * factor).round() / factor;
-    if r.is_finite() { r } else { n }
+/// `E`-style text: `d.ddd` + `E` + sign + at least three exponent digits.
+fn exponential(n: f64, decimals: usize, e: char) -> String {
+    let Some(mut d) = Digits::of(n, 15) else {
+        return number_to_text(n);
+    };
+    if !d.is_zero() {
+        let keep = i64::try_from(decimals).unwrap_or(0) + 1 - i64::from(d.exponent()) - 1;
+        d.round(
+            i32::try_from(keep).unwrap_or(i32::MAX),
+            Rounding::HalfAwayFromZero,
+        );
+    }
+    d.scientific(Some(decimals), e, 3)
 }
 
-/// .NET-style numeric formats: `G`, `D[n]`, `F[n]`, `N[n]`, `P[n]`, `X`, and simple custom
-/// patterns (`0.00`, `#,##0.##`, `000`).
+/// .NET-style numeric formats: `G[n]`, `R`, `D[n]`, `E[n]`, `F[n]`, `N[n]`, `P[n]`, `X[n]`, and
+/// simple custom patterns (`0.00`, `#,##0.##`, `000`).
 pub(crate) fn format_number(n: f64, fmt: &str) -> Result<String, MError> {
     let precision = |rest: &str, default: usize| -> Result<usize, MError> {
         if rest.is_empty() {
@@ -173,15 +195,29 @@ pub(crate) fn format_number(n: f64, fmt: &str) -> Result<String, MError> {
         }
     };
     let mut chars = fmt.chars();
-    let first = chars.next().map(|c| c.to_ascii_uppercase());
+    let letter = chars.next();
+    let first = letter.map(|c| c.to_ascii_uppercase());
     let rest = chars.as_str();
     let standard = rest.chars().all(|c| c.is_ascii_digit());
+    let e = if letter.is_some_and(|c| c.is_ascii_lowercase()) {
+        'e'
+    } else {
+        'E'
+    };
     match first {
         None => Ok(number_to_text(n)),
-        Some('G') if standard => Ok(number_to_text(n)),
+        Some('R') if standard => Ok(number_to_text(n)),
+        Some('G') if standard => {
+            let p = precision(rest, 0)?;
+            Ok(match Digits::of(n, if p == 0 { 15 } else { p }) {
+                Some(d) if p == 0 => general_number(n, &d, 15, e),
+                Some(d) => d.general(p, e),
+                None => number_to_text(n),
+            })
+        }
         Some('D') if standard => {
             if n.fract() != 0.0 {
-                return Err(MError::expression("The 'D' format requires an integer."));
+                return Err(MError::expression("We expected an integer value."));
             }
             let width = precision(rest, 0)?;
             let i = n as i64;
@@ -191,9 +227,19 @@ pub(crate) fn format_number(n: f64, fmt: &str) -> Result<String, MError> {
                 format!("{i:0width$}")
             })
         }
+        Some('E') if standard => Ok(exponential(n, precision(rest, 6)?, e)),
         Some('F') if standard => Ok(fixed(n, precision(rest, 2)?, false)),
         Some('N') if standard => Ok(fixed(n, precision(rest, 2)?, true)),
-        Some('P') if standard => Ok(format!("{}%", fixed(n * 100.0, precision(rest, 2)?, true))),
+        Some('P') if standard => {
+            let decimals = precision(rest, 2)?;
+            Ok(match Digits::of(n, 15) {
+                Some(mut d) => {
+                    d.shift(2);
+                    format!("{}%", fixed_text(d, decimals, true))
+                }
+                None => number_to_text(n),
+            })
+        }
         Some('X') if standard && n.fract() == 0.0 && n >= 0.0 => {
             let width = precision(rest, 0)?;
             let s = format!("{:0width$X}", n as u64);
@@ -219,23 +265,27 @@ fn custom_format(n: f64, fmt: &str) -> Result<String, MError> {
         )));
     }
     let percent = suffix.contains('%') || prefix.contains('%');
-    let n = if percent { n * 100.0 } else { n };
+    let Some(mut d) = Digits::of(n, 15) else {
+        return Ok(number_to_text(n));
+    };
+    if percent {
+        d.shift(2);
+    }
     let (int_pat, frac_pat) = pattern.split_once('.').unwrap_or((pattern, ""));
     let min_dec = frac_pat.chars().filter(|&c| c == '0').count();
     let max_dec = frac_pat.chars().filter(|&c| c == '0' || c == '#').count();
     let int_min = int_pat.chars().filter(|&c| c == '0').count();
     let grouping = int_pat.contains(',');
-    let s = format!("{:.*}", max_dec, round_half_away(n, max_dec as i32));
-    let (int_part, frac_part) = s.split_once('.').unwrap_or((&s, ""));
-    let mut frac = frac_part.to_owned();
+    d.round(
+        i32::try_from(max_dec).unwrap_or(i32::MAX),
+        Rounding::HalfAwayFromZero,
+    );
+    let (int_part, mut frac) = d.fixed_parts(max_dec);
     while frac.len() > min_dec && frac.ends_with('0') {
         frac.pop();
     }
-    let (sign, digits) = match int_part.strip_prefix('-') {
-        Some(d) => ("-", d),
-        None => ("", int_part),
-    };
-    let digits = digits.trim_start_matches('0');
+    let sign = if d.negative && !d.is_zero() { "-" } else { "" };
+    let digits = int_part.trim_start_matches('0');
     let mut int_digits = format!("{digits:0>int_min$}");
     if grouping {
         int_digits = group_thousands(&int_digits);
@@ -254,24 +304,15 @@ fn to_text(_: &Interp, args: &[Value]) -> Result<Value, MError> {
     number_or_null(args, |n| Ok(Value::text(format_number(n, fmt)?)))
 }
 
-/// Rounds with an M `RoundingMode` (default `ToEven`).
+/// Rounds to `digits` decimals breaking ties with an M `RoundingMode` (default `ToEven`).
 pub(crate) fn round_with_mode(n: f64, digits: i32, mode: Option<f64>) -> Result<f64, MError> {
-    let factor = 10f64.powi(digits);
-    let scaled = n * factor;
-    let r = match mode.map(|m| m as i64) {
-        None | Some(4) => return Ok(round_half_even(n, digits)),
-        Some(0) => scaled.ceil(),
-        Some(1) => scaled.floor(),
-        Some(2) => scaled.round(),
-        Some(3) => scaled.trunc(),
-        Some(other) => {
-            return Err(MError::expression(format!(
-                "{other} is not a valid RoundingMode value."
-            )));
-        }
+    let rounding = match mode {
+        None => Rounding::HalfEven,
+        Some(m) => Rounding::from_mode(m as i64)
+            .filter(|_| m.fract() == 0.0)
+            .ok_or_else(|| MError::expression(format!("{m} is not a valid RoundingMode value.")))?,
     };
-    let r = r / factor;
-    Ok(if r.is_finite() { r } else { n })
+    Ok(round_number(n, digits, rounding))
 }
 
 fn digits_arg(args: &[Value]) -> Result<i32, MError> {
@@ -286,27 +327,27 @@ fn round(_: &Interp, args: &[Value]) -> Result<Value, MError> {
     })
 }
 
-fn round_mode(args: &[Value], mode: f64) -> Result<Value, MError> {
+fn round_directed(args: &[Value], rounding: Rounding) -> Result<Value, MError> {
     let digits = digits_arg(args)?;
     number_or_null(args, |n| {
-        Ok(Value::Number(round_with_mode(n, digits, Some(mode))?))
+        Ok(Value::Number(round_number(n, digits, rounding)))
     })
 }
 
 fn round_up(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    round_mode(args, 0.0)
+    round_directed(args, Rounding::Ceiling)
 }
 
 fn round_down(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    round_mode(args, 1.0)
+    round_directed(args, Rounding::Floor)
 }
 
 fn round_away_from_zero(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    round_mode(args, 2.0)
+    round_directed(args, Rounding::AwayFromZero)
 }
 
 fn round_toward_zero(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    round_mode(args, 3.0)
+    round_directed(args, Rounding::TowardZero)
 }
 
 fn unary(args: &[Value], f: impl FnOnce(f64) -> f64) -> Result<Value, MError> {
@@ -453,5 +494,28 @@ mod tests {
         assert_eq!(f(3.0, "000"), "003");
         assert_eq!(f(2.5, "0.##"), "2.5");
         assert_eq!(f(1.5, ""), "1.5");
+        assert_eq!(f(0.1 + 0.2, "G"), "0.3");
+        assert_eq!(f(0.1 + 0.2, "R"), "0.30000000000000004");
+        assert_eq!(f(1e21, "G"), "1000000000000000000000");
+        assert_eq!(f(1e21, "G17"), "1E+21");
+        assert_eq!(f(123456.0, "G5"), "1.2346E+05");
+        assert_eq!(f(0.000123, "E2"), "1.23E-004");
+        assert_eq!(f(1234.5, "E"), "1.234500E+003");
+        assert_eq!(f(1234.5, "e3"), "1.235e+003");
+        assert_eq!(f(-0.5, "E0"), "-5E-001");
+        assert_eq!(f(0.0, "E2"), "0.00E+000");
+        assert_eq!(f(9.99, "E1"), "1.0E+001");
+        assert_eq!(f(2.675, "F2"), "2.68");
+        assert_eq!(f(1.005, "F2"), "1.01");
+        assert_eq!(f(-0.001, "F2"), "0.00");
+        assert_eq!(f(2.5, "F0"), "3");
+        assert_eq!(f(0.1, "F20"), "0.10000000000000000000");
+        assert_eq!(f(1e21, "N0"), "1,000,000,000,000,000,000,000");
+        assert_eq!(f(1.5, "P"), "150.00%");
+        assert_eq!(f(2.675, "0.00"), "2.68");
+        assert_eq!(
+            f(123.456, "D"),
+            "Expression.Error: We expected an integer value."
+        );
     }
 }

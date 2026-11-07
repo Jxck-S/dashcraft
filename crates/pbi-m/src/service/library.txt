@@ -1,0 +1,1149 @@
+# Power BI Desktop's M standard library: every dotted name of #shared.
+# Generated from reference/groundtruth/recordings/m-library.json by
+# `DASHCRAFT_BLESS=1 cargo test -p pbi-m --test library`; do not edit by hand.
+# Tab-separated: name, kind, then for functions the required parameter count, the
+# parameters (name:type, comma-separated) and the return type; for types their
+# primitive kind; for number, text and logical constants their value as an M literal.
+# desktop 2.159.1231.0
+ADPAnalytics.Contents	function	0		any
+Access.Database	function	1	database:binary,options:nullable record	table
+AccessControlEntry.ConditionContextType	type	record
+AccessControlEntry.ConditionToIdentities	function	2	identityProvider:function,condition:function	list
+AccessControlEntry.Type	type	record
+AccessControlKind.Allow	number	1
+AccessControlKind.Deny	number	0
+AccessControlKind.Type	type	number
+Acterys.Contents	function	0		any
+Actian.Contents	function	2	server:text,database:text	any
+Action.WithErrorContext	function	2	action:action,context:text	action
+ActiveDirectory.Domains	function	0	forestRootDomainName:nullable text	table
+AdoDotNet.DataSource	function	2	providerName:text,connectionString:any,options:nullable record	table
+AdoDotNet.Query	function	3	providerName:text,connectionString:any,query:text,options:nullable record	table
+AdobeAnalytics.Cubes	function	0	options:nullable record	table
+AmazonAthena.Databases	function	1	DSN:text,role:nullable text,options:nullable record	table
+AmazonOpenSearchService.Contents	function	3	Server:text,Port:number,UseSSL:logical	table
+AmazonRedshift.Database	function	2	server:text,database:text,options:nullable record	table
+AnalysisServices.Database	function	2	server:text,database:text,options:nullable record	table
+AnalysisServices.Databases	function	1	server:text,options:nullable record	table
+Anaplan.Contents	function	2	apiUrl:text,authUrl:text	table
+Any.Type	type	any
+ApacheHiveLLAP.Database	function	3	server:text,database:text,thriftTransport:number,options:nullable record	table
+ApacheSpark.Tables	function	2	server:text,protocol:number,options:nullable record	table
+AptixInsights.Feed	function	1	url:text,query:any	table
+Arrow.Document	function	1	binary:binary,options:nullable record	any
+Arrow.FromBinary	function	1	binary:binary,options:nullable record	any
+Arrow.ToBinary	function	1	table:table,options:nullable record	any
+Asana.Tables	function	1	link:text	table
+AssembleViews.Contents	function	1	resourceUrl:text,viewAtDate:any	table
+AssembleViews.Feed	function	1	resourceUrl:text	table
+AtScale.Cubes	function	1	server:text,options:nullable record	table
+Attio.Contents	function	1	url:text,options:nullable record	table
+AutodeskConstructionCloud.Contents	function	1	region:text	table
+AutodeskConstructionCloud.Feed	function	1	region:text	table
+AutomationAnywhere.Feed	function	2	CRVersion:text,CRHostName:text	table
+AutomyDataAnalytics.Contents	function	0		table
+AzureCosmosDBForMongoDBvCore.Contents	function	1	baseURL:text,database:nullable text,collection:nullable text	table
+AzureCostManagement.Contents	function	3	scope:text,scopeValue:text,numberOfMonths:number,parameters:nullable record	table
+AzureCostManagement.Tables	function	3	scope:text,scopeValue:text,numberOfMonths:number,options:nullable record	table
+AzureDataExplorer.Contents	function	1	cluster:text,database:nullable text,tableOrQuery:nullable text,options:nullable record	table
+AzureDataExplorer.Databases	function	1	cluster:text,options:nullable record	list
+AzureDataExplorer.KqlDatabase	function	0	cluster:nullable text,database:nullable text,tableOrQuery:nullable text,options:nullable record	table
+AzureDatabaseForMySQL.Database	function	2	server:text,database:text	table
+AzureDevOpsServer.AccountContents	function	1	url:text,options:nullable record	table
+AzureDevOpsServer.AnalyticsViews	function	2	url:text,project:text,options:nullable record	table
+AzureDevOpsServer.Feed	function	1	url:text,options:nullable record	table
+AzureDevOpsServer.Views	function	3	url:text,project:text,areaPath:nullable text,options:nullable record	table
+AzureDeviceRegistry.Query	function	1	scope:text,subscriptions:nullable text,namespaces:nullable text,customAttributes:nullable text,options:nullable record	table
+AzureEnterprise.Contents	function	1	url:text,query:nullable record	binary
+AzureEnterprise.Tables	function	1	url:text	table
+AzureHiveLLAP.Database	function	2	server:text,database:text,options:nullable record	table
+AzureHorizonDB.Database	function	2	server:text,database:text,options:nullable record	table
+AzurePostgreSQL.Database	function	2	server:text,database:text,options:nullable record	table
+AzureResourceGraph.Query	function	1	query:text,scope:nullable text,subscription:nullable text,managementGroup:nullable text,options:nullable record	table
+AzureSpark.Tables	function	1	server:text,options:nullable record	table
+AzureStorage.BlobContents	function	1	url:text,options:nullable record	binary
+AzureStorage.Blobs	function	1	account:text,options:nullable record	table
+AzureStorage.DataLake	function	1	endpoint:text,options:nullable record	table
+AzureStorage.DataLakeContents	function	1	url:text,options:nullable record	binary
+AzureStorage.Tables	function	1	account:text,options:nullable record	table
+AzureTimeSeriesInsights.Contents	function	1	query:record	table
+BI360.Contents	function	1	Url:text	table
+BIConnector.Contents	function	1	dsnname:text	table
+BQECore.Contents	function	0		any
+BQL.Query	function	1	Bloomberg:text	table
+Binary.ApproximateLength	function	1	binary:nullable binary	nullable number
+Binary.Buffer	function	1	binary:nullable binary	nullable binary
+Binary.Combine	function	1	binaries:list	binary
+Binary.Compress	function	2	binary:nullable binary,compressionType:number	nullable binary
+Binary.Decompress	function	2	binary:nullable binary,compressionType:number	nullable binary
+Binary.From	function	1	value:any,encoding:nullable number	nullable binary
+Binary.FromList	function	1	list:list	binary
+Binary.FromText	function	1	text:nullable text,encoding:nullable number	nullable binary
+Binary.InferContentType	function	1	source:binary	record
+Binary.Length	function	1	binary:nullable binary	nullable number
+Binary.Range	function	2	binary:binary,offset:number,count:nullable number	binary
+Binary.Split	function	2	binary:binary,pageSize:number	list
+Binary.ToList	function	1	binary:binary	list
+Binary.ToText	function	1	binary:nullable binary,encoding:nullable number	nullable text
+Binary.Type	type	binary
+Binary.View	function	2	binary:nullable binary,handlers:record	binary
+Binary.ViewError	function	1	errorRecord:record	record
+Binary.ViewFunction	function	1	function:function	function
+BinaryEncoding.Base64	number	0
+BinaryEncoding.Hex	number	1
+BinaryEncoding.Type	type	number
+BinaryFormat.7BitEncodedSignedInteger	function	1	binary:binary	any
+BinaryFormat.7BitEncodedUnsignedInteger	function	1	binary:binary	any
+BinaryFormat.Binary	function	0	length:any	function
+BinaryFormat.Byte	function	1	binary:binary	any
+BinaryFormat.ByteOrder	function	2	binaryFormat:function,byteOrder:number	function
+BinaryFormat.Choice	function	2	binaryFormat:function,chooseFunction:function,type:nullable type,combineFunction:nullable function	function
+BinaryFormat.Decimal	function	1	binary:binary	any
+BinaryFormat.Double	function	1	binary:binary	any
+BinaryFormat.Group	function	2	binaryFormat:function,group:list,extra:nullable function,lastKey:any	function
+BinaryFormat.Length	function	2	binaryFormat:function,length:any	function
+BinaryFormat.List	function	1	binaryFormat:function,countOrCondition:any	function
+BinaryFormat.Null	function	1	binary:binary	any
+BinaryFormat.Record	function	1	record:record	function
+BinaryFormat.SignedInteger16	function	1	binary:binary	any
+BinaryFormat.SignedInteger32	function	1	binary:binary	any
+BinaryFormat.SignedInteger64	function	1	binary:binary	any
+BinaryFormat.Single	function	1	binary:binary	any
+BinaryFormat.Text	function	1	length:any,encoding:nullable number	function
+BinaryFormat.Transform	function	2	binaryFormat:function,function:function	function
+BinaryFormat.UnsignedInteger16	function	1	binary:binary	any
+BinaryFormat.UnsignedInteger32	function	1	binary:binary	any
+BinaryFormat.UnsignedInteger64	function	1	binary:binary	any
+BinaryOccurrence.Optional	number	0
+BinaryOccurrence.Repeating	number	2
+BinaryOccurrence.Required	number	1
+BinaryOccurrence.Type	type	number
+BitSightSecurityRatings.Contents	function	0	company_guid:nullable text,affects_rating_findings:nullable logical	any
+Bitbucket.Contents	function	1	url:text,options:nullable record	table
+Bitly.Contents	function	1	url:text,options:nullable record	table
+Bloomberg.Query	function	1	Bloomberg:text	table
+BufferMode.Delayed	number	2
+BufferMode.Eager	number	1
+BufferMode.Type	type	number
+BuildingConnected.Contents	function	0	rangeStart:nullable datetimezone,rangeEnd:nullable datetimezone,includeClosed:nullable logical	table
+Byte.From	function	1	value:any,culture:nullable text,roundingMode:nullable number	nullable number
+Byte.Type	type	number
+ByteOrder.BigEndian	number	1
+ByteOrder.LittleEndian	number	0
+ByteOrder.Type	type	number
+CCHTagetik.Contents	function	2	URL:text,Database:text,AW:nullable text,Dataset:nullable text	table
+CCHTagetik.Contents2	function	2	URL:text,Database:text,AW:nullable text,Dataset:nullable text,StartDate:nullable datetime,EndDate:nullable datetime	table
+CCHTagetik.Contents3	function	2	URL:text,Database:text,FinancialOptions:nullable record,AnalyticalOptions:nullable record,AdvancedOptions:nullable record	table
+CCHTagetik.Contents4	function	2	URL:text,Database:text,options:nullable record	table
+CDataConnectCloud.Contents	function	0	options:nullable record	table
+CDataConnectCloud.ContentsV2	function	0	options:nullable record	table
+Cdm.Contents	function	1	table:table	table
+Cdm.MapToEntity	function	2	table:table,columnDefinitions:any,defaultType:nullable type,defaultCdmClass:nullable text	table
+Cds.Contents	function	1	url:text,options:nullable record	any
+Cds.Entities	function	1	url:text,options:nullable record	table
+Celonis.KnowledgeModels	function	1	URL:text	table
+Celonis.Navigation	function	1	URL:text	table
+Certificate.Type	type	text
+Character.FromNumber	function	1	number:nullable number	nullable text
+Character.ToNumber	function	1	character:nullable text	nullable number
+Character.Type	type	text
+Cherwell.SavedSearches	function	2	API URL:text,Client ID:text,Locale:nullable text,Saved Search URL:nullable text	table
+ClickHouse.Database	function	2	server:text,port:number,database:nullable text,options:nullable record	table
+CloudBluePSA.Feed	function	2	url:text,filter:text	table
+Cognite.Contents	function	1	project:text,environment:nullable text	table
+CogniteDataSource.Contents	function	2	project:text,organization:text	table
+Combiner.CombineTextByDelimiter	function	1	delimiter:text,quoteStyle:nullable number	function
+Combiner.CombineTextByEachDelimiter	function	1	delimiters:list,quoteStyle:nullable number	function
+Combiner.CombineTextByLengths	function	1	lengths:list,template:nullable text	function
+Combiner.CombineTextByPositions	function	1	positions:list,template:nullable text	function
+Combiner.CombineTextByRanges	function	1	ranges:list,template:nullable text	function
+CommonDataService.Database	function	0	server:nullable text,options:nullable record	table
+Comparer.Equals	function	3	comparer:function,x:any,y:any	logical
+Comparer.FromCulture	function	1	culture:text,ignoreCase:nullable logical	function
+Comparer.Ordinal	function	2	x:any,y:any	number
+Comparer.OrdinalIgnoreCase	function	2	x:any,y:any	number
+Compression.Brotli	number	3
+Compression.Deflate	number	1
+Compression.GZip	number	0
+Compression.LZ4	number	4
+Compression.None	number	-1
+Compression.Snappy	number	2
+Compression.Type	type	number
+Compression.Zstandard	number	5
+CosmosDB.Contents	function	1	host:text,options:nullable record	table
+Csv.Document	function	1	source:any,columns:any,delimiter:any,extraValues:nullable number,encoding:nullable number	table
+CsvStyle.QuoteAfterDelimiter	number	0
+CsvStyle.QuoteAlways	number	1
+CsvStyle.Type	type	number
+Cube.AddAndExpandDimensionColumn	function	3	cube:table,dimensionSelector:any,attributeNames:list,newColumnNames:any	table
+Cube.AddMeasureColumn	function	3	cube:table,column:text,measureSelector:any	table
+Cube.ApplyParameter	function	2	cube:table,parameter:any,arguments:nullable list	table
+Cube.AttributeMemberId	function	1	attribute:any	any
+Cube.AttributeMemberProperty	function	2	attribute:any,propertyName:text	any
+Cube.CollapseAndRemoveColumns	function	2	cube:table,columnNames:list	table
+Cube.Dimensions	function	1	cube:table	table
+Cube.DisplayFolders	function	1	cube:table	table
+Cube.MeasureProperties	function	1	cube:table	table
+Cube.MeasureProperty	function	2	measure:any,propertyName:text	any
+Cube.Measures	function	1	cube:any	table
+Cube.Parameters	function	1	cube:table	table
+Cube.Properties	function	1	cube:table	table
+Cube.PropertyKey	function	1	property:any	any
+Cube.ReplaceDimensions	function	2	cube:table,dimensions:any	table
+Cube.Transform	function	2	cube:table,transforms:list	table
+Culture.Current	text
+Currency.From	function	1	value:any,culture:nullable text,roundingMode:nullable number	nullable number
+Currency.Type	type	number
+CustomerInsights.Contents	function	0	options:nullable record	table
+DB2.Database	function	2	server:text,database:text,options:nullable record	table
+DCWInsights.Feed	function	1	url:text,query:any	table
+DataLake.Contents	function	1	url:text,options:nullable record	table
+DataLake.Files	function	1	url:text,options:nullable record	table
+DataVirtuality.Database	function	2	server:text,database:text,options:nullable record	table
+DataWorld.Contents	function	0		table
+DataWorld.Dataset	function	2	owner:text,id:text,query:nullable text	table
+Databricks.Catalogs	function	2	host:text,httpPath:text,options:nullable record	table
+Databricks.Contents	function	2	host:text,httpPath:text,options:nullable record	table
+Databricks.Query	function	2	host:text,httpPath:text,options:nullable record	function
+DatabricksMultiCloud.Catalogs	function	2	host:text,httpPath:text,options:nullable record	table
+DatabricksMultiCloud.Query	function	2	host:text,httpPath:text,options:nullable record	function
+Date.AddDays	function	2	dateTime:any,numberOfDays:number	any
+Date.AddMonths	function	2	dateTime:any,numberOfMonths:number	any
+Date.AddQuarters	function	2	dateTime:any,numberOfQuarters:number	any
+Date.AddWeeks	function	2	dateTime:any,numberOfWeeks:number	any
+Date.AddYears	function	2	dateTime:any,numberOfYears:number	any
+Date.Day	function	1	dateTime:any	nullable number
+Date.DayOfWeek	function	1	dateTime:any,firstDayOfWeek:nullable number	nullable number
+Date.DayOfWeekName	function	1	date:any,culture:nullable text	nullable text
+Date.DayOfYear	function	1	dateTime:any	nullable number
+Date.DaysInMonth	function	1	dateTime:any	nullable number
+Date.EndOfDay	function	1	dateTime:any	any
+Date.EndOfMonth	function	1	dateTime:any	any
+Date.EndOfQuarter	function	1	dateTime:any	any
+Date.EndOfWeek	function	1	dateTime:any,firstDayOfWeek:nullable number	any
+Date.EndOfYear	function	1	dateTime:any	any
+Date.From	function	1	value:any,culture:nullable text	nullable date
+Date.FromText	function	1	text:nullable text,options:any	nullable date
+Date.IsInCurrentDay	function	1	dateTime:any	nullable logical
+Date.IsInCurrentMonth	function	1	dateTime:any	nullable logical
+Date.IsInCurrentQuarter	function	1	dateTime:any	nullable logical
+Date.IsInCurrentWeek	function	1	dateTime:any	nullable logical
+Date.IsInCurrentYear	function	1	dateTime:any	nullable logical
+Date.IsInNextDay	function	1	dateTime:any	nullable logical
+Date.IsInNextMonth	function	1	dateTime:any	nullable logical
+Date.IsInNextNDays	function	2	dateTime:any,days:number	nullable logical
+Date.IsInNextNMonths	function	2	dateTime:any,months:number	nullable logical
+Date.IsInNextNQuarters	function	2	dateTime:any,quarters:number	nullable logical
+Date.IsInNextNWeeks	function	2	dateTime:any,weeks:number	nullable logical
+Date.IsInNextNYears	function	2	dateTime:any,years:number	nullable logical
+Date.IsInNextQuarter	function	1	dateTime:any	nullable logical
+Date.IsInNextWeek	function	1	dateTime:any	nullable logical
+Date.IsInNextYear	function	1	dateTime:any	nullable logical
+Date.IsInPreviousDay	function	1	dateTime:any	nullable logical
+Date.IsInPreviousMonth	function	1	dateTime:any	nullable logical
+Date.IsInPreviousNDays	function	2	dateTime:any,days:number	nullable logical
+Date.IsInPreviousNMonths	function	2	dateTime:any,months:number	nullable logical
+Date.IsInPreviousNQuarters	function	2	dateTime:any,quarters:number	nullable logical
+Date.IsInPreviousNWeeks	function	2	dateTime:any,weeks:number	nullable logical
+Date.IsInPreviousNYears	function	2	dateTime:any,years:number	nullable logical
+Date.IsInPreviousQuarter	function	1	dateTime:any	nullable logical
+Date.IsInPreviousWeek	function	1	dateTime:any	nullable logical
+Date.IsInPreviousYear	function	1	dateTime:any	nullable logical
+Date.IsInYearToDate	function	1	dateTime:any	nullable logical
+Date.IsLeapYear	function	1	dateTime:any	nullable logical
+Date.Month	function	1	dateTime:any	nullable number
+Date.MonthName	function	1	date:any,culture:nullable text	nullable text
+Date.QuarterOfYear	function	1	dateTime:any	nullable number
+Date.StartOfDay	function	1	dateTime:any	any
+Date.StartOfMonth	function	1	dateTime:any	any
+Date.StartOfQuarter	function	1	dateTime:any	any
+Date.StartOfWeek	function	1	dateTime:any,firstDayOfWeek:nullable number	any
+Date.StartOfYear	function	1	dateTime:any	any
+Date.ToRecord	function	1	date:date	record
+Date.ToText	function	1	date:nullable date,options:any,culture:nullable text	nullable text
+Date.Type	type	date
+Date.WeekOfMonth	function	1	dateTime:any,firstDayOfWeek:nullable number	nullable number
+Date.WeekOfYear	function	1	dateTime:any,firstDayOfWeek:nullable number	nullable number
+Date.Year	function	1	dateTime:any	nullable number
+DateTime.AddZone	function	2	dateTime:nullable datetime,timezoneHours:number,timezoneMinutes:nullable number	nullable datetimezone
+DateTime.Date	function	1	dateTime:any	nullable date
+DateTime.FixedLocalNow	function	0		datetime
+DateTime.From	function	1	value:any,culture:nullable text	nullable datetime
+DateTime.FromFileTime	function	1	fileTime:nullable number	nullable datetime
+DateTime.FromText	function	1	text:nullable text,options:any	nullable datetime
+DateTime.IsInCurrentHour	function	1	dateTime:any	nullable logical
+DateTime.IsInCurrentMinute	function	1	dateTime:any	nullable logical
+DateTime.IsInCurrentSecond	function	1	dateTime:any	nullable logical
+DateTime.IsInNextHour	function	1	dateTime:any	nullable logical
+DateTime.IsInNextMinute	function	1	dateTime:any	nullable logical
+DateTime.IsInNextNHours	function	2	dateTime:any,hours:number	nullable logical
+DateTime.IsInNextNMinutes	function	2	dateTime:any,minutes:number	nullable logical
+DateTime.IsInNextNSeconds	function	2	dateTime:any,seconds:number	nullable logical
+DateTime.IsInNextSecond	function	1	dateTime:any	nullable logical
+DateTime.IsInPreviousHour	function	1	dateTime:any	nullable logical
+DateTime.IsInPreviousMinute	function	1	dateTime:any	nullable logical
+DateTime.IsInPreviousNHours	function	2	dateTime:any,hours:number	nullable logical
+DateTime.IsInPreviousNMinutes	function	2	dateTime:any,minutes:number	nullable logical
+DateTime.IsInPreviousNSeconds	function	2	dateTime:any,seconds:number	nullable logical
+DateTime.IsInPreviousSecond	function	1	dateTime:any	nullable logical
+DateTime.LocalNow	function	0		datetime
+DateTime.Time	function	1	dateTime:any	nullable time
+DateTime.ToRecord	function	1	dateTime:datetime	record
+DateTime.ToText	function	1	dateTime:nullable datetime,options:any,culture:nullable text	nullable text
+DateTime.Type	type	datetime
+DateTimeZone.FixedLocalNow	function	0		datetimezone
+DateTimeZone.FixedUtcNow	function	0		datetimezone
+DateTimeZone.From	function	1	value:any,culture:nullable text	nullable datetimezone
+DateTimeZone.FromFileTime	function	1	fileTime:nullable number	nullable datetimezone
+DateTimeZone.FromText	function	1	text:nullable text,options:any	nullable datetimezone
+DateTimeZone.LocalNow	function	0		datetimezone
+DateTimeZone.RemoveZone	function	1	dateTimeZone:nullable datetimezone	nullable datetime
+DateTimeZone.SwitchZone	function	2	dateTimeZone:nullable datetimezone,timezoneHours:number,timezoneMinutes:nullable number	nullable datetimezone
+DateTimeZone.ToLocal	function	1	dateTimeZone:nullable datetimezone	nullable datetimezone
+DateTimeZone.ToRecord	function	1	dateTimeZone:datetimezone	record
+DateTimeZone.ToText	function	1	dateTimeZone:nullable datetimezone,options:any,culture:nullable text	nullable text
+DateTimeZone.ToUtc	function	1	dateTimeZone:nullable datetimezone	nullable datetimezone
+DateTimeZone.Type	type	datetimezone
+DateTimeZone.UtcNow	function	0		datetimezone
+DateTimeZone.ZoneHours	function	1	dateTimeZone:nullable datetimezone	nullable number
+DateTimeZone.ZoneMinutes	function	1	dateTimeZone:nullable datetimezone	nullable number
+Day.Friday	number	5
+Day.Monday	number	1
+Day.Saturday	number	6
+Day.Sunday	number	0
+Day.Thursday	number	4
+Day.Tuesday	number	2
+Day.Type	type	number
+Day.Wednesday	number	3
+Decimal.From	function	1	value:any,culture:nullable text	nullable number
+Decimal.Type	type	number
+DeltaLake.Metadata	function	1	table:table	table
+DeltaLake.Table	function	1	directory:table,options:nullable record	any
+DeltaSharing.Contents	function	1	host:text,options:nullable record	table
+Denodo.Contents	function	1	DSN:text,debug:nullable logical,options:nullable record	table
+Diagnostics.ActivityId	function	0		nullable text
+Diagnostics.CorrelationId	function	0		nullable text
+Diagnostics.Trace	function	3	traceLevel:number,message:anynonnull,value:any,delayed:nullable logical	any
+DirectQueryCapabilities.From	function	1	value:any	table
+DocumentDB.Contents	function	1	url:text,database:nullable text,collection:nullable text,options:nullable record	table
+Double.From	function	1	value:any,culture:nullable text	nullable number
+Double.Type	type	number
+Dremio.Databases	function	1	server:text,engine:nullable text,routingTag:nullable text,routingQueue:nullable text	table
+Dremio.DatabasesV300	function	2	server:text,encryption:text,engine:nullable text,routingTag:nullable text,routingQueue:nullable text	table
+Dremio.DatabasesV370	function	2	server:text,encryption:text,engine:nullable text,routingTag:nullable text,routingQueue:nullable text,options:nullable record	table
+DremioCloud.Databases	function	1	projectId:text,engine:nullable text	table
+DremioCloud.DatabasesByServer	function	1	server:text,projectId:nullable text,engine:nullable text	table
+DremioCloud.DatabasesByServerV330	function	1	server:text,projectId:nullable text,engine:nullable text,routingTag:nullable text,routingQueue:nullable text	table
+DremioCloud.DatabasesByServerV360	function	1	server:text,projectId:nullable text,engine:nullable text,routingTag:nullable text,routingQueue:nullable text,encryption:nullable text	table
+DremioCloud.DatabasesByServerV370	function	1	server:text,projectId:nullable text,engine:nullable text,routingTag:nullable text,routingQueue:nullable text,encryption:nullable text,options:nullable record	table
+DremioTesting.Contents	function	0		any
+Duration.Days	function	1	duration:nullable duration	nullable number
+Duration.From	function	1	value:any	nullable duration
+Duration.FromText	function	1	text:nullable text	nullable duration
+Duration.Hours	function	1	duration:nullable duration	nullable number
+Duration.Minutes	function	1	duration:nullable duration	nullable number
+Duration.Seconds	function	1	duration:nullable duration	nullable number
+Duration.ToRecord	function	1	duration:duration	record
+Duration.ToText	function	1	duration:nullable duration,format:nullable text	nullable text
+Duration.TotalDays	function	1	duration:nullable duration	nullable number
+Duration.TotalHours	function	1	duration:nullable duration	nullable number
+Duration.TotalMinutes	function	1	duration:nullable duration	nullable number
+Duration.TotalSeconds	function	1	duration:nullable duration	nullable number
+Duration.Type	type	duration
+Dynamics365BusinessCentral.ApiContents	function	0	environment:nullable text,company:nullable text,apiRoute:nullable text	table
+Dynamics365BusinessCentral.ApiContentsWithOptions	function	0	environment:nullable text,company:nullable text,apiRoute:nullable text,options:nullable record	table
+Dynamics365BusinessCentral.Contents	function	0	company:nullable text	table
+Dynamics365BusinessCentral.EnvironmentContents	function	0	environment:nullable text,company:nullable text	table
+Dynamics365BusinessCentralOnPremises.Contents	function	1	url:text,company:nullable text	table
+DynamicsNav.Contents	function	1	url:text,company:nullable text	table
+DynatraceGrail.Contents	function	1	url:text,QueryInput:nullable text,options:nullable record	table
+EQuIS.Contents	function	1	baseUri:text	table
+EduFrame.Contents	function	1	domainSlug:text	table
+Embedded.Value	function	2	value:any,path:text	any
+Emigo.Contents	function	0	DataRestrictionType:nullable text,DataRestrictionValue:nullable text,DataRestrictionMode:nullable text,AuthorizationMode:nullable text	table
+Emigo.GetExtractFunction	function	1	ExtractName:text,DataRestrictionType:nullable text,DataRestrictionValue:nullable text,DataRestrictionMode:nullable text	any
+EmigoDataSourceConnector.GetExtractFunction	function	1	ExtractName:text,DataRestrictionType:nullable text,DataRestrictionValue:nullable text,DataRestrictionMode:nullable text	any
+EmigoDataSourceConnector.NavigationFunctionType	type	function
+EntersoftBusinessSuite.Contents	function	0		any
+Error.Record	function	1	reason:text,message:nullable text,detail:any,parameters:nullable list,errorCode:nullable text	record
+Essbase.Cubes	function	1	url:text,options:nullable record	table
+ExactOnlinePremium.Contents	function	0		table
+Exasol.Database	function	2	server:text,encrypted:text	table
+Excel.CurrentWorkbook	function	0		table
+Excel.RichDocument	null
+Excel.ShapeTable	function	1	table:table,options:nullable record	any
+Excel.Workbook	function	1	workbook:binary,useHeaders:any,delayTypes:nullable logical	table
+Exchange.Contents	function	0	mailboxAddress:nullable text	table
+Expression.Constant	function	1	value:any	text
+Expression.Evaluate	function	1	document:text,environment:nullable record	any
+Expression.Identifier	function	1	name:text	text
+ExtraValues.Error	number	1
+ExtraValues.Ignore	number	2
+ExtraValues.List	number	0
+ExtraValues.Type	type	number
+Fabric.Warehouse	function	0	options:nullable record	table
+FabricSql.Contents	function	0	options:nullable record	table
+FactSetAnalytics.ConnectionCheck	function	0		any
+FactSetAnalytics.Contents	function	0		table
+FactSetAnalytics.Functions	function	0		table
+FactSetRMS.Functions	function	0	options:nullable record	table
+Fhir.Contents	function	1	url:text,searchQuery:nullable text	table
+File.Contents	function	1	path:text,options:nullable record	binary
+Folder.Contents	function	1	path:text,options:nullable record	table
+Folder.Files	function	1	path:text,options:nullable record	table
+Foundry.Contents	function	1	BaseUri:text,datasetRid:nullable text,branch:nullable text	table
+Function.From	function	2	functionType:type,function:function	function
+Function.Invoke	function	2	function:function,args:list	any
+Function.InvokeAfter	function	2	function:function,delay:duration	any
+Function.InvokeWithErrorContext	function	2	function:function,context:text	any
+Function.IsDataSource	function	1	function:function	logical
+Function.ScalarVector	function	2	scalarFunctionType:type,vectorFunction:function	function
+Function.Type	type	function
+Funnel.Contents	function	0		table
+Geography.FromWellKnownText	function	1	input:nullable text	nullable record
+Geography.ToWellKnownText	function	1	input:nullable record,omitSRID:nullable logical	nullable text
+GeographyPoint.From	function	2	longitude:number,latitude:number,z:nullable number,m:nullable number,srid:nullable number	record
+Geometry.FromWellKnownText	function	1	input:nullable text	nullable record
+Geometry.ToWellKnownText	function	1	input:nullable record,omitSRID:nullable logical	nullable text
+GeometryPoint.From	function	2	x:number,y:number,z:nullable number,m:nullable number,srid:nullable number	record
+Github.Contents	function	1	url:text	any
+Github.PagedTable	function	1	url:text	any
+Github.Tables	function	2	RepositoryOwner:text,Repository:text	table
+GoogleAnalytics.Accounts	function	0	options:nullable record	table
+GoogleBigQuery.Database	function	0	options:nullable record	table
+GoogleBigQueryAad.Database	function	1	billingProject:text,options:nullable record	table
+GoogleSheets.Contents	function	1	url:text	table
+Graph.Nodes	function	1	graph:record	list
+GroupKind.Global	number	1
+GroupKind.Local	number	0
+GroupKind.Type	type	number
+Guid.From	function	1	value:nullable text	nullable text
+Guid.Type	type	text
+HdInsight.Containers	function	1	account:text	table
+HdInsight.Contents	function	1	account:text	table
+HdInsight.Files	function	2	account:text,containerName:text	table
+Hdfs.Contents	function	1	url:text	table
+Hdfs.Files	function	1	url:text	table
+HexagonSmartApi.ApplySelectList	function	2	serviceRoot:text,inputSelectListTarget:any	table
+HexagonSmartApi.ApplyUnitsOfMeasure	function	6	serviceRoot:text,unitsOfMeasureTarget:any,unitCategory:text,fromUnit:text,toUnit:text,precision:number	any
+HexagonSmartApi.ExecuteParametricFilterOnFilterRecord	function	2	url:text,filter:record,objectHierarchyName:nullable text,objectHierarchyResourceIds:nullable text,objectTypes:nullable text,queryExpression:nullable text	any
+HexagonSmartApi.ExecuteParametricFilterOnFilterUrl	function	3	url:text,filterTarget:text,parameterNames:record,objectHierarchyNameInput:nullable text,objectHierarchyResourceIdsInput:nullable text,objectTypesInput:nullable text,queryExpressionInput:nullable text	any
+HexagonSmartApi.Feed	function	1	url:text,headers:nullable text,odataFeedVersion:nullable text	table
+HexagonSmartApi.GenerateParametricFilterByFilterSourceType	function	2	serviceRoot:text,inputFilterSource:any	any
+HexagonSmartApi.GetODataMetadata	function	1	url:text,includeAnnotations:nullable logical	any
+HexagonSmartApi.Typecast	function	2	typecastTarget:any,outputType:text	function
+HiveProtocol.HTTP	number	2
+HiveProtocol.Standard	number	1
+HiveProtocol.Type	type	number
+Html.Table	function	2	html:any,columnNameSelectorPairs:list,options:nullable record	table
+IRIS.Database	function	3	host:text,port:number,namespace:text,ssl:nullable text,logs:nullable text	table
+Identity.From	function	2	identityProvider:function,value:any	record
+Identity.IsMemberOf	function	2	identity:record,collection:record	logical
+Identity.Type	type	record
+IdentityProvider.Default	function	0		any
+IdentityProvider.Type	type	function
+Impala.Database	function	1	server:text,options:nullable record	table
+Indexima.Database	function	2	server:text,port:number,ODBCdriver:nullable text,options:nullable record	table
+IndustrialAppStore.NavigationTable	function	0		any
+InformationGrid.Contents	function	1	server:text	table
+Informix.Database	function	2	server:text,database:text,options:nullable record	table
+Int16.From	function	1	value:any,culture:nullable text,roundingMode:nullable number	nullable number
+Int16.Type	type	number
+Int32.From	function	1	value:any,culture:nullable text,roundingMode:nullable number	nullable number
+Int32.Type	type	number
+Int64.From	function	1	value:any,culture:nullable text,roundingMode:nullable number	nullable number
+Int64.Type	type	number
+Int8.From	function	1	value:any,culture:nullable text,roundingMode:nullable number	nullable number
+Int8.Type	type	number
+IntersystemsHealthInsight.Database	function	5	host:text,port:number,namespace:text,ssl:text,hideSystemTables:text	table
+Intune.Contents	function	1	maxHistoryDays:number	table
+IntuneV2.Contents	function	1	dataWarehouseAsuUri:text,options:nullable record	table
+ItemExpression.From	function	1	function:function	record
+ItemExpression.Item	record
+JamfPro.Contents	function	1	jamfUrl:text	text
+JethroODBC.Database	function	2	server:text,database:text,options:nullable record	table
+JoinAlgorithm.Dynamic	number	0
+JoinAlgorithm.LeftHash	number	3
+JoinAlgorithm.LeftIndex	number	5
+JoinAlgorithm.PairwiseHash	number	1
+JoinAlgorithm.RightHash	number	4
+JoinAlgorithm.RightIndex	number	6
+JoinAlgorithm.SortMerge	number	2
+JoinAlgorithm.Type	type	number
+JoinKind.FullOuter	number	3
+JoinKind.Inner	number	0
+JoinKind.LeftAnti	number	4
+JoinKind.LeftOuter	number	1
+JoinKind.LeftSemi	number	6
+JoinKind.RightAnti	number	5
+JoinKind.RightOuter	number	2
+JoinKind.RightSemi	number	7
+JoinKind.Type	type	number
+JoinSide.Left	number	0
+JoinSide.Right	number	1
+JoinSide.Type	type	number
+Json.Document	function	1	jsonText:any,encoding:nullable number	any
+Json.FromValue	function	1	value:any,encoding:nullable number	binary
+Kognitwin.Contents	function	1	url:text	table
+Kusto.Contents	function	1	cluster:text,database:nullable text,tableOrQuery:nullable text,options:nullable record	table
+Kusto.Databases	function	1	cluster:text,options:nullable record	list
+Kyligence.Database	function	3	Server:text,Port:text,Project:text,options:nullable record	table
+KyvosODBC.Databases	function	3	server:text,httpPath:text,encryption:text	table
+LEAP.Contents	function	0		table
+Lakehouse.Contents	function	0	options:nullable record	table
+LimitClauseKind.AnsiSql2008	number	4
+LimitClauseKind.Limit	number	3
+LimitClauseKind.LimitOffset	number	2
+LimitClauseKind.None	number	0
+LimitClauseKind.Top	number	1
+LimitClauseKind.Type	type	number
+Lines.FromBinary	function	1	binary:binary,quoteStyle:any,includeLineSeparators:nullable logical,encoding:nullable number	list
+Lines.FromText	function	1	text:text,quoteStyle:any,includeLineSeparators:nullable logical	list
+Lines.ToBinary	function	1	lines:list,lineSeparator:nullable text,encoding:nullable number,includeByteOrderMark:nullable logical	binary
+Lines.ToText	function	1	lines:list,lineSeparator:nullable text	text
+Linkar.Contents	function	3	server:text,entrypoint:text,port:number,language:nullable text,freetext:nullable text,customvars:nullable text,FileName:nullable text,SelectClause:nullable text,DictClause:nullable text,SortClause:nullable text,sqlmode:nullable logical	table
+LinkedIn.SalesContracts	function	0		table
+LinkedIn.SalesContractsWithReportAccess	function	0		table
+LinkedIn.SalesNavigator	function	1	selectContracts:text,startAt:nullable date,endAt:nullable date	table
+LinkedIn.SalesNavigatorAnalytics	function	4	contractName:text,action:text,startAt:date,endAt:date	table
+LinkedIn.SalesNavigatorAnalyticsImpl	function	4	contractName:text,action:text,startAt:date,endAt:date	any
+LinkedInLearning.Contents	function	0	start_date:nullable datetime,end_date:nullable datetime	any
+List.Accumulate	function	3	list:list,seed:any,accumulator:function	any
+List.AllTrue	function	1	list:list	logical
+List.Alternate	function	2	list:list,count:number,repeatInterval:nullable number,offset:nullable number	list
+List.AnyTrue	function	1	list:list	logical
+List.Average	function	1	list:list,precision:nullable number	any
+List.Buffer	function	1	list:list	list
+List.Combine	function	1	lists:list	list
+List.ConformToPageReader	function	1	list:list,options:nullable record	table
+List.Contains	function	2	list:list,value:any,equationCriteria:any	logical
+List.ContainsAll	function	2	list:list,values:list,equationCriteria:any	logical
+List.ContainsAny	function	2	list:list,values:list,equationCriteria:any	logical
+List.Count	function	1	list:list	number
+List.Covariance	function	2	numberList1:list,numberList2:list	nullable number
+List.DateTimeZones	function	3	start:datetimezone,count:number,step:duration	list
+List.DateTimes	function	3	start:datetime,count:number,step:duration	list
+List.Dates	function	3	start:date,count:number,step:duration	list
+List.Difference	function	2	list1:list,list2:list,equationCriteria:any	list
+List.Distinct	function	1	list:list,equationCriteria:any	list
+List.Durations	function	3	start:duration,count:number,step:duration	list
+List.FindText	function	2	list:list,text:text	list
+List.First	function	1	list:list,defaultValue:any	any
+List.FirstN	function	2	list:list,countOrCondition:any	any
+List.Generate	function	3	initial:function,condition:function,next:function,selector:nullable function	list
+List.InsertRange	function	3	list:list,index:number,values:list	list
+List.Intersect	function	1	lists:list,equationCriteria:any	list
+List.IsDistinct	function	1	list:list,equationCriteria:any	logical
+List.IsEmpty	function	1	list:list	logical
+List.Last	function	1	list:list,defaultValue:any	any
+List.LastN	function	1	list:list,countOrCondition:any	any
+List.MatchesAll	function	2	list:list,condition:function	logical
+List.MatchesAny	function	2	list:list,condition:function	logical
+List.Max	function	1	list:list,default:any,comparisonCriteria:any,includeNulls:nullable logical	any
+List.MaxN	function	2	list:list,countOrCondition:any,comparisonCriteria:any,includeNulls:nullable logical	list
+List.Median	function	1	list:list,comparisonCriteria:any	any
+List.Min	function	1	list:list,default:any,comparisonCriteria:any,includeNulls:nullable logical	any
+List.MinN	function	2	list:list,countOrCondition:any,comparisonCriteria:any,includeNulls:nullable logical	list
+List.Mode	function	1	list:list,equationCriteria:any	any
+List.Modes	function	1	list:list,equationCriteria:any	list
+List.NonNullCount	function	1	list:list	number
+List.Numbers	function	2	start:number,count:number,increment:nullable number	list
+List.Percentile	function	2	list:list,percentiles:any,options:nullable record	any
+List.PositionOf	function	2	list:list,value:any,occurrence:nullable number,equationCriteria:any	any
+List.PositionOfAny	function	2	list:list,values:list,occurrence:nullable number,equationCriteria:any	any
+List.Positions	function	1	list:list	list
+List.Product	function	1	numbersList:list,precision:nullable number	nullable number
+List.Random	function	1	count:number,seed:nullable number	list
+List.Range	function	2	list:list,offset:number,count:nullable number	list
+List.RemoveFirstN	function	1	list:list,countOrCondition:any	list
+List.RemoveItems	function	2	list1:list,list2:list	list
+List.RemoveLastN	function	1	list:list,countOrCondition:any	list
+List.RemoveMatchingItems	function	2	list1:list,list2:list,equationCriteria:any	list
+List.RemoveNulls	function	1	list:list	list
+List.RemoveRange	function	2	list:list,index:number,count:nullable number	list
+List.Repeat	function	2	list:list,count:number	list
+List.ReplaceMatchingItems	function	2	list:list,replacements:list,equationCriteria:any	list
+List.ReplaceRange	function	4	list:list,index:number,count:number,replaceWith:list	list
+List.ReplaceValue	function	4	list:list,oldValue:any,newValue:any,replacer:function	list
+List.Reverse	function	1	list:list	list
+List.Select	function	2	list:list,selection:function	list
+List.Single	function	1	list:list	any
+List.SingleOrDefault	function	1	list:list,default:any	any
+List.Skip	function	1	list:list,countOrCondition:any	list
+List.Sort	function	1	list:list,comparisonCriteria:any	list
+List.Split	function	2	list:list,pageSize:number	list
+List.StandardDeviation	function	1	numbersList:list	nullable number
+List.Sum	function	1	list:list,precision:nullable number	any
+List.Times	function	3	start:time,count:number,step:duration	list
+List.Transform	function	2	list:list,transform:function	list
+List.TransformMany	function	3	list:list,collectionTransform:function,resultTransform:function	list
+List.Type	type	list
+List.Union	function	1	lists:list,equationCriteria:any	list
+List.Zip	function	1	lists:list	list
+Logical.From	function	1	value:any	nullable logical
+Logical.FromText	function	1	text:nullable text	nullable logical
+Logical.ToText	function	1	logicalValue:nullable logical	nullable text
+Logical.Type	type	logical
+MailChimp.Collection	function	1	path:text,entityName:nullable text	table
+MailChimp.Instance	function	1	path:text	table
+MailChimp.Tables	function	0		table
+MailChimp.TablesV2	function	0		table
+MariaDB.Contents	function	1	MariaDB Data Source:text,database:nullable text,CreateNavigationProperties:nullable logical	table
+MarkLogicODBC.Contents	function	2	server:text,port:number	table
+Marketo.Activities	function	3	url:text,startTime:date,activityIds:list	table
+Marketo.Leads	function	2	url:text,leadIds:list,options:any	table
+Marketo.Tables	function	2	url:text,QueryStart:date	table
+MicroStrategyDataset.Contents	function	1	libraryUrl:text,authMode:nullable text,options:nullable record	table
+MicroStrategyDataset.TestConnection	function	1	libraryUrl:text	any
+MicrosoftAzureDataManagerForEnergy.Search	function	4	serviceName:text,dataPartition:text,kind:text,query:text,limit:nullable number,returnedFields:nullable text	table
+MicrosoftGraphSecurity.Contents	function	1	version:text,options:nullable record	table
+MicrosoftSentinel.Contents	function	1	cluster:text,database:nullable text,tableOrQuery:nullable text,options:nullable record	table
+MissingField.Error	number	0
+MissingField.Ignore	number	1
+MissingField.Type	type	number
+MissingField.UseNull	number	2
+Mixpanel.Contents	function	1	url:text	any
+Mixpanel.Export	function	2	fromDate:text,toDate:text,events:nullable list,bucket:nullable text	any
+Mixpanel.FunnelById	function	1	funnelId:number,fromDate:nullable text,toDate:nullable text,length:nullable number,interval:nullable number	any
+Mixpanel.FunnelByName	function	1	funnelName:text,fromDate:nullable text,toDate:nullable text,length:nullable number,interval:nullable number	any
+Mixpanel.Funnels	function	0		any
+Mixpanel.Segmentation	function	3	event:text,fromDate:text,toDate:text,whereClause:nullable text,unit:nullable text,interval:nullable number,countType:nullable text,onProperty:nullable text,limit:nullable number,where:nullable text	any
+Mixpanel.Tables	function	0		any
+Module.Versions	function	0		record
+MongoDBAtlasODBC.Contents	function	2	mongodbUri:text,database:text,options:nullable record	table
+MongoDBAtlasODBC.Query	function	3	mongoDbUri:any,database:any,query:any,options:any	any
+MySQL.Database	function	2	server:text,database:text,options:nullable record	table
+Netezza.Database	function	2	server:text,database:text,options:nullable record	table
+None.Type	type	none
+Null.Type	type	null
+Number.Abs	function	1	number:nullable number	nullable number
+Number.Acos	function	1	number:nullable number	nullable number
+Number.Asin	function	1	number:nullable number	nullable number
+Number.Atan	function	1	number:nullable number	nullable number
+Number.Atan2	function	2	y:nullable number,x:nullable number	nullable number
+Number.BitwiseAnd	function	2	number1:nullable number,number2:nullable number	nullable number
+Number.BitwiseNot	function	1	number:any	any
+Number.BitwiseOr	function	2	number1:nullable number,number2:nullable number	nullable number
+Number.BitwiseShiftLeft	function	2	number1:nullable number,number2:nullable number	nullable number
+Number.BitwiseShiftRight	function	2	number1:nullable number,number2:nullable number	nullable number
+Number.BitwiseXor	function	2	number1:nullable number,number2:nullable number	nullable number
+Number.Combinations	function	2	setSize:nullable number,combinationSize:nullable number	nullable number
+Number.Cos	function	1	number:nullable number	nullable number
+Number.Cosh	function	1	number:nullable number	nullable number
+Number.E	number	2.718281828459045
+Number.Epsilon	number	5e-324
+Number.Exp	function	1	number:nullable number	nullable number
+Number.Factorial	function	1	number:nullable number	nullable number
+Number.From	function	1	value:any,culture:nullable text	nullable number
+Number.FromText	function	1	text:nullable text,culture:nullable text	nullable number
+Number.IntegerDivide	function	2	number1:nullable number,number2:nullable number,precision:nullable number	nullable number
+Number.IsEven	function	1	number:number	logical
+Number.IsNaN	function	1	number:number	logical
+Number.IsOdd	function	1	number:number	logical
+Number.Ln	function	1	number:nullable number	nullable number
+Number.Log	function	1	number:nullable number,base:nullable number	nullable number
+Number.Log10	function	1	number:nullable number	nullable number
+Number.Mod	function	2	number:nullable number,divisor:nullable number,precision:nullable number	nullable number
+Number.NaN	number	#nan
+Number.NegativeInfinity	number	-#infinity
+Number.PI	number	3.141592653589793
+Number.Permutations	function	2	setSize:nullable number,permutationSize:nullable number	nullable number
+Number.PositiveInfinity	number	#infinity
+Number.Power	function	2	number:nullable number,power:nullable number	nullable number
+Number.Random	function	0		number
+Number.RandomBetween	function	2	bottom:number,top:number	number
+Number.Round	function	1	number:nullable number,digits:nullable number,roundingMode:nullable number	nullable number
+Number.RoundAwayFromZero	function	1	number:nullable number,digits:nullable number	nullable number
+Number.RoundDown	function	1	number:nullable number,digits:nullable number	nullable number
+Number.RoundTowardZero	function	1	number:nullable number,digits:nullable number	nullable number
+Number.RoundUp	function	1	number:nullable number,digits:nullable number	nullable number
+Number.Sign	function	1	number:nullable number	nullable number
+Number.Sin	function	1	number:nullable number	nullable number
+Number.Sinh	function	1	number:nullable number	nullable number
+Number.Sqrt	function	1	number:nullable number	nullable number
+Number.Tan	function	1	number:nullable number	nullable number
+Number.Tanh	function	1	number:nullable number	nullable number
+Number.ToText	function	1	number:nullable number,format:nullable text,culture:nullable text	nullable text
+Number.Type	type	number
+OData.Feed	function	1	serviceUri:text,headers:nullable record,options:any	any
+ODataOmitValues.Nulls	text	"nulls"
+ODataOmitValues.Type	type	text
+Occurrence.All	number	2
+Occurrence.First	number	0
+Occurrence.Last	number	1
+Occurrence.Optional	number	0
+Occurrence.Repeating	number	2
+Occurrence.Required	number	1
+Occurrence.Type	type	number
+Odbc.DataSource	function	1	connectionString:any,options:nullable record	table
+Odbc.InferOptions	function	1	connectionString:any	record
+Odbc.Query	function	2	connectionString:any,query:text,options:nullable record	table
+Office.InferChartPropertiesGenerator	null
+OleDb.DataSource	function	1	connectionString:any,options:nullable record	table
+OleDb.Query	function	2	connectionString:any,query:text,options:nullable record	table
+OneLake.Contents	function	1	path:text,options:nullable record	table
+OneLake.SqlAnalytics	function	3	workspace:text,database:text,artifactType:text,options:nullable record	table
+OneStream.Navigation	function	1	OneStreamURL:text	any
+OpenSearchProject.Contents	function	3	Server:text,Port:number,UseSSL:logical	table
+Oracle.Database	function	1	server:text,options:nullable record	table
+Order.Ascending	number	0
+Order.Descending	number	1
+Order.Type	type	number
+Parquet.Document	function	1	binary:binary,options:nullable record	any
+Parquet.Metadata	function	1	binary:binary	any
+Password.Type	type	text
+Paxata.Contents	function	1	url:text	table
+Pdf.Tables	function	1	pdf:binary,options:nullable record	table
+Percentage.From	function	1	value:any,culture:nullable text	nullable number
+Percentage.Type	type	number
+PercentileMode.ExcelExc	number	2
+PercentileMode.ExcelInc	number	1
+PercentileMode.SqlCont	number	4
+PercentileMode.SqlDisc	number	3
+PercentileMode.Type	type	number
+PlanviewEnterprise.CallQueryService	function	3	url:text,database:text,sqlQueryString:text	table
+PlanviewEnterprise.Feed	function	2	url:text,database:text	table
+PlanviewOKR.Contents	function	1	ODataURL:text	table
+PlanviewProjectplace.Contents	function	1	ODataURL:text	table
+PostgreSQL.Database	function	2	server:text,database:text,options:nullable record	table
+PowerBI.Dataflows	function	0	options:nullable record	table
+PowerBI.Datamarts	function	0	server:nullable text	table
+PowerPlatform.Dataflows	function	0	options:nullable record	table
+PowerPoint.Presentation	null
+Precision.Decimal	number	1
+Precision.Double	number	0
+Precision.Type	type	number
+ProductInsights.Contents	function	0		table
+ProductInsights.QueryMetric	function	1	urlAndQuery:text	any
+Profisee.Tables	function	1	url:text	table
+Progress.DataSourceProgress	function	0		any
+Projectplace.Feed	function	1	ODataURL:text	table
+Python.Execute	function	1	script:text,arguments:nullable record	table
+QubolePresto.Contents	function	1	dsn:text	any
+QuickBase.Contents	function	1	url:text	table
+QuickBooks.Query	function	1	query:text,schema:nullable type	table
+QuickBooks.Report	function	1	urlFragment:text	table
+QuickBooks.Tables	function	0		any
+QuoteStyle.Csv	number	1
+QuoteStyle.None	number	0
+QuoteStyle.Type	type	number
+R.Execute	function	1	script:text,arguments:nullable record	table
+RData.FromBinary	function	1	stream:binary	any
+RankKind.Competition	number	0
+RankKind.Dense	number	1
+RankKind.Ordinal	number	2
+RankKind.Type	type	number
+Record.AddField	function	3	record:record,fieldName:text,value:any,delayed:nullable logical	record
+Record.Combine	function	1	records:list	record
+Record.Field	function	2	record:record,field:text	any
+Record.FieldCount	function	1	record:record	number
+Record.FieldNames	function	1	record:record	list
+Record.FieldOrDefault	function	2	record:nullable record,field:text,defaultValue:any	any
+Record.FieldValues	function	1	record:record	list
+Record.FromList	function	2	list:list,fields:any	record
+Record.FromTable	function	1	table:table	record
+Record.HasFields	function	2	record:record,fields:any	logical
+Record.RemoveFields	function	2	record:record,fields:any,missingField:nullable number	record
+Record.RenameFields	function	2	record:record,renames:list,missingField:nullable number	record
+Record.ReorderFields	function	2	record:record,fieldOrder:list,missingField:nullable number	record
+Record.SelectFields	function	2	record:record,fields:any,missingField:nullable number	record
+Record.ToList	function	1	record:record	list
+Record.ToTable	function	1	record:record	table
+Record.TransformFields	function	2	record:record,transformOperations:list,missingField:nullable number	record
+Record.Type	type	record
+RelativePosition.FromEnd	number	1
+RelativePosition.FromStart	number	0
+RelativePosition.Type	type	number
+Replacer.ReplaceText	function	3	text:nullable text,old:text,new:text	nullable text
+Replacer.ReplaceValue	function	3	value:any,old:any,new:any	any
+Resource.Access	function	1	resource:any,nativeQuery:nullable text,options:nullable record	any
+Roamler.Contents	function	0		any
+RoundingMode.AwayFromZero	number	2
+RoundingMode.Down	number	1
+RoundingMode.ToEven	number	4
+RoundingMode.TowardZero	number	3
+RoundingMode.Type	type	number
+RoundingMode.Up	number	0
+RowExpression.Column	function	1	columnName:text	record
+RowExpression.From	function	1	function:function	record
+RowExpression.Row	record
+SDMX.Contents	function	2	url:text,Option:text,Language:nullable text	table
+Salesforce.Data	function	0	loginUrl:any,options:nullable record	table
+Salesforce.Reports	function	0	loginUrl:nullable text,options:nullable record	table
+Samsara.Records	function	2	Region:text,RangeStart:text,RangeEnd:nullable text	table
+SapBusinessWarehouse.Cubes	function	3	server:text,systemNumberOrSystemId:text,clientId:text,optionsOrLogonGroup:any,options:nullable record	table
+SapBusinessWarehouseExecutionMode.BasXml	number	64
+SapBusinessWarehouseExecutionMode.BasXmlGzip	number	65
+SapBusinessWarehouseExecutionMode.DataStream	number	66
+SapBusinessWarehouseExecutionMode.Type	type	number
+SapHana.Database	function	1	server:text,options:nullable record	table
+SapHanaDistribution.All	number	3
+SapHanaDistribution.Connection	number	1
+SapHanaDistribution.Off	number	0
+SapHanaDistribution.Statement	number	2
+SapHanaDistribution.Type	type	number
+SapHanaRangeOperator.Equals	number	4
+SapHanaRangeOperator.GreaterThan	number	0
+SapHanaRangeOperator.GreaterThanOrEquals	number	2
+SapHanaRangeOperator.LessThan	number	1
+SapHanaRangeOperator.LessThanOrEquals	number	3
+SapHanaRangeOperator.NotEquals	number	5
+SapHanaRangeOperator.Type	type	number
+SharePoint.Contents	function	1	url:text,options:nullable record	table
+SharePoint.Files	function	1	url:text,options:nullable record	table
+SharePoint.Tables	function	1	url:text,options:nullable record	table
+ShortcutsBI.Contents	function	0		table
+Single.From	function	1	value:any,culture:nullable text	nullable number
+Single.Type	type	number
+SingleStoreODBC.Contents	function	2	ServerAddr:text,Database:text,options:nullable record	table
+SingleStoreODBC.DataSource	function	2	ServerAddr:text,Database:text,UseSSL:nullable logical	table
+SingleStoreODBC.Database	function	2	ServerAddr:text,Database:text,UseSSL:nullable logical	table
+SingleStoreODBC.Query	function	2	ServerAddr:text,Database:text,Query:nullable text	table
+Siteimprove.Contents	function	0		table
+Smartsheet.Content	function	1	endpoint:text	any
+Smartsheet.Query	function	3	endpoint:text,args:text,headers:record	any
+Smartsheet.Tables	function	0		table
+SmartsheetGlobal.Contents	function	1	region:text,options:nullable record	table
+SmartsheetGlobal.Query	function	4	region:text,endpoint:text,args:text,headers:record,options:nullable record	any
+Snowflake.Databases	function	2	server:text,warehouse:text,options:nullable record	table
+Soda.Feed	function	1	url:text	table
+SoftOneBI.Contents	function	0		table
+SolarWindsServiceDesk.Contents	function	0		any
+SolarWindsServiceDesk.ContentsV110	function	0	RangeStart:nullable datetime,RangeEnd:nullable datetime	any
+SolarWindsServiceDesk.ContentsV113	function	0	RangeStart:nullable datetime,RangeEnd:nullable datetime,CustomFieldsStr:nullable text	any
+Spark.Tables	function	2	server:text,protocol:number,options:nullable record	table
+SparkPost.GetList	function	1	Path:text	table
+SparkPost.GetTable	function	4	DaysToAggregate:number,MetricColumns:text,NonMetricColumns:text,Path:text	table
+SparkPost.NavTable	function	1	DaysToAggregate:number	table
+SparkProtocol.Azure	number	1
+SparkProtocol.HTTP	number	2
+SparkProtocol.Standard	number	0
+SparkProtocol.Type	type	number
+Spigit.Contents	function	1	ODataURL:text	table
+Splitter.SplitByNothing	function	0		function
+Splitter.SplitTextByAnyDelimiter	function	1	delimiters:list,quoteStyle:nullable number,startAtEnd:nullable logical	function
+Splitter.SplitTextByCharacterTransition	function	2	before:anynonnull,after:anynonnull	function
+Splitter.SplitTextByDelimiter	function	1	delimiter:text,quoteStyle:nullable number,csvStyle:nullable number	function
+Splitter.SplitTextByEachDelimiter	function	1	delimiters:list,quoteStyle:nullable number,startAtEnd:nullable logical	function
+Splitter.SplitTextByLengths	function	1	lengths:list,startAtEnd:nullable logical	function
+Splitter.SplitTextByPositions	function	1	positions:list,startAtEnd:nullable logical	function
+Splitter.SplitTextByRanges	function	1	ranges:list,startAtEnd:nullable logical	function
+Splitter.SplitTextByRepeatedLengths	function	1	length:number,startAtEnd:nullable logical	function
+Splitter.SplitTextByWhitespace	function	0	quoteStyle:nullable number	function
+Sql.Database	function	2	server:text,database:text,options:nullable record	table
+Sql.Databases	function	1	server:text,options:nullable record	table
+SqlExpression.SchemaFrom	function	1	schema:any	any
+SqlExpression.ToExpression	function	2	sql:text,environment:record	text
+StarburstAad.Contents	function	2	Host:text,Port:number,options:nullable record	table
+StarburstPresto.Contents	function	2	Host:text,Port:number,options:nullable record	table
+Stripe.Contents	function	1	method:text,query:nullable record,pageLimit:nullable number	table
+Stripe.Method	function	3	method:text,additionalParameters:record,ColumnNames:list	table
+Stripe.Tables	function	0		table
+SumTotal.ODataFeed	function	1	url:text	table
+Supermetrics.Render	function	0		table
+Supermetrics.Test	function	0		any
+SurveyMonkey.Contents	function	0		table
+SweetIQ.Contents	function	0	clientId:nullable text,path:nullable text,optionalParameter:nullable text	any
+SweetIQ.Tables	function	0		any
+Sybase.Database	function	2	server:text,database:text,options:nullable record	table
+Synapse.Contents	function	0	option:nullable record	table
+Table.AddColumn	function	3	table:table,newColumnName:text,columnGenerator:function,columnType:nullable type	table
+Table.AddFuzzyClusterColumn	function	3	table:table,columnName:text,newColumnName:text,options:nullable record	table
+Table.AddIndexColumn	function	2	table:table,newColumnName:text,initialValue:nullable number,increment:nullable number,columnType:nullable type	table
+Table.AddJoinColumn	function	5	table1:table,key1:any,table2:any,key2:any,newColumnName:text	table
+Table.AddKey	function	3	table:table,columns:list,isPrimary:logical	table
+Table.AddRankColumn	function	3	table:table,newColumnName:text,comparisonCriteria:any,options:nullable record	table
+Table.AggregateTableColumn	function	3	table:table,column:text,aggregations:list	table
+Table.AlternateRows	function	4	table:table,offset:number,skip:number,take:number	table
+Table.ApproximateRowCount	function	1	table:table	number
+Table.Buffer	function	1	table:table,options:nullable record	table
+Table.ClearDown	function	2	table:table,columns:list	table
+Table.Column	function	2	table:table,column:text	list
+Table.ColumnCount	function	1	table:table	number
+Table.ColumnNames	function	1	table:table	list
+Table.ColumnsOfType	function	2	table:table,listOfTypes:list	list
+Table.Combine	function	1	tables:list,columns:any	table
+Table.CombineColumns	function	4	table:table,sourceColumns:list,combiner:function,column:text	table
+Table.CombineColumnsToRecord	function	3	table:table,newColumnName:text,sourceColumns:list,options:nullable record	table
+Table.ConformToPageReader	function	2	table:table,shapingFunction:function	table
+Table.Contains	function	2	table:table,row:record,equationCriteria:any	logical
+Table.ContainsAll	function	2	table:table,rows:list,equationCriteria:any	logical
+Table.ContainsAny	function	2	table:table,rows:list,equationCriteria:any	logical
+Table.DemoteHeaders	function	1	table:table	table
+Table.Distinct	function	1	table:table,equationCriteria:any	table
+Table.DuplicateColumn	function	3	table:table,columnName:text,newColumnName:text,columnType:nullable type	table
+Table.ExpandListColumn	function	2	table:table,column:text	table
+Table.ExpandRecordColumn	function	3	table:table,column:text,fieldNames:list,newColumnNames:nullable list	table
+Table.ExpandTableColumn	function	3	table:table,column:text,columnNames:list,newColumnNames:nullable list	table
+Table.FillDown	function	2	table:table,columns:list	table
+Table.FillUp	function	2	table:table,columns:list	table
+Table.FilterWithDataTable	function	2	table:table,dataTableIdentifier:text	any
+Table.FindText	function	2	table:table,text:text	table
+Table.First	function	1	table:table,default:any	any
+Table.FirstN	function	2	table:table,countOrCondition:any	table
+Table.FirstValue	function	1	table:table,default:any	any
+Table.FromColumns	function	1	lists:list,columns:any	table
+Table.FromList	function	1	list:list,splitter:nullable function,columns:any,default:any,extraValues:nullable number	table
+Table.FromPartitions	function	2	partitionColumn:text,partitions:list,partitionColumnType:nullable type	table
+Table.FromRecords	function	1	records:list,columns:any,missingField:nullable number	table
+Table.FromRows	function	1	rows:list,columns:any	table
+Table.FromValue	function	1	value:any,options:nullable record	table
+Table.FuzzyGroup	function	3	table:table,key:any,aggregatedColumns:list,options:nullable record	table
+Table.FuzzyJoin	function	4	table1:table,key1:any,table2:table,key2:any,joinKind:nullable number,joinOptions:nullable record	table
+Table.FuzzyNestedJoin	function	5	table1:table,key1:any,table2:table,key2:any,newColumnName:text,joinKind:nullable number,joinOptions:nullable record	table
+Table.Group	function	3	table:table,key:any,aggregatedColumns:list,groupKind:nullable number,comparer:nullable function	table
+Table.HasColumns	function	2	table:table,columns:any	logical
+Table.InsertRows	function	3	table:table,offset:number,rows:list	table
+Table.IsDistinct	function	1	table:table,comparisonCriteria:any	logical
+Table.IsEmpty	function	1	table:table	logical
+Table.Join	function	4	table1:table,key1:any,table2:table,key2:any,joinKind:nullable number,joinAlgorithm:nullable number,keyEqualityComparers:nullable list	table
+Table.Keys	function	1	table:table	list
+Table.Last	function	1	table:table,default:any	any
+Table.LastN	function	2	table:table,countOrCondition:any	table
+Table.MatchesAllRows	function	2	table:table,condition:function	logical
+Table.MatchesAnyRows	function	2	table:table,condition:function	logical
+Table.Max	function	2	table:table,comparisonCriteria:any,default:any	any
+Table.MaxN	function	3	table:table,comparisonCriteria:any,countOrCondition:any	table
+Table.Min	function	2	table:table,comparisonCriteria:any,default:any	any
+Table.MinN	function	3	table:table,comparisonCriteria:any,countOrCondition:any	table
+Table.NestedJoin	function	5	table1:table,key1:any,table2:any,key2:any,newColumnName:text,joinKind:nullable number,keyEqualityComparers:nullable list	table
+Table.Partition	function	4	table:table,column:text,groups:number,hash:function	list
+Table.PartitionKey	function	1	table:table	nullable list
+Table.PartitionValues	function	1	table:table	table
+Table.Pivot	function	4	table:table,pivotValues:list,attributeColumn:text,valueColumn:text,aggregationFunction:nullable function	table
+Table.PositionOf	function	2	table:table,row:record,occurrence:any,equationCriteria:any	any
+Table.PositionOfAny	function	2	table:table,rows:list,occurrence:nullable number,equationCriteria:any	any
+Table.PrefixColumns	function	2	table:table,prefix:text	table
+Table.Profile	function	1	table:table,additionalAggregates:nullable list	table
+Table.PromoteHeaders	function	1	table:table,options:nullable record	table
+Table.Range	function	2	table:table,offset:number,count:nullable number	table
+Table.RemoveColumns	function	2	table:table,columns:any,missingField:nullable number	table
+Table.RemoveFirstN	function	1	table:table,countOrCondition:any	table
+Table.RemoveLastN	function	1	table:table,countOrCondition:any	table
+Table.RemoveMatchingRows	function	2	table:table,rows:list,equationCriteria:any	table
+Table.RemoveRows	function	2	table:table,offset:number,count:nullable number	table
+Table.RemoveRowsWithErrors	function	1	table:table,columns:nullable list	table
+Table.RenameColumns	function	2	table:table,renames:list,missingField:nullable number	table
+Table.ReorderColumns	function	2	table:table,columnOrder:list,missingField:nullable number	table
+Table.Repeat	function	2	table:table,count:number	table
+Table.ReplaceErrorValues	function	2	table:table,errorReplacement:list	table
+Table.ReplaceKeys	function	2	table:table,keys:list	table
+Table.ReplaceMatchingRows	function	2	table:table,replacements:list,equationCriteria:any	table
+Table.ReplacePartitionKey	function	2	table:table,partitionKey:nullable list	table
+Table.ReplaceRelationshipIdentity	function	2	value:any,identity:text	any
+Table.ReplaceRows	function	4	table:table,offset:number,count:number,rows:list	table
+Table.ReplaceValue	function	5	table:table,oldValue:any,newValue:any,replacer:function,columnsToSearch:list	table
+Table.ReverseRows	function	1	table:table	table
+Table.RowCount	function	1	table:table	number
+Table.Schema	function	1	table:table	table
+Table.SelectColumns	function	2	table:table,columns:any,missingField:nullable number	table
+Table.SelectRows	function	2	table:table,condition:function	table
+Table.SelectRowsWithErrors	function	1	table:table,columns:nullable list	table
+Table.SingleRow	function	1	table:table	record
+Table.Skip	function	1	table:table,countOrCondition:any	table
+Table.Sort	function	2	table:table,comparisonCriteria:any	table
+Table.Split	function	2	table:table,pageSize:number	list
+Table.SplitAt	function	2	table:table,count:number	list
+Table.SplitColumn	function	3	table:table,sourceColumn:text,splitter:function,columnNamesOrNumber:any,default:any,extraColumns:any	table
+Table.StopFolding	function	1	table:table	table
+Table.ToColumns	function	1	table:table	list
+Table.ToList	function	1	table:table,combiner:nullable function	list
+Table.ToRecords	function	1	table:table	list
+Table.ToRows	function	1	table:table	list
+Table.TransformColumnNames	function	2	table:table,nameGenerator:function,options:nullable record	table
+Table.TransformColumnTypes	function	2	table:table,typeTransformations:list,culture:any	table
+Table.TransformColumns	function	2	table:table,transformOperations:list,defaultTransformation:nullable function,missingField:nullable number	table
+Table.TransformRows	function	2	table:table,transform:function	list
+Table.Transpose	function	1	table:table,columns:any	table
+Table.Type	type	table
+Table.Unpivot	function	4	table:table,pivotColumns:list,attributeColumn:text,valueColumn:text	table
+Table.UnpivotOtherColumns	function	4	table:table,pivotColumns:list,attributeColumn:text,valueColumn:text	table
+Table.View	function	2	table:nullable table,handlers:record	table
+Table.ViewError	function	1	errorRecord:record	record
+Table.ViewFunction	function	1	function:function	function
+Table.WithErrorContext	function	2	value:any,context:text	any
+Tables.GetRelationships	function	1	tables:table,dataColumn:nullable text	table
+TeamDesk.Database	function	1	url:text	table
+TeamDesk.Select	function	1	url:text,table:nullable text,columns:any,filter:nullable text,orderBy:any	table
+TeamDesk.SelectView	function	1	url:text,table:nullable text,view:nullable text,filter:nullable text	table
+TeamsAnalytics.Contents	function	0		table
+Tenforce.Contents	function	3	ApplicationUrl:text,ListId:text,DataType:text	table
+Teradata.Database	function	1	server:text,options:nullable record	table
+Text.AfterDelimiter	function	2	text:nullable text,delimiter:text,index:any	any
+Text.At	function	2	text:nullable text,index:number	nullable text
+Text.BeforeDelimiter	function	2	text:nullable text,delimiter:text,index:any	any
+Text.BetweenDelimiters	function	3	text:nullable text,startDelimiter:text,endDelimiter:text,startIndex:any,endIndex:any	any
+Text.Clean	function	1	text:nullable text	nullable text
+Text.Combine	function	1	texts:list,separator:nullable text	text
+Text.Contains	function	2	text:nullable text,substring:text,comparer:nullable function	nullable logical
+Text.End	function	2	text:nullable text,count:number	nullable text
+Text.EndsWith	function	2	text:nullable text,substring:text,comparer:nullable function	nullable logical
+Text.Format	function	2	formatString:text,arguments:any,culture:nullable text	text
+Text.From	function	1	value:any,culture:nullable text	nullable text
+Text.FromBinary	function	1	binary:nullable binary,encoding:nullable number	nullable text
+Text.InferNumberType	function	1	text:text,culture:nullable text	type
+Text.Insert	function	3	text:nullable text,offset:number,newText:text	nullable text
+Text.Length	function	1	text:nullable text	nullable number
+Text.Lower	function	1	text:nullable text,culture:nullable text	nullable text
+Text.Middle	function	2	text:nullable text,start:number,count:nullable number	nullable text
+Text.NewGuid	function	0		text
+Text.PadEnd	function	2	text:nullable text,count:number,character:nullable text	nullable text
+Text.PadStart	function	2	text:nullable text,count:number,character:nullable text	nullable text
+Text.PositionOf	function	2	text:text,substring:text,occurrence:nullable number,comparer:nullable function	any
+Text.PositionOfAny	function	2	text:text,characters:list,occurrence:nullable number	any
+Text.Proper	function	1	text:nullable text,culture:nullable text	nullable text
+Text.Range	function	2	text:nullable text,offset:number,count:nullable number	nullable text
+Text.Remove	function	2	text:nullable text,removeChars:any	nullable text
+Text.RemoveRange	function	2	text:nullable text,offset:number,count:nullable number	nullable text
+Text.Repeat	function	2	text:nullable text,count:number	nullable text
+Text.Replace	function	3	text:nullable text,old:text,new:text	nullable text
+Text.ReplaceRange	function	4	text:nullable text,offset:number,count:number,newText:text	nullable text
+Text.Reverse	function	1	text:nullable text	nullable text
+Text.Select	function	2	text:nullable text,selectChars:any	nullable text
+Text.Split	function	2	text:text,separator:text	list
+Text.SplitAny	function	2	text:text,separators:text	list
+Text.Start	function	2	text:nullable text,count:number	nullable text
+Text.StartsWith	function	2	text:nullable text,substring:text,comparer:nullable function	nullable logical
+Text.ToBinary	function	1	text:nullable text,encoding:nullable number,includeByteOrderMark:nullable logical	nullable binary
+Text.ToList	function	1	text:text	list
+Text.Trim	function	1	text:nullable text,trim:any	nullable text
+Text.TrimEnd	function	1	text:nullable text,trim:any	nullable text
+Text.TrimStart	function	1	text:nullable text,trim:any	nullable text
+Text.Type	type	text
+Text.Upper	function	1	text:nullable text,culture:nullable text	nullable text
+TextEncoding.Ascii	number	20127
+TextEncoding.BigEndianUnicode	number	1201
+TextEncoding.Type	type	number
+TextEncoding.Unicode	number	1200
+TextEncoding.Utf16	number	1200
+TextEncoding.Utf8	number	65001
+TextEncoding.Windows	number	1252
+TibcoTdv.DataSource	function	1	dsn:text,advancedOptions:nullable text,options:nullable record	table
+Time.EndOfHour	function	1	dateTime:any	any
+Time.From	function	1	value:any,culture:nullable text	nullable time
+Time.FromText	function	1	text:nullable text,options:any	nullable time
+Time.Hour	function	1	dateTime:any	nullable number
+Time.Minute	function	1	dateTime:any	nullable number
+Time.Second	function	1	dateTime:any	nullable number
+Time.StartOfHour	function	1	dateTime:any	any
+Time.ToRecord	function	1	time:time	record
+Time.ToText	function	1	time:nullable time,options:any,culture:nullable text	nullable text
+Time.Type	type	time
+TimeSeriesInsights.Contents	function	1	query:record	table
+TimeZone.Current	text
+TraceLevel.Critical	number	1
+TraceLevel.Error	number	2
+TraceLevel.Information	number	8
+TraceLevel.Type	type	number
+TraceLevel.Verbose	number	16
+TraceLevel.Warning	number	4
+Troux.CustomFeed	function	2	url:text,query:text	table
+Troux.Feed	function	1	url:text	table
+Troux.TestConnection	function	1	url:text	any
+Twilio.Contents	function	2	URL:any,collectionName:any,historyInMonths:any,dateLabel:any	any
+Twilio.Tables	function	1	historyMonths:number	table
+Twilio.URL	function	1	url:any	any
+Type.AddTableKey	function	3	table:type,columns:list,isPrimary:logical	type
+Type.ClosedRecord	function	1	type:type	type
+Type.Facets	function	1	type:type	record
+Type.ForFunction	function	2	signature:record,min:number	type
+Type.ForRecord	function	2	fields:record,open:logical	type
+Type.FunctionParameters	function	1	type:type	record
+Type.FunctionRequiredParameters	function	1	type:type	number
+Type.FunctionReturn	function	1	type:type	type
+Type.Is	function	2	type1:type,type2:type	logical
+Type.IsNullable	function	1	type:type	logical
+Type.IsOpenRecord	function	1	type:type	logical
+Type.ListItem	function	1	type:type	type
+Type.NonNullable	function	1	type:type	type
+Type.OpenRecord	function	1	type:type	type
+Type.RecordFields	function	1	type:type	record
+Type.ReplaceFacets	function	2	type:type,facets:record	type
+Type.ReplaceTableKeys	function	2	tableType:type,keys:list	type
+Type.ReplaceTablePartitionKey	function	2	tableType:type,partitionKey:nullable list	type
+Type.TableColumn	function	2	tableType:type,column:text	type
+Type.TableKeys	function	1	tableType:type	list
+Type.TablePartitionKey	function	1	tableType:type	nullable list
+Type.TableRow	function	1	table:type	type
+Type.TableSchema	function	1	tableType:type	table
+Type.Type	type	type
+Type.Union	function	1	types:list	type
+Uri.BuildQueryString	function	1	query:record	text
+Uri.Combine	function	2	baseUri:text,relativeUri:text	text
+Uri.EscapeDataString	function	1	data:text	text
+Uri.Parts	function	1	absoluteUri:text	record
+Uri.Type	type	text
+Usercube.Universes	function	1	serverUrl:text	table
+VSTS.AccountContents	function	1	url:text,options:nullable record	binary
+VSTS.AnalyticsViews	function	2	url:text,project:text,options:nullable record	table
+VSTS.Contents	function	1	url:text,options:nullable record	binary
+VSTS.Feed	function	1	url:text,options:nullable record	table
+VSTS.Views	function	3	url:text,project:text,areaPath:nullable text,options:nullable record	table
+Value.Add	function	2	value1:any,value2:any,precision:nullable number	any
+Value.Alternates	function	1	alternates:list	any
+Value.As	function	2	value:any,type:type	any
+Value.Compare	function	2	value1:any,value2:any,precision:nullable number	number
+Value.Divide	function	2	value1:any,value2:any,precision:nullable number	any
+Value.Equals	function	2	value1:any,value2:any,precision:nullable number	logical
+Value.Expression	function	1	value:any	nullable record
+Value.Firewall	function	1	key:text	any
+Value.FromText	function	1	text:any,culture:nullable text	any
+Value.Is	function	2	value:any,type:type	logical
+Value.Lineage	function	1	value:any	any
+Value.Metadata	function	1	value:any	any
+Value.Multiply	function	2	value1:any,value2:any,precision:nullable number	any
+Value.NativeQuery	function	2	target:any,query:text,parameters:any,options:nullable record	any
+Value.NullableEquals	function	2	value1:any,value2:any,precision:nullable number	nullable logical
+Value.Optimize	function	1	value:any	any
+Value.RemoveMetadata	function	1	value:any,metaValue:any	any
+Value.ReplaceMetadata	function	2	value:any,metaValue:any	any
+Value.ReplaceType	function	2	value:any,type:type	any
+Value.ResourceExpression	function	1	value:any	any
+Value.Subtract	function	2	value1:any,value2:any,precision:nullable number	any
+Value.Traits	function	1	value:any	table
+Value.Type	function	1	value:any	type
+Value.VersionIdentity	function	1	value:any	any
+Value.Versions	function	1	value:any	table
+Value.ViewError	function	1	errorRecord:record	record
+Value.ViewFunction	function	1	function:function	function
+Variable.Value	function	1	identifier:text	any
+Variable.ValueOrDefault	function	1	identifier:text,defaultValue:any	any
+Vena.Contents	function	1	source:text,modelQuery:nullable text,apiVersion:nullable text	table
+Vertica.Database	function	2	server:text,database:text,options:nullable record	table
+VesselInsight.Contents	function	0		any
+VivaInsights.Data	function	1	scopeId:text,jobName:nullable text,jobId:nullable text,options:nullable record	table
+VivaInsightsApi.GetResults	function	0	options:nullable record,env:nullable text	any
+Web.BrowserContents	function	1	url:text,options:nullable record	text
+Web.Contents	function	1	url:text,options:nullable record	binary
+Web.Headers	function	1	url:text,options:nullable record	record
+Web.Page	function	1	html:any	table
+WebAction.Request	function	2	method:text,url:text,options:nullable record	action
+WebMethod.Delete	text	"DELETE"
+WebMethod.Get	text	"GET"
+WebMethod.Head	text	"HEAD"
+WebMethod.Patch	text	"PATCH"
+WebMethod.Post	text	"POST"
+WebMethod.Put	text	"PUT"
+WebMethod.Type	type	text
+Webtrends.KeyMetrics	function	1	ProfileId:text,startDate:nullable date,endDate:nullable date	table
+Webtrends.Profile	function	0		any
+Webtrends.ReportContents	function	2	ProfileId:text,ReportId:text,startDate:nullable date,endDate:nullable date	table
+Webtrends.Tables	function	1	ProfileId:text,startDate:nullable date,endDate:nullable date	table
+WebtrendsAnalytics.Tables	function	3	ProfileId:text,Period:text,reportType:text,startDate:nullable date,endDate:nullable date,startPeriod:nullable text,endPeriod:nullable text	table
+Windsor.Main	function	0		table
+Witivio.Contents	function	1	botId:text	table
+WorkforceDimensions.Contents	function	3	configurationServer:text,workForceDimensionsServer:text,symbolicPeriod:text,startDate:nullable date,endDate:nullable date	text
+Wrike.Contents	function	0		table
+Xml.Document	function	1	contents:any,encoding:nullable number	table
+Xml.Tables	function	1	contents:any,options:nullable record,encoding:nullable number	table
+Zendesk.Collection	function	2	url:any,collectionName:any,schema:any	any
+Zendesk.Tables	function	1	url:text	table
+ZendeskData.Contents	function	1	url:text,options:nullable record	table
+ZohoCreator.Contents	function	4	creatordomain:text,scopname:text,applinkname:text,reportlinkname:text	any
+Zucchetti.Contents	function	2	Url:text,Environment:text	table
+appFigures.Content	function	2	path:text,params:record	any
+appFigures.Tables	function	0		table
+eWayCRM.Contents	function	0	IncludeRelations:nullable logical	table
+eWayCRM.Contents2	function	0	options:nullable record	table
+inwink.ScopeContents	function	3	customerId:text,scope:text,scopeId:text	table
+kxkdbinsightsenterprise.Contents	function	1	HostUrl:text	table

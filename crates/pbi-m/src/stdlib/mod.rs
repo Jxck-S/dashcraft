@@ -15,7 +15,7 @@ mod number;
 mod record;
 pub(crate) mod table;
 mod text;
-mod value_fns;
+pub(crate) mod value_fns;
 
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
@@ -185,6 +185,7 @@ pub(crate) fn unknown_name(name: &str) -> MError {
         message: format!("The name '{name}' wasn't recognized. Make sure it's spelled correctly."),
         detail: None,
         location: None,
+        fields: None,
     }
 }
 
@@ -194,6 +195,7 @@ pub(crate) fn missing_column(name: &str) -> MError {
         message: format!("The column '{name}' of the table wasn't found."),
         detail: Some(Box::new(Value::Text(Arc::from(name)))),
         location: None,
+        fields: None,
     }
 }
 

@@ -95,6 +95,20 @@ impl fmt::Display for ResolverError {
 
 impl std::error::Error for ResolverError {}
 
+/// Error record fields beyond `Reason`, `Message` and `Detail`, kept when an error is raised
+/// from a record so that `try` gives them back unchanged.
+#[derive(Debug, Clone)]
+pub struct ErrorFields {
+    /// The record's `Message` was `null` or missing (the error's `message` is then empty).
+    pub null_message: bool,
+    /// `Message.Format`: a text, or `null`.
+    pub message_format: Value,
+    /// `Message.Parameters`: a list, or `null`.
+    pub message_parameters: Value,
+    /// `ErrorCode`: any value (usually a text), or `null`.
+    pub error_code: Value,
+}
+
 /// An error produced while parsing or evaluating M.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum MError {
@@ -118,6 +132,9 @@ pub enum MError {
         /// The error record's `Detail` value, if any.
         detail: Option<Box<Value>>,
         location: Option<Box<Location>>,
+        /// The other error record fields of an error raised from a record (`error [...]`,
+        /// `error Error.Record(...)`); `None` for errors raised by the engine or `error "text"`.
+        fields: Option<Box<ErrorFields>>,
     },
     /// The query uses a function or feature DashCraft does not evaluate.
     #[error("{}", unsupported_message(function, location.as_deref(), hint))]
@@ -191,6 +208,7 @@ impl MError {
             message: message.into(),
             detail: None,
             location: None,
+            fields: None,
         }
     }
 

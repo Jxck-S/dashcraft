@@ -2,11 +2,14 @@
 
 Differential tests that compare DashCraft one-to-one with Power BI Desktop
 ([ADR-0011](../../docs/adr/0011-desktop-ground-truth.md)). Desktop's local Analysis Services
-engine answers the DAX queries of a corpus; the answers are committed as recordings; the test
-runs the same queries through DashCraft and compares them value by value.
+engine answers the DAX queries of a corpus, and its mashup engine the M expressions of the M
+suites ([below](#m-suites)); the answers are committed as recordings; the tests run the same
+queries through DashCraft and compare them value by value.
 
 ```sh
-cargo test -p pbi-session --test groundtruth -- --nocapture   # compare (any OS; SKIPs without recordings)
+cargo test -p pbi-session --test groundtruth -- --nocapture   # compare DAX (any OS; SKIPs without recordings)
+cargo test -p pbi-m --test groundtruth -- --nocapture         # compare M
+cargo test -p pbi-m --test library                            # DashCraft's M library against Desktop's
 cargo xtask groundtruth                                       # status: cases, recorded, stale, volatile, ledger, Desktop version
 cargo xtask groundtruth --check                               # fails on stale or missing recordings
 python scripts/groundtruth/gen_corpus.py --check              # corpora are up to date with their inputs
@@ -37,6 +40,8 @@ ready-to-edit ledger entries to `target/tmp/groundtruth/<suite>.proposed.json`.
 | `dax-lab-tables` | dax-lab | 5 | The dax-lab tables |
 | `dax-arity` | dax-lab | 929 | Every function of the DAX catalog (`crates/pbi-dax/src/service/catalog.txt`) with too few, the fewest, the most and too many arguments; no values, only whether Desktop accepts the call. Checked in `pbi-dax` (`catalog_argument_counts_match_power_bi_desktop`), not by `groundtruth.rs` |
 | `samples-*` | Microsoft samples | 286 | Metadata, row counts, column aggregates, small tables and every measure of three MIT PBIX samples (VertiPaq decoding against Desktop) |
+| `m-functions` | any | 177 | M expressions: literals, operators, `try` and errors, and every family of DashCraft's M library (text, numbers and their formats, rounding, dates and times, lists, records, tables, splitters, CSV, binary). Compared by `crates/pbi-m/tests/groundtruth.rs` |
+| `m-library` | any | 1 | Desktop's whole M standard library: every dotted name of `#shared` with its kind, parameters, return type, type or constant value (`scripts/groundtruth/m-library.m`). Generates `crates/pbi-m/src/service/library.txt` and is checked by `crates/pbi-m/tests/library.rs` |
 
 `cargo xtask groundtruth` prints the current counts.
 
@@ -55,6 +60,32 @@ BLANK equals only BLANK; text exactly; date/times to the millisecond. Rows are a
 query has `ORDER BY`. Errors compare by parity: both sides must fail, messages are not compared.
 Volatile cases (the clock, random numbers, the signed-in user, refresh time) compare columns and
 row count only. A recording whose `query` differs from the corpus is stale and fails.
+
+### M suites
+
+A corpus with `"language": "m"` holds M expressions (`query`) instead of DAX. Desktop evaluates
+each one with `Expression.Evaluate` against the standard library alone (the dotted names of
+`#shared`, no model query in scope), in a temporary hidden table of any open model, which the
+recorder deletes afterwards. A recording case has `value` or `error`:
+
+* `value` is typed JSON: `null`, logicals, numbers (`Number.ToText(n, "R")`), text, lists as
+  arrays and records as objects in field order; other values are one-key objects tagged with `#`:
+  `{"#date":"2024-01-05"}`, `{"#datetime":"2024-01-05T10:20:30.5"}` (fraction `FFFFFFF`),
+  `{"#datetimezone":…}`, `{"#time":…}`, `{"#duration":"1.02:03:04"}` (.NET `c`),
+  `{"#binary":base64}`, `{"#number":"NaN"}`, `{"#table":{"columns":[…],"rows":[[…]]}}`,
+  `{"#type":"nullable number"}`, `{"#function":null}`, and `{"#record":{…}}` for a record whose
+  only field starts with `#`;
+* `error` is `"Reason: Message"`.
+
+`crates/pbi-m/tests/groundtruth.rs` encodes DashCraft's results the same way. Numbers compare
+within 1e-12 relative (Desktop computes some results as decimals), everything else exactly; an
+error anywhere in a case's value makes the whole case that error; errors compare by reason and
+message, and a Desktop syntax error (`[1,7-1,8] Token Literal expected.`) matches any DashCraft
+syntax error. Engine error codes (`ErrorCode` in `Detail`) are not reproduced, so cases select only
+`Reason`, `Message` and `Detail`. Each run writes `target/tmp/groundtruth/<suite>.md`.
+
+Desktop's mashup engine may answer a case with an earlier case's error when both raise the same
+message in one batch: give every error case a unique message (`error "e-17"`).
 
 ### Deviation ledger
 
@@ -108,6 +139,11 @@ pwsh -NoProfile -File scripts/groundtruth/Record-GroundTruth.ps1 -Refresh -Corpu
 
 `-Refresh` refreshes each model once through TMSL first (no UI); `-Port` picks an engine by hand;
 `-OutDir` records elsewhere (writer checks below).
+
+The M suites need any open model (`-Port` picks one): `pwsh -NoProfile -File
+scripts/groundtruth/Record-GroundTruth.ps1 -Corpus reference/groundtruth/corpus/m-functions.json`.
+After re-recording `m-library`, regenerate the catalog: `DASHCRAFT_BLESS=1 cargo test -p pbi-m
+--test library`.
 
 **4. Compare and review.** Run the test, read `target/tmp/groundtruth/<suite>.md`, fix DashCraft
 or add a reasoned ledger entry, and review the recording diff like a snapshot change. Commit

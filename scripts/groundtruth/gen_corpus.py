@@ -30,6 +30,7 @@ ACME = ROOT / "reference" / "examples" / "acme-outfitters"
 ACME_DEF = ACME / "AcmeOutfitters.SemanticModel" / "definition"
 FUNCTIONS_RS = ROOT / "crates" / "pbi-dax" / "tests" / "functions.rs"
 CATALOG_TXT = ROOT / "crates" / "pbi-dax" / "src" / "service" / "catalog.txt"
+M_LIBRARY = ROOT / "scripts" / "groundtruth" / "m-library.m"
 OUT = ROOT / "reference" / "groundtruth" / "corpus"
 
 ACME_TABLES = [
@@ -942,6 +943,230 @@ def dax_arity_suite() -> dict:
     return doc
 
 
+def m_suite(name: str, title: str, cases: list[dict]) -> dict:
+    """An M suite: pure M expressions that Desktop evaluates against its standard library alone
+    (Record-GroundTruth.ps1 runs them in a temporary table of any open model)."""
+    doc = suite(name, title, "any", [], cases)
+    doc["language"] = "m"
+    return doc
+
+
+def m_library_suite() -> dict:
+    text = M_LIBRARY.read_text(encoding="utf-8")
+    return m_suite(
+        "m-library",
+        "Every name of Power BI Desktop's M standard library: kind, parameters, return type, type and constant values",
+        [{"id": "library", "query": text}],
+    )
+
+
+# M expressions for the m-functions suite: (id, expression). Error cases use distinct messages:
+# within one probe batch Desktop may reuse the error record of an earlier case with the same
+# message (reference/groundtruth/README.md).
+M_FUNCTIONS = [
+    # Error.Record and the error records `try` catches.
+    ("Error.Record/reason-only", 'Error.Record("r-1")'),
+    ("Error.Record/all-arguments", 'Error.Record("r-2", "m-2 #{0}", "d-2", {"x"}, "E2")'),
+    ("Error.Record/null-message-with-parameters", 'Error.Record("r-3", null, null, {1})'),
+    ("Error.Record/detail-record", 'Error.Record("r-4", "m-4", [a = 1])'),
+    ("Error.Record/error-code-not-text", 'Error.Record("r-5", "m-5", null, null, 5)'),
+    ("Error.Record/parameters-not-list", 'Error.Record("r-6", "m-6", null, 6)'),
+    ("Error.Record/raised", '(try error Error.Record("r-7", "m-7 #{0}", null, {"p7"}, "E7"))[Error]'),
+    ("try/error-text", '(try error "boom-8")[Error]'),
+    ("try/error-record-format", '(try error [Reason = "R9", Message = "ignored-9", #"Message.Format" = "v9=#{0}", #"Message.Parameters" = {9}, ErrorCode = 9])[Error]'),
+    ("try/error-record-no-format", '(try error [Reason = "R10", Message = "m-10", #"Message.Parameters" = {10}])[Error]'),
+    ("try/error-record-no-reason", '(try error [Message = "m-11"])[Error]'),
+    ("try/error-record-no-message", '(try error [Reason = "R12"])[Error]'),
+    ("try/error-record-detail", '(try error [Reason = "R13", Message = "m-13", Detail = [a = 13]])[Error]'),
+    ("try/has-error", 'let r = try error "boom-14" in [HasError = r[HasError], Reason = r[Error][Reason]]'),
+    ("try/otherwise", 'try error "boom-15" otherwise 15'),
+    ("try/engine-error", 'let e = (try 1 + "a")[Error] in [Reason = e[Reason], Message = e[Message]]'),
+    ("error/record-message-not-text", 'error [Reason = "R16", Message = 16]'),
+    ("error/record-bad-placeholder", 'error [Reason = "R17", #"Message.Format" = "m-17 #{x}"]'),
+    ("error/record-unclosed-placeholder", 'error [Reason = "R18", #"Message.Format" = "m-18 #{0"]'),
+    ("error/text", 'error "boom-19"'),
+    # Error message placeholders (#{n}).
+    ("format/basic", 'Error.Record("P", "a #{0} b #{1}", null, {1, "x"})[Message]'),
+    ("format/index-spacing", 'Error.Record("P", "#{ 0}|#{+1}|#{00}", null, {"a", "b"})[Message]'),
+    ("format/literal-hashes", 'Error.Record("P", "##{0}|#{0}}|# { } #", null, {1})[Message]'),
+    ("format/numbers", 'Error.Record("P", "#{0}|#{1}|#{2}|#{3}|#{4}|#{5}|#{6}", null, {null, true, 1.5, -0.5, 0.1 + 0.2, 1e20, 1.2345678901234568e23 + 0})[Message]'),
+    # Desktop keeps number literals as System.Decimal until arithmetic; DashCraft numbers are f64.
+    ("literals/decimal-precision", '{Text.From(9007199254740993), Text.From(123456789.123456789), Text.From(123456789.123456789 + 0)}'),
+    ("format/small-numbers", 'Error.Record("P", "#{0}|#{1}|#{2}|#{3}", null, {1e-7, 2.5e-5, 0.0001, 0.00012})[Message]'),
+    ("format/special-numbers", 'Error.Record("P", "#{0}|#{1}|#{2}|#{3}", null, {#nan, #infinity, -#infinity, -0})[Message]'),
+    ("format/dates-and-times", 'Error.Record("P", "#{0}|#{1}|#{2}|#{3}", null, {#date(2024, 1, 2), #datetime(2024, 1, 2, 3, 4, 5), #datetimezone(2024, 1, 2, 3, 4, 5, 1, 30), #time(13, 2, 59)})[Message]'),
+    ("format/durations", 'Error.Record("P", "#{0}|#{1}", null, {#duration(0, 0, 0, 1.5), #duration(-1, -2, 0, 0)})[Message]'),
+    ("format/structured", 'Error.Record("P", "#{0}|#{1}|#{2}|#{3}|#{4}", null, {{1}, [a = 1], #table({"a"}, {}), each _, type text})[Message]'),
+    ("format/binary", 'Error.Record("P", "#{0}", null, {#binary({1, 2})})[Message]'),
+    ("format/index-not-integer", 'Error.Record("P", "f-20 #{x}", null, {1})[Message]'),
+    ("format/index-negative", 'Error.Record("P", "f-21 #{-1}", null, {1})[Message]'),
+    ("format/index-out-of-range", 'Error.Record("P", "f-22 #{5}", null, {1})[Message]'),
+    ("format/unclosed", 'Error.Record("P", "f-23 #{0} #{", null, {1})[Message]'),
+    ("format/error-parameter", 'Error.Record("P", "f-24 #{0}", null, {error "pe-24"})[Message]'),
+    ("format/unreferenced-error-parameter", 'Error.Record("P", "f-25 #{0}", null, {25, error "pe-25"})[Message]'),
+    # Splitters.
+    ("Splitter.SplitTextByDelimiter/csv-default", 'Splitter.SplitTextByDelimiter(",")("a,""b,c"",d")'),
+    ("Splitter.SplitTextByDelimiter/quote-none", 'Splitter.SplitTextByDelimiter(",", QuoteStyle.None)("a,""b,c"",d")'),
+    ("Splitter.SplitTextByDelimiter/quote-mid-field", 'Splitter.SplitTextByDelimiter(",")("a,x""b,c"",d")'),
+    ("Splitter.SplitTextByDelimiter/quote-after-delimiter", 'Splitter.SplitTextByDelimiter(",", QuoteStyle.Csv, CsvStyle.QuoteAfterDelimiter)("a,x""b,c"",""d,e""")'),
+    ("Splitter.SplitTextByDelimiter/quote-always", 'Splitter.SplitTextByDelimiter(",", QuoteStyle.Csv, CsvStyle.QuoteAlways)("a,x""b,c"",d")'),
+    ("Splitter.SplitTextByDelimiter/unclosed-quote", 'Splitter.SplitTextByDelimiter(",")("a,""b,c")'),
+    ("Splitter.SplitTextByDelimiter/text-after-quote", 'Splitter.SplitTextByDelimiter(",")("""a""x,b")'),
+    ("Splitter.SplitTextByDelimiter/escaped-quote", 'Splitter.SplitTextByDelimiter(",")("""a""""b"",c")'),
+    ("Splitter.SplitTextByDelimiter/line-breaks", 'Splitter.SplitTextByDelimiter(",")("a#(cr,lf)b,c")'),
+    ("Splitter.SplitTextByDelimiter/multi-character", 'Splitter.SplitTextByDelimiter("--")("a--b---c")'),
+    ("Splitter.SplitTextByDelimiter/null-text", 'Splitter.SplitTextByDelimiter(",")(null)'),
+    ("Splitter.SplitTextByDelimiter/empty-text", 'Splitter.SplitTextByDelimiter(",")("")'),
+    ("Splitter.SplitTextByDelimiter/empty-delimiter", 'Splitter.SplitTextByDelimiter("")("s-26")'),
+    ("Splitter.SplitTextByDelimiter/quote-style-invalid", 'Splitter.SplitTextByDelimiter(",", 2)("s-27")'),
+    ("Splitter.SplitTextByDelimiter/quote-none-with-csv-style", 'Splitter.SplitTextByDelimiter(",", QuoteStyle.None, CsvStyle.QuoteAlways)("s-28")'),
+    ("Splitter.SplitTextByDelimiter/csv-style-invalid", 'Splitter.SplitTextByDelimiter(",", null, 5)("s-29")'),
+    ("Splitter.SplitTextByAnyDelimiter/list-order", 'Splitter.SplitTextByAnyDelimiter({"--", "-"})("a---b")'),
+    ("Splitter.SplitTextByAnyDelimiter/csv-default", 'Splitter.SplitTextByAnyDelimiter({",", ";"})("a;""b,c"",d")'),
+    ("Splitter.SplitTextByAnyDelimiter/empty-list", 'Splitter.SplitTextByAnyDelimiter({})("a,b")'),
+    ("Splitter.SplitTextByAnyDelimiter/start-at-end", 'Splitter.SplitTextByAnyDelimiter({",", ";"}, QuoteStyle.Csv, true)("a,b;""c,d"",e")'),
+    ("Splitter.SplitTextByAnyDelimiter/start-at-end-overlap", 'Splitter.SplitTextByAnyDelimiter({"--", "-"}, QuoteStyle.None, true)("a---b")'),
+    ("Splitter.SplitTextByAnyDelimiter/start-at-end-not-logical", 'Splitter.SplitTextByAnyDelimiter({","}, QuoteStyle.None, 1)("s-30")'),
+    ("Splitter.SplitTextByAnyDelimiter/empty-delimiter", 'Splitter.SplitTextByAnyDelimiter({",", ""})("s-31")'),
+    ("Splitter.SplitTextByEachDelimiter/basic", 'Splitter.SplitTextByEachDelimiter({",", ";"})("a,b;c,d")'),
+    ("Splitter.SplitByNothing/basic", 'Splitter.SplitByNothing()("a,b")'),
+    ("Splitter.SplitTextByPositions/basic", 'Splitter.SplitTextByPositions({0, 2, 5})("abcdefg")'),
+    ("Splitter.SplitTextByLengths/basic", 'Splitter.SplitTextByLengths({1, 3})("abcdefg")'),
+    ("Splitter.SplitTextByCharacterTransition/basic", 'Splitter.SplitTextByCharacterTransition({"a".."z"}, {"0".."9"})("ab12cd34")'),
+    # Library constants.
+    ("constants/TraceLevel", '{TraceLevel.Critical, TraceLevel.Error, TraceLevel.Warning, TraceLevel.Information, TraceLevel.Verbose}'),
+    ("constants/QuoteStyle-CsvStyle", '{QuoteStyle.None, QuoteStyle.Csv, CsvStyle.QuoteAfterDelimiter, CsvStyle.QuoteAlways}'),
+    ("constants/numbers", '{Number.PI, Number.E, Number.Epsilon, Number.PositiveInfinity, Number.NegativeInfinity}'),
+    # Text.
+    ("Text.Upper/basic", 'Text.Upper("abc é")'),
+    ("Text.Proper/basic", 'Text.Proper("hello wORLD o\'neil")'),
+    ("Text.Trim/basic", '{Text.Trim("  a b  "), Text.TrimStart("xxaxx", "x"), Text.TrimEnd("xxaxx", {"x", "a"})}'),
+    ("Text.PadStart/basic", '{Text.PadStart("7", 3, "0"), Text.PadEnd("ab", 4), Text.PadStart("abcd", 2)}'),
+    ("Text.Middle/basic", '{Text.Middle("abcdef", 2, 3), Text.Middle("abc", 2, 10), Text.Range("abcdef", 1, 2), Text.Start("abc", 2), Text.End("abc", 2)}'),
+    ("Text.Replace/basic", 'Text.Replace("a-b-c", "-", "+")'),
+    ("Text.Split/basic", 'Text.Split("a,b,,c", ",")'),
+    ("Text.Combine/basic", '{Text.Combine({"a", null, "b"}, "-"), Text.Combine({})}'),
+    ("Text.Contains/basic", '{Text.Contains("Hello", "ell"), Text.Contains("Hello", "ELL"), Text.Contains("Hello", "ELL", Comparer.OrdinalIgnoreCase)}'),
+    ("Text.PositionOf/basic", '{Text.PositionOf("abcabc", "c"), Text.PositionOf("abcabc", "c", Occurrence.Last), Text.PositionOf("abcabc", "c", Occurrence.All), Text.PositionOf("abc", "z")}'),
+    ("Text.BeforeDelimiter/basic", '{Text.BeforeDelimiter("a-b-c", "-"), Text.BeforeDelimiter("a-b-c", "-", 1), Text.AfterDelimiter("a-b-c", "-", {0, RelativePosition.FromEnd}), Text.BetweenDelimiters("a(b)c", "(", ")")}'),
+    ("Text.Select/basic", '{Text.Select("a1b2", {"0".."9"}), Text.Remove("a1b2", {"0".."9"})}'),
+    ("Text.Repeat/basic", '{Text.Repeat("ab", 3), Text.Insert("ac", 1, "b"), Text.Length("héllo"), Text.ToList("abc")}'),
+    ("Text.From/basic", '{Text.From(1.5), Text.From(#date(2024, 1, 2)), Text.From(true), Text.From(null), Text.From(#duration(1, 2, 3, 4))}'),
+    ("Text.Format/basic", '{Text.Format("#{0}+#{1}", {1, "b"}), Text.Format("#[x]!", [x = "hi"])}'),
+    ("Text.Clean/basic", 'Text.Clean("a#(lf)b#(tab)c")'),
+    ("Text.StartsWith/basic", '{Text.StartsWith("Hello", "He"), Text.EndsWith("Hello", "LO"), Text.EndsWith("Hello", "LO", Comparer.OrdinalIgnoreCase)}'),
+    ("Text.NewGuid/length", 'Text.Length(Text.NewGuid())'),
+    # Number.
+    ("Number.Round/banker", '{Number.Round(2.5), Number.Round(3.5), Number.Round(-2.5), Number.Round(2.345, 2)}'),
+    ("Number.Round/modes", '{Number.Round(2.5, 0, RoundingMode.AwayFromZero), Number.Round(2.5, 0, RoundingMode.Up), Number.Round(-2.5, 0, RoundingMode.Down), Number.Round(2.5, 0, RoundingMode.TowardZero)}'),
+    ("Number.RoundUp/basic", '{Number.RoundUp(1.2), Number.RoundDown(-1.2), Number.RoundUp(1.234, 2), Number.RoundTowardZero(-1.7), Number.RoundAwayFromZero(-1.2)}'),
+    ("Number.IntegerDivide/basic", '{Number.IntegerDivide(7, 2), Number.IntegerDivide(-7, 2), Number.Mod(-7, 3), Number.Mod(7.5, 2)}'),
+    ("Number.Power/basic", '{Number.Power(2, 10), Number.Sqrt(16), Number.Abs(-3), Number.Sign(-2), Number.Log10(1000), Number.Ln(1)}'),
+    ("Number.From/basic", '{Number.From("1.5"), Number.From(true), Number.From(#date(2024, 1, 2)), Number.From(#duration(1, 12, 0, 0)), Number.FromText("1e3")}'),
+    ("Number.ToText/formats", '{Number.ToText(1234.5, "N2"), Number.ToText(0.5, "P"), Number.ToText(255, "X"), Number.ToText(1234.5678, "0.00"), Number.ToText(1234.5, "F1"), Number.ToText(0.000123, "E2")}'),
+    ("Number.ToText/default", '{Number.ToText(1.5), Number.ToText(1e21), Number.ToText(0.1 + 0.2), Number.ToText(-0)}'),
+    ("Number.Bitwise/basic", '{Number.BitwiseAnd(12, 10), Number.BitwiseOr(12, 10), Number.BitwiseXor(12, 10), Number.BitwiseShiftLeft(1, 4)}'),
+    ("Number.IsEven/basic", '{Number.IsEven(4), Number.IsOdd(4), Number.IsNaN(0 / 0), 1 / 0, -1 / 0}'),
+    ("Number.FromText/invalid", 'Number.FromText("n-32")'),
+    ("Int64.From/basic", '{Int64.From(2.5), Int64.From(3.5), Int64.From("12"), Currency.From(1.23456), Decimal.From("1.25")}'),
+    # Lists.
+    ("List.Sum/basic", '{List.Sum({1, 2, null}), List.Average({1, 2, 4}), List.Max({3, 1, 2}), List.Min({3, 1, 2}), List.Count({1, null}), List.NonNullCount({1, null})}'),
+    ("List.Sum/empty", '{List.Sum({}), List.Average({}), List.Max({}), List.Min({}, 0)}'),
+    ("List.Distinct/basic", '{List.Distinct({1, 1, 2}), List.Distinct({"a", "A"}, Comparer.OrdinalIgnoreCase)}'),
+    ("List.Sort/basic", '{List.Sort({3, 1, 2}), List.Sort({3, 1, 2}, Order.Descending), List.Sort({"b", "A", "a"}), List.Sort({"b", "A", "a"}, Comparer.OrdinalIgnoreCase)}'),
+    ("List.Range/basic", '{List.Range({1..5}, 1, 2), List.FirstN({1..5}, 2), List.LastN({1..5}, 2), List.Skip({1..5}, 3), List.RemoveFirstN({1..5}, 1), List.Reverse({1, 2, 3})}'),
+    ("List.Zip/basic", 'List.Zip({{1, 2}, {"a", "b", "c"}})'),
+    ("List.Combine/basic", '{List.Combine({{1}, {2, 3}}), List.Union({{1, 2}, {2, 3}}), List.Intersect({{1, 2}, {2, 3}}), List.Difference({1, 2, 3}, {2})}'),
+    ("List.Accumulate/basic", 'List.Accumulate({1, 2, 3}, 0, (s, c) => s + c)'),
+    ("List.Generate/basic", 'List.Generate(() => 0, each _ < 3, each _ + 1, each _ * 10)'),
+    ("List.Numbers/basic", '{List.Numbers(1, 3, 2), List.Dates(#date(2024, 1, 30), 3, #duration(1, 0, 0, 0)), {1..3}, {"a".."c"}}'),
+    ("List.PositionOf/basic", '{List.PositionOf({1, 2, 3, 2}, 2), List.PositionOf({1, 2, 3, 2}, 2, Occurrence.All), List.Contains({1, 2}, 2), List.ContainsAny({1, 2}, {3, 2}), List.ContainsAll({1, 2}, {2, 3})}'),
+    ("List.Select/basic", '{List.Select({1..6}, Number.IsEven), List.Transform({1, 2}, each _ * 2), List.RemoveNulls({1, null, 2}), List.RemoveItems({1, 2, 3}, {2})}'),
+    ("List.Statistics/basic", '{List.Median({1, 3, 2, 4}), List.Mode({1, 2, 2, 3}), List.StandardDeviation({1, 2, 3, 4}), List.Product({2, 3})}'),
+    ("List.Split/basic", '{List.Split({1..5}, 2), List.Alternate({1..10}, 1, 1), List.Repeat({1, 2}, 2), List.Buffer({1})}'),
+    ("List.First/basic", '{List.First({}), List.First({}, "d"), List.Last({1, 2}), List.IsEmpty({}), List.Single({7}), List.SingleOrDefault({}, 0)}'),
+    ("List.MatchesAll/basic", '{List.MatchesAll({2, 4}, Number.IsEven), List.MatchesAny({1, 3}, Number.IsEven), List.AnyTrue({false, true}), List.AllTrue({})}'),
+    ("List.ReplaceValue/basic", '{List.ReplaceValue({"a", "b"}, "a", "z", Replacer.ReplaceValue), List.ReplaceValue({"ab", "b"}, "b", "z", Replacer.ReplaceText), List.InsertRange({1, 4}, 1, {2, 3}), List.ReplaceRange({1, 2, 3}, 1, 1, {9})}'),
+    ("List.Item/out-of-range", '{1, 2}{5}'),
+    ("List.Item/optional", '{{1, 2}{5}?, [a = 1][b]?}'),
+    # Dates and times.
+    ("Date.AddMonths/end-of-month", '{Date.AddMonths(#date(2024, 1, 31), 1), Date.AddYears(#date(2024, 2, 29), 1), Date.AddDays(#date(2024, 2, 28), 2), Date.AddWeeks(#date(2024, 1, 1), 2)}'),
+    ("Date.StartOfWeek/basic", '{Date.StartOfWeek(#date(2024, 1, 3)), Date.StartOfWeek(#date(2024, 1, 3), Day.Monday), Date.EndOfMonth(#date(2024, 2, 10)), Date.StartOfQuarter(#date(2024, 5, 10)), Date.EndOfYear(#date(2024, 5, 10))}'),
+    ("Date.DayOfWeek/basic", '{Date.DayOfWeek(#date(2024, 1, 7)), Date.DayOfWeek(#date(2024, 1, 7), Day.Monday), Date.DayOfYear(#date(2024, 3, 1)), Date.WeekOfYear(#date(2024, 12, 31)), Date.WeekOfMonth(#date(2024, 1, 31)), Date.QuarterOfYear(#date(2024, 8, 1))}'),
+    ("Date.Names/basic", '{Date.MonthName(#date(2024, 3, 1)), Date.DayOfWeekName(#date(2024, 3, 1)), Date.MonthName(#date(2024, 3, 1), "fr-FR")}'),
+    ("Date.IsLeapYear/basic", '{Date.IsLeapYear(#date(2024, 1, 1)), Date.IsLeapYear(#date(1900, 1, 1)), Date.DaysInMonth(#date(2023, 2, 1))}'),
+    ("Date.ToText/basic", '{Date.ToText(#date(2024, 1, 2)), Date.ToText(#date(2024, 1, 2), "dd MMM yyyy"), Date.ToText(#date(2024, 1, 2), [Format = "yyyy-MM-dd"]), DateTime.ToText(#datetime(2024, 1, 2, 13, 4, 5))}'),
+    ("Date.FromText/basic", '{Date.FromText("2024-03-05"), Date.FromText("3/5/2024"), Date.From(45000), DateTime.From("2024-01-02 03:04"), Time.From(0.75), DateTime.FromText("2024-01-02T03:04:05")}'),
+    ("Date.ToRecord/basic", '{Date.ToRecord(#date(2024, 1, 2)), Time.ToRecord(#time(1, 2, 3)), DateTime.Date(#datetime(2024, 1, 2, 3, 4, 5)), DateTime.Time(#datetime(2024, 1, 2, 3, 4, 5))}'),
+    ("Date.Arithmetic/basic", '{#date(2024, 3, 1) - #date(2024, 2, 1), #date(2024, 1, 1) + #duration(1, 0, 0, 0), #datetime(2024, 1, 1, 0, 0, 0) - #duration(0, 1, 0, 0), #time(23, 0, 0) + #duration(0, 2, 0, 0)}'),
+    ("Duration/basic", '{Duration.TotalHours(#duration(1, 2, 0, 0)), Duration.From(1.5), Duration.Days(#duration(1, 2, 3, 4)), Duration.FromText("1.02:03:04"), Duration.ToText(#duration(0, 0, 0, 1.25))}'),
+    ("DateTimeZone/basic", '{DateTime.AddZone(#datetime(2024, 1, 1, 0, 0, 0), 2), DateTimeZone.SwitchZone(#datetimezone(2024, 1, 1, 12, 0, 0, 2, 0), -5), DateTimeZone.RemoveZone(#datetimezone(2024, 1, 1, 12, 0, 0, 2, 0)), DateTimeZone.ZoneHours(#datetimezone(2024, 1, 1, 12, 0, 0, -3, -30))}'),
+    ("Date.FromText/invalid", 'Date.FromText("d-33")'),
+    # Records.
+    ("Record/basic", '{Record.Field([a = 1], "a"), Record.FieldNames([b = 1, a = 2]), Record.AddField([a = 1], "b", 2), Record.Combine({[a = 1], [b = 2], [a = 3]})}'),
+    ("Record/transform", '{Record.TransformFields([a = 1, b = 2], {"a", each _ * 10}), Record.RemoveFields([a = 1, b = 2], "a"), Record.RenameFields([a = 1], {"a", "z"}), Record.ReorderFields([a = 1, b = 2], {"b", "a"})}'),
+    ("Record.ToTable/basic", 'Record.ToTable([a = 1, b = "x"])'),
+    ("Record.Field/missing", 'Record.Field([a = 1], "missing-34")'),
+    # Tables.
+    ("Table.FromRecords/basic", 'Table.FromRecords({[a = 1, b = "x"], [a = 2, b = "y"]})'),
+    ("Table.SelectRows/basic", 'Table.SelectRows(Table.FromRecords({[a = 1], [a = 2], [a = 3]}), each [a] > 1)'),
+    ("Table.AddColumn/basic", 'Table.AddColumn(#table({"a"}, {{1}, {2}}), "c", each [a] * 2)'),
+    ("Table.Group/basic", 'Table.Group(#table({"k", "v"}, {{"x", 1}, {"y", 2}, {"x", 3}}), {"k"}, {{"n", Table.RowCount}, {"s", each List.Sum([v])}})'),
+    ("Table.Group/local", 'Table.Group(#table({"k", "v"}, {{"x", 1}, {"x", 2}, {"y", 3}, {"x", 4}}), {"k"}, {{"s", each List.Sum([v])}}, GroupKind.Local)'),
+    ("Table.Sort/basic", 'Table.Sort(#table({"a", "b"}, {{2, "x"}, {1, "y"}, {2, "a"}}), {{"a", Order.Descending}, "b"})'),
+    ("Table.Unpivot/basic", 'Table.UnpivotOtherColumns(#table({"id", "q1", "q2"}, {{1, 10, 20}, {2, null, 40}}), {"id"}, "q", "v")'),
+    ("Table.Pivot/basic", 'Table.Pivot(#table({"id", "q", "v"}, {{1, "q1", 10}, {1, "q2", 20}, {2, "q1", 30}}), {"q1", "q2"}, "q", "v", List.Sum)'),
+    ("Table.TransformColumnTypes/basic", 'Table.TransformColumnTypes(#table({"a", "b"}, {{"1.5", "2024-01-02"}}), {{"a", type number}, {"b", type date}})'),
+    # Desktop's engine-raised errors carry an ErrorCode ("10041") DashCraft does not reproduce.
+    ("Table.TransformColumnTypes/error-cell", 'let t = Table.TransformColumnTypes(#table({"a"}, {{"x35"}}), {{"a", type number}}), r = try t{0}[a] in [HasError = r[HasError], Error = Record.SelectFields(r[Error], {"Reason", "Message", "Detail"})]'),
+    ("Table.NestedJoin/basic", 'Table.ExpandTableColumn(Table.NestedJoin(#table({"k", "a"}, {{1, "x"}, {2, "y"}}), {"k"}, #table({"k", "b"}, {{1, "p"}, {1, "q"}}), {"k"}, "j", JoinKind.LeftOuter), "j", {"b"})'),
+    ("Table.Join/inner", 'Table.Join(#table({"k", "a"}, {{1, "x"}, {2, "y"}}), "k", #table({"k2", "b"}, {{2, "p"}}), "k2")'),
+    ("Table.Distinct/basic", '{Table.Distinct(#table({"a"}, {{1}, {1}, {2}})), Table.FillDown(#table({"a"}, {{1}, {null}, {2}}), {"a"}), Table.FillUp(#table({"a"}, {{null}, {2}}), {"a"})}'),
+    ("Table.PromoteHeaders/basic", '{Table.PromoteHeaders(#table({"Column1", "Column2"}, {{"x", "y"}, {1, 2}})), Table.DemoteHeaders(#table({"a"}, {{1}}))}'),
+    ("Table.Transpose/basic", 'Table.Transpose(#table({"a", "b"}, {{1, 2}, {3, 4}}))'),
+    ("Table.ReplaceValue/basic", 'Table.ReplaceValue(#table({"a", "b"}, {{"xa", "x"}}), "x", "z", Replacer.ReplaceText, {"a"})'),
+    ("Table.SplitColumn/basic", 'Table.SplitColumn(#table({"a"}, {{"p-q"}, {"r"}}), "a", Splitter.SplitTextByDelimiter("-"), {"a1", "a2"})'),
+    ("Table.Combine/basic", 'Table.Combine({#table({"a"}, {{1}}), #table({"b"}, {{2}})})'),
+    ("Table.Columns/basic", '{Table.ColumnNames(Table.RenameColumns(#table({"a", "b"}, {}), {"a", "z"})), Table.ColumnNames(Table.ReorderColumns(#table({"a", "b"}, {}), {"b", "a"})), Table.ColumnNames(Table.RemoveColumns(#table({"a", "b"}, {}), "a")), Table.RowCount(#table({"a"}, {{1}, {2}}))}'),
+    ("Table.Max/basic", '{Table.Max(#table({"a"}, {{1}, {3}}), "a"), Table.First(#table({"a"}, {})), Table.Column(#table({"a"}, {{1}, {2}}), "a")}'),
+    ("Table.ToRows/basic", '{Table.ToRows(#table({"a", "b"}, {{1, 2}})), Table.ToRecords(#table({"a"}, {{1}})), Table.ToColumns(#table({"a", "b"}, {{1, 2}}))}'),
+    ("Table.AddIndexColumn/basic", 'Table.AddIndexColumn(#table({"a"}, {{"x"}, {"y"}}), "i", 1, 10)'),
+    ("Table.Schema/basic", 'Table.SelectColumns(Table.Schema(#table(type table [a = number, b = text], {})), {"Name", "Kind", "IsNullable"})'),
+    ("Table.SelectRows/missing-column", 'Table.SelectRows(#table({"a"}, {{1}}), each [missing36] = 1)'),
+    # Values, logicals, types, binary, JSON.
+    ("Value/basic", '{Value.Is(1, type number), Value.Equals(1, 1.0), Value.Compare(1, 2), Value.Type(1), Value.Type("x"), Logical.FromText("TRUE"), Logical.ToText(false)}'),
+    ("Value.Metadata/basic", 'Value.Metadata(1 meta [a = 1])'),
+    ("Type/basic", '{Type.IsNullable(type nullable text), Type.NonNullable(type nullable number), Type.TableColumn(type table [a = text], "a"), Type.Is(type number, type any)}'),
+    ("Binary/basic", '{Text.ToBinary("hé"), Binary.ToText(Text.ToBinary("abc"), BinaryEncoding.Hex), Binary.FromText("AQI="), Binary.Length(#binary({1, 2, 3})), Text.FromBinary(#binary({104, 105}))}'),
+    ("Json.Document/basic", 'Json.Document("{""a"":[1,2.5,{""b"":null}],""c"":true}")'),
+    ("Json.FromValue/basic", 'Text.FromBinary(Json.FromValue([a = {1, "x"}, b = null, c = #date(2024, 1, 2)]))'),
+    ("Comparer/basic", '{Comparer.Ordinal("a", "B"), Comparer.OrdinalIgnoreCase("a", "B"), Comparer.Equals(Comparer.OrdinalIgnoreCase, "a", "A")}'),
+    ("Lines/basic", '{Lines.FromText("a#(cr,lf)b#(lf)c"), Lines.ToText({"a", "b"}, "|")}'),
+    ("Csv.Document/basic", 'Csv.Document("a,b#(lf)1,""x,y""#(lf)", [Delimiter = ",", Columns = 2, QuoteStyle = QuoteStyle.Csv])'),
+    # Operators and language.
+    ("operators/arithmetic", '{1 + 2 * 3, 7 / 2, "a" & "b", {1} & {2}, [a = 1] & [b = 2], null + 1, 0.1 + 0.2}'),
+    ("operators/comparison", '{1 < 2, "a" < "B", null = null, null < 1, #date(2024, 1, 1) < #date(2024, 1, 2), {1, 2} = {1, 2}, [a = 1, b = 2] = [b = 2, a = 1]}'),
+    ("operators/logical", '{true and null, false and (error "never-37"), true or (error "never-38"), not true}'),
+    # `error` is an expression, not an operand: Desktop rejects it unparenthesized.
+    ("syntax/error-operand", 'false and error "never-37b"'),
+    ("operators/type-error", '1 + "x39"'),
+    ("language/let-each", 'let f = each _ + 1, g = (x, optional y) => x + (if y = null then 0 else y) in {f(1), g(1), g(1, 2)}'),
+    ("language/recursion", 'let fact = (n) => if n <= 1 then 1 else n * @fact(n - 1) in fact(10)'),
+    ("language/field-access", 'let r = [a = [b = 2]] in {r[a][b], r[[a]], #table({"x", "y"}, {{1, 2}}){0}[[x]]}'),
+    ("language/meta", 'Value.Metadata(Value.ReplaceMetadata(1, [m = "x"]))'),
+    ("language/is-as", '{1 is number, null is nullable text, "a" as text, 1 is any}'),
+    ("language/as-error", '"a40" as number'),
+]
+
+
+def m_functions_suite() -> dict:
+    return m_suite(
+        "m-functions",
+        "M standard library functions, operators and errors evaluated by Power BI Desktop's mashup engine",
+        [{"id": i, "query": q} for i, q in M_FUNCTIONS],
+    )
+
+
 def render(doc: dict) -> str:
     return json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
 
@@ -961,6 +1186,8 @@ def main() -> int:
         dax_lab_tables_suite(),
         dax_functions_suite(),
         dax_arity_suite(),
+        m_library_suite(),
+        m_functions_suite(),
         *sample_suites(),
     ]
     stale = []
