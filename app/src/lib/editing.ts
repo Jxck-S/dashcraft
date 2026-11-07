@@ -12,43 +12,56 @@ export function formulaText(name: string, expression: string): string {
 
 export type ParsedFormula = { ok: true; name: string; expression: string } | { ok: false; error: string }
 
+/** The name of a formula and the index of the `=` after it. */
+export type ScannedName = { ok: true; name: string; eq: number } | { ok: false; error: string }
+
 /**
- * Splits the formula bar's `Name = expression`. The name ends at the first `=`, or is bracketed
- * (`[Total = Sales] = …`, `]]` escapes `]`); the expression keeps its line breaks and indentation.
+ * Finds the name of `Name = expression`: up to the first `=`, or bracketed (`[Total = Sales] =`,
+ * `]]` escapes `]`).
  */
-export function parseFormula(text: string): ParsedFormula {
+export function scanFormulaName(text: string): ScannedName {
   const lead = text.length - text.trimStart().length
-  let name: string
-  let rest: string
   if (text.startsWith('[', lead)) {
     let i = lead + 1
-    let close = -1
     while (i < text.length) {
       if (text[i] === ']') {
         if (text[i + 1] === ']') {
           i += 2
           continue
         }
-        close = i
-        break
+        const after = text.slice(i + 1)
+        const eq = i + 1 + (after.length - after.trimStart().length)
+        if (text[eq] !== '=') return { ok: false, error: 'Write the formula as Name = expression.' }
+        return { ok: true, name: text.slice(lead + 1, i).replaceAll(']]', ']'), eq }
       }
       i++
     }
-    if (close < 0) return { ok: false, error: 'The name’s “[” has no closing “]”.' }
-    name = text.slice(lead + 1, close).replaceAll(']]', ']')
-    rest = text.slice(close + 1).trimStart()
-    if (!rest.startsWith('=')) return { ok: false, error: 'Write the formula as Name = expression.' }
-  } else {
-    const eq = text.indexOf('=')
-    if (eq < 0) return { ok: false, error: 'Write the formula as Name = expression.' }
-    name = text.slice(0, eq).trim()
-    rest = text.slice(eq)
+    return { ok: false, error: 'The name’s “[” has no closing “]”.' }
   }
+  const eq = text.indexOf('=')
+  if (eq < 0) return { ok: false, error: 'Write the formula as Name = expression.' }
+  return { ok: true, name: text.slice(0, eq).trim(), eq }
+}
+
+/**
+ * Splits the formula bar's `Name = expression`. The name ends at the first `=`, or is bracketed
+ * (`[Total = Sales] = …`, `]]` escapes `]`); the expression keeps its line breaks and indentation.
+ */
+export function parseFormula(text: string): ParsedFormula {
+  const scanned = scanFormulaName(text)
+  if (!scanned.ok) return scanned
+  const { name, eq } = scanned
   if (!name.trim()) return { ok: false, error: 'The formula needs a name before “=”.' }
   if (/[\r\n]/.test(name)) return { ok: false, error: 'The name before “=” must be on one line.' }
-  const expression = rest.slice(1).replace(/^[ \t]*(\r\n?|\n)?/, '').trimEnd()
+  const expression = text.slice(eq + 1).replace(/^[ \t]*(\r\n?|\n)?/, '').trimEnd()
   if (!expression.trim()) return { ok: false, error: 'The formula needs an expression after “=”.' }
   return { ok: true, name, expression }
+}
+
+/** Where the DAX expression of `Name = expression` starts (just after the `=`), or `null`. */
+export function expressionStart(text: string): number | null {
+  const scanned = scanFormulaName(text)
+  return scanned.ok ? scanned.eq + 1 : null
 }
 
 /** The window title: the file name (`*` while there are unsaved edits) and the app name. */

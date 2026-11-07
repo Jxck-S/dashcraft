@@ -7,6 +7,7 @@ import {
   canSaveInPlace,
   changedValue,
   editShortcut,
+  expressionStart,
   folderNotEmpty,
   formulaText,
   historyTitles,
@@ -49,6 +50,13 @@ test('malformed formulas are refused with a message', () => {
     assert.equal(parsed.ok, false, text)
     if (!parsed.ok) assert.ok(parsed.error.length > 0)
   }
+})
+
+test('the DAX of a formula starts after its =', () => {
+  assert.equal(expressionStart('Total = SUM(T[c])'), 7)
+  assert.equal(expressionStart('[A = B] = 1'), 9)
+  assert.equal(expressionStart('SUM(T[c])'), null)
+  assert.equal(expressionStart('[Open = 1'), null)
 })
 
 test('the window title marks unsaved edits', () => {

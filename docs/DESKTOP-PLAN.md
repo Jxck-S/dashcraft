@@ -964,6 +964,25 @@ optional language server.
     back to Desktop's bytes, and to four spaces and back.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,
   calculation items, format string expressions and RLS filters; commit and cancel; multi-line.
+  The editor is one component (`app/src/components/DaxEditor.svelte`) that takes where the DAX
+  starts in its text, so the calculation item, dynamic format string and RLS filter editors
+  (M10.4, M11.1, M11.4: their edit commands and selections come there) reuse it as it is.
+  - [x] M7.5a (2026-11-07) IntelliSense in the formula bar of measures, calculated columns and
+    calculated tables, over the M7.1 and M7.2 commands against the open document: token colours
+    (`dax.tokens`; every colour at least 4.5:1 on the editor background) and wavy squiggles
+    (`dax.diagnostics`; the problem at the caret, else the first error, is in the editor's
+    accessible description); a suggestion list (`dax.complete`) when a name, `[` or `'` is
+    typed or on Ctrl+Space, with ↑ ↓ PgUp PgDn, Enter or Tab to insert (a function's `(` not
+    doubled), Esc to close, `aria-activedescendant` and a status announcement; parameter info
+    (`dax.signatureHelp`) after `(` and `,` or on Ctrl+Shift+Space with the active parameter in
+    bold; descriptions (`dax.hover` and the problems there) on pointing or Ctrl+K Ctrl+I; Shift+Alt+F
+    formats (`dax.format`) as Desktop's DAX query view does. Keys follow Microsoft's
+    documentation of Desktop's formula editor. Ranges stay aligned while typing and late
+    answers are dropped; edits keep the editor's own undo. Checked in the app by
+    `scripts/app-checks/formula-intellisense.mjs` (20 checks on Windows / WebView2).
+  - [ ] M7.5b Desktop's editor keys (Ctrl+M for Tab moving focus, indent and outdent, line
+    moves, copies and deletes, select line, matching bracket, insert line above and below) and
+    accessibility checklist A1–A6 for the formula bar with completion lists and squiggles.
 - [ ] **M7.6 Optional `dashcraft lsp`.** A Language Server Protocol adapter over the same
   commands for `.dax`, `.m` and `.tmdl` files in external editors.
 

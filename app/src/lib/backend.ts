@@ -62,6 +62,7 @@ import {
   type ViewAsOut,
 } from './ops'
 import type { RefreshEvent } from './data'
+import type { DaxService } from './daxEditor'
 
 export type * from './bindings'
 export { hasBackend } from './ops'
@@ -617,6 +618,43 @@ export async function runDaxQuery(query: string): Promise<Outcome<DaxQueryResult
 
 export async function cancelDaxQuery(): Promise<Outcome<boolean>> {
   return { ok: true, value: await cancelLatest('dax') }
+}
+
+// ---------------------------------------------------------------------------
+// DAX language services of the formula bar (`dax.complete`, `dax.tokens`, …; M7.5)
+// ---------------------------------------------------------------------------
+
+/**
+ * The `dax.*` language commands against the current document's model. A newer request of the
+ * same kind cancels a running one; a failed or cancelled request answers `null`.
+ */
+export const daxService: DaxService = {
+  async complete(text, offset) {
+    const r = await ops.daxComplete({ docId: current?.docId, text, position: { utf16Offset: offset }, maxItems: 50 }, { latest: 'dax-complete' })
+    return r.ok ? r.value : null
+  },
+  async signatureHelp(text, offset) {
+    const r = await ops.daxSignatureHelp({ text, position: { utf16Offset: offset } }, { latest: 'dax-signature' })
+    return r.ok ? (r.value.signature ?? null) : null
+  },
+  async hover(text, offset) {
+    const r = await ops.daxHover({ docId: current?.docId, text, position: { utf16Offset: offset } }, { latest: 'dax-hover' })
+    return r.ok ? (r.value.hover ?? null) : null
+  },
+  async diagnostics(text) {
+    const r = await ops.daxDiagnostics({ docId: current?.docId, text, kind: 'expression' }, { latest: 'dax-diagnostics' })
+    return r.ok ? r.value.diagnostics : null
+  },
+  async tokens(text) {
+    const r = await ops.daxTokens({ docId: current?.docId, text }, { latest: 'dax-tokens' })
+    return r.ok ? r.value.tokens : null
+  },
+  async format(text) {
+    const r = await ops.daxFormat({ text, kind: 'expression' })
+    if (!r.ok) return { ok: false, error: r.error }
+    if (!r.value.ok) return { ok: false, error: r.value.diagnostic?.message ?? 'The expression has a syntax error.' }
+    return { ok: true, text: r.value.text }
+  },
 }
 
 // ---------------------------------------------------------------------------

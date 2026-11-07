@@ -1,17 +1,21 @@
 <script lang="ts">
   import Icon from '../Icon.svelte'
-  import { formulaText } from '../../lib/editing'
+  import DaxEditor from '../DaxEditor.svelte'
+  import { expressionStart, formulaText } from '../../lib/editing'
+  import type { DaxService } from '../../lib/daxEditor'
 
   // Desktop's formula bar, shown under the ribbon when a measure, calculated column or calculated
-  // table is selected: `Name = expression`. With `oncommit` it is editable: Enter or ✓ commits
-  // (the name and the expression as one undo step), Shift+Enter starts a new line, Esc or ✕
-  // cancels. Without it (no local model) it is read-only.
+  // table is selected: `Name = expression`. With `oncommit` it is editable, with DAX IntelliSense
+  // (DaxEditor: colours, suggestions, parameter info, descriptions, squiggles, Shift+Alt+F
+  // format): Enter or ✓ commits (the name and the expression as one undo step), Shift+Enter
+  // starts a new line, Esc or ✕ cancels. Without it (no local model) it is read-only.
   let {
     name,
     expression,
     kind,
     explain = null,
     oncommit = null,
+    service = null,
   }: {
     name: string
     expression: string
@@ -20,20 +24,22 @@
     explain?: { enabled: boolean; title: string; run: () => void } | null
     /** Applies the edited formula; resolves an error message, or `null` once it is applied. */
     oncommit?: ((text: string) => Promise<string | null>) | null
+    /** The DAX language services of the editable formula. */
+    service?: DaxService | null
   } = $props()
 
   let expanded = $state(false)
   let saving = $state(false)
-  let editor = $state<HTMLTextAreaElement | null>(null)
-  let gutter = $state<HTMLDivElement | null>(null)
-  const text = $derived(formulaText(name, expression))
+  let editor = $state<ReturnType<typeof DaxEditor> | null>(null)
+  // A textarea's value has `\n` line breaks only; the editor's ranges are offsets into it.
+  const text = $derived(formulaText(name, expression).replace(/\r\n?/g, '\n'))
   // The draft follows the selected object until the user types; a new object resets it.
   let draft = $derived(text)
   let error = $derived.by((): string | null => {
     void text
     return null
   })
-  const lines = $derived((oncommit ? draft : text).split(/\r\n?|\n/))
+  const lines = $derived((oncommit ? draft : text).split('\n'))
   const changed = $derived(draft !== text)
   const rows = $derived(expanded ? Math.min(Math.max(lines.length, 3), 14) : 1)
   const errorId = `formula-error-${Math.random().toString(36).slice(2)}`
@@ -70,8 +76,8 @@
     }
   }
 
-  function syncScroll() {
-    if (gutter && editor) gutter.scrollTop = editor.scrollTop
+  function formatted() {
+    if (draft.includes('\n')) expanded = true
   }
 </script>
 
@@ -80,23 +86,19 @@
   <button class="icon-btn" disabled={!oncommit || !changed || saving} onclick={() => void commit()} title={oncommit ? 'Commit (Enter)' : `${kind} (read-only)`} aria-label="Commit"><Icon name="check" size={16} /></button>
   {#if oncommit}
     <div class="editor-wrap">
-      <div class="editor" class:invalid={!!error}>
-        <div class="gutter" bind:this={gutter} aria-hidden="true" style:height={`${rows * 18 + 8}px`}>{#each lines as _, i (i)}<span>{i + 1}</span>{/each}</div>
-        <textarea
-          bind:this={editor}
-          bind:value={draft}
-          {rows}
-          wrap="off"
-          spellcheck="false"
-          autocomplete="off"
-          readonly={saving}
-          aria-label={`${kind} formula`}
-          aria-invalid={!!error}
-          aria-describedby={error ? errorId : undefined}
-          onkeydown={keydown}
-          onscroll={syncScroll}
-        ></textarea>
-      </div>
+      <DaxEditor
+        bind:this={editor}
+        bind:value={draft}
+        {rows}
+        label={`${kind} formula`}
+        {service}
+        start={expressionStart}
+        readonly={saving}
+        invalid={!!error}
+        describedby={error ? errorId : undefined}
+        onkeydown={keydown}
+        onformat={formatted}
+      />
       <div class="error" id={errorId} aria-live="polite">{error ?? ''}</div>
     </div>
   {:else}
@@ -172,8 +174,7 @@
     white-space: pre;
   }
 
-  .no,
-  .gutter span {
+  .no {
     display: inline-block;
     width: 2.5ch;
     margin-right: 8px;
@@ -191,55 +192,7 @@
     margin-left: 6px;
   }
 
-  .editor {
-    display: flex;
-    align-items: flex-start;
-    min-width: 0;
-    border: 1px solid var(--color-border);
-    border-bottom-color: var(--color-border-accessible);
-    border-radius: 3px;
-    background: var(--color-code-bg);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 18px;
-  }
-
-  .editor:focus-within {
-    border-color: var(--color-brand);
-    outline: 2px solid var(--color-brand);
-  }
-
-  .editor.invalid {
-    border-color: var(--color-danger);
-  }
-
-  .gutter {
-    box-sizing: border-box;
-    flex: none;
-    padding: 4px 0 4px 8px;
-    overflow: hidden;
-  }
-
-  .gutter span {
-    display: block;
-    margin-right: 0;
-  }
-
-  textarea {
-    flex: 1;
-    min-width: 0;
-    padding: 4px 8px;
-    border: none;
-    outline: none;
-    background: transparent;
-    color: var(--color-text);
-    font: inherit;
-    line-height: inherit;
-    white-space: pre;
-    resize: none;
-  }
-
-  .formula-bar:not(.expanded) textarea {
+  .formula-bar:not(.expanded) .editor-wrap :global(textarea) {
     overflow: hidden;
   }
 
