@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json && npm run test",
-    "test": "node --test tests/markdown.test.ts tests/editing.test.ts",
+    "test": "node --test tests/markdown.test.ts tests/editing.test.ts tests/daxEditor.test.ts",
     "tauri": "tauri",
     "bindings": "cargo test -p dashcraft-app --lib export_bindings",
     "gen:ops": "node scripts/gen-ops.mjs --write",

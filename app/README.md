@@ -248,7 +248,12 @@ results and DTOs. Locations below refer to the Desktop shell above.
     (a calculated column's or table's DAX that does not parse, a taken name, a circular
     dependency) shows under the editor and keeps the draft. A measure keeps DAX that does not
     parse: the edit is applied, a warning toast says so, and the measure returns an error until
-    it is fixed.
+    it is fixed. IntelliSense (M7.5, `components/DaxEditor.svelte`, helpers in
+    `lib/daxEditor.ts`): the DAX is coloured and problems are squiggled (`dax.tokens`,
+    `dax.diagnostics`); typing a name, `[` or `'`, or Ctrl+Space, lists suggestions
+    (`dax.complete`; ↑ ↓ PgUp PgDn choose, Enter or Tab insert, Esc closes); `(` and `,`, or
+    Ctrl+Shift+Space, show the parameters (`dax.signatureHelp`); pointing at a name, or Ctrl+K
+    Ctrl+I, describes it (`dax.hover`); Shift+Alt+F formats (`dax.format`).
   - **Properties pane**: Description (tables, columns, measures), Display folder and Format string
     (columns, measures). Enter commits (Ctrl+Enter in Description), as does leaving the field;
     Esc cancels; an empty field clears the property.
@@ -264,8 +269,9 @@ results and DTOs. Locations below refer to the Desktop shell above.
     file, asks *Save*, *Don't save* or *Cancel* first.
   - The TMDL view shows a project's files with the unsaved edits, as Save would write them.
   - Checks: `cargo test -p dashcraft-app` (`edits_save_and_close_through_the_registry`),
-    `npm run check` (`tests/editing.test.ts`), and on Windows the UI smoke and accessibility
-    scripts of [`scripts/app-checks/`](../scripts/app-checks/) against a debug build
+    `npm run check` (`tests/editing.test.ts`, `tests/daxEditor.test.ts`), and on Windows the UI
+    smoke, IntelliSense (`formula-intellisense.mjs`) and accessibility scripts of
+    [`scripts/app-checks/`](../scripts/app-checks/) against a debug build
     ([results](../docs/accessibility/m6-editing.md)).
 - **Remote models** (`byConnection` / live connection): a banner "Remote model — not available
   offline"; pages, visuals and fields are still shown.

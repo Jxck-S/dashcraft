@@ -26,5 +26,11 @@ export default defineConfig({
     target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome111' : 'safari16',
     minify: process.env.TAURI_ENV_DEBUG ? false : 'oxc',
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    // The Svelte runtime and the Tauri API in a chunk of their own, apart from the app's code.
+    rolldownOptions: {
+      output: {
+        codeSplitting: { groups: [{ name: 'vendor', test: /node_modules/ }] },
+      },
+    },
   },
 })

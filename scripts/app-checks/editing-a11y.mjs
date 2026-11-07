@@ -111,7 +111,7 @@ try {
   check('A3 UI Automation exposes the controls with roles and values', !uiaControls.some((l) => l.startsWith('MISSING')) && uiaControls.some((l) => l.includes('Measure formula\tControlType.Edit')) && uiaControls.some((l) => /Redo\tControlType.Button\tenabled=False/.test(l)))
 
   // A4: text and component contrast (one shell theme).
-  const text = await evaluate(`[...document.querySelectorAll('.qat button:not(:disabled), .title-bar .title, .formula-bar textarea, .formula-bar .gutter span, ${field} label, ${field} input, ${field} textarea')].map((e) => [__a11y.name(e) || e.className, __a11y.ratio(getComputedStyle(e).color, __a11y.bg(e))])`)
+  const text = await evaluate(`[...document.querySelectorAll('.qat button:not(:disabled), .title-bar .title, .formula-bar .highlight .layer > span:not(.probe), .formula-bar .gutter span, ${field} label, ${field} input, ${field} textarea')].map((e) => [__a11y.name(e) || e.className, __a11y.ratio(getComputedStyle(e).color, __a11y.bg(e))])`)
   check('A4 text at least 4.5:1', text.every(([, r]) => r >= 4.5), `lowest ${Math.min(...text.map(([, r]) => r))}:1`)
   const parts = await evaluate(`[...document.querySelectorAll('.qat button:not(:disabled) svg, .formula-bar .icon-btn:not(:disabled) svg')].map((s) => __a11y.ratio(getComputedStyle(s).color, __a11y.bg(s))).concat([...document.querySelectorAll('${field} input, ${field} textarea, .formula-bar .editor')].map((e) => __a11y.ratio(getComputedStyle(e).borderBottomColor, __a11y.bg(e.parentElement))))`)
   check('A4 icons and input borders at least 3:1', parts.every((r) => r >= 3), `lowest ${Math.min(...parts)}:1`)
