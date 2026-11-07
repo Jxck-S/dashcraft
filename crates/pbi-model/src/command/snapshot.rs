@@ -8,7 +8,7 @@ use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
 use crate::props::Annotation;
 use crate::query::Filter;
-use crate::report::Visual;
+use crate::report::{ReportMeasure, Visual};
 use crate::semantic::{Column, Measure, NamedExpression, Relationship, Role, Table};
 
 /// New value for one object (or object part), addressed by ID.
@@ -25,6 +25,11 @@ pub enum Snapshot {
     ReportFilters {
         report: ObjectId,
         filters: Vec<Filter>,
+    },
+    /// Report-level measures of the report with this ID.
+    ReportMeasures {
+        report: ObjectId,
+        measures: Vec<ReportMeasure>,
     },
     /// Page-level filter list of the page with this ID.
     PageFilters {
@@ -49,7 +54,9 @@ impl Snapshot {
             Snapshot::Expression(x) => x.id,
             Snapshot::Role(x) => x.id,
             Snapshot::Visual(x) => x.id,
-            Snapshot::ReportFilters { report, .. } => *report,
+            Snapshot::ReportFilters { report, .. } | Snapshot::ReportMeasures { report, .. } => {
+                *report
+            }
             Snapshot::PageFilters { page, .. } => *page,
             Snapshot::ModelAnnotations { model, .. } => *model,
         }
@@ -64,7 +71,7 @@ impl Snapshot {
             Snapshot::Expression(_) => ObjectKind::Expression,
             Snapshot::Role(_) => ObjectKind::Role,
             Snapshot::Visual(_) => ObjectKind::Visual,
-            Snapshot::ReportFilters { .. } => ObjectKind::Report,
+            Snapshot::ReportFilters { .. } | Snapshot::ReportMeasures { .. } => ObjectKind::Report,
             Snapshot::PageFilters { .. } => ObjectKind::Page,
             Snapshot::ModelAnnotations { .. } => ObjectKind::Model,
         }
@@ -167,6 +174,10 @@ fn swap_in(doc: &mut Document, value: &mut Snapshot) -> Result<(), CommandError>
             let r = doc.reports.get_mut(report).ok_or_else(missing)?;
             mem::swap(&mut r.filters, filters);
         }
+        (ObjectPath::Report { report }, Snapshot::ReportMeasures { measures, .. }) => {
+            let r = doc.reports.get_mut(report).ok_or_else(missing)?;
+            mem::swap(&mut r.measures, measures);
+        }
         (ObjectPath::Page { report, page }, Snapshot::PageFilters { filters, .. }) => {
             let p = doc
                 .reports
@@ -263,6 +274,15 @@ fn diff_events(old: &Snapshot, new: &Snapshot, events: &mut Vec<ChangeEvent>) {
                 filters: a,
             },
             Snapshot::PageFilters { filters: b, .. },
+        ) if a != b => {
+            events.push(ChangeEvent::ObjectChanged { id: *id });
+        }
+        (
+            Snapshot::ReportMeasures {
+                report: id,
+                measures: a,
+            },
+            Snapshot::ReportMeasures { measures: b, .. },
         ) if a != b => {
             events.push(ChangeEvent::ObjectChanged { id: *id });
         }

@@ -4,8 +4,9 @@
 //!
 //! - **PBIR**: a folder of JSON files (`definition.pbir`, `.platform`,
 //!   `definition/report.json`, `version.json`, `pages/pages.json`,
-//!   `pages/<id>/page.json`, `pages/<id>/visuals/<id>/visual.json`, themes
-//!   under `StaticResources/`). Used by PBIP and by newer PBIX files
+//!   `pages/<id>/page.json`, `pages/<id>/visuals/<id>/visual.json`,
+//!   `reportExtensions.json` (report-level measures), themes under
+//!   `StaticResources/`). Used by PBIP and by newer PBIX files
 //!   (`Report/definition/`).
 //! - **PBIR-Legacy / PBIX `Layout`**: one JSON document with stringified
 //!   nested JSON (`report.json` in older PBIP, UTF-16LE `Report/Layout` in
@@ -54,8 +55,8 @@ pub use legacy::{
     LegacyReport, TextEncoding, legacy_to_report_ast, read_legacy_layout, read_legacy_layout_at,
 };
 pub use pbir::{
-    DefinitionPbir, FilterJson, PageJson, PagesJson, Platform, ReportJson, VersionJson,
-    VisualContainerJson,
+    DefinitionPbir, FilterJson, PageJson, PagesJson, Platform, ReportExtensionsJson, ReportJson,
+    VersionJson, VisualContainerJson,
 };
 pub use query::{ConditionJson, ExprKind, FieldExprJson, QueryExpr};
 pub use reader::{PbirFile, PbirFileKind, PbirPage, PbirReport, PbirTheme, PbirVisual, read_pbir};

@@ -1968,3 +1968,113 @@ fn table_definitions_change_columns_with_exact_inverses() {
         .contains("used by relationship")
     );
 }
+
+#[test]
+fn renames_follow_report_level_measures_whose_names_are_taken() {
+    use crate::report::{MeasureReference, ReportMeasure};
+    let reference = |schema: &str, table: &str, name: &str| MeasureReference {
+        schema: schema.into(),
+        table: table.into(),
+        name: name.into(),
+    };
+    let mut doc = sample_document();
+    doc.reports[0].measures = vec![
+        ReportMeasure {
+            table: "Stores".into(),
+            name: "Half Count".into(),
+            expression: "[Store Count] / 2".into(),
+            references: vec![reference("", "Stores", "Store Count")],
+            ..ReportMeasure::default()
+        },
+        ReportMeasure {
+            table: "Orders".into(),
+            name: "Full Count".into(),
+            expression: "[Half Count] * 2".into(),
+            references: vec![reference("extension", "Stores", "Half Count")],
+            ..ReportMeasure::default()
+        },
+    ];
+    let stores = table_id(&doc, "Stores");
+    let command = RenameTable {
+        table: stores,
+        new_name: "Shops".into(),
+    };
+    assert_round_trip(&mut doc, command, |doc, events| {
+        let m = &doc.reports[0].measures;
+        assert_eq!(
+            (m[0].table.as_str(), m[1].table.as_str()),
+            ("Shops", "Orders")
+        );
+        assert_eq!(m[0].references, [reference("", "Shops", "Store Count")]);
+        assert_eq!(
+            m[1].references,
+            [reference("extension", "Shops", "Half Count")]
+        );
+        // The DAX is rewritten by pbi-session's rename.
+        assert_eq!(m[0].expression, "[Store Count] / 2");
+        let report = doc.reports[0].id;
+        assert!(events.contains(&ChangeEvent::ObjectChanged { id: report }));
+    });
+    let count = measure_id(&doc, "Stores", "Store Count");
+    let command = RenameMeasure {
+        measure: count,
+        new_name: "Stores Total".into(),
+    };
+    assert_round_trip(&mut doc, command, |doc, _| {
+        let m = &doc.reports[0].measures;
+        assert_eq!(m[0].references, [reference("", "Stores", "Stores Total")]);
+        assert_eq!(
+            m[1].references,
+            [reference("extension", "Stores", "Half Count")]
+        );
+    });
+
+    // A report-level measure's name is taken for measures (anywhere) and
+    // for columns of the table it is shown in.
+    let original = doc.clone();
+    let mut history = History::new();
+    let (orders, region) = (
+        table_id(&doc, "Orders"),
+        column_id(&doc, "Stores", "Region"),
+    );
+    let order_id = column_id(&doc, "Orders", "Order ID");
+    let conflict = |result: Result<Vec<ChangeEvent>, CommandError>| {
+        assert!(
+            matches!(&result, Err(CommandError::NameConflict { .. })),
+            "{result:?}"
+        );
+    };
+    conflict(history.execute(
+        &mut doc,
+        RenameMeasure {
+            measure: count,
+            new_name: "half count".into(),
+        },
+    ));
+    conflict(history.execute(
+        &mut doc,
+        CreateMeasure {
+            table: orders,
+            measure: Measure::new("Full Count", "1"),
+            index: None,
+        },
+    ));
+    conflict(history.execute(
+        &mut doc,
+        RenameColumn {
+            column: region,
+            new_name: "Half Count".into(),
+        },
+    ));
+    assert_eq!(doc, original);
+    // Another table's column may have that name.
+    history
+        .execute(
+            &mut doc,
+            RenameColumn {
+                column: order_id,
+                new_name: "Half Count".into(),
+            },
+        )
+        .unwrap();
+}

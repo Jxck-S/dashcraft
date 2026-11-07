@@ -3,10 +3,11 @@
 //! [`Rename`] updates every *structured* reference to a renamed table,
 //! column or measure: relationship ends, role table permissions, report
 //! field expressions (projections, sorts, filters, conditions), projection
-//! `queryRef`/`nativeQueryRef`, and semantic-query JSON kept verbatim in
+//! `queryRef`/`nativeQueryRef`, semantic-query JSON kept verbatim in
 //! `Filter::raw`, visual `objects`/`visualContainerObjects` and `extra`
 //! bags (`SourceRef.Entity`, `From[].Entity`, `Column`/`Measure`
-//! `Property`, selector `metadata`).
+//! `Property`, selector `metadata`), and the table and measure references
+//! of report-level measures.
 //!
 //! DAX and M text that mention the renamed object are rewritten by
 //! `pbi-session`, which has the `pbi-dax` and `pbi-m` lexers.
@@ -18,7 +19,7 @@ use serde_json::Value;
 use crate::names::names_eq;
 use crate::props::{PropValue, PropertyBag};
 use crate::query::{Condition, FieldExpr, Filter};
-use crate::report::Visual;
+use crate::report::{ReportMeasure, Visual};
 use crate::semantic::{ColumnRef, Relationship};
 
 /// A rename to propagate to references. Matching is case-insensitive.
@@ -202,11 +203,51 @@ impl Rename {
         from | to
     }
 
+    /// Rewrites the table of a report-level measure and the measure
+    /// references it lists (`references.measures`); its DAX is rewritten by
+    /// `pbi-session`.
+    pub fn apply_to_report_measure(&self, measure: &mut ReportMeasure) -> bool {
+        let mut changed = false;
+        if let Rename::Table { old, new } = self
+            && names_eq(&measure.table, old)
+        {
+            changed |= set_if_different(&mut measure.table, new);
+        }
+        for r in &mut measure.references {
+            changed |= match self {
+                Rename::Table { old, new } if names_eq(&r.table, old) => {
+                    set_if_different(&mut r.table, new)
+                }
+                Rename::Measure { table, old, new }
+                    if r.schema.is_empty()
+                        && names_eq(&r.table, table)
+                        && names_eq(&r.name, old) =>
+                {
+                    set_if_different(&mut r.name, new)
+                }
+                _ => false,
+            };
+        }
+        changed
+    }
+
+    pub fn apply_to_report_measures(&self, measures: &mut [ReportMeasure]) -> bool {
+        measures
+            .iter_mut()
+            .fold(false, |acc, m| self.apply_to_report_measure(m) | acc)
+    }
+
     /// Rewrites a `queryRef`-style string (`Table.Field` or
-    /// `Func(Table.Field)`). Returns the new string if it changed.
+    /// `Func(Table.Field)`). Returns the new string if it changed. Only an
+    /// alphanumeric name before the `(` makes a function call, so names with
+    /// parentheses (`Orders.Sales (Scaled)`) stay plain fields.
     pub fn apply_to_query_ref(&self, query_ref: &str) -> Option<String> {
         let (prefix, inner, suffix) = match (query_ref.find('('), query_ref.strip_suffix(')')) {
-            (Some(open), Some(body)) if open < body.len() => {
+            (Some(open), Some(body))
+                if open > 0
+                    && open < body.len()
+                    && query_ref[..open].chars().all(|c| c.is_ascii_alphanumeric()) =>
+            {
                 (&query_ref[..=open], &body[open + 1..], ")")
             }
             _ => ("", query_ref, ""),
@@ -409,6 +450,26 @@ mod tests {
             Some("CountNonNull(Sessions.Device)")
         );
         assert_eq!(r.apply_to_query_ref("Web Sessionsx.Device"), None);
+        // Field names ending in a parenthesis are not function calls.
+        let orders = table("Orders", "Sales Orders");
+        assert_eq!(
+            orders
+                .apply_to_query_ref("Orders.Sales (Scaled)")
+                .as_deref(),
+            Some("Sales Orders.Sales (Scaled)")
+        );
+        assert_eq!(
+            orders
+                .apply_to_query_ref("Sum(Orders.Amount (USD))")
+                .as_deref(),
+            Some("Sum(Sales Orders.Amount (USD))")
+        );
+        assert_eq!(
+            column("Orders", "Sales (Scaled)", "Scaled")
+                .apply_to_query_ref("Orders.Sales (Scaled)")
+                .as_deref(),
+            Some("Orders.Scaled")
+        );
         let c = column("Stores", "Region", "Area");
         assert_eq!(
             c.apply_to_query_ref("Stores.Region").as_deref(),

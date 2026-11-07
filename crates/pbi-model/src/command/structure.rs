@@ -7,7 +7,7 @@
 //! command is built (ADR-0014), so undo and redo keep them.
 
 use super::edit::{changed, swap};
-use super::rename::{check_measure_name, validate_name};
+use super::rename::{check_measure_name, check_report_measures, validate_name};
 use super::snapshot::{ReplaceObjects, Snapshot};
 use super::{Applied, ChangeEvent, Command, CommandError, expect_kind, model, model_mut};
 use crate::document::{Document, ObjectKind, ObjectPath};
@@ -41,7 +41,7 @@ impl Command for CreateMeasure {
         else {
             return Err(CommandError::NotFound(self.table));
         };
-        check_measure_name(model(doc)?, t, ObjectId::UNASSIGNED, &self.measure.name)?;
+        check_measure_name(doc, t, ObjectId::UNASSIGNED, &self.measure.name)?;
         let mut measure = self.measure.clone();
         measure.id = doc.ids.peek();
         let id = measure.id;
@@ -522,6 +522,7 @@ impl Command for CreateColumn {
                 existing: format!("measure '{}'[{}]", table.name, other.name),
             });
         }
+        check_report_measures(doc, Some(&table.name), &self.column.name)?;
         let mut column = self.column.clone();
         column.id = doc.ids.peek();
         let id = column.id;

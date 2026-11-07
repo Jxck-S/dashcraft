@@ -5,7 +5,8 @@
 //! calculated columns and tables, calculation items, role filters), model
 //! structure (relationship ends, hierarchy levels, sort-by columns, role
 //! table permissions) and report fields (visual projections, sorts, filters
-//! and formatting, page and report filters). For a relationship, the
+//! and formatting, page and report filters) and report-level measures
+//! (their DAX, and the table they are shown in). For a relationship, the
 //! dependents are the DAX expressions whose `USERELATIONSHIP` or
 //! `CROSSFILTER` calls name both of its columns; for a user hierarchy, the
 //! report fields that use one of its levels (DAX cannot name a hierarchy).
@@ -19,7 +20,7 @@ use pbi_model::{
 use serde::{Deserialize, Serialize};
 
 use crate::DerivedKind;
-use crate::edit::{ExtraDax, dax_scan};
+use crate::edit::{ExtraDax, dax_scan, report_measure_location};
 use crate::session::Session;
 
 /// One object property that refers to the inspected object.
@@ -189,6 +190,12 @@ fn find(
         let in_report = format!("report '{}'", report.name);
         if probe.apply_to_filters(&mut report.filters.clone()) {
             push(&mut out.dependents, &in_report, "filters");
+        }
+        if let Target::Table(table) = &target {
+            for m in report.measures.iter().filter(|m| names_eq(&m.table, table)) {
+                let location = report_measure_location(&m.table, &m.name, &report.name);
+                push(&mut out.dependents, &location, "table");
+            }
         }
         for page in &report.pages {
             let on_page = format!("page '{}' of {in_report}", page.display_name);
@@ -648,6 +655,32 @@ mod tests {
             object_dependents(&d, month).unwrap()
         );
     }
+    #[test]
+    fn report_level_measures_are_dependents() {
+        let mut d = doc();
+        d.reports[0].measures.push(pbi_model::ReportMeasure {
+            table: "Orders".into(),
+            name: "Per Line".into(),
+            expression: "DIVIDE([Total Sales], COUNTROWS(Orders))".into(),
+            ..pbi_model::ReportMeasure::default()
+        });
+        let model = d.model.as_ref().unwrap();
+        let location = "report-level measure 'Orders'[Per Line] of report 'Sales'";
+        let total = model.measure("Orders", "Total Sales").unwrap().id;
+        assert!(
+            locations(&object_dependents(&d, total).unwrap()).contains(&(location, "expression"))
+        );
+        // It stays in the report when its table is deleted.
+        let orders = model.table("Orders").unwrap().id;
+        let found = delete_dependents(&d, orders).unwrap();
+        let found = locations(&found);
+        assert!(found.contains(&(location, "expression")), "{found:?}");
+        assert!(found.contains(&(location, "table")), "{found:?}");
+        let stores = model.table("Stores").unwrap().id;
+        let found = object_dependents(&d, stores).unwrap();
+        assert!(!locations(&found).iter().any(|(l, _)| *l == location));
+    }
+
     #[test]
     fn relationship_dependents_are_the_dax_that_names_both_ends() {
         let mut d = doc();

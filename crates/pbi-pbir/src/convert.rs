@@ -3,9 +3,10 @@
 
 use pbi_model::{
     AggregationFunction, Annotation, ComparisonKind, Condition, DatasetReference, Diagnostic,
-    DisplayOption, FieldExpr, Filter, FilterKind, InteractionKind, Literal, Origin, Page, Position,
-    Projection, PropValue, PropertyBag, PropertyVariation, Report, ResourceItem, ResourcePackage,
-    ResourceRef, SortDirection, SortItem, ThemeRef, Visual, VisualInteraction, VisualKind,
+    DisplayOption, FieldExpr, Filter, FilterKind, InteractionKind, Literal, MeasureReference,
+    Origin, Page, Position, Projection, PropValue, PropertyBag, PropertyVariation, Report,
+    ReportMeasure, ResourceItem, ResourcePackage, ResourceRef, SortDirection, SortItem, ThemeRef,
+    Visual, VisualInteraction, VisualKind,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -13,8 +14,8 @@ use serde_json::Value;
 use crate::error::codes;
 use crate::json::{JsonMap, num_f64, num_i64};
 use crate::pbir::{
-    AnnotationJson, DefinitionPbir, FilterJson, ResourcePackageJson, ThemeCollectionJson,
-    ThemeMetadataJson, schema_kind_version,
+    AnnotationJson, DefinitionPbir, FilterJson, ReportExtensionsJson, ResourcePackageJson,
+    ThemeCollectionJson, ThemeMetadataJson, schema_kind_version,
 };
 use crate::query::{ExprKind, QueryExpr, SourceAliases};
 use crate::reader::{DEFINITION_PBIR, PbirPage, PbirReport, PbirVisual, REPORT_JSON, VERSION_JSON};
@@ -524,8 +525,46 @@ pub fn to_report_ast(pbir: &PbirReport) -> (Report, Vec<Diagnostic>) {
         );
         put_extra(&mut report.extra, "pages.", &meta.extra);
     }
+    if let Some(ext) = &pbir.extensions {
+        report.measures = report_measures(ext);
+    }
     report.pages = pbir.pages.iter().map(|p| page(p, &mut ctx)).collect();
     (report, ctx.diags)
+}
+
+/// The measures of `reportExtensions.json`, entity by entity in file order
+/// (every measure, so positions match the file).
+fn report_measures(ext: &ReportExtensionsJson) -> Vec<ReportMeasure> {
+    let mut out = Vec::new();
+    for entity in ext.entities.iter().flatten() {
+        let table = entity.name.clone().unwrap_or_default();
+        for m in entity.measures.iter().flatten() {
+            let references = m
+                .references
+                .as_ref()
+                .and_then(|r| r.measures.as_ref())
+                .into_iter()
+                .flatten()
+                .map(|r| MeasureReference {
+                    schema: r.schema.clone().unwrap_or_default(),
+                    table: r.entity.clone().unwrap_or_default(),
+                    name: r.name.clone().unwrap_or_default(),
+                })
+                .collect();
+            out.push(ReportMeasure {
+                table: table.clone(),
+                name: m.name.clone().unwrap_or_default(),
+                expression: m.expression.clone().unwrap_or_default(),
+                data_type: m.data_type.clone(),
+                format_string: m.format_string.clone(),
+                hidden: m.hidden.unwrap_or(false),
+                display_folder: m.display_folder.clone(),
+                description: m.description.clone(),
+                references,
+            });
+        }
+    }
+    out
 }
 
 fn page(p: &PbirPage, ctx: &mut Ctx) -> Page {

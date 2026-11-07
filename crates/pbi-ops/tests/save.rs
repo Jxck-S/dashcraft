@@ -1523,3 +1523,130 @@ async fn renamed_queries_save_and_reopen() {
         "undoing the renames saves the original project"
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn renames_rewrite_report_level_measures_and_save_them() {
+    const EXT: &str = "Mini.Report/definition/reportExtensions.json";
+    const DOUBLE_CARD: &str = "Mini.Report/definition/pages/overview/visuals/double/visual.json";
+    let dir = tmp_dir("save-ext-");
+    let pbip = mini_pbip(dir.path());
+    let ext = json!({
+        "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json",
+        "name": "extension",
+        "entities": [{
+            "name": "Sales",
+            "measures": [
+                {
+                    "name": "Double Total",
+                    "dataType": "Integer",
+                    "expression": "[Total] * 2",
+                    "formatString": "0",
+                    "references": {"measures": [{"entity": "Sales", "name": "Total"}]}
+                },
+                {"name": "Mean Amount", "dataType": "Double", "expression": "AVERAGE(Sales[Amount])"}
+            ]
+        }]
+    });
+    fs::write(
+        dir.path().join(EXT),
+        serde_json::to_string_pretty(&ext).unwrap(),
+    )
+    .unwrap();
+    // A card showing the report-level measure.
+    let mut card: Value =
+        serde_json::from_slice(&fs::read(dir.path().join(TOTAL_CARD)).unwrap()).unwrap();
+    card["name"] = json!("double");
+    card["visual"]["query"]["queryState"]["Data"]["projections"][0] = json!({
+        "field": {"Measure": {"Expression": {"SourceRef": {"Schema": "extension", "Entity": "Sales"}}, "Property": "Double Total"}},
+        "queryRef": "Sales.Double Total",
+        "nativeQueryRef": "Double Total"
+    });
+    fs::create_dir_all(dir.path().join(DOUBLE_CARD).parent().unwrap()).unwrap();
+    fs::write(
+        dir.path().join(DOUBLE_CARD),
+        serde_json::to_string_pretty(&card).unwrap(),
+    )
+    .unwrap();
+    let original = files(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    let lint = r.run("doc.lint", json!({"docId": doc})).await;
+    assert!(lint["summary"]["byRule"].get("LINT003").is_none(), "{lint}");
+
+    // The preview lists the report-level measure's DAX.
+    let preview = r
+        .run(
+            "model.object.rename",
+            json!({"docId": doc, "table": "Sales", "measure": "Total", "newName": "Grand Total", "dryRun": true}),
+        )
+        .await;
+    let rewrites = preview["rewrites"].as_array().unwrap();
+    assert!(
+        rewrites.iter().any(|w| w["location"]
+            .as_str()
+            .unwrap()
+            .starts_with("report-level measure 'Sales'[Double Total] of report ")
+            && w["after"] == "[Grand Total] * 2"),
+        "{preview}"
+    );
+    for mut params in [
+        json!({"table": "Sales", "measure": "Total", "newName": "Grand Total"}),
+        json!({"table": "Sales", "column": "Amount", "newName": "Revenue"}),
+        json!({"table": "Sales", "newName": "Sales Data"}),
+    ] {
+        params["docId"] = json!(doc);
+        r.run("model.object.rename", params).await;
+    }
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    let written = strings(&out["written"]);
+    assert!(
+        written.contains(&EXT) && written.contains(&DOUBLE_CARD),
+        "{out}"
+    );
+    let saved = files(dir.path());
+    let mut expected = ext.clone();
+    expected["entities"][0]["name"] = json!("Sales Data");
+    let measures = &mut expected["entities"][0]["measures"];
+    measures[0]["expression"] = json!("[Grand Total] * 2");
+    measures[0]["references"]["measures"][0] =
+        json!({"entity": "Sales Data", "name": "Grand Total"});
+    measures[1]["expression"] = json!("AVERAGE('Sales Data'[Revenue])");
+    assert_eq!(
+        String::from_utf8(saved[EXT].clone()).unwrap(),
+        serde_json::to_string_pretty(&expected).unwrap()
+    );
+    let card = String::from_utf8(saved[DOUBLE_CARD].clone()).unwrap();
+    assert!(
+        card.contains("\"Entity\": \"Sales Data\"")
+            && card.contains("\"queryRef\": \"Sales Data.Double Total\""),
+        "{card}"
+    );
+
+    // Reopened: the report-level measures still bind, and deleting their
+    // table lists them.
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    let lint = fresh.run("doc.lint", json!({"docId": reopened})).await;
+    assert!(lint["summary"]["byRule"].get("LINT003").is_none(), "{lint}");
+    let delete = fresh
+        .run(
+            "model.table.delete",
+            json!({"docId": reopened, "table": "Sales Data", "dryRun": true}),
+        )
+        .await;
+    let dependents = delete["dependents"].to_string();
+    assert!(
+        dependents.contains("report-level measure 'Sales Data'[Double Total]")
+            && dependents.contains("report-level measure 'Sales Data'[Mean Amount]"),
+        "{dependents}"
+    );
+
+    // Undo the renames and save: the original bytes.
+    for _ in 0..3 {
+        r.run("doc.undo", json!({"docId": doc})).await;
+    }
+    r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(files(dir.path()), original);
+}

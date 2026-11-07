@@ -8,7 +8,7 @@
 - An embedded report (PBIX/PBIT) is checked against the document model.
 - For a `byConnection` report, or when the model was not loaded, model-dependent checks are skipped. The skip is recorded in `summary.notes`.
 - `queryRef` consistency, interactions, duplicate names and layout are checked on every report.
-- Report-level measures from PBIR `definition/reportExtensions.json` count as defined. `lint_document` has no container, so it cannot see them.
+- Report-level measures from PBIR `definition/reportExtensions.json` count as defined (`lint` and `lint_document` read them from the report).
 
 `LintOptions` can disable rules by id (`disabled_rules`), drop findings below a severity (`min_severity`), and turn the layout rules off (`layout: false`). `LintReport::to_json()` is the stable machine format (`schemaVersion: 1`). `LintReport::to_diagnostics()` converts findings to `pbi_model::Diagnostic`, with the rule id as the code and the suggestion appended to the message.
 

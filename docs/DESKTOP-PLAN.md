@@ -43,7 +43,7 @@ What exists after M0–M5 (`v0.1.0`, `v0.2.0`) and the unreleased work, from [GA
 
 | Area | What exists | GAPS avg |
 |---|---|---|
-| File formats | Content detection and safe containers; readers for PBIP (TMDL or `model.bim`, PBIR and PBIR-Legacy), PBIX (report, model, VertiPaq data), PBIT, `.abf`, `.pbi/cache.abf`, Power Pivot, VPAX, RDL outline, mashups, `.pbiviz`/`.mez`/`.pqx` metadata; writers: TMDL (byte-identical), TMSL, PBIR, `save_as_pbip`, `export_pbit`. No PBIX writer, bookmarks and report-level measures only kept | 3.1 |
+| File formats | Content detection and safe containers; readers for PBIP (TMDL or `model.bim`, PBIR and PBIR-Legacy), PBIX (report, model, VertiPaq data), PBIT, `.abf`, `.pbi/cache.abf`, Power Pivot, VPAX, RDL outline, mashups, `.pbiviz`/`.mez`/`.pqx` metadata; writers: TMDL (byte-identical), TMSL, PBIR, `save_as_pbip`, `export_pbit`. No PBIX writer, bookmarks only kept; PBIR report-level measures (`reportExtensions.json`) typed, renamed and written back | 3.1 |
 | M | Full grammar, lazy evaluator, 336 library names, `AzureStorage.Blobs` offline through the blob map; every other data source unsupported by policy | 3.1 |
 | DAX | Parser, printer, evaluator with filter and row context, context transition, BLANK; 294 functions (271 supported, 23 partial); calculation groups; security functions; differential tests against Desktop (2,242 recorded queries, ADR-0011) | 3.9 |
 | Engine | Arrow store, DataFusion SQL, one-to-many, one-to-one and limited many-to-many relationships, filter propagation, RLS "View as", calculation groups, one-pass group-by, cancellable refresh | 3.4 |
@@ -480,10 +480,18 @@ their write roots).
   project from any readable source (PBIP, PBIX, PBIT, `model.bim`) or a PBIT file. Saving a PBIX or
   PBIT source in place offers Save As PBIP; embedded VertiPaq data cannot be carried over (no
   encoder; a PBIT has none) and the dialog says so.
-- [ ] **M6.7 DAX- and M-aware rename.** Renames rewrite DAX text references (measures, calculated
+- [x] **M6.7 DAX- and M-aware rename.** Renames rewrite DAX text references (measures, calculated
   columns and tables, calculation items, format string expressions, RLS filters, report-level
   measures) at token level, keeping formatting and comments; renaming a query or parameter rewrites
   M identifier references; a preview lists every affected object.
+  Done: DAX at token level in all of these and in session-derived columns; the report-level
+  measures of PBIR reports are in the report AST (`Report::measures`), so a table rename moves
+  them, their DAX and `references` follow every rename, `model.dependencies` and deletes list
+  them, a rename onto one of their names is refused, and `doc.save` writes them back into
+  `reportExtensions.json` (only the changed strings); M at token level for queries, parameters and
+  functions (`pbi_m::rename_query`); `dryRun` lists every rewrite. Checked in Power BI Desktop
+  (GT-6 s21 for M, s22 for report-level measures). Not covered: report-level measures of
+  PBIR-Legacy and PBIX layouts (`modelExtensions` in the report `config`), which are not read yet.
 - [ ] **M6.8 App wiring.** Quick Access Toolbar Save, Undo and Redo with labels from the history;
   Ctrl+S, Ctrl+Z, Ctrl+Y; unsaved marker in the title; prompt on close and quit; the formula bar
   edits measure expressions (plain editor; IntelliSense in M7.5); the Properties pane edits
@@ -518,7 +526,7 @@ their write roots).
   ([ci.md](ci.md#registry-property-tests)). It found that renaming a field a visual uses and then
   deleting it made the project unsaveable; the save now reads such renames from the report.
 
-**Progress (M6.2–M6.7 partial, not ticked).** The session owns a `pbi-model::History` per open
+**Progress (M6.2–M6.6 partial, not ticked).** The session owns a `pbi-model::History` per open
 document and publishes each edit, undo and redo into the opened document, the session model and
 the engine in one step (prepare, then commit; report-only edits keep the engine and the canvas
 cache); queries report the revision they captured. Registry commands: `doc.applyEdits`,
@@ -674,10 +682,17 @@ with a warning, and the preview lists every rewrite as `mRewrites`
 Checked in Power BI Desktop (GT-6 s21): DashCraft renamed five queries and parameters of the
 Desktop copy of Acme (15 references in seven tables and one expression); Desktop opened and
 refreshed the saved project with the renamed expressions and rewritten partitions, and all 643
-recorded cases equal the committed recordings. Still open:
-the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits, KPI and detail-rows expressions, report-level measures
-(`reportExtensions.json`), moving visual groups, canvas state remapping after renames, and the
-app and CLI work.
+recorded cases equal the committed recordings. Report-level measures (`reportExtensions.json`)
+are typed in `pbi-pbir` and kept in the report AST: renames rewrite their table, DAX and
+`references`, they count as dependents and as taken names, and the save patches only the changed
+strings (`renames_follow_into_report_level_measures`,
+`renames_rewrite_report_level_measures_and_save_them`). Checked in Power BI Desktop (GT-6 s22):
+three report-level measures on a card of the Desktop copy of Acme, then DashCraft renamed a table,
+a column and a measure they use; Desktop loaded the saved report, its own card query used the
+rewritten DAX, and the card values equal those before the renames. Still open:
+the app's change events (M6.8), data column delete (with M editing), hierarchy and level edits,
+KPI and detail-rows expressions, moving visual groups, canvas state remapping after renames, and
+the app and CLI work.
 
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,
 invalidation, recalculation), `pbi-core` (save in place, minimal-diff writes, identifier
@@ -895,7 +910,7 @@ in focus mode or as a table and export its data; see images and report-level mea
 
 **Crates and layers.** `pbi-render` (query, DataView highlights, drill and drillthrough filters,
 tooltip pages, bookmarks, images), `pbi-pbir` (bookmark and extension types already kept),
-`pbi-model` (report-level measures in the report AST), `pbi-session` (query model with report
+`pbi-model` (report-level measures, in the report AST since M6.7), `pbi-session` (query model with report
 measures), `pbi-ops` (`canvas.*`), `dashcraft-app`.
 
 **New registry commands.** `report.bookmarks`, `canvas.applyBookmark`, `canvas.drill`,

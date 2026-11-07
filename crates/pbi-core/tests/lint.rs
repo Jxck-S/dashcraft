@@ -636,6 +636,20 @@ fn report_level_measures_are_not_missing() {
         "{}",
         show(&report)
     );
+    // They are part of the report, so lint_document sees them too.
+    let opened = open(&p.root);
+    let stores = opened
+        .document
+        .reports
+        .iter()
+        .find(|r| r.measure("Total Sales (report)").is_some());
+    assert_eq!(stores.map(|r| r.measures.len()), Some(1));
+    let report = lint_document(&opened.document, &LintOptions::default());
+    assert!(
+        of(&report, rules::MISSING_FIELD).is_empty(),
+        "{}",
+        show(&report)
+    );
     // Without the extension file the same binding is broken.
     fs::remove_file(p.path(&ext_path)).unwrap();
     let report = p.lint();

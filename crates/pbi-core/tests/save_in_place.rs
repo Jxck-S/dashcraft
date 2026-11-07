@@ -143,6 +143,7 @@ fn rename(doc: &mut Document, rename: &Rename) {
         rename.apply_to_relationship(relationship);
     }
     for report in &mut doc.reports {
+        rename.apply_to_report_measures(&mut report.measures);
         rename.apply_to_filters(&mut report.filters);
         for page in &mut report.pages {
             rename.apply_to_filters(&mut page.filters);
@@ -413,6 +414,108 @@ fn renamed_then_deleted_objects_keep_their_new_names_in_the_report() {
             normalized(&edited.reports)
         );
     }
+}
+
+#[test]
+fn renames_follow_into_report_level_measures() {
+    let (_dir, root) = project();
+    let ext_path = format!("{ONLINE}/definition/reportExtensions.json");
+    let ext = serde_json::json!({
+        "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json",
+        "name": "extension",
+        "entities": [
+            {
+                "name": "Web Sessions",
+                "measures": [{
+                    "name": "Double Sessions",
+                    "dataType": "Integer",
+                    "expression": "[Sessions] * 2",
+                    "dataCategory": "Uncategorized",
+                    "references": {"measures": [{"entity": "Web Sessions", "name": "Sessions"}]}
+                }]
+            },
+            {
+                "name": "Orders",
+                "measures": [{
+                    "name": "Sessions per Order",
+                    "dataType": "Double",
+                    "expression": "DIVIDE([Double Sessions], COUNTROWS(Orders))",
+                    "references": {"measures": [
+                        {"schema": "extension", "entity": "Web Sessions", "name": "Double Sessions"}
+                    ]}
+                }]
+            }
+        ]
+    });
+    let ext_bytes = serde_json::to_vec_pretty(&ext).unwrap();
+    std::fs::write(root.join(&ext_path), &ext_bytes).unwrap();
+    let original = files(&root);
+    let opened = open(&root);
+    let mut fingerprint = ProjectFingerprint::scan(&opened).unwrap();
+    let online = opened
+        .document
+        .reports
+        .iter()
+        .position(|r| r.measure("Double Sessions").is_some())
+        .unwrap();
+    assert_eq!(opened.document.reports[online].measures.len(), 2);
+    let outcome = save_in_place(&opened, &mut fingerprint, &opened.document, false).unwrap();
+    assert!(outcome.written.is_empty(), "{:?}", outcome.written);
+
+    let mut edited = opened.document.clone();
+    rename(
+        &mut edited,
+        &Rename::Measure {
+            table: "Web Sessions".into(),
+            old: "Sessions".into(),
+            new: "Visits".into(),
+        },
+    );
+    rename(
+        &mut edited,
+        &Rename::Table {
+            old: "Web Sessions".into(),
+            new: "Site Sessions".into(),
+        },
+    );
+    // The DAX, as the session's rename rewrites it.
+    "[Visits] * 2".clone_into(&mut edited.reports[online].measures[0].expression);
+    let outcome = save_in_place(&outcome.saved, &mut fingerprint, &edited, false).unwrap();
+    assert!(outcome.written.contains(&ext_path), "{:?}", outcome.written);
+    let saved = files(&root);
+    let mut expected = ext.clone();
+    expected["entities"][0]["name"] = "Site Sessions".into();
+    let first = &mut expected["entities"][0]["measures"][0];
+    first["expression"] = "[Visits] * 2".into();
+    first["references"]["measures"][0] =
+        serde_json::json!({"entity": "Site Sessions", "name": "Visits"});
+    expected["entities"][1]["measures"][0]["references"]["measures"][0]["entity"] =
+        "Site Sessions".into();
+    assert_eq!(
+        String::from_utf8(saved[&ext_path].clone()).unwrap(),
+        String::from_utf8(serde_json::to_vec_pretty(&expected).unwrap()).unwrap()
+    );
+    let reopened = open(&root);
+    assert_eq!(
+        normalized(&reopened.document.reports),
+        normalized(&edited.reports)
+    );
+
+    // Undo: the original bytes.
+    let outcome = save_in_place(&outcome.saved, &mut fingerprint, &opened.document, false).unwrap();
+    assert!(outcome.written.contains(&ext_path), "{:?}", outcome.written);
+    assert_eq!(changed(&original, &files(&root)), Vec::<String>::new());
+
+    // Other changes to them cannot be written yet: refused, not dropped.
+    let mut edited = opened.document.clone();
+    edited.reports[online].measures[1].hidden = true;
+    let err = save_in_place(&outcome.saved, &mut fingerprint, &edited, false).unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("the report-level measures of report"),
+        "{err}"
+    );
+    assert_eq!(changed(&original, &files(&root)), Vec::<String>::new());
 }
 
 #[test]

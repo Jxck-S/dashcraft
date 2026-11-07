@@ -9,8 +9,9 @@ use common::{DirSource, report_folders};
 use pbi_pbir::json::first_difference;
 use pbi_pbir::theme::ThemeJson;
 use pbi_pbir::{
-    DefinitionPbir, PageJson, PagesJson, PbirFileKind, Platform, ReportJson, VersionJson,
-    VisualContainerJson, read_pbir, write_pbir,
+    DefinitionPbir, MemoryFileSource, PageJson, PagesJson, PbirFileKind, Platform,
+    ReportExtensionsJson, ReportJson, VersionJson, VisualContainerJson, read_pbir, to_report_ast,
+    write_pbir,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -43,6 +44,7 @@ fn every_fixture_json_file_round_trips_through_its_typed_struct() {
                 PbirFileKind::Report => retyped::<ReportJson>(&original),
                 PbirFileKind::Version => retyped::<VersionJson>(&original),
                 PbirFileKind::Pages => retyped::<PagesJson>(&original),
+                PbirFileKind::ReportExtensions => retyped::<ReportExtensionsJson>(&original),
                 PbirFileKind::Page { .. } => retyped::<PageJson>(&original),
                 PbirFileKind::Visual { .. } => retyped::<VisualContainerJson>(&original),
                 PbirFileKind::Other if path.starts_with("StaticResources/") => {
@@ -129,4 +131,106 @@ fn edited_reports_write_minimal_changes() {
         text.contains("\"position\": {\n    \"x\": 5,\n    \"y\""),
         "{text}"
     );
+}
+
+/// `reportExtensions.json` is typed: its measures reach the report AST
+/// (entity by entity, unknown keys kept), and it is written back byte for
+/// byte, or with an edited expression and nothing else changed.
+#[test]
+fn report_extensions_are_report_measures() {
+    let ext = r#"{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json",
+  "name": "extension",
+  "entities": [
+    {
+      "name": "Orders",
+      "measures": [
+        {
+          "name": "Avg Line",
+          "dataType": "Double",
+          "expression": "DIVIDE([Total Sales], COUNTROWS(Orders))",
+          "formatString": "0.00",
+          "dataCategory": "Uncategorized",
+          "references": {
+            "measures": [
+              {
+                "entity": "Orders",
+                "name": "Total Sales"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Avg Line x2",
+          "dataType": "Double",
+          "expression": "[Avg Line] * 2",
+          "hidden": true,
+          "references": {
+            "unrecognizedReferences": false,
+            "measures": [
+              {
+                "schema": "extension",
+                "entity": "Orders",
+                "name": "Avg Line"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stores"
+    }
+  ]
+}"#;
+    let src: MemoryFileSource = [
+        ("definition/report.json", "{}"),
+        ("definition/reportExtensions.json", ext),
+    ]
+    .into_iter()
+    .collect();
+    let mut report = read_pbir(&src).unwrap();
+    assert!(report.diagnostics.is_empty(), "{:?}", report.diagnostics);
+    let (ast, _) = to_report_ast(&report);
+    let names: Vec<_> = ast
+        .measures
+        .iter()
+        .map(|m| (m.table.as_str(), m.name.as_str(), m.hidden))
+        .collect();
+    assert_eq!(
+        names,
+        [
+            ("Orders", "Avg Line", false),
+            ("Orders", "Avg Line x2", true)
+        ]
+    );
+    let first = &ast.measures[0];
+    assert_eq!(first.data_type.as_deref(), Some("Double"));
+    assert_eq!(first.format_string.as_deref(), Some("0.00"));
+    assert_eq!(
+        first.references[0],
+        pbi_model::MeasureReference {
+            schema: String::new(),
+            table: "Orders".into(),
+            name: "Total Sales".into(),
+        }
+    );
+    assert_eq!(ast.measures[1].references[0].schema, "extension");
+
+    let path = "definition/reportExtensions.json";
+    let written = write_pbir(&report);
+    let (_, bytes) = written.iter().find(|(p, _)| p == path).unwrap();
+    assert_eq!(bytes.as_slice(), ext.as_bytes());
+
+    let entities = report
+        .extensions
+        .as_mut()
+        .and_then(|e| e.entities.as_mut())
+        .unwrap();
+    let measure = &mut entities[0].measures.as_mut().unwrap()[0];
+    measure.expression = Some("DIVIDE([Revenue], COUNTROWS(Orders))".into());
+    let written = write_pbir(&report);
+    let (_, bytes) = written.iter().find(|(p, _)| p == path).unwrap();
+    let expected = ext.replace("[Total Sales], COUNTROWS", "[Revenue], COUNTROWS");
+    assert_eq!(String::from_utf8_lossy(bytes), expected);
 }
