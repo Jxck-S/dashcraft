@@ -41,6 +41,7 @@ regressed, `2` for usage or build errors.
    | `crates/pbi-dax/examples/perf_dax.rs` | P04 |
    | `crates/pbi-m/examples/perf_m.rs` | P05 |
    | `crates/pbi-vertipaq/examples/perf_vertipaq.rs` | P06 |
+| `crates/pbi-ops/examples/perf_ops.rs` | P09, P10, P11 (through `Registry::execute`, like the app) |
 
 2. **Build.** `xtask` builds all perf examples with one `cargo build --release` (same
    feature unification on every run; the shared `target/release`). `xtask` itself depends on
@@ -51,7 +52,7 @@ regressed, `2` for usage or build errors.
    `iterations` timed iterations and prints one JSON line with the samples and an `info`
    object (sizes, sub-timings; never data values). The loop and the line format are in
    `perf/harness.rs`, which every example includes with `#[path]`. Scenarios with
-   `per_process = true` (P02) run one process per sample, because the shaping and grid-layout
+   `per_process = true` (P02, P11) run one process per sample, because the shaping and grid-layout
    caches are process-wide and a second render in the same process is no longer cold.
 4. **Statistics.** Median and nearest-rank p95 (also min, max, mean) per scenario. `metric`
    selects which one is judged: p95 for scroll steps (a slow step is visible jank), median
@@ -91,6 +92,9 @@ without it.
 | P06 | `pbix-data-open` | `open_pbix_data` on the `DataModel` of the committed Microsoft sample `reference/samples/microsoft/Revenue Opportunities.pbix` (MIT): XPress9 → ABF → `metadata.sqlitedb` → VertiPaq → Arrow | committed | median | 20 / 100 |
 | P07 | `busy-page-svg` | `to_svg` of a rendered synthetic dashboard: 4 cards, a slicer, column, line (730 points) and pie charts, a matrix, a 5 000-row table | synthetic | median | 4 / 16 |
 | P08 | `example-table-scroll-step` | P01 on the example's data: a 40 px scroll step (render + SVG) of the table (29 rows) on the Customer Detail page of the Acme Outfitters Online report, after an offline refresh from its committed CSVs (`blob-map.json`) | committed | p95 | 16 / 33 |
+| P09 | `edit-measure-requery` | through `Registry::execute`: `model.measure.update` of the example's `Total Sales` (refreshed offline from its CSVs; the text alternates, so every step commits a revision), then `canvas.render` of the Overview report's Executive Summary page (14 visuals) | committed | median | 50 / 150 |
+| P10 | `save-pbip-acme` | through `Registry::execute`: one `model.measure.update`, then `doc.save` into a copy of the example under `target/tmp/` (compares the saved and current state, writes the one changed TMDL file atomically) | committed | median | 100 / 300 |
+| P11 | `refresh-acme-end-to-end` | in a fresh process, through `Registry::execute`: `doc.open` of the example, `data.refresh` of its 11 tables from the CSVs (M, calculated columns and tables), `canvas.render` of the first page | committed | median | 1000 / 3000 |
 
 Reproduce one scenario by hand (prints its JSON line; progress on stderr):
 
@@ -100,6 +104,7 @@ cargo run --release -p pbi-render   --example perf_render   -- --scenario P02 --
 cargo run --release -p pbi-dax      --example perf_dax      -- --scenario P04
 cargo run --release -p pbi-m        --example perf_m        -- --scenario P05
 cargo run --release -p pbi-vertipaq --example perf_vertipaq -- --scenario P06
+cargo run --release -p pbi-ops      --example perf_ops      -- --scenario P09
 ```
 
 `crates/pbi-render/examples/bench_scroll.rs` remains the ad-hoc tool for scrolling any PBIP
@@ -128,6 +133,14 @@ example and sample:
 | P06 | 4.5 | 20 / 100 | ok | opening the Revenue Opportunities sample's `DataModel` (9 tables) |
 | P07 | 1.6 | 4 / 16 | ok | busy page to SVG (186 KB of SVG, 866 hit regions) |
 | P08 | 0.34 (p95) | 16 / 33 | ok | the example's Customer Detail table scroll step (29 rows) |
+
+P09–P11 (M6 editing) have no baseline entry yet. A full run on a 12-core x86-64 Windows desktop,
+about twice as slow as the baseline machine on P01–P08, measured 43.6 ms for P09 (edit 13 ms,
+re-render 32 ms), 55 ms for P10 and 184 ms for P11 (open 42 ms, refresh 91 ms, first page
+30 ms), all within target. The CI runner's quick run (Ubuntu, informational) measured 53 ms
+for P09, just over its 50 ms target and well within its maximum, 33 ms for P10 and 209 ms for
+P11. Record them on the baseline machine with
+`cargo xtask perf --update-baseline --scenario P09 --scenario P10 --scenario P11`.
 
 The per-scenario breakdowns (`info`) are in `target/perf/report.json` after a run.
 

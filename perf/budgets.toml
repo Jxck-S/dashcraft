@@ -140,3 +140,52 @@ max_ms = 33
 warmup = 3
 iterations = 40
 quick_iterations = 15
+
+[[scenario]]
+id = "P09"
+name = "edit-measure-requery"
+description = """
+Edit, then re-render, through Registry::execute like the app: model.measure.update changes \
+Total Sales of the Acme Outfitters example (refreshed offline from its CSVs through \
+blob-map.json; the text alternates, so every step commits a revision), then canvas.render \
+re-renders the Executive Summary page of the Overview report (14 visuals)."""
+package = "pbi-ops"
+example = "perf_ops"
+data = "committed"
+target_ms = 50
+max_ms = 150
+iterations = 15
+quick_iterations = 5
+
+[[scenario]]
+id = "P10"
+name = "save-pbip-acme"
+description = """
+One edit, then save, through Registry::execute: model.measure.update of Total Sales, then \
+doc.save into a copy of the Acme Outfitters project under target/tmp/ (compares the files \
+of the saved and the current state, writes the one changed TMDL file atomically)."""
+package = "pbi-ops"
+example = "perf_ops"
+data = "committed"
+target_ms = 100
+max_ms = 300
+iterations = 15
+quick_iterations = 5
+
+[[scenario]]
+id = "P11"
+name = "refresh-acme-end-to-end"
+description = """
+Open to first page in a fresh process, through Registry::execute: doc.open of the Acme \
+Outfitters project, data.refresh of its 11 tables from the CSVs through blob-map.json (M, \
+calculated columns and tables), canvas.render of the first page of the first report."""
+package = "pbi-ops"
+example = "perf_ops"
+data = "committed"
+target_ms = 1000
+max_ms = 3000
+per_process = true
+warmup = 0
+iterations = 5
+quick_warmup = 0
+quick_iterations = 3
