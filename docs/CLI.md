@@ -29,6 +29,7 @@ For task-oriented recipes (CI checks, golden comparisons, exports), see the [use
 | `dashcraft run --batch <file\|-> [--doc <path>] [--blob-map <file>] [--save] [--stop-on-error true\|false] [--pretty]` | Runs ordered steps on one workspace, with `${name.field}` references to earlier results |
 | `dashcraft serve [--stdio] [--read-root <dir>]… [--write-root <dir>]… [--blob-map <file>] [--max-concurrent <n>] [--agent]` | Serves the catalog as JSON-lines RPC (JSON-RPC 2.0) on stdin/stdout with a persistent workspace |
 | `dashcraft mcp [--read-root <dir>]… [--write-root <dir>]… [--blob-map <file>] [--allow <category\|id>]… [--deny <category\|id>]… [--tool-names underscore\|dotted] [--max-concurrent <n>]` | Model Context Protocol server on stdin/stdout: the agent-safe commands as MCP tools, confined to read/write roots ([MCP.md](MCP.md)) |
+| `dashcraft lsp [--stdio] [--model <path>]` | Language Server Protocol server on stdin/stdout for `.dax`, `.m` and `.tmdl` files in external editors: diagnostics with quick fixes, completion, hover, signature help, navigation, semantic tokens and formatting, over the same language commands as the app ([below](#lsp)) |
 | `dashcraft ai login --provider <id> [--stdin]` / `dashcraft ai logout --provider <id>` | Stores (prompted without echo, or the first line of stdin) or deletes an AI provider's API key in the OS keychain; the `ai.*` commands themselves run through `run`/`serve`/`mcp` ([AI.md](AI.md)) |
 
 Flags shared by every command that reads a model (`inspect`, `convert`, `lint`, `refresh`, `measures`, `export`, `render`):
@@ -177,6 +178,58 @@ A [Model Context Protocol](https://modelcontextprotocol.io/specification) server
 $ dashcraft mcp --read-root ~/PowerBI --blob-map ~/PowerBI/blob-map.json
 $ dashcraft mcp --read-root . --write-root ./out --allow inspect --allow dax --allow workspace
 ```
+
+### `lsp`
+
+A [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) 3.17 server for external editors, over the registry's language commands (the ones the app's formula bar uses): the answers in an editor are the app's answers. It reads stdin and writes stdout with `Content-Length` framing; logs go to stderr. `--stdio` is accepted (editors pass it) and is the only transport.
+
+- **Languages.** By the editor's language id (`dax`; `m`, `powerquery` or `pq`; `tmdl`), else by extension (`.dax`; `.m`, `.pq`, `.pqm`; `.tmdl`). Other files are ignored.
+- **DAX** (`dax.*`): diagnostics (syntax, unknown tables, columns and measures, argument counts, unsupported functions as warnings), completion, hover, signature help, go to definition of variables and a query's `DEFINE`s, references and highlights of any name in the text, semantic tokens, formatting, quick fixes for "did you mean" suggestions.
+- **M** (`m.*`): diagnostics in Desktop's wording with quick fixes, completion, hover and signature help over Desktop's library catalog, formatting (the editor's tab size, spaces or tabs).
+- **TMDL** (`tmdl.*`): a file under a `definition` folder (the nearest ancestor named `definition` or holding `model.tmdl`/`database.tmdl`) is checked together with the folder's other `.tmdl` files, read from disk or from the editor when open, so references across files resolve: diagnostics as Microsoft's TMDL reader reports them, with quick fixes; completion of keywords, values and references; hover; go to definition of a referenced table, column, measure or other object in another file; formatting as Desktop writes (tabs, unless the file is already indented with spaces and the editor asks for spaces). A `.tmdl` file outside such a folder is checked alone.
+- **Model names.** `--model PATH` (a `.pbip`, `.pbix`, `.pbit`, `model.bim`, a TMDL or PBIP folder, …; relative to the current folder) or, without it, the `initializationOptions` `{"model": "PATH"}` (relative to the workspace folder) opens a model, without loading data, and DAX and M names are checked and completed against it; without one only syntax, functions and the library are checked. Saving a file under the model's folder opens the model again and re-checks the open DAX and M documents. A model that cannot be opened is an error (exit 1) with `--model`, and a warning (`window/showMessage`) from `initializationOptions`.
+- **Protocol.** UTF-16 positions; incremental document sync; diagnostics are pushed (`textDocument/publishDiagnostics`) once the queue of incoming messages is empty; `$/cancelRequest` (answered with `-32800`); requests before `initialize` get `-32002`, after `shutdown` `-32600`, unknown methods `-32601`. Nothing is run, written or sent over the network: formatting and quick fixes are edits the editor applies.
+- **Exit.** `exit` after `shutdown` exits 0; `exit` without `shutdown`, or the end of input, exits 1.
+
+Editor setup (`dashcraft` on `PATH`):
+
+```lua
+-- Neovim (0.10+)
+vim.filetype.add({ extension = { dax = 'dax', tmdl = 'tmdl', pq = 'm', pqm = 'm' } })
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'dax', 'm', 'tmdl' },
+  callback = function()
+    vim.lsp.start({
+      name = 'dashcraft',
+      cmd = { 'dashcraft', 'lsp', '--model', 'AcmeOutfitters.pbip' },
+      root_dir = vim.fs.root(0, { '.git' }),
+    })
+  end,
+})
+```
+
+```toml
+# Helix: languages.toml
+[language-server.dashcraft]
+command = "dashcraft"
+args = ["lsp"]
+config = { model = "AcmeOutfitters.pbip" }   # sent as initializationOptions
+
+[[language]]
+name = "dax"
+scope = "source.dax"
+file-types = ["dax"]
+language-servers = ["dashcraft"]
+
+[[language]]
+name = "tmdl"
+scope = "source.tmdl"
+file-types = ["tmdl"]
+indent = { tab-width = 4, unit = "\t" }
+language-servers = ["dashcraft"]
+```
+
+VS Code needs an extension to start a language server: a generic LSP client extension pointed at `dashcraft lsp`, for the language ids your DAX, Power Query and TMDL extensions use. DashCraft does not ship a VS Code extension.
 
 ### `ai`
 

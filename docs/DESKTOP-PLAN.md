@@ -848,7 +848,7 @@ optional language server.
 
 **Scope**
 
-- [ ] **M7.1 DAX language service.** In `pbi-dax`: completion (functions with signatures, tables,
+- [x] **M7.1 DAX language service.** In `pbi-dax`: completion (functions with signatures, tables,
   columns, measures, variables, keywords, user-defined functions), signature help, hover with
   DashCraft-written one-line descriptions, diagnostics (syntax, unknown references, unsupported
   functions, type hints), semantic tokens, go to definition, find references; incremental and
@@ -995,8 +995,26 @@ optional language server.
     ([accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md)); A6 waits for a person.
     Checked in the app by `scripts/app-checks/formula-keys.mjs` (43 checks on Windows /
     WebView2) and by 10 new tests in `app/tests/daxEditor.test.ts`.
-- [ ] **M7.6 Optional `dashcraft lsp`.** A Language Server Protocol adapter over the same
-  commands for `.dax`, `.m` and `.tmdl` files in external editors.
+- [x] **M7.6 Optional `dashcraft lsp`** (2026-11-07). A Language Server Protocol adapter over the
+  same commands for `.dax`, `.m` and `.tmdl` files in external editors.
+  `dashcraft lsp` (`crates/dashcraft-cli/src/lsp/`) speaks LSP 3.17 on stdin/stdout and answers
+  with the registry's `dax.*`, `m.*` and `tmdl.*` commands, so an external editor gets the app's
+  answers: pushed diagnostics with quick fixes for their "did you mean" suggestions, completion,
+  hover, signature help (DAX, M), go to definition (DAX variables and `DEFINE`s; TMDL references
+  across files), references and highlights (DAX), semantic tokens (DAX) and formatting (all three).
+  A TMDL file is checked with the rest of its `definition` folder (open files from the editor,
+  the others from disk), and DAX and M names against a model from `--model` or the
+  `initializationOptions`, opened again when a file under it is saved. Editor setup:
+  [CLI.md](CLI.md#lsp). Checked by 7 protocol tests with a scripted client
+  (`crates/dashcraft-cli/tests/lsp.rs`: lifecycle and protocol errors, cancellation, each
+  language's features with exact ranges, a TMDL folder on disk, Acme from `--model`) and 13 unit
+  tests; what it serves is the commands checked against Desktop and Microsoft's TMDL reader in
+  M7.1 to M7.4.
+
+**Status.** M7 is complete (2026-11-07) apart from the screen-reader runs of acceptance 5 (A6),
+which need a person ([accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md)). The
+language services analyse the whole text on each request (incremental document sync in the LSP,
+P12 well within its target); the LSP drops cancelled requests before running them.
 
 **Crates and layers.** `pbi-dax`, `pbi-m`, `pbi-tmdl` (services, layer 1 and 2, no new edges),
 `pbi-ops` (commands), `dashcraft-cli` (`lsp`), `dashcraft-app` (editor integration).

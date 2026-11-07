@@ -7,6 +7,38 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.6 `dashcraft lsp`
+
+- **What:** a Language Server Protocol 3.17 server, `dashcraft lsp [--stdio] [--model PATH]`
+  (`crates/dashcraft-cli/src/cmd/lsp.rs`, `src/lsp/`): `transport.rs` (`Content-Length`
+  framing, 64 MiB cap), `text.rs` (UTF-16 positions, incremental changes, language by id or
+  extension, `file:` URIs), `files.rs` (a TMDL file's `definition` folder, read from disk with a
+  size and mtime cache, capped at 10,000 files and 256 MiB), `mod.rs` (lifecycle, document sync,
+  the model from `--model` or `initializationOptions`, reopened when a file under it is saved;
+  diagnostics pushed once the incoming queue is empty; `$/cancelRequest` even before the request
+  arrives) and `features.rs` (completion, hover, signature help, definition, references,
+  highlights, formatting, quick fixes, semantic tokens). Every answer comes from a registry
+  command (`dax.*`, `m.*`, `tmdl.*`, `doc.open`) run through `Registry::execute`, so no new
+  command and no new crate edge. "Did you mean" suggestions become quick fixes: DAX's are mapped
+  onto the flagged range (a bracketed column or measure, a quoted or plain table); M's and TMDL's
+  carry their replacement. TMDL formatting keeps Desktop's tabs unless the file already uses
+  spaces. Setup for Neovim, Helix and VS Code in `docs/CLI.md`.
+- **Why:** M7.6 (DESKTOP-PLAN), the last M7 step: the language services of M7.1–M7.4 in
+  external editors. M7 is complete apart from A6.
+- **Desktop check:** the server adds no language logic; its diagnostics, completion and
+  formatting are the commands checked against Power BI Desktop (DAX arity, M library and
+  messages, the 2,507 DAX queries) and Microsoft's TMDL reader and writer in M7.1–M7.4. A manual
+  `Fuzz` run on `main` covers the `dax_service`, `m_service` and `tmdl_service` targets
+  (acceptance 4).
+- **Numbers:** 7 protocol tests with a scripted client (`tests/lsp.rs`: lifecycle and errors
+  `-32002`, `-32600`, `-32601`, `-32700`, `-32800`; DAX, M and TMDL features with exact ranges;
+  a TMDL folder on disk with a cross-file definition and diagnostics; names from a model opened by
+  `initializationOptions` and again on save; Acme from `--model`; exit codes), 13 unit tests;
+  dashcraft-cli lib tests 7 → 20. About 2,450 lines of Rust (including 706 of tests). The 7
+  protocol tests take 0.1 s in a debug build.
+- **Open:** A6 for M7 (a person); DAX-only navigation and tokens (M has no references or tokens
+  service yet); no VS Code extension is shipped.
+
 ### M7.5b Formula editor keys and accessibility
 
 - **What:** the formula bar's DAX editor gets the keys of Microsoft's table for Power BI Desktop's
@@ -31,6 +63,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   suggestion's outline 5.39:1, squiggles 5.86:1 (error) and 5.73:1 (warning), parameter info
   6.19:1, descriptions 6.07:1; focus ring 2 px at 5.21:1. Main chunk 445 kB → 453 kB. Found by the tests: moving the last
   lines down left the selection past the end of the text.
+- **Commit:** `f7afc32` (PR #63).
 - **Open:** A6 (screen-reader runs) needs a person; extra cursors, column selection, Ctrl+G and
   Ctrl+U are not supported; M7.6 (`dashcraft lsp`).
 
