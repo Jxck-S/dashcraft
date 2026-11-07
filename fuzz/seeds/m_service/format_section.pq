@@ -1,0 +1,1 @@
+Usection S; [A = 1] shared f = (x as number) as number => if x > 0 then try g(x) otherwise null else error "neg"; T = type table [a = text, optional b = nullable number]; R = type function (x as text) as {any};

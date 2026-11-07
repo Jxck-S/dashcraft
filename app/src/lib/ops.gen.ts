@@ -2643,6 +2643,41 @@ export interface MDiagnosticsParams {
   text: string
 }
 
+export interface MFormatOut {
+  /**
+   * The text parses (else `text` is the input unchanged and `diagnostic`
+   * says why).
+   */
+  ok: boolean
+  /** The formatted text: `\n` line breaks, no trailing line break. */
+  text: string
+  /** `text` differs from the input. */
+  changed: boolean
+  /** The syntax error when `ok` is false, with Power BI Desktop's message. */
+  diagnostic?: MDiagnosticOut | null
+}
+
+export interface MFormatParams {
+  /**
+   * The M text: a query (`let … in …`, any expression) or a section
+   * document (`section Section1; …`).
+   */
+  text: string
+  /**
+   * Preferred maximum line length in characters (default 100, at most
+   * 10000). Only a single long token, comment or unbreakable run makes a
+   * line longer.
+   */
+  maxWidth?: number
+  /**
+   * Spaces per indentation level (default 4, at most 16), or the width a
+   * tab counts for with `useTabs`.
+   */
+  indentWidth?: number
+  /** Indent with tabs instead of spaces. */
+  useTabs?: boolean
+}
+
 /** The name under the cursor. */
 export interface MHoverInfo {
   kind: MNameKind
@@ -4555,6 +4590,8 @@ export interface OpsCommands {
   'm.signatureHelp': { params: MSignatureHelpParams; output: MSignatureHelpOut }
   /** The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as. */
   'm.complete': { params: MCompleteParams; output: MCompleteOut }
+  /** Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated. */
+  'm.format': { params: MFormatParams; output: MFormatOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4684,6 +4721,7 @@ export const OPS_META = {
   'm.hover': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'm.signatureHelp': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'm.complete': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'm.format': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4853,6 +4891,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     mSignatureHelp: (params: MSignatureHelpParams, options?: O) => run('m.signatureHelp', params, options),
     /** The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as. */
     mComplete: (params: MCompleteParams, options?: O) => run('m.complete', params, options),
+    /** Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated. */
+    mFormat: (params: MFormatParams, options?: O) => run('m.format', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */

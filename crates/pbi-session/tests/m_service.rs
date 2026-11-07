@@ -10,11 +10,16 @@
 //! * completion at the end of every free name ranks that name first;
 //! * signature help just before the `)` of every library call shows that
 //!   function;
-//! * nothing panics at any cursor of the example's queries.
+//! * nothing panics at any cursor of the example's queries;
+//! * `format` lays out every query (at the default width and a narrow one)
+//!   without changing its tokens, comments or syntax tree, and formatting
+//!   the result again changes nothing.
 
 use std::path::PathBuf;
 
-use pbi_m::service::{NameKind, catalog_entry, complete, hover, signature_help};
+use pbi_m::service::{
+    FormatOptions, NameKind, catalog_entry, complete, format, hover, signature_help,
+};
 use pbi_model::{Document, ExpressionKind, PartitionSource};
 
 fn reference_root() -> PathBuf {
@@ -168,4 +173,43 @@ fn no_panic_at_any_cursor_of_the_example() {
             );
         }
     }
+}
+
+#[test]
+fn every_fixture_query_formats_stably() {
+    let narrow = FormatOptions {
+        max_width: 40,
+        indent_width: 2,
+        use_tabs: false,
+    };
+    let mut queries = 0;
+    let mut changed = 0;
+    for path in fixtures() {
+        let opened = pbi_core::open_path(&path, &pbi_core::OpenOptions::default()).unwrap();
+        for (at, text) in m_texts(&opened.document) {
+            for opts in [FormatOptions::default(), narrow] {
+                let out = format(&text, &opts)
+                    .unwrap_or_else(|e| panic!("{}: {at}: {e}", path.display()));
+                assert_eq!(
+                    format(&out, &opts).as_deref(),
+                    Ok(out.as_str()),
+                    "{}: {at}: not idempotent at width {}",
+                    path.display(),
+                    opts.max_width
+                );
+                if opts.max_width == 40 {
+                    continue;
+                }
+                assert!(
+                    out.lines()
+                        .all(|l| l.chars().count() <= 100 || !l.contains(", ")),
+                    "{}: {at}: a breakable line is too long:\n{out}",
+                    path.display()
+                );
+                changed += usize::from(out != text.trim());
+            }
+            queries += 1;
+        }
+    }
+    println!("{queries} queries formatted, {changed} changed at the default width");
 }

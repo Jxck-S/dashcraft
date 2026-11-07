@@ -7,6 +7,32 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.3d M formatter
+
+- **What:** `pbi_m::service::format` (`service/format.rs`) and the registry command `m.format`
+  (category `m`; `text`, `maxWidth` default 100, `indentWidth` default 4 up to 16, `useTabs`;
+  returns `ok`, `text`, `changed` and a syntax `diagnostic`). Comments attach to the tokens
+  they precede or follow; each construct becomes a group that breaks only when it does not fit
+  (Wadler-style): one `let` step per line with blank lines between steps kept, operators leading
+  continuation lines, `else if` chains at one level, `try … otherwise`/`catch`, records, lists,
+  calls, record and table types, function bodies on the next line. Generalized identifiers and
+  literals are kept verbatim. The output is re-parsed and its tree (spans cleared), tokens and
+  comments must equal the input's, else the call fails rather than change the query. The fuzz
+  target `m_service` also formats with the default options and with options from its first byte.
+- **Why:** M7.3d (DESKTOP-PLAN), M7 acceptance 1 for M, GAPS §2 language service. Closes M7.3.
+- **Numbers:** 84 → 85 registry commands. 6 unit tests; 42 of the 44 queries of Acme and the
+  samples change at the default width, and all 44 are stable at width 100 and at width 40 with
+  2-space indents (`crates/pbi-session/tests/m_service.rs`); registry tests 6 → 8
+  (`crates/pbi-ops/tests/m_language.rs`); the 268 `m-functions` expressions formatted at the
+  default width and at width 20 with tabs give Desktop's recorded results (267 match, the same 1
+  by-design ledger entry; unknown-name errors compared without their moved line and column). A
+  replay of the fuzz target (about 3 million byte mutations of the seeds, then 320,000 comment
+  and whitespace insertions into 17 parseable seeds including the Acme queries) found no unstable
+  or non-idempotent output. Seeds 12 → 14.
+- **Open:** M7.4 (TMDL language service), M7.5 (formula bar), M7.6 (`dashcraft lsp`); semantic
+  tokens and references for M. A line comment between `)` and the `,` on the next line leaves
+  the comma on its own line (stable, cosmetic).
+
 ### M7.3c M hover, signature help and completion
 
 - **What:** `pbi-m` gains a tolerant lexer (`tokenize_tolerant`: an unterminated text, quoted
@@ -33,6 +59,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   `crates/pbi-ops/tests/m_language.rs` 3 → 6. A mutation replay of the fuzz target found an
   empty completion label for the valid step name `#""` (fixed, seed added). GAPS §2 language
   service 2 → 3.
+- **Commit:** `657df86` (PR #57).
 - **Open:** M7.3d (`m.format`), semantic tokens and references for M.
 
 ### M7.3b M diagnostics and Desktop's name binding
@@ -62,6 +89,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   implemented functions; `m.diagnostics` finds no false error in the 44 queries of Acme and the
   committed samples; 6 unit tests in `service/diagnostics.rs`, 3 in `refs.rs`, 3 registry tests in
   `crates/pbi-ops/tests/m_language.rs`.
+- **Commit:** `e4b7e72` (PR #56).
 - **Open:** M7.3c (`m.hover`, `m.signatureHelp`, `m.complete`), M7.3d (`m.format`).
 
 ### M7.3 M library growth, part 2
@@ -90,6 +118,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Numbers:** library 461 → 514 names (335 → 384 functions, 49 → 50 types, 77 → 80 constants;
   `Table.*` functions 45 → 94 of Desktop's 114); `m-functions` 202 → 239 expressions, 238 match,
   1 by design; ledger 12 → 2 entries (one M, one DAX format); 6 new tests in `stdlib.rs`.
+- **Commit:** `210c667` (PR #55).
 - **Open:** the 20 `Table.*` functions left out (fuzzy matching, keys, partition keys,
   `Table.View`, `Table.Profile`, connector internals); M7.3b–d (M diagnostics, hover, completion,
   formatting).
@@ -117,6 +146,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Numbers:** library 351 → 461 names (266 → 335 functions, 31 → 49 types, 54 → 77 constants);
   ledger 29 → 12 entries; new tests in `stdlib.rs` (GUIDs, date range, JSON, base64) and
   `binary.rs`.
+- **Commit:** `dfad70a` (PR #54).
 - **Open:** part 2, the table functions (`Table.Group`, `Pivot`, `Unpivot`, `Join`, `NestedJoin`,
   `Transpose`, `SplitColumn`, `Max`, `Schema`, expansions).
 
@@ -151,6 +181,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Numbers:** new tests: `library.rs` 3, `groundtruth.rs` 3, `digits.rs` 2, regression cases in
   `stdlib.rs` and `eval.rs`; GAPS §2 3.1 → 3.3. Ground truth: 14 suites, 3,366 cases, 29 ledger
   entries.
+- **Commit:** `5868808` (PR #53).
 - **Open:** the 27 ledgered functions (`Table.Group`, `Table.Pivot`, `Table.Join`,
   `Splitter.SplitTextBy*`, `List.Median`, `Date.WeekOfYear`, …), then M7.3b–d (diagnostics, hover
   and completion, formatter).
@@ -181,6 +212,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   expressions and 300 queries with injected comments, and token soup. `dax_language.rs` 9 → 10
   (pbi-ops): all 136 Acme and sample expressions and all 2,507 queries Desktop ran without error
   format idempotently with no errors after. 79 → 80 registry commands.
+- **Commit:** `e56319a` (PR #52).
 - **Open:** M7.3 (M language service and formatter).
 
 ### M7.1d DAX semantic tokens and references

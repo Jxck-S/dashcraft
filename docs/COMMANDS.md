@@ -149,6 +149,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`m.hover`](#mhover) | Describes the M name at a cursor as Power BI Desktop binds it: step, parameter or field of the text, query, parameter or table of the model, library name or keyword. | A |
 | [`m.signatureHelp`](#msignaturehelp) | The M function call around a cursor: library function, #date-style constructor, function step or function query, its parameters and the one the cursor is in; works on unparsed text. | A |
 | [`m.complete`](#mcomplete) | The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as. | A |
+| [`m.format`](#mformat) | Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -1320,6 +1321,35 @@ Examples:
 
 - A query of the model: `{"docId":"d1","text":"let Source = Ord","position":{"offset":16}}`
 - Library functions, without a document: `{"text":"Table.Sel","position":{"line":1,"column":10},"maxItems":10}`
+
+### `m.format`
+
+**Format M.** Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `text` | string | The M text: a query (`let … in …`, any expression) or a section document (`section Section1; …`). |
+| `maxWidth` (optional) | integer | Preferred maximum line length in characters (default 100, at most 10000). Only a single long token, comment or unbreakable run makes a line longer. |
+| `indentWidth` (optional) | integer | Spaces per indentation level (default 4, at most 16), or the width a tab counts for with `useTabs`. |
+| `useTabs` (optional) | boolean | Indent with tabs instead of spaces. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `ok` | boolean | The text parses (else `text` is the input unchanged and `diagnostic` says why). |
+| `text` | string | The formatted text: `\n` line breaks, no trailing line break. |
+| `changed` | boolean | `text` differs from the input. |
+| `diagnostic`? | MDiagnosticOut \| null | The syntax error when `ok` is false, with Power BI Desktop's message. |
+
+Examples:
+
+- A query: `{"text":"let Source = Csv.Document(File.Contents(\"orders.csv\"),[Delimiter=\",\"]), Rows = Table.RowCount(Source) in Rows"}`
+- Narrow, two-space indentation: `{"text":"Table.SelectRows(Orders, each [Quantity] > 1 and [Channel] = \"Online\")","maxWidth":40,"indentWidth":2}`
 
 ## Render
 

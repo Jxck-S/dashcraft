@@ -15,6 +15,10 @@
 //! A mismatch fails unless `reference/groundtruth/deviations.json` lists it with a reason; a
 //! listed case that now matches fails too (the ledger only shrinks). Reports go to
 //! `target/tmp/groundtruth/<suite>.md`; a missing recording prints `SKIP: <file> missing`.
+//!
+//! The `m-functions` cases also run after [`pbi_m::service::format`] lays them out (at the
+//! default width and a narrow one with tabs): the formatted queries must give Desktop's
+//! recorded results with the same ledger.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -278,11 +282,28 @@ fn clip(s: &str, max: usize) -> String {
     out
 }
 
-/// `None` when DashCraft agrees with the recording, else what differs.
-fn compare(recorded: &Json, ours: &Outcome) -> Option<String> {
+/// `Expression.Error: [2,9-2,19] The name …` without its `[2,9-2,19] ` source position.
+fn without_position(e: &str) -> String {
+    match e.split_once(": [").and_then(|(reason, rest)| {
+        let (span, message) = rest.split_once("] ")?;
+        let position = !span.is_empty()
+            && span
+                .chars()
+                .all(|c| c.is_ascii_digit() || c == ',' || c == '-');
+        position.then(|| format!("{reason}: {message}"))
+    }) {
+        Some(stripped) => stripped,
+        None => e.to_owned(),
+    }
+}
+
+/// `None` when DashCraft agrees with the recording, else what differs. With `moved`, the case
+/// was rewritten, so the source positions in errors are not compared.
+fn compare(recorded: &Json, ours: &Outcome, moved: bool) -> Option<String> {
     if let Some(err) = recorded.get("error").and_then(Json::as_str) {
         return match ours {
             Outcome::Error(e) if e == err => None,
+            Outcome::Error(e) if moved && without_position(e) == without_position(err) => None,
             Outcome::Syntax(_) if is_desktop_syntax_error(err) => None,
             Outcome::Error(e) | Outcome::Syntax(e) => {
                 Some(format!("error {e:?}, Desktop error {err:?}"))
@@ -360,7 +381,15 @@ fn ledger(suite: &str) -> Vec<Deviation> {
         .collect()
 }
 
+/// Rewrites a case before it is evaluated; `None` evaluates it as recorded.
+type Transform = fn(&str) -> String;
+
 fn run_suite(suite: &str) {
+    run_suite_as(suite, suite, None);
+}
+
+/// Runs `suite` with each case rewritten by `transform`, reported as `report`.
+fn run_suite_as(suite: &str, report: &str, transform: Option<Transform>) {
     let root = reference_root().join("groundtruth");
     let corpus_path = root.join(format!("corpus/{suite}.json"));
     let recording_path = root.join(format!("recordings/{suite}.json"));
@@ -397,8 +426,12 @@ fn run_suite(suite: &str) {
             stale_query.push(id.to_owned());
             continue;
         }
-        let ours = evaluate(&engine, case["query"].as_str().unwrap());
-        match compare(rec, &ours) {
+        let query = case["query"].as_str().unwrap();
+        let ours = match transform {
+            Some(f) => evaluate(&engine, &f(query)),
+            None => evaluate(&engine, query),
+        };
+        match compare(rec, &ours, transform.is_some()) {
             None => passed += 1,
             Some(detail) => mismatches.push((id.to_owned(), detail)),
         }
@@ -414,7 +447,7 @@ fn run_suite(suite: &str) {
         .collect();
 
     let mut md = String::new();
-    let _ = writeln!(md, "# Ground truth: {suite}\n");
+    let _ = writeln!(md, "# Ground truth: {report}\n");
     let _ = writeln!(
         md,
         "Desktop {} (engine {}), recorded {}.\n",
@@ -444,14 +477,14 @@ fn run_suite(suite: &str) {
     }
     let dir = report_dir();
     let _ = std::fs::create_dir_all(&dir);
-    let _ = std::fs::write(dir.join(format!("{suite}.md")), &md);
+    let _ = std::fs::write(dir.join(format!("{report}.md")), &md);
     println!(
-        "{suite}: {} cases, {passed} match, {} listed, {} new, {} stale; report {}",
+        "{report}: {} cases, {passed} match, {} listed, {} new, {} stale; report {}",
         cases.len(),
         mismatches.len() - new.len(),
         new.len(),
         stale.len(),
-        dir.join(format!("{suite}.md")).display()
+        dir.join(format!("{report}.md")).display()
     );
 
     let mut failures = Vec::new();
@@ -476,7 +509,7 @@ fn run_suite(suite: &str) {
     }
     assert!(
         failures.is_empty(),
-        "ground truth {suite}: {} problem(s) (fix them, or list them in reference/groundtruth/deviations.json with a reason):\n{}",
+        "ground truth {report}: {} problem(s) (fix them, or list them in reference/groundtruth/deviations.json with a reason):\n{}",
         failures.len(),
         failures.join("\n")
     );
@@ -485,6 +518,46 @@ fn run_suite(suite: &str) {
 #[test]
 fn m_functions() {
     run_suite("m-functions");
+}
+
+/// A case laid out by the formatter; a case that does not parse stays as it is (Desktop's
+/// recording is its syntax error).
+fn formatted(query: &str, opts: &pbi_m::service::FormatOptions) -> String {
+    match pbi_m::service::format(query, opts) {
+        Ok(out) => {
+            assert_eq!(
+                pbi_m::service::format(&out, opts).as_deref(),
+                Ok(out.as_str()),
+                "not idempotent: {query}"
+            );
+            out
+        }
+        Err(pbi_m::service::FormatError::Syntax(_)) => query.to_owned(),
+        Err(e) => panic!("{e}: {query}"),
+    }
+}
+
+#[test]
+fn m_functions_formatted() {
+    run_suite_as(
+        "m-functions",
+        "m-functions-formatted",
+        Some(|q| formatted(q, &pbi_m::service::FormatOptions::default())),
+    );
+    run_suite_as(
+        "m-functions",
+        "m-functions-formatted-narrow",
+        Some(|q| {
+            formatted(
+                q,
+                &pbi_m::service::FormatOptions {
+                    max_width: 20,
+                    indent_width: 2,
+                    use_tabs: true,
+                },
+            )
+        }),
+    );
 }
 
 #[test]
@@ -528,31 +601,40 @@ fn comparison_rules() {
     assert_eq!(
         compare(
             &rec(r#"{"value": 2.333333333333333}"#),
-            &ok("2.3333333333333335")
+            &ok("2.3333333333333335"),
+            false
         ),
         None
     );
-    assert!(compare(&rec(r#"{"value": 2.3333}"#), &ok("2.3334")).is_some());
+    assert!(compare(&rec(r#"{"value": 2.3333}"#), &ok("2.3334"), false).is_some());
     // Record fields compare in order.
     assert!(
         compare(
             &rec(r#"{"value": {"a": 1, "b": 2}}"#),
-            &ok(r#"{"b": 2, "a": 1}"#)
+            &ok(r#"{"b": 2, "a": 1}"#),
+            false
         )
         .is_some()
     );
     // Errors compare by reason and message; syntax errors by kind.
     let err = rec(r#"{"error": "Expression.Error: x"}"#);
     assert_eq!(
-        compare(&err, &Outcome::Error("Expression.Error: x".into())),
+        compare(&err, &Outcome::Error("Expression.Error: x".into()), false),
         None
     );
-    assert!(compare(&err, &Outcome::Error("DataFormat.Error: x".into())).is_some());
+    assert!(compare(&err, &Outcome::Error("DataFormat.Error: x".into()), false).is_some());
     let syntax = rec(r#"{"error": "Expression.Error: [1,27-1,32] Token Literal expected."}"#);
-    assert_eq!(compare(&syntax, &Outcome::Syntax("…".into())), None);
-    assert!(compare(&syntax, &ok("1")).is_some());
+    assert_eq!(compare(&syntax, &Outcome::Syntax("…".into()), false), None);
+    assert!(compare(&syntax, &ok("1"), false).is_some());
     assert!(is_desktop_syntax_error(
         "Expression.Error: [1,1-1,2] Token Eof expected."
     ));
     assert!(!is_desktop_syntax_error("Expression.Error: [a] b"));
+    // A rewritten case may move the position of an error, nothing else.
+    let unknown = rec(r#"{"error": "Expression.Error: [1,9-1,19] The name 'x' doesn't exist."}"#);
+    let moved = Outcome::Error("Expression.Error: [2,9-2,19] The name 'x' doesn't exist.".into());
+    assert!(compare(&unknown, &moved, false).is_some());
+    assert_eq!(compare(&unknown, &moved, true), None);
+    let other = Outcome::Error("Expression.Error: [2,9-2,19] The name 'y' doesn't exist.".into());
+    assert!(compare(&unknown, &other, true).is_some());
 }

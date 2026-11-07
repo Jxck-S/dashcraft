@@ -2,9 +2,12 @@
 //! (Power BI Desktop's messages for unknown names and argument counts on the
 //! Acme Outfitters example, suggestions and positions, checks without a
 //! document, edits seen at once, and no false error on any M query of the
-//! example and the Microsoft samples), and `m.hover`, `m.signatureHelp` and
+//! example and the Microsoft samples), `m.hover`, `m.signatureHelp` and
 //! `m.complete` (the example's parameters, functions, tables, steps and the
-//! library; UTF-16 positions; bad parameters; every query of the example).
+//! library; UTF-16 positions; bad parameters; every query of the example),
+//! and `m.format` (layout, options, syntax errors as `m.diagnostics` reports
+//! them, and every query of the example formatting to text with the same
+//! diagnostics).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -592,4 +595,90 @@ async fn language_service_on_every_example_query() {
         }
     }
     assert!(runs > 300, "{runs}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn format_lays_out_m_and_reports_syntax_errors() {
+    let r = Runner::new();
+    let text = "let Source=Csv.Document(File.Contents(\"orders.csv\"),[Delimiter=\",\"]), // raw\nRows=Table.RowCount(Source) in Rows";
+    let out = r.run("m.format", json!({ "text": text })).await;
+    assert_eq!(
+        out,
+        json!({
+            "ok": true,
+            "text": "let\n    Source = Csv.Document(File.Contents(\"orders.csv\"), [Delimiter = \",\"]), // raw\n    Rows = Table.RowCount(Source)\nin\n    Rows",
+            "changed": true
+        })
+    );
+    let again = r
+        .run("m.format", json!({ "text": out["text"].clone() }))
+        .await;
+    assert_eq!(again["changed"], false, "{again}");
+
+    let out = r
+        .run(
+            "m.format",
+            json!({"text": "Table.SelectRows(Orders, each [Quantity] > 1)", "maxWidth": 22, "indentWidth": 2, "useTabs": true}),
+        )
+        .await;
+    assert_eq!(
+        out["text"], "Table.SelectRows(\n\tOrders,\n\teach [Quantity] > 1\n)",
+        "{out}"
+    );
+
+    // A syntax error: the text comes back unchanged with m.diagnostics' error.
+    let bad = "let a = Text.Upper(\"x\" in a";
+    let out = r.run("m.format", json!({ "text": bad })).await;
+    assert_eq!(out["ok"], false, "{out}");
+    assert_eq!(out["changed"], false);
+    assert_eq!(out["text"], bad);
+    let check = r.run("m.diagnostics", json!({ "text": bad })).await;
+    assert_eq!(out["diagnostic"], check["diagnostics"][0], "{check}");
+    assert_eq!(out["diagnostic"]["code"], "syntax");
+
+    for params in [
+        json!({"text": "1", "maxWidth": 10_001}),
+        json!({"text": "1", "indentWidth": 17}),
+        json!({"text": "1", "kind": "query"}),
+    ] {
+        let err = r
+            .try_run("m.format", params.clone())
+            .await
+            .expect_err("bad parameters");
+        assert_eq!(
+            err.code,
+            pbi_ops::OpErrorCode::InvalidParams,
+            "{params}: {err:?}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn every_example_query_formats_to_the_same_diagnostics() {
+    let Some(path) = fixture(PBIP) else { return };
+    let r = Runner::new();
+    let doc = r.open(json!({"path": s(&path)})).await;
+    let document = r.ws.get(&doc).unwrap().session().document();
+    let texts = m_texts(&document);
+    assert!(texts.len() >= 10, "only {} queries", texts.len());
+    for (at, text) in texts {
+        let out = r.run("m.format", json!({ "text": text })).await;
+        assert_eq!(out["ok"], true, "{at}: {out}");
+        let formatted = out["text"].as_str().unwrap();
+        let codes = |v: &Value| -> Vec<(Value, Value)> {
+            v["diagnostics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|d| (d["code"].clone(), d["message"].clone()))
+                .collect()
+        };
+        let before = r
+            .run("m.diagnostics", json!({"docId": doc, "text": text}))
+            .await;
+        let after = r
+            .run("m.diagnostics", json!({"docId": doc, "text": formatted}))
+            .await;
+        assert_eq!(codes(&before), codes(&after), "{at}:\n{formatted}");
+    }
 }
