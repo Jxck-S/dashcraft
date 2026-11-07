@@ -158,6 +158,10 @@ that no longer match anything. The list is capped (proposal: at most 20 entries 
 shrinks between releases unless a new Desktop release introduces new constructs, and never contains
 no-op-save or Preserved-from-input entries.
 
+For TMDL the list is [`reference/groundtruth/gt4/deviations.json`](../reference/groundtruth/gt4/deviations.json),
+checked by `crates/pbi-ops/tests/save.rs::edits_save_like_power_bi_desktop` against Desktop's
+recorded saves (two entries, Desktop 2.159).
+
 ## Coverage inventories
 
 Coverage is measured against pinned public inventories (names and documented behaviours are facts;
@@ -744,9 +748,17 @@ refresh from the CSVs, first page) run through `Registry::execute`
 (`crates/pbi-ops/examples/perf_ops.rs`) and are within target (43.6, 55 and 184 ms against 50,
 100 and 1000 ms on a Windows desktop; acceptance 12); the CI runner's quick run has P09 at 53 ms,
 just over its target. The app (M6.8) runs the same commands and reloads its views after each
-edit, undo, redo and Save as. Still open: data column delete (with M editing), hierarchy and
-level edits, KPI and detail-rows expressions, canvas state remapping after renames, the A6
-screen-reader runs (acceptance 13) and GT-4 (acceptance 14).
+edit, undo, redo and Save as. Acceptance 14 (GT-4 s24): after the same edits (four measures, a
+calculated column and table, a hierarchy, a relationship), `doc.save` writes exactly the five
+files Power BI Desktop 2.159 rewrote, byte for byte equal to Desktop's apart from new identifiers
+and two listed deviations (inferred data types written with `isDataTypeInferred`); the TMDL writer
+follows Desktop's property order and keeps each file's CRLF line ends and blank last line, and
+calculation items without an `ordinal` are numbered by position as Desktop does
+(`edits_save_like_power_bi_desktop`; [GT-4](../reference/groundtruth/README.md#writer-form-gt-4-dashcraft-saves-what-desktop-saves)).
+Desktop opened that save without a dialog and, after a refresh, computes the same values (GT-6
+s24). Still open: data column delete (with M editing), hierarchy and level edits, KPI and
+detail-rows expressions, canvas state remapping after renames and the A6 screen-reader runs
+(acceptance 13).
 
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,
 invalidation, recalculation), `pbi-core` (save in place, minimal-diff writes, identifier

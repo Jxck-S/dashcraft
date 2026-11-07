@@ -75,6 +75,7 @@ table Sales
 			RETURN
 			    TOTALYTD([Sales Amount], 'Calendar'[Date])
 		lineageTag: m2
+
 		formatStringDefinition = SELECTEDMEASUREFORMATSTRING()
 
 	measure Padded = ```
@@ -135,9 +136,9 @@ table Sales
 
 	column Date
 		dataType: dateTime
-		isNameInferred
 		lineageTag: c3
 		summarizeBy: none
+		isNameInferred
 		sourceColumn: [Date]
 
 	column Year = YEAR('Calendar'[Date])

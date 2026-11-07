@@ -31,6 +31,7 @@ const TIME_CALC: &str = r#"table 'Time Calc'
 
 		calculationItem 'YOY %' = DIVIDE(SELECTEDMEASURE(), 2)
 			ordinal: 2
+
 			formatStringDefinition = "0.00%"
 			state: ready
 
@@ -135,7 +136,7 @@ fn edited_items_are_written_and_unchanged_files_kept_verbatim() {
         .unwrap()
         .1;
     assert!(text.contains(
-        "\t\tcalculationItem Current = SELECTEDMEASURE() + 0\n\t\t\tformatStringDefinition = SELECTEDMEASUREFORMATSTRING()\n"
+        "\t\tcalculationItem Current = SELECTEDMEASURE() + 0\n\n\t\t\tformatStringDefinition = SELECTEDMEASUREFORMATSTRING()\n"
     ));
     assert!(!text.contains("precedence"));
     let reloaded = load_model(&written).unwrap();

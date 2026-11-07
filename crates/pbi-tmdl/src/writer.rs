@@ -23,6 +23,9 @@ use crate::expr::{EncodedExpr, encode_expression, quote_name, quote_text};
 use crate::lexer::{IndentStyle, Line, LineEnding, is_keyword};
 use crate::load::{COLON_VALUE_KEY, Fragment, fragment};
 
+const JOIN_ON_DATE: &str = "joinOnDateBehavior";
+const FORMAT_STRING_DEFINITION: &str = "formatStringDefinition";
+
 /// Writer options.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct WriteOptions {
@@ -167,17 +170,23 @@ fn write_files(
 /// Like [`write_model`], but files whose content is semantically unchanged
 /// compared with `previous` (the CSTs from [`crate::LoadedModel::files`])
 /// are emitted verbatim, so unedited files stay byte-identical (comments,
-/// quoting and ordering included). In an edited file, each top-level object
-/// whose meaning is unchanged (a relationship, a shared expression, …) keeps
-/// its previous text too, and only the edited objects are re-serialized
-/// canonically. Previous files are matched by their path relative to the
-/// `definition/` folder (`\` and `/` are equivalent, case-insensitive).
-/// Previous files with no counterpart (deleted objects) are not returned.
+/// quoting and ordering included). In an edited file, every object or
+/// property whose meaning is unchanged (a relationship, a measure of an
+/// edited table, a property of an edited measure, …) keeps its previous text
+/// too, and only what was edited is written canonically. An edited file keeps
+/// its line endings, BOM and trailing blank lines; a new file takes the style
+/// most previous files share (Power BI Desktop writes CRLF and ends each file
+/// with a blank line), and canonical LF without a trailing blank line when
+/// there are no previous files. Previous files are matched by their path
+/// relative to the `definition/` folder (`\` and `/` are equivalent,
+/// case-insensitive). Previous files with no counterpart (deleted objects)
+/// are not returned.
 pub fn write_model_preserving(
     model: &Model,
     database: Option<&Database>,
     previous: &[TmdlFile],
 ) -> Vec<(String, String)> {
+    let project = FileStyle::dominant(previous);
     write_files(
         model,
         database,
@@ -190,7 +199,7 @@ pub fn write_model_preserving(
             .iter()
             .find(|f| definition_relative(&f.path).eq_ignore_ascii_case(&path));
         let Some(prev) = prev else {
-            return (path, text);
+            return (path, project.apply(&text));
         };
         let Ok(cst) = parse_file(&path, &text) else {
             return (path, text);
@@ -199,87 +208,210 @@ pub fn write_model_preserving(
         if written == fragment(prev) {
             return (path, prev.to_string());
         }
-        let text = preserve_blocks(cst, prev, &written).unwrap_or(text);
+        let text = [Some(MAX_DEPTH), Some(0), None]
+            .into_iter()
+            .find_map(|depth| preserve(&path, &text, prev, &written, depth))
+            .unwrap_or(text);
         (path, text)
     })
     .collect()
 }
 
-/// `cst` (a canonical file that differs from `prev`) with every top-level
-/// node whose meaning is unchanged replaced by its text in `prev`: same
-/// keyword, `ref` and name, and the same fragment on its own. `None` when
-/// nothing is kept, or when the result would not mean `written` (the
-/// fragment of `cst`). Only tab-indented, LF nodes are kept, so the file
-/// stays canonical in layout.
-fn preserve_blocks(mut cst: TmdlFile, prev: &TmdlFile, written: &Fragment) -> Option<String> {
-    if prev.indent != IndentStyle::Tabs {
-        return None;
-    }
-    let alone = |node: &Node| {
-        fragment(&TmdlFile {
-            path: prev.path.clone(),
-            bom: false,
-            indent: IndentStyle::Tabs,
-            nodes: vec![node.clone()],
-            trailing: Vec::new(),
-            diagnostics: Vec::new(),
-        })
-    };
-    let mut used = vec![false; prev.nodes.len()];
-    let mut kept_any = false;
-    for node in &mut cst.nodes {
-        let Some(name) = node.name() else {
-            continue;
-        };
-        let Some(i) = (0..prev.nodes.len()).find(|&i| {
-            let p = &prev.nodes[i];
-            !used[i]
-                && p.is_ref() == node.is_ref()
-                && p.keyword().eq_ignore_ascii_case(node.keyword())
-                && p.name().as_deref() == Some(name.as_str())
-        }) else {
-            continue;
-        };
-        let old = &prev.nodes[i];
-        used[i] = true;
-        if has_crlf(old) || alone(old) != alone(node) {
-            continue;
+/// Line ending and trailing blank line of a file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct FileStyle {
+    crlf: bool,
+    blank_last: bool,
+}
+
+impl FileStyle {
+    fn of(file: &TmdlFile) -> Self {
+        let text = file.to_string();
+        FileStyle {
+            crlf: text
+                .find('\n')
+                .is_some_and(|i| i > 0 && text.as_bytes().get(i - 1) == Some(&b'\r')),
+            blank_last: !file.nodes.is_empty()
+                && !file.trailing.is_empty()
+                && file.trailing.iter().all(Line::is_blank),
         }
-        let mut kept = old.clone();
-        // Separating blank lines as written now; comments and descriptions
-        // as they were.
-        let blank: Vec<Line> = node
-            .leading
-            .iter()
-            .take_while(|l| l.is_blank())
-            .cloned()
-            .collect();
-        kept.leading = blank
-            .into_iter()
-            .chain(kept.leading.into_iter().skip_while(Line::is_blank))
-            .collect();
-        let last = last_line(&mut kept);
+    }
+
+    /// The style of most `files` (canonical on a tie or without files).
+    fn dominant(files: &[TmdlFile]) -> Self {
+        let styles: Vec<FileStyle> = files.iter().map(FileStyle::of).collect();
+        let most =
+            |f: fn(&FileStyle) -> bool| styles.iter().filter(|s| f(s)).count() * 2 > styles.len();
+        FileStyle {
+            crlf: most(|s| s.crlf),
+            blank_last: most(|s| s.blank_last),
+        }
+    }
+
+    fn ending(self) -> LineEnding {
+        if self.crlf {
+            LineEnding::CrLf
+        } else {
+            LineEnding::Lf
+        }
+    }
+
+    /// Canonical (LF) text in this style.
+    fn apply(self, canonical: &str) -> String {
+        let mut text = if self.crlf {
+            canonical.replace('\n', "\r\n")
+        } else {
+            canonical.to_owned()
+        };
+        if self.blank_last && !text.is_empty() {
+            text.push_str(self.ending().as_str());
+        }
+        text
+    }
+}
+
+/// `canonical` (a file whose meaning `written` differs from `prev`) in the
+/// style of `prev`, with every node whose meaning is unchanged replaced by
+/// its text in `prev`. With `depth` `Some(d)`, the children of changed nodes
+/// are matched too, `d` levels down (`Some(0)`: top-level nodes only); with
+/// `None`, only the style is kept. Nodes are kept only from a tab-indented
+/// `prev`. `None` when the result would not mean `written`.
+fn preserve(
+    path: &str,
+    canonical: &str,
+    prev: &TmdlFile,
+    written: &Fragment,
+    depth: Option<usize>,
+) -> Option<String> {
+    let style = FileStyle::of(prev);
+    let mut cst = parse_file(path, &style.apply(canonical)).ok()?;
+    cst.bom = prev.bom;
+    if let Some(depth) = depth {
+        if prev.indent != IndentStyle::Tabs {
+            return None;
+        }
+        let merge = Merge {
+            prev,
+            ending: style.ending(),
+        };
+        merge.nodes(&mut cst.nodes, &prev.nodes, &mut Vec::new(), depth);
+    }
+    if style.blank_last {
+        cst.trailing.clone_from(&prev.trailing);
+    }
+    if cst.trailing.is_empty()
+        && let Some(last) = cst.nodes.last_mut()
+    {
+        let last = last_line(last);
         if last.ending == LineEnding::None {
-            last.ending = LineEnding::Lf;
+            last.ending = style.ending();
         }
-        *node = kept;
-        kept_any = true;
-    }
-    if !kept_any {
-        return None;
     }
     let text = cst.to_string();
-    let reparsed = parse_file(&cst.path, &text).ok()?;
+    let reparsed = parse_file(path, &text).ok()?;
     (fragment(&reparsed) == *written).then_some(text)
 }
 
-fn has_crlf(node: &Node) -> bool {
-    node.leading
-        .iter()
-        .chain([&node.line])
-        .chain(node.block.iter().flat_map(|b| &b.lines))
-        .any(|l| l.ending == LineEnding::CrLf)
-        || node.children.iter().any(has_crlf)
+/// Keeps the text of unchanged nodes of a previous file.
+struct Merge<'a> {
+    prev: &'a TmdlFile,
+    /// Line ending for kept lines that had none (the last line of a file).
+    ending: LineEnding,
+}
+
+impl Merge<'_> {
+    /// Replaces each of `new` (under the header-only `chain`) whose
+    /// counterpart in `old` means the same with that counterpart, and
+    /// recurses into the others.
+    fn nodes(&self, new: &mut [Node], old: &[Node], chain: &mut Vec<Node>, depth: usize) {
+        let mut used = vec![false; old.len()];
+        for node in new.iter_mut() {
+            let Some(i) = (0..old.len()).find(|&i| {
+                let o = &old[i];
+                !used[i]
+                    && o.is_ref() == node.is_ref()
+                    && o.keyword().eq_ignore_ascii_case(node.keyword())
+                    && o.name() == node.name()
+            }) else {
+                continue;
+            };
+            used[i] = true;
+            let Some(o) = old.get(i) else {
+                continue;
+            };
+            if self.alone(chain, o) == self.alone(chain, node) {
+                let mut kept = o.clone();
+                kept.leading = kept_leading(&node.leading, &o.leading);
+                self.end_line(last_line(&mut kept));
+                *node = kept;
+                continue;
+            }
+            if depth == 0 || node.children.is_empty() || o.children.is_empty() {
+                continue;
+            }
+            let head = header_only(node);
+            let same_head = self.alone(chain, &header_only(o)) == self.alone(chain, &head);
+            chain.push(head);
+            self.nodes(&mut node.children, &o.children, chain, depth - 1);
+            chain.pop();
+            if same_head {
+                node.leading = kept_leading(&node.leading, &o.leading);
+                node.line = o.line.clone();
+                node.header = o.header.clone();
+                node.block = o.block.clone();
+                let last = match node.block.as_mut().and_then(|b| b.lines.last_mut()) {
+                    Some(line) => line,
+                    None => &mut node.line,
+                };
+                self.end_line(last);
+            }
+        }
+    }
+
+    /// What `node` means on its own, inside the objects of `chain`.
+    fn alone(&self, chain: &[Node], node: &Node) -> Fragment {
+        let mut nested = node.clone();
+        for parent in chain.iter().rev() {
+            let mut p = parent.clone();
+            p.children = vec![nested];
+            nested = p;
+        }
+        fragment(&TmdlFile {
+            path: self.prev.path.clone(),
+            bom: false,
+            indent: IndentStyle::Tabs,
+            nodes: vec![nested],
+            trailing: Vec::new(),
+            diagnostics: Vec::new(),
+        })
+    }
+
+    fn end_line(&self, line: &mut Line) {
+        if line.ending == LineEnding::None {
+            line.ending = self.ending;
+        }
+    }
+}
+
+/// `node` without its children.
+fn header_only(node: &Node) -> Node {
+    Node {
+        leading: node.leading.clone(),
+        line: node.line.clone(),
+        header: node.header.clone(),
+        block: node.block.clone(),
+        children: Vec::new(),
+    }
+}
+
+/// The separating blank lines as written now; comments and descriptions as
+/// they were.
+fn kept_leading(now: &[Line], before: &[Line]) -> Vec<Line> {
+    now.iter()
+        .take_while(|l| l.is_blank())
+        .cloned()
+        .chain(before.iter().skip_while(|l| l.is_blank()).cloned())
+        .collect()
 }
 
 /// The last physical line of `node`.
@@ -756,6 +888,22 @@ impl Out {
                 &quote_text(r.cross_filtering_behavior.as_str()),
             );
         }
+        let join_on_date = r.extra.get(JOIN_ON_DATE).filter(|v| !is_child_object(v));
+        if let Some(v) = join_on_date {
+            self.prop(1, JOIN_ON_DATE, v, 0);
+        }
+        self.flag(
+            1,
+            "relyOnReferentialIntegrity",
+            r.rely_on_referential_integrity,
+        );
+        if r.security_filtering_behavior != SecurityFilteringBehavior::OneDirection {
+            self.raw_text(
+                1,
+                "securityFilteringBehavior",
+                &quote_text(r.security_filtering_behavior.as_str()),
+            );
+        }
         if r.from_cardinality != Cardinality::Many {
             self.raw_text(
                 1,
@@ -766,19 +914,12 @@ impl Out {
         if r.to_cardinality != Cardinality::One {
             self.raw_text(1, "toCardinality", &quote_text(r.to_cardinality.as_str()));
         }
-        if r.security_filtering_behavior != SecurityFilteringBehavior::OneDirection {
-            self.raw_text(
-                1,
-                "securityFilteringBehavior",
-                &quote_text(r.security_filtering_behavior.as_str()),
-            );
-        }
-        self.flag(
-            1,
-            "relyOnReferentialIntegrity",
-            r.rely_on_referential_integrity,
-        );
-        self.extras_scalars(1, &r.extra, &[]);
+        let skip: &[&str] = if join_on_date.is_some() {
+            &[JOIN_ON_DATE]
+        } else {
+            &[]
+        };
+        self.extras_scalars(1, &r.extra, skip);
         for (key, col) in [("fromColumn", &r.from), ("toColumn", &r.to)] {
             if !col.table.is_empty() || !col.column.is_empty() {
                 let text = format!("{}.{}", quote_name(&col.table), quote_name(&col.column));
@@ -875,6 +1016,7 @@ impl Out {
             self.raw_text(3, "ordinal", &o.to_string());
         }
         if let Some(f) = &i.format_string_definition {
+            self.blank();
             self.expr(3, "formatStringDefinition", f, false);
         }
         self.extras_scalars(3, &i.extra, &[]);
@@ -887,13 +1029,27 @@ impl Out {
         let head = format!("measure {}", quote_name(&m.name));
         self.expr(1, &head, &m.expression, false);
         self.text(2, "formatString", m.format_string.as_deref());
-        self.text(2, "displayFolder", m.display_folder.as_deref());
         self.flag(2, "isHidden", m.is_hidden);
+        self.text(2, "displayFolder", m.display_folder.as_deref());
         self.text(2, "lineageTag", m.lineage_tag.as_deref());
         self.text(2, "dataCategory", m.data_category.as_deref());
         let extra = tmdl_format_string_definition(&m.extra);
-        self.extras_scalars(2, &extra, &[]);
-        self.extras_objects(2, &extra, &[]);
+        // Desktop writes the dynamic format string as a child object, after a
+        // blank line.
+        let definition = extra
+            .get(FORMAT_STRING_DEFINITION)
+            .filter(|v| matches!(v, PropValue::Expression(_)));
+        let skip: &[&str] = if definition.is_some() {
+            &[FORMAT_STRING_DEFINITION]
+        } else {
+            &[]
+        };
+        self.extras_scalars(2, &extra, skip);
+        if let Some(v) = definition {
+            self.blank();
+            self.prop(2, FORMAT_STRING_DEFINITION, v, 0);
+        }
+        self.extras_objects(2, &extra, skip);
         self.annotations(2, &m.annotations);
     }
 
@@ -909,8 +1065,6 @@ impl Out {
         }
         self.flag(2, "isHidden", c.is_hidden);
         self.flag(2, "isKey", c.is_key);
-        self.flag(2, "isNameInferred", c.is_name_inferred);
-        self.flag(2, "isDataTypeInferred", c.is_data_type_inferred);
         self.text(2, "formatString", c.format_string.as_deref());
         self.text(2, "displayFolder", c.display_folder.as_deref());
         self.text(2, "lineageTag", c.lineage_tag.as_deref());
@@ -919,6 +1073,8 @@ impl Out {
         if let Some(s) = &c.summarize_by {
             self.raw_text(2, "summarizeBy", &quote_text(s.as_str()));
         }
+        self.flag(2, "isNameInferred", c.is_name_inferred);
+        self.flag(2, "isDataTypeInferred", c.is_data_type_inferred);
         match &c.kind {
             ColumnKind::Data { source_column }
             | ColumnKind::CalculatedTableColumn { source_column }
@@ -1264,16 +1420,57 @@ mod tests {
                 .unwrap_or_default()
         };
         // `a` keeps its comment and spelled-out default; `c` is rewritten.
+        let expected = format!(
+            "{KEPT}\nrelationship c\n\tisActive: false\n\tfromColumn: Sales.Day\n\ttoColumn: Days.Day\n"
+        );
+        assert_eq!(edited("\n"), expected);
+        // A CRLF file stays CRLF, written lines included.
+        assert_eq!(edited("\r\n"), expected.replace('\n', "\r\n"));
+    }
+
+    #[test]
+    fn an_edited_desktop_file_keeps_its_style_and_unchanged_children() {
+        let table = "table Sales\r\n\tlineageTag: t\r\n\r\n\tmeasure Total = SUM(Sales[Amount])\r\n\t\tformatString: \"0.00\"\r\n\t\tlineageTag: m\r\n\r\n\tcolumn Amount\r\n\t\tdataType: double\r\n\t\tlineageTag: c\r\n\t\tsummarizeBy: sum\r\n\t\tsourceColumn: \"Amount\"\r\n\r\n\t\tannotation SummarizationSetBy = Automatic\r\n\r\n";
+        let files = [
+            ("definition/model.tmdl", "model Model\r\n\r\n"),
+            ("definition/tables/Sales.tmdl", table),
+        ]
+        .map(|(p, t)| (p.to_owned(), t.to_owned()));
+        let loaded = crate::load_model(&files).unwrap_or_else(|e| panic!("{e}"));
+        let mut model = loaded.model.clone();
+        let Some(sales) = model.tables.first_mut() else {
+            panic!("no table");
+        };
+        let mut added = sales.measures[0].clone();
+        added.name = "Double".into();
+        added.expression = "[Total] * 2".into();
+        added.format_string = None;
+        added.lineage_tag = Some("n".into());
+        sales.measures.push(added);
+        sales.columns[0].is_hidden = true;
+        let mut extra = sales.clone();
+        extra.name = "Extra".into();
+        model.tables.push(extra);
+        let out = write_model_preserving(&model, None, &loaded.files);
+        let file = |name: &str| {
+            out.iter()
+                .find(|(p, _)| p == name)
+                .map(|(_, t)| t.clone())
+                .unwrap_or_default()
+        };
+        // The unchanged measure and the column's unchanged lines keep their
+        // quotes; CRLF and the blank last line stay.
         assert_eq!(
-            edited("\n"),
-            format!(
-                "{KEPT}\nrelationship c\n\tisActive: false\n\tfromColumn: Sales.Day\n\ttoColumn: Days.Day\n"
+            file("tables/Sales.tmdl"),
+            table.replace(
+                "\t\tlineageTag: m\r\n\r\n\tcolumn Amount\r\n\t\tdataType: double\r\n",
+                "\t\tlineageTag: m\r\n\r\n\tmeasure Double = [Total] * 2\r\n\t\tlineageTag: n\r\n\r\n\tcolumn Amount\r\n\t\tdataType: double\r\n\t\tisHidden\r\n",
             )
         );
-        // CRLF objects are not mixed into the LF output: all canonical.
-        assert_eq!(
-            edited("\r\n"),
-            "relationship a\n\tfromCardinality: one\n\tfromColumn: Sales.Id\n\ttoColumn: Items.Id\n\nrelationship c\n\tisActive: false\n\tfromColumn: Sales.Day\n\ttoColumn: Days.Day\n"
-        );
+        // A new file takes the style of the project.
+        let new = file("tables/Extra.tmdl");
+        assert!(new.starts_with("table Extra\r\n"), "{new:?}");
+        assert!(new.ends_with("Automatic\r\n\r\n"), "{new:?}");
+        assert!(!new.replace("\r\n", "").contains('\n'), "{new:?}");
     }
 }

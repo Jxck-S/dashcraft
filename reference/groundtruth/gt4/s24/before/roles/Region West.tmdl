@@ -1,0 +1,8 @@
+/// Sees the West region only: its stores, their orders, returns and targets.
+role 'Region West'
+	modelPermission: read
+
+	tablePermission Stores = Stores[Region] = "West"
+
+	annotation PBI_Id = 7533d7ab92a94c32a3c15f2d29dd4c8a
+

@@ -1,0 +1,15 @@
+table 'GT4 Regions'
+	lineageTag: 75ad2e42-d911-4fc9-b4e0-9b639c1e2c9e
+
+	column Region
+		lineageTag: edd0dc46-9fa7-4ef8-91ff-bce918fdf4fe
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: Stores[Region]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'GT4 Regions' = calculated
+		mode: import
+		source = DISTINCT(Stores[Region])
+

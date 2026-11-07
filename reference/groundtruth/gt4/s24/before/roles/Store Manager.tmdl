@@ -1,0 +1,8 @@
+/// Dynamic security: a manager sees the stores whose Manager Email is the signed-in user.
+role 'Store Manager'
+	modelPermission: read
+
+	tablePermission Stores = Stores[Manager Email] = USERPRINCIPALNAME()
+
+	annotation PBI_Id = 9f6b8a38d86e424c82fee305f91bee79
+

@@ -6,6 +6,8 @@
 # CRLF on purpose: a fuzz seed for CRLF input, and Microsoft's licence file kept as published.
 fuzz/seeds/tmsl/alphabetical_crlf.bim -text
 reference/samples/microsoft/LICENSE -text
+# Power BI Desktop's own TMDL (CRLF, blank last line), compared byte for byte.
+reference/groundtruth/gt4/** -text
 
 # Binary formats (git detects most of these; listed so no heuristic touches them).
 *.pbix binary

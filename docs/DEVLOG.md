@@ -7,6 +7,32 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M6 saves in Power BI Desktop's TMDL form (GT-4 s24, acceptance 14)
+
+- **What:** `pbi-tmdl`'s writer emits Desktop's property order (columns, measures, relationships;
+  a blank line before a measure's or calculation item's `formatStringDefinition`), and the
+  source-preserving save keeps each edited file's line ends and blank last line (`FileStyle`; a
+  new file takes the project's prevailing style, a conversion stays LF). `pbi-session` numbers
+  calculation items without an `ordinal` by position, as Desktop does (was -1).
+  `model.column.create` sets `isDataTypeInferred` when it infers the type. New fixtures
+  `reference/groundtruth/gt4/s24/` (Desktop-saved `before/` and `after/`, `edits.json`) and the
+  deviation list `reference/groundtruth/gt4/deviations.json`; test
+  `crates/pbi-ops/tests/save.rs::edits_save_like_power_bi_desktop`. `gen_acme.py` writes the
+  Desktop order and the Acme example is regenerated (five files).
+- **Why:** M6 acceptance 14 (new-object TMDL matches Desktop's under the output contract,
+  ADR-0014), the GAPS TMDL-writer row ("compare the writer with Desktop-saved TMDL").
+- **Numbers:** after four measures, a calculated column and table, a hierarchy and a relationship,
+  DashCraft writes the same 5 files as Desktop 2.159, equal byte for byte apart from new GUIDs and
+  2 deviations (inferred data types). GT-6 s24: Desktop opens DashCraft's save with no dialog;
+  after a refresh its values for the new objects equal DashCraft's (6 totals, 5 regions, 9
+  channel-region shares) and `'Time Calc'` ordinals are 0–3 in both. Mutation checks: an empty
+  deviation list and the old -1 ordinal each fail the test. `check_acme.py` 445/445; ground truth
+  12/12 suites unchanged; perf P09, P10, P11 45.6, 55.2, 187 ms (ok); lint line numbers in 4
+  tests and one CLI snapshot moved by one line.
+- **Open:** Desktop's form of constructs no edit creates yet (roles, partitions, calculation
+  items, perspectives; M26.1); TMDL with explicit ordinals out of document order still uses the
+  explicit values (Desktop ignores them; Desktop never writes such files).
+
 ### M6 app editing (M6.8)
 
 - **What:** the desktop app edits through the registry. The formula bar edits `Name = expression`

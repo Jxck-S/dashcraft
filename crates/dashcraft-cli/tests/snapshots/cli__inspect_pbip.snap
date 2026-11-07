@@ -4361,7 +4361,7 @@ expression: pretty(&v)
       "message": "`formatStringDefinition` on measure is not modeled; kept as an untyped property (1 occurrence(s))",
       "origin": {
         "path": "AcmeOutfitters.SemanticModel/definition/tables/Orders.tmdl",
-        "line": 36
+        "line": 37
       }
     }
   ],

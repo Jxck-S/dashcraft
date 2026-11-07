@@ -8,7 +8,7 @@
 
 mod common;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
@@ -943,7 +943,7 @@ async fn relationship_updates_save_and_reopen() {
             "relationship {CUSTOMERS}\n\tfromColumn: Orders.'Customer ID'\n\ttoColumn: Customers.'Customer ID'\n\n"
         ),
         format!(
-            "relationship {STORES}\n\tcrossFilteringBehavior: bothDirections\n\ttoCardinality: many\n\tsecurityFilteringBehavior: bothDirections\n\tfromColumn: Orders.'Store ID'\n\ttoColumn: Stores.'Store ID'\n\n"
+            "relationship {STORES}\n\tcrossFilteringBehavior: bothDirections\n\tsecurityFilteringBehavior: bothDirections\n\ttoCardinality: many\n\tfromColumn: Orders.'Store ID'\n\ttoColumn: Stores.'Store ID'\n\n"
         ),
         format!(
             "relationship {ORDER_DATE}\n\tisActive: false\n\tfromColumn: Orders.'Order Date'\n\ttoColumn: Date.Date\n\n"
@@ -1403,20 +1403,20 @@ async fn created_table_saves_and_reopens() {
              \n\
              \tcolumn Region\n\
              \t\tdataType: string\n\
-             \t\tisNameInferred\n\
-             \t\tisDataTypeInferred\n\
              \t\tlineageTag: {}\n\
              \t\tsummarizeBy: none\n\
+             \t\tisNameInferred\n\
+             \t\tisDataTypeInferred\n\
              \t\tsourceColumn: Stores[Region]\n\
              \n\
              \t\tannotation SummarizationSetBy = Automatic\n\
              \n\
              \tcolumn 'Square Feet'\n\
              \t\tdataType: int64\n\
-             \t\tisNameInferred\n\
-             \t\tisDataTypeInferred\n\
              \t\tlineageTag: {}\n\
              \t\tsummarizeBy: sum\n\
+             \t\tisNameInferred\n\
+             \t\tisDataTypeInferred\n\
              \t\tsourceColumn: Stores[Square Feet]\n\
              \n\
              \t\tannotation SummarizationSetBy = Automatic\n\
@@ -1508,10 +1508,10 @@ async fn updated_table_saves_and_reopens() {
     let edited = format!(
         "{}\tcolumn 'Unit Cost'\n\
          \t\tdataType: decimal\n\
-         \t\tisNameInferred\n\
-         \t\tisDataTypeInferred\n\
          \t\tlineageTag: {tag}\n\
          \t\tsummarizeBy: sum\n\
+         \t\tisNameInferred\n\
+         \t\tisDataTypeInferred\n\
          \t\tsourceColumn: [Unit Cost]\n\
          \n\
          \t\tannotation SummarizationSetBy = Automatic\n\
@@ -1773,4 +1773,159 @@ async fn renames_rewrite_report_level_measures_and_save_them() {
     }
     r.run("doc.save", json!({"docId": doc})).await;
     assert_eq!(files(dir.path()), original);
+}
+
+fn is_guid(s: &str) -> bool {
+    s.len() == 36
+        && s.bytes().enumerate().all(|(i, b)| {
+            if matches!(i, 8 | 13 | 18 | 23) {
+                b == b'-'
+            } else {
+                b.is_ascii_hexdigit()
+            }
+        })
+}
+
+/// The words of `text` made of hex digits and `-` (GUIDs among them).
+fn hex_words(text: &str) -> impl Iterator<Item = &str> {
+    text.split(|c: char| !(c.is_ascii_hexdigit() || c == '-'))
+}
+
+/// `text` with every GUID that is not in `known` replaced by `<new id>`.
+fn new_ids(text: &str, known: &BTreeSet<&str>) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut word = String::new();
+    let flush = |word: &mut String, out: &mut String| {
+        if is_guid(word) && !known.contains(word.as_str()) {
+            out.push_str("<new id>");
+        } else {
+            out.push_str(word);
+        }
+        word.clear();
+    };
+    for c in text.chars() {
+        if c.is_ascii_hexdigit() || c == '-' {
+            word.push(c);
+        } else {
+            flush(&mut word, &mut out);
+            out.push(c);
+        }
+    }
+    flush(&mut word, &mut out);
+    out
+}
+
+/// GT-4 (ADR-0014): Power BI Desktop 2.159 made the edits of
+/// `reference/groundtruth/gt4/s24/edits.json` on a project it saved
+/// (`before/`) and saved the files of `after/`. The same edits through the
+/// registry save the same bytes, apart from new identifiers and the entries
+/// of `gt4/deviations.json`.
+#[tokio::test(flavor = "multi_thread")]
+async fn edits_save_like_power_bi_desktop() {
+    const DEF: &str = "AcmeOutfitters.SemanticModel/definition";
+    const SESSION: &str = "s24";
+    let (Some(acme), Some(gt4)) = (fixture(ACME), fixture("groundtruth/gt4")) else {
+        return;
+    };
+    let session = gt4.join(SESSION);
+    let dir = tmp_dir("gt4-");
+    copy_dir(&acme, dir.path());
+    let def = dir.path().join(DEF);
+    copy_dir(&session.join("before"), &def);
+    let before = files(&def);
+    let after = files(&session.join("after"));
+    let text = |b: &[u8]| String::from_utf8(b.to_vec()).unwrap();
+    let before_text: Vec<String> = before.values().map(|b| text(b)).collect();
+    let known: BTreeSet<&str> = before_text
+        .iter()
+        .flat_map(|t| hex_words(t))
+        .filter(|w| is_guid(w))
+        .collect();
+
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": dir.path().join("AcmeOutfitters.pbip"),
+            "blobMap": dir.path().join("blob-map.json")}))
+        .await;
+    // Desktop's calculation items carry no `ordinal`: numbered by position, as Desktop answers.
+    let recorded: Value = serde_json::from_str(
+        &fs::read_to_string(gt4.parent().unwrap().join("recordings/acme-tables.json")).unwrap(),
+    )
+    .unwrap();
+    let time_calc = recorded["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["id"] == "time-calc")
+        .unwrap();
+    let items = r
+        .run(
+            "dax.query",
+            json!({"docId": doc, "query": "EVALUATE 'Time Calc'"}),
+        )
+        .await;
+    assert_eq!(items["tables"][0]["rows"], time_calc["rows"], "{items}");
+    let edits: Value =
+        serde_json::from_str(&fs::read_to_string(session.join("edits.json")).unwrap()).unwrap();
+    let mut last = Value::Null;
+    for step in edits.as_array().unwrap() {
+        let mut params = step["params"].clone();
+        params["docId"] = json!(doc);
+        last = r.run(step["id"].as_str().unwrap(), params).await;
+    }
+    // The last step saves: the files Desktop changed and no other.
+    let changed: Vec<String> = after.keys().map(|f| format!("{DEF}/{f}")).collect();
+    assert_eq!(sorted(&last["written"]), changed, "{last}");
+    assert_eq!(last["deleted"], json!([]), "{last}");
+
+    let deviations: Value =
+        serde_json::from_str(&fs::read_to_string(gt4.join("deviations.json")).unwrap()).unwrap();
+    let deviations = deviations["deviations"].as_array().unwrap();
+    assert!(
+        deviations.len() <= 20,
+        "ADR-0014 caps the deviation list at 20"
+    );
+    let mut desktop = before.clone();
+    desktop.extend(after);
+    for d in deviations.iter().filter(|d| d["session"] == SESSION) {
+        assert!(
+            desktop.contains_key(d["file"].as_str().unwrap()),
+            "deviation for a file Desktop did not save: {d}"
+        );
+    }
+    let saved = files(&def);
+    assert_eq!(
+        saved.keys().collect::<Vec<_>>(),
+        desktop.keys().collect::<Vec<_>>()
+    );
+    for (file, bytes) in &desktop {
+        let mut expected = new_ids(&text(bytes), &known);
+        let eol = if expected.contains("\r\n") {
+            "\r\n"
+        } else {
+            "\n"
+        };
+        for d in deviations
+            .iter()
+            .filter(|d| d["session"] == SESSION && d["file"] == file.as_str())
+        {
+            let lines = |key: &str| -> String {
+                d[key]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|l| format!("{}{eol}", l.as_str().unwrap()))
+                    .collect()
+            };
+            let (from, to) = (lines("desktop"), lines("dashcraft"));
+            assert_eq!(
+                expected.matches(&from).count(),
+                1,
+                "deviation no longer applies to {file}: {d}"
+            );
+            expected = expected.replace(&from, &to);
+        }
+        let actual = new_ids(&text(&saved[file]), &known);
+        pretty_assertions::assert_eq!(actual, expected, "{file}");
+    }
 }

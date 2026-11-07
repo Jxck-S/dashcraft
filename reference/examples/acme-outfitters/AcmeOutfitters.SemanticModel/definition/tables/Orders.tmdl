@@ -33,6 +33,7 @@ table Orders
 	measure 'Sales (Scaled)' = [Total Sales]
 		displayFolder: Sales
 		lineageTag: 170e6979-28bd-5f91-a480-abc280d1d197
+
 		formatStringDefinition = IF(ABS(SELECTEDMEASURE()) >= 1000000, "\$#,0.00,,\M", IF(ABS(SELECTEDMEASURE()) >= 1000, "\$#,0.0,\K", "\$#,0.00"))
 
 	measure 'Completed Sales' = CALCULATE([Total Sales], KEEPFILTERS(Orders[Status] = "Completed"))
@@ -48,8 +49,8 @@ table Orders
 
 	measure 'Sales All Stores' = CALCULATE([Total Sales], ALL(Stores))
 		formatString: \$#,0.00
-		displayFolder: Sales
 		isHidden
+		displayFolder: Sales
 		lineageTag: ea7f7ace-4efe-568c-9f01-b506de97dcb9
 
 	measure 'Store Share' = DIVIDE([Total Sales], [Sales All Stores])

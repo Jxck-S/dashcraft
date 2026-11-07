@@ -6,20 +6,20 @@ table Date
 	column Date
 		dataType: dateTime
 		isKey
-		isNameInferred
 		formatString: yyyy-mm-dd
 		lineageTag: b6ba6ce5-ba17-52e0-970c-6e0d06fdc7d4
 		summarizeBy: none
+		isNameInferred
 		sourceColumn: [Date]
 
 		annotation SummarizationSetBy = Automatic
 
 	column Year
 		dataType: int64
-		isNameInferred
 		formatString: 0
 		lineageTag: 63942eaa-922d-541d-a5aa-9a832b179637
 		summarizeBy: none
+		isNameInferred
 		sourceColumn: [Year]
 
 		annotation SummarizationSetBy = Automatic
@@ -27,19 +27,19 @@ table Date
 	column 'Month Number'
 		dataType: int64
 		isHidden
-		isNameInferred
 		formatString: 0
 		lineageTag: d15384f1-1c4f-5286-8e59-dd868d9aa857
 		summarizeBy: none
+		isNameInferred
 		sourceColumn: [Month Number]
 
 		annotation SummarizationSetBy = Automatic
 
 	column Month
 		dataType: string
-		isNameInferred
 		lineageTag: 423b0ef4-8ac0-53be-9d3a-dd07d4630e22
 		summarizeBy: none
+		isNameInferred
 		sourceColumn: [Month]
 		sortByColumn: 'Month Number'
 
@@ -47,28 +47,28 @@ table Date
 
 	column 'Year Month'
 		dataType: string
-		isNameInferred
 		lineageTag: a000dc22-ff55-5c6b-b505-169b8511dfaf
 		summarizeBy: none
+		isNameInferred
 		sourceColumn: [Year Month]
 
 		annotation SummarizationSetBy = Automatic
 
 	column Quarter
 		dataType: string
-		isNameInferred
 		lineageTag: a8471720-0c35-5379-8602-62b6cd69abbe
 		summarizeBy: none
+		isNameInferred
 		sourceColumn: [Quarter]
 
 		annotation SummarizationSetBy = Automatic
 
 	column 'Month Start'
 		dataType: dateTime
-		isNameInferred
 		formatString: yyyy-mm-dd
 		lineageTag: a6918dc7-aa17-52dd-b849-841a287c7a49
 		summarizeBy: none
+		isNameInferred
 		sourceColumn: [Month Start]
 
 		annotation SummarizationSetBy = Automatic

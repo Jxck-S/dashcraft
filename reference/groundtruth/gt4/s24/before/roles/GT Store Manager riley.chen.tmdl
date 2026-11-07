@@ -1,0 +1,8 @@
+/// Ground-truth variant only: Store Manager for riley.chen@acmeoutfitters.example.
+role 'GT Store Manager riley.chen'
+	modelPermission: read
+
+	tablePermission Stores = Stores[Manager Email] = "riley.chen@acmeoutfitters.example"
+
+	annotation PBI_Id = 9422cb050fc4400a886c6246ca176534
+

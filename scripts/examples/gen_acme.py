@@ -1719,12 +1719,13 @@ def table_tmdl(t: dict) -> str:
         # Desktop refuses a measure with both formatString and formatStringDefinition.
         if not m["fsd"]:
             o.line(2, f"formatString: {tmdl_text(m['fmt'])}")
-        if m["folder"]:
-            o.line(2, f"displayFolder: {tmdl_text(m['folder'])}")
         if m["hidden"]:
             o.line(2, "isHidden")
+        if m["folder"]:
+            o.line(2, f"displayFolder: {tmdl_text(m['folder'])}")
         o.line(2, f"lineageTag: {guid('measure', name, m['name'])}")
         if m["fsd"]:
+            o.blank()
             o.expr(2, "formatStringDefinition", m["fsd"])
         o.annotations(2, m["annotations"])
     for c in t["columns"]:
@@ -1740,8 +1741,6 @@ def table_tmdl(t: dict) -> str:
             o.line(2, "isHidden")
         if c["key"]:
             o.line(2, "isKey")
-        if c["inferred"]:
-            o.line(2, "isNameInferred")
         if c["fmt"]:
             o.line(2, f"formatString: {tmdl_text(c['fmt'])}")
         if c["folder"]:
@@ -1750,6 +1749,8 @@ def table_tmdl(t: dict) -> str:
         if c["category"]:
             o.line(2, f"dataCategory: {c['category']}")
         o.line(2, f"summarizeBy: {c['summarize']}")
+        if c["inferred"]:
+            o.line(2, "isNameInferred")
         if not c["expr"]:
             o.line(2, f"sourceColumn: {tmdl_text(c['source'])}")
         if c["sort_by"]:
@@ -1790,6 +1791,7 @@ def calc_group_tmdl() -> str:
         o.expr(2, f"calculationItem {tq(item)}", dax)
         o.line(3, f"ordinal: {i}")
         if fsd:
+            o.blank()
             o.expr(3, "formatStringDefinition", fsd)
     o.blank()
     o.line(1, "column 'Time Calculation'")
@@ -1878,8 +1880,9 @@ def write_model(out: Path) -> None:
         if i:
             o.blank()
         o.line(0, f"relationship {guid('relationship', ft, fc, tt, tc)}")
-        for key in ("isActive", "crossFilteringBehavior", "fromCardinality", "toCardinality",
-                    "securityFilteringBehavior"):
+        # Power BI Desktop's order (2.159).
+        for key in ("isActive", "crossFilteringBehavior", "securityFilteringBehavior",
+                    "fromCardinality", "toCardinality"):
             if key in opts:
                 o.line(1, f"{key}: {opts[key]}")
         o.line(1, f"fromColumn: {tq(ft)}.{tq(fc)}")
