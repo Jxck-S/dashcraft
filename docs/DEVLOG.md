@@ -7,6 +7,24 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M6 canvas selections follow renames
+
+- **What:** `pbi_model::renames_between(old, new)` lists the table, column and measure renames
+  between two models, matched by `ObjectId` and ordered through placeholders so swaps and a table
+  renamed with its columns come out right. `pbi-ops` canvas pages remember the model their view
+  state names (`PageEntry::names`) and rewrite selected points and slicer conditions, saved and
+  current, when the page is next used under a newer model (`follow_renames`); a click on a render
+  made before the rename maps its point to the current names. `Target::update` reads the page and
+  the model from one revision.
+- **Why:** M6 open item "canvas state remapping after renames" (DESKTOP-PLAN M6 progress): a
+  rename silently dropped a cross-filter ("cross-filter not applied") and `canvas.reset` restored
+  stale names.
+- **Numbers:** new tests `canvas_selections_follow_renames` (column and table rename, undo, redo,
+  click on a stale render), `saved_and_current_selections_follow_model_renames` and
+  `renames_between_models_follow_ids_through_swaps`; the integration test fails without the fix,
+  and with either the click remap or `follow_renames` turned off. View state is not saved, so
+  there is no Desktop ground-truth comparison.
+
 ### M6 saves in Power BI Desktop's TMDL form (GT-4 s24, acceptance 14)
 
 - **What:** `pbi-tmdl`'s writer emits Desktop's property order (columns, measures, relationships;
@@ -32,6 +50,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Open:** Desktop's form of constructs no edit creates yet (roles, partitions, calculation
   items, perspectives; M26.1); TMDL with explicit ordinals out of document order still uses the
   explicit values (Desktop ignores them; Desktop never writes such files).
+- **Commit:** `53bcb1c` (PR #44).
 
 ### M6 app editing (M6.8)
 

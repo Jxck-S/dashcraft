@@ -106,6 +106,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - `.gitignore` refuses `*.pbix`, `*.pbit` and `*.abf` files except the committed Microsoft samples and fuzz seeds.
 
 ### Fixed
+- Canvas selections follow model renames: a selected data point (cross-filter) or a slicer's range or text condition that names a renamed table, column or measure keeps filtering after the rename, its undo and its redo, instead of being dropped with a "cross-filter not applied" warning; `canvas.reset` restores the saved selections under the new names, and a click on a render made before the rename still toggles the selection.
 - Calculation items without an `ordinal` (as Power BI Desktop saves them) are numbered by position, as Desktop does; their `Ordinal` column was -1.
 - `model.column.create` marks a data type it inferred with `isDataTypeInferred`, as `model.table.create` already did; the saved column read as explicitly typed.
 - Queries never mix two revisions (M6 acceptance 8): with "View as" active, a query running between an edit, undo or redo and the rebuild of the restricted engine read the new model over the previous revision's rows; the rebuilt engine is now published with the edit. Canvas renders and `render.page` read the report, the page and the data from one revision (`Session::revision_snapshot`), and `canvas.*` results report it as `documentRevision`.

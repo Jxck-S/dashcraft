@@ -29,7 +29,8 @@ re-render, save, end-to-end refresh) added three rows to §8.
 
 Update **2026-11-07**: editing in the app (M6.8: Save, Save as, Undo and Redo, the editable
 formula bar and Properties fields, the unsaved-changes prompt) re-scored the modeling, Save, undo
-and accessibility rows (§10).
+and accessibility rows (§10). Canvas selections now follow model renames (cross-filter row, §6;
+score unchanged).
 
 Update **2026-11-07** (later): the TMDL DashCraft saves after edits now equals Power BI Desktop's
 for the same edits, byte for byte apart from new identifiers and two listed deviations (GT-4 s24,
@@ -224,7 +225,7 @@ Source: [VISUALS.md "Interaction summary"](VISUALS.md#interaction-summary), ADR-
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
 | Slicer selection (single, multi, Select all, search, clear, dropdown) | ✅ | 4 | `crates/pbi-ops/tests/canvas.rs`; app canvas tests | — |
-| Cross-filter from pie, bar, column, line, scatter, funnel, treemap, waterfall, table, matrix per `visualInteractions` | ✅ | 4 | same; hit ids on every mark of the new chart types | — |
+| Cross-filter from pie, bar, column, line, scatter, funnel, treemap, waterfall, table, matrix per `visualInteractions` | ✅ | 4 | same; hit ids on every mark of the new chart types; selections follow model renames, undo and redo (`canvas_selections_follow_renames`) | — |
 | Highlight interactions (`HighlightFilter`) | ❌ | 1 | filters instead, with a warning | Highlight values in DataViews (ROADMAP Next) |
 | Default tooltips (data points, ⚠ errors with DAX) | ✅ | 3 | `canvas.tooltip`; scatter points show Details, Legend, X, Y and Size (`scatter_tooltips_show_details_legend_x_y_and_size` in `crates/pbi-ops/tests/canvas.rs`) | Tooltip formatting objects (`tooltips.*`) |
 | Report-page tooltips | ❌ | 0 | not rendered | ROADMAP Next |

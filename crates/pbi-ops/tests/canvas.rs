@@ -339,6 +339,102 @@ async fn canvas_interactions() {
     assert_eq!(e.code, OpErrorCode::NotFound);
 }
 
+/// A cross-filter survives renames of its column and table, and their undo.
+#[tokio::test(flavor = "multi_thread")]
+async fn canvas_selections_follow_renames() {
+    let dir = tmp_dir("pbi-ops-canvas-rename-");
+    let pbip = mini_pbip(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let unfiltered = format!(">{MINI_TOTAL}<");
+
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    let bar = hit(&page, "bars|dataPoint|").to_owned();
+    let clicked = r
+        .run("canvas.click", json!({"docId": doc, "hitId": bar}))
+        .await;
+    let filtered = clicked["page"]["svg"].as_str().unwrap().to_owned();
+    assert!(!filtered.contains(&unfiltered));
+    let field =
+        |state: &Value| state["interaction"]["selectedPoints"]["points"][0][0]["field"].clone();
+    let before = field(&r.run("canvas.state", json!({"docId": doc})).await);
+    assert_eq!(before["column"]["property"], "Region", "{before}");
+
+    let check = |page: &Value, step: &str| {
+        let svg = page["svg"].as_str().unwrap();
+        assert!(
+            !svg.contains(&unfiltered),
+            "{step}: the cross-filter is lost"
+        );
+        let kinds: Vec<&Value> = page["selections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| &s["kind"])
+            .collect();
+        assert_eq!(kinds, [&json!("crossFilter")], "{step}");
+    };
+    r.run(
+        "model.object.rename",
+        json!({"docId": doc, "table": "Sales", "column": "Region", "newName": "Area"}),
+    )
+    .await;
+    check(
+        &r.run("canvas.render", json!({"docId": doc})).await,
+        "column rename",
+    );
+    r.run(
+        "model.object.rename",
+        json!({"docId": doc, "table": "Sales", "newName": "Orders"}),
+    )
+    .await;
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    check(&page, "table rename");
+    assert_eq!(page["isDefault"], false);
+    let renamed = field(&r.run("canvas.state", json!({"docId": doc})).await);
+    assert_eq!(renamed["column"]["property"], "Area", "{renamed}");
+    assert_eq!(renamed["column"]["entity"], "Orders", "{renamed}");
+    // The bar's selection still highlights the same data point.
+    let again = r
+        .run("canvas.click", json!({"docId": doc, "hitId": bar}))
+        .await;
+    assert_eq!(
+        again["changed"], true,
+        "a second click on the bar clears it"
+    );
+    assert!(again["page"]["svg"].as_str().unwrap().contains(&unfiltered));
+    r.run("canvas.click", json!({"docId": doc, "hitId": bar}))
+        .await;
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.undo", json!({"docId": doc})).await;
+    check(&r.run("canvas.render", json!({"docId": doc})).await, "undo");
+    assert_eq!(
+        field(&r.run("canvas.state", json!({"docId": doc})).await),
+        before
+    );
+    r.run("doc.redo", json!({"docId": doc})).await;
+    check(&r.run("canvas.render", json!({"docId": doc})).await, "redo");
+
+    // A click on the render from before a rename (nothing rendered since)
+    // uses today's names: it toggles the selected bar off, and on again.
+    r.run(
+        "model.object.rename",
+        json!({"docId": doc, "table": "Sales", "column": "Area", "newName": "Zone"}),
+    )
+    .await;
+    r.run("canvas.click", json!({"docId": doc, "hitId": bar}))
+        .await;
+    let state = r.run("canvas.state", json!({"docId": doc})).await;
+    assert!(state["interaction"]["selectedPoints"].is_null(), "{state}");
+    let on = r
+        .run("canvas.click", json!({"docId": doc, "hitId": bar}))
+        .await;
+    check(&on["page"], "click after a rename");
+    let zone = field(&r.run("canvas.state", json!({"docId": doc})).await);
+    assert_eq!(zone["column"]["property"], "Zone", "{zone}");
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn scatter_tooltips_show_details_legend_x_y_and_size() {
     let dir = tmp_dir("pbi-ops-scatter-");

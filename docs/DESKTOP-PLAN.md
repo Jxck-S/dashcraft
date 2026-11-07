@@ -756,9 +756,12 @@ follows Desktop's property order and keeps each file's CRLF line ends and blank 
 calculation items without an `ordinal` are numbered by position as Desktop does
 (`edits_save_like_power_bi_desktop`; [GT-4](../reference/groundtruth/README.md#writer-form-gt-4-dashcraft-saves-what-desktop-saves)).
 Desktop opened that save without a dialog and, after a refresh, computes the same values (GT-6
-s24). Still open: data column delete (with M editing), hierarchy and level edits, KPI and
-detail-rows expressions, canvas state remapping after renames and the A6 screen-reader runs
-(acceptance 13).
+s24). Canvas view state follows renames: selected data points and slicer conditions are rewritten
+from the model's previous names to its current ones (matched by `ObjectId`,
+`pbi_model::renames_between`) after a rename, its undo and its redo, so a cross-filter keeps
+filtering (`canvas_selections_follow_renames`). Still open: data column delete (with M
+editing), hierarchy and level edits, KPI and detail-rows expressions and the A6
+screen-reader runs (acceptance 13).
 
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,
 invalidation, recalculation), `pbi-core` (save in place, minimal-diff writes, identifier

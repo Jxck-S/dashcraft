@@ -37,7 +37,8 @@ use std::time::Instant;
 use pbi_core::{OpenedDocument, ReportSource};
 use pbi_engine::{CancellationToken, EngineSnapshot, Value};
 use pbi_model::{
-    Document, FieldExpr, Literal, LiteralValue, Model, Page, Report, ResourceRef, Visual,
+    Document, FieldExpr, Literal, LiteralValue, Model, Page, Rename, Report, ResourceRef, Visual,
+    renames_between,
 };
 use pbi_render::dataview::{
     BLANK_LABEL, CellValue, ColumnMeta, DataView, FieldRefKind, ValueColumn,
@@ -309,6 +310,10 @@ struct PageEntry {
     state: InteractionState,
     /// The report's saved state, for `canvas.reset`.
     initial: InteractionState,
+    /// The model whose table, column and measure names `state` and
+    /// `initial` use; renames since (edits, undo, redo) are applied to them
+    /// before the next use.
+    names: Arc<Model>,
     /// Saved slicer selections that could not be read.
     problems: Vec<String>,
     view: PageViewState,
@@ -343,6 +348,8 @@ struct LastRender {
     state_version: u64,
     snapshot: Arc<EngineSnapshot>,
     model: Arc<Model>,
+    /// The page as rendered (clicks read its fields).
+    page: Arc<Page>,
     data: Arc<PageData>,
     interactions: Vec<VisualInteraction>,
 }
@@ -358,11 +365,12 @@ impl LastRender {
 }
 
 impl PageEntry {
-    fn new(page: &Page) -> Self {
+    fn new(page: &Page, model: &Arc<Model>) -> Self {
         let (state, problems) = InteractionState::from_page(page);
         Self {
             initial: state.clone(),
             state,
+            names: Arc::clone(model),
             problems,
             view: PageViewState::new(),
             viewport: None,
@@ -371,6 +379,25 @@ impl PageEntry {
             running: Vec::new(),
             last: None,
         }
+    }
+
+    /// Renames the fields of the selections (cross-filter points, slicer
+    /// conditions) after the model's tables, columns or measures were
+    /// renamed, so they keep filtering; `canvas.reset` gets the renamed
+    /// saved state.
+    fn follow_renames(&mut self, model: &Arc<Model>) {
+        if Arc::ptr_eq(&self.names, model) {
+            return;
+        }
+        let renames = renames_between(&self.names, model);
+        self.names = Arc::clone(model);
+        if renames.is_empty() {
+            return;
+        }
+        rename_state(&mut self.initial, &renames);
+        let mut state = self.state.clone();
+        rename_state(&mut state, &renames);
+        self.set_state(state);
     }
 
     /// Replaces the interaction state; `true` if it changed.
@@ -390,6 +417,22 @@ impl PageEntry {
     }
 }
 
+/// Applies `renames`, in order, to the fields of a page's selections.
+fn rename_state(state: &mut InteractionState, renames: &[Rename]) {
+    for rename in renames {
+        for selection in state.slicer_selections.values_mut() {
+            if let Some(condition) = &mut selection.condition {
+                rename.apply_to_condition(condition);
+            }
+        }
+        if let Some(points) = &mut state.selected_points {
+            for f in points.points.iter_mut().flatten() {
+                rename.apply_to_field(&mut f.field);
+            }
+        }
+    }
+}
+
 /// A render prepared under the store lock.
 struct Job {
     key: PageKey,
@@ -405,15 +448,27 @@ struct Job {
 }
 
 impl CanvasStore {
-    fn update<R>(&self, key: PageKey, page: &Page, f: impl FnOnce(&mut PageEntry) -> R) -> R {
+    /// Runs `f` on the page's entry, created from `page` on first use, with
+    /// its selections following the renames up to `model`.
+    fn update<R>(
+        &self,
+        key: PageKey,
+        page: &Page,
+        model: &Arc<Model>,
+        f: impl FnOnce(&mut PageEntry) -> R,
+    ) -> R {
         let mut pages = lock(&self.pages);
-        f(pages.entry(key).or_insert_with(|| PageEntry::new(page)))
+        let entry = pages
+            .entry(key)
+            .or_insert_with(|| PageEntry::new(page, model));
+        entry.follow_renames(model);
+        f(entry)
     }
 
     /// Starts a render: a newer generation; cancels the running renders of
     /// an older interaction state (and the oldest beyond [`MAX_RUNNING`]).
     fn begin(&self, key: PageKey, page: &Page, env: &QueryEnv) -> Job {
-        self.update(key, page, |entry| {
+        self.update(key, page, &env.model, |entry| {
             entry.generation = entry.generation.wrapping_add(1);
             let version = entry.state_version;
             entry.running.retain(|r| {
@@ -621,11 +676,12 @@ impl Target {
     }
 
     fn update<R>(&self, f: impl FnOnce(&mut PageEntry, &Report, &Page) -> R) -> Result<R, OpError> {
-        let (report, page) = self.report_and_page()?;
+        let revision = self.entry.session().revision_snapshot();
+        let (report, page) = locate(&revision.document, self.report, self.page)?;
         Ok(self
             .entry
             .canvas
-            .update(self.key(), &page, |e| f(e, &report, &page)))
+            .update(self.key(), &page, &revision.model, |e| f(e, &report, &page)))
     }
 }
 
@@ -644,6 +700,7 @@ fn locate(document: &Document, report: usize, page: usize) -> Result<(Report, Pa
 async fn render(target: &Target) -> Result<CanvasPageOut, OpError> {
     let revision = target.entry.session().revision_snapshot();
     let (report, page) = locate(&revision.document, target.report, target.page)?;
+    let page = Arc::new(page);
     let env = QueryEnv::from_revision(&revision);
     let job = target.entry.canvas.begin(target.key(), &page, &env);
     let theme = target.theme();
@@ -670,7 +727,7 @@ fn run_job(
     entry: &DocEntry,
     env: QueryEnv,
     revision: u64,
-    (report, page): (&Report, &Page),
+    (report, page): (&Report, &Arc<Page>),
     theme: &ThemeResolver,
     job: &Job,
 ) -> Result<(CanvasPageOut, LastRender), OpError> {
@@ -702,6 +759,7 @@ fn run_job(
         state_version: job.state_version,
         snapshot: env.snapshot,
         model: env.model,
+        page: Arc::clone(page),
         data,
         interactions: rendered.interactions,
     };
@@ -1189,7 +1247,18 @@ fn apply_click(
             let Some(dv) = last.dataview(&visual.name) else {
                 return Ok((changed, action));
             };
-            let point = point_fields(visual, dv, last.interaction(&visual.name), *series, *index);
+            // The fields of the page the caller saw, in today's names.
+            let seen = last.page.visual(&visual.name).unwrap_or(visual);
+            let mut point = point_fields(seen, dv, last.interaction(&visual.name), *series, *index);
+            if let Some(fields) = &mut point
+                && !Arc::ptr_eq(&last.model, &entry.names)
+            {
+                for rename in renames_between(&last.model, &entry.names) {
+                    for f in fields.iter_mut() {
+                        rename.apply_to_field(&mut f.field);
+                    }
+                }
+            }
             let mut state = entry.state.clone();
             state.selected_points = match point {
                 Some(point) => {
@@ -2022,6 +2091,7 @@ mod tests {
             state_version: job.state_version,
             snapshot: Arc::clone(&env.snapshot),
             model: Arc::clone(&env.model),
+            page: Arc::new(Page::default()),
             data: Arc::new(PageData::default()),
             interactions: Vec::new(),
         }
@@ -2056,7 +2126,7 @@ mod tests {
 
         // A new interaction state cancels the renders of the old one.
         let e = store.begin(key, &page, &env);
-        store.update(key, &page, |entry| {
+        store.update(key, &page, &env.model, |entry| {
             let mut state = entry.state.clone();
             state.selected_points = Some(PointSelection::default());
             assert!(entry.set_state(state));
@@ -2083,6 +2153,54 @@ mod tests {
     }
 
     #[test]
+    fn saved_and_current_selections_follow_model_renames() {
+        use pbi_model::{Column, ComparisonKind, Condition, ObjectId, Table};
+        let model = |table: &str, column: &str| {
+            Arc::new(Model {
+                tables: vec![Table {
+                    id: ObjectId(1),
+                    name: table.into(),
+                    columns: vec![Column {
+                        id: ObjectId(2),
+                        name: column.into(),
+                        ..Column::default()
+                    }],
+                    ..Table::default()
+                }],
+                ..Model::default()
+            })
+        };
+        let at_least = |table: &str, column: &str| {
+            let mut state = InteractionState::new();
+            state.select(
+                "range",
+                SlicerSelection {
+                    condition: Some(Condition::Comparison {
+                        kind: ComparisonKind::GreaterThanOrEqual,
+                        left: FieldExpr::column(table, column),
+                        right: FieldExpr::Unknown(serde_json::json!(10)),
+                    }),
+                    ..SlicerSelection::default()
+                },
+            );
+            state
+        };
+        let (before, after) = (model("Sales", "Amount"), model("Orders", "Revenue"));
+        let mut entry = PageEntry::new(&Page::default(), &before);
+        // A saved range selection (`canvas.reset` restores it) and the same one now.
+        entry.initial = at_least("Sales", "Amount");
+        entry.state = at_least("Sales", "Amount");
+        entry.follow_renames(&after);
+        assert_eq!(entry.state, at_least("Orders", "Revenue"));
+        assert_eq!(entry.initial, entry.state);
+        assert_eq!(entry.state_version, 1, "cached query results are stale");
+        // The same model again, or a model without renames: nothing changes.
+        entry.follow_renames(&after);
+        entry.follow_renames(&model("Orders", "Revenue"));
+        assert_eq!(entry.state_version, 1);
+    }
+
+    #[test]
     fn cached_query_results_are_reused_while_state_and_data_are_unchanged() {
         let (store, env, page, key) = (CanvasStore::default(), env(), Page::default(), (0, 0));
         let a = store.begin(key, &page, &env);
@@ -2102,7 +2220,7 @@ mod tests {
         // A new snapshot (data changed) or a new interaction state invalidates them.
         let other = super::tests::env();
         assert!(store.begin(key, &page, &other).cached.is_none());
-        store.update(key, &page, |entry| {
+        store.update(key, &page, &env.model, |entry| {
             let mut state = entry.state.clone();
             state.selected_points = Some(PointSelection::default());
             entry.set_state(state);
