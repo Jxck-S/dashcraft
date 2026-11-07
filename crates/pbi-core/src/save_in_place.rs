@@ -15,8 +15,11 @@
 //!   the report fields that still name them) are applied to the PBIR files
 //!   (`report.json`, `page.json`, `visual.json` and other JSON files under
 //!   `definition/`, such as bookmarks), and moved or resized visuals get
-//!   their `position` patched. Report changes that cannot be written yet
-//!   (a legacy `report.json` layout) are refused, never dropped.
+//!   their `position` patched. Report-level measures
+//!   (`reportExtensions.json`) get their tables, measure references and
+//!   DAX (rewritten by the rename) written back. Report changes that cannot
+//!   be written yet (a legacy `report.json` layout, whose report-level
+//!   measures are not read) are refused, never dropped.
 //! - **External changes are conflicts.** A [`ProjectFingerprint`] of the
 //!   project files is taken at open and updated by every save; if the files
 //!   changed on disk since, the save is refused with the changed paths
@@ -27,9 +30,6 @@
 //!   folder and renamed into place. A failure part-way returns
 //!   [`CoreError::PartialSave`] with the files already written; the next
 //!   save writes the rest.
-//!
-//! Known gaps: `reportExtensions.json` (report-level measures) keeps the
-//! old names, and DAX in it is not rewritten.
 //!
 //! [`save_as_project`] writes an edited document from any readable source
 //! (PBIP, PBIX, PBIT, `model.bim`, …) as a new PBIP project and reads it
@@ -46,7 +46,7 @@ use std::sync::Arc;
 use pbi_model::{
     Document, FieldExpr, Model, ObjectId, Position, Rename, Report, SourceFormat, names_eq,
 };
-use pbi_pbir::{JsonStyle, PbirReport};
+use pbi_pbir::{JsonStyle, PbirReport, ReportExtensionsJson};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Number, Value};
@@ -1041,8 +1041,9 @@ fn expected_reports(baseline: &Document, current: &Document, renames: &[Rename])
         .map(|v| (v.id, &v.position))
         .collect();
     let mut reports = baseline.reports.clone();
-    for report in &mut reports {
+    for (i, report) in reports.iter_mut().enumerate() {
         for rename in renames {
+            rename.apply_to_report_measures(&mut report.measures);
             rename.apply_to_filters(&mut report.filters);
             for page in &mut report.pages {
                 rename.apply_to_filters(&mut page.filters);
@@ -1054,6 +1055,15 @@ fn expected_reports(baseline: &Document, current: &Document, renames: &[Rename])
         for visual in report.pages.iter_mut().flat_map(|p| &mut p.visuals) {
             if let Some(position) = positions.get(&visual.id) {
                 (*position).clone_into(&mut visual.position);
+            }
+        }
+        // The DAX of report-level measures is rewritten by renames (and
+        // only by them): take it as it is now.
+        if let Some(now) = current.reports.get(i)
+            && now.measures.len() == report.measures.len()
+        {
+            for (m, now) in report.measures.iter_mut().zip(&now.measures) {
+                now.expression.clone_into(&mut m.expression);
             }
         }
     }
@@ -1076,6 +1086,9 @@ fn check_reports(expected: &[Report], current: &[Report]) -> Result<(), CoreErro
     for (e, c) in expected.iter().zip(current) {
         if e == c {
             continue;
+        }
+        if e.measures != c.measures {
+            return refuse(format!("the report-level measures of report `{}`", c.name));
         }
         if e.pages.len() == c.pages.len() {
             for (ep, cp) in e.pages.iter().zip(&c.pages) {
@@ -1119,6 +1132,15 @@ fn sync_reports(
                 for (page, visual, old, new) in moved_visuals(before, after) {
                     patch_position(report, page, visual, old, new)?;
                 }
+                if before.measures != after.measures {
+                    let Some(extensions) = report.extensions.as_mut() else {
+                        return Err(CoreError::Save(format!(
+                            "report `{}`: the report-level measures changed but reportExtensions.json is missing",
+                            after.name
+                        )));
+                    };
+                    patch_report_measures(extensions, after, renames)?;
+                }
             }
             ReportSource::Legacy { .. } => {
                 if before != after {
@@ -1131,6 +1153,64 @@ fn sync_reports(
         }
     }
     Ok(out)
+}
+
+/// Writes the tables, measure references and DAX of `report`'s report-level
+/// measures into `reportExtensions.json`, whose measures they are in order
+/// (entity by entity, as the reader lists them).
+fn patch_report_measures(
+    extensions: &mut ReportExtensionsJson,
+    report: &Report,
+    renames: &[Rename],
+) -> Result<(), CoreError> {
+    let mismatch = || {
+        CoreError::Save(format!(
+            "report `{}`: reportExtensions.json does not match its report-level measures",
+            report.name
+        ))
+    };
+    let mut measures = report.measures.iter();
+    for entity in extensions.entities.iter_mut().flatten() {
+        if let Some(name) = entity.name.as_mut() {
+            for rename in renames {
+                if let Rename::Table { old, new } = rename
+                    && names_eq(name, old)
+                {
+                    new.clone_into(name);
+                }
+            }
+        }
+        let table = entity.name.clone().unwrap_or_default();
+        for json in entity.measures.iter_mut().flatten() {
+            let m = measures.next().ok_or_else(mismatch)?;
+            if m.table != table || json.name.as_deref().unwrap_or_default() != m.name {
+                return Err(mismatch());
+            }
+            if json.expression.as_deref() != Some(m.expression.as_str()) {
+                json.expression = Some(m.expression.clone());
+            }
+            let refs = json
+                .references
+                .as_mut()
+                .and_then(|r| r.measures.as_mut())
+                .map(Vec::as_mut_slice)
+                .unwrap_or_default();
+            if refs.len() != m.references.len() {
+                return Err(mismatch());
+            }
+            for (json, r) in refs.iter_mut().zip(&m.references) {
+                for (slot, value) in [(&mut json.entity, &r.table), (&mut json.name, &r.name)] {
+                    if slot.as_deref().unwrap_or_default() != value {
+                        *slot = Some(value.clone());
+                    }
+                }
+            }
+        }
+    }
+    if measures.next().is_some() {
+        return Err(mismatch());
+    }
+    Ok(())
 }
 
 /// `(page name, visual name, old position, new position)` of every visual

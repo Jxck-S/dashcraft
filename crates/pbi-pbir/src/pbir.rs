@@ -104,6 +104,58 @@ json_object! {
 }
 
 json_object! {
+    /// `definition/reportExtensions.json`: report-level measures, by the
+    /// model table they are shown in.
+    pub struct ReportExtensionsJson {
+        "$schema" => schema: String,
+        /// `extension`: the `SourceRef.Schema` visuals use for the measures.
+        "name" => name: String,
+        "entities" => entities: Vec<ReportExtensionEntityJson>,
+    }
+}
+
+json_object! {
+    /// `entities[]`: a model table and the measures added to it.
+    pub struct ReportExtensionEntityJson {
+        "name" => name: String,
+        "measures" => measures: Vec<ReportExtensionMeasureJson>,
+    }
+}
+
+json_object! {
+    /// `entities[].measures[]` (`dataCategory`, `measureTemplate` and
+    /// `annotations` stay in `extra`).
+    pub struct ReportExtensionMeasureJson {
+        "name" => name: String,
+        "dataType" => data_type: String,
+        "expression" => expression: String,
+        "formatString" => format_string: String,
+        "hidden" => hidden: bool,
+        "displayFolder" => display_folder: String,
+        "description" => description: String,
+        "references" => references: ExpressionReferencesJson,
+    }
+}
+
+json_object! {
+    /// `references`: what a report-level measure's DAX uses.
+    pub struct ExpressionReferencesJson {
+        "unrecognizedReferences" => unrecognized_references: bool,
+        "measures" => measures: Vec<MeasureReferenceJson>,
+    }
+}
+
+json_object! {
+    /// `references.measures[]`: `schema` is empty for a model measure and
+    /// the extension's name for a report-level one.
+    pub struct MeasureReferenceJson {
+        "schema" => schema: String,
+        "entity" => entity: String,
+        "name" => name: String,
+    }
+}
+
+json_object! {
     /// `themeCollection`.
     pub struct ThemeCollectionJson {
         "baseTheme" => base_theme: ThemeMetadataJson,

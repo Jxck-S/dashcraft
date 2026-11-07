@@ -4,7 +4,10 @@ use indexmap::IndexMap;
 use serde::Serialize;
 
 use crate::json::JsonStyle;
-use crate::reader::{DEFINITION_PBIR, PAGES_JSON, PLATFORM, PbirReport, REPORT_JSON, VERSION_JSON};
+use crate::reader::{
+    DEFINITION_PBIR, PAGES_JSON, PLATFORM, PbirReport, REPORT_EXTENSIONS_JSON, REPORT_JSON,
+    VERSION_JSON,
+};
 
 /// Serializes a report folder back to `(path, bytes)` pairs.
 ///
@@ -39,6 +42,12 @@ pub fn write_pbir(report: &PbirReport) -> Vec<(String, Vec<u8>)> {
     }
     if let Some(v) = &report.pages_meta {
         put(PAGES_JSON.into(), styled(report, PAGES_JSON, v));
+    }
+    if let Some(v) = &report.extensions {
+        put(
+            REPORT_EXTENSIONS_JSON.into(),
+            styled(report, REPORT_EXTENSIONS_JSON, v),
+        );
     }
     for page in &report.pages {
         let path = page.path();

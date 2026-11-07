@@ -68,8 +68,9 @@ pub use query::{
     LiteralError, LiteralValue, PropertyVariation, SortDirection, SortItem,
 };
 pub use report::{
-    DatasetReference, DisplayOption, InteractionKind, Page, Position, Projection, Report,
-    ResourceItem, ResourcePackage, ResourceRef, ThemeRef, Visual, VisualInteraction, VisualKind,
+    DatasetReference, DisplayOption, InteractionKind, MeasureReference, Page, Position, Projection,
+    Report, ReportMeasure, ResourceItem, ResourcePackage, ResourceRef, ThemeRef, Visual,
+    VisualInteraction, VisualKind,
 };
 pub use rewrite::Rename;
 pub use semantic::{

@@ -38,7 +38,7 @@ use pbi_model::{
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::reader::{OpenedDocument, ReportSource};
+use crate::reader::OpenedDocument;
 
 /// Rule identifiers.
 pub mod rules {
@@ -512,7 +512,7 @@ pub fn lint(doc: &OpenedDocument, opts: &LintOptions) -> LintReport {
             ReportCtx {
                 folder,
                 binding,
-                ext: source.map(extension_measures).unwrap_or_default(),
+                ext: extension_measures(r),
             }
         })
         .collect();
@@ -521,8 +521,7 @@ pub fn lint(doc: &OpenedDocument, opts: &LintOptions) -> LintReport {
 }
 
 /// Lints a document without container information: every local report is
-/// checked against `doc.model` (multi-model projects and report-level
-/// measures need [`lint`]).
+/// checked against `doc.model` (multi-model projects need [`lint`]).
 pub fn lint_document(doc: &Document, opts: &LintOptions) -> LintReport {
     let models: Vec<(Option<&str>, &Model)> = doc.model.iter().map(|m| (Some(""), m)).collect();
     let reports: Vec<ReportCtx<'_>> = doc
@@ -539,7 +538,7 @@ pub fn lint_document(doc: &Document, opts: &LintOptions) -> LintReport {
             ReportCtx {
                 folder,
                 binding,
-                ext: report::ExtensionMeasures::new(),
+                ext: extension_measures(r),
             }
         })
         .collect();
@@ -566,39 +565,13 @@ fn run(
     sink.finish()
 }
 
-/// Report-level measures declared in a PBIR `definition/reportExtensions.json`.
-fn extension_measures(source: &ReportSource) -> report::ExtensionMeasures {
-    let mut out = report::ExtensionMeasures::new();
-    let ReportSource::Pbir { report, .. } = source else {
-        return out;
-    };
-    let Some(file) = report.files.get("definition/reportExtensions.json") else {
-        return out;
-    };
-    let Ok(json) = serde_json::from_slice::<Value>(&file.bytes) else {
-        return out;
-    };
-    for entity in json
-        .get("entities")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-    {
-        let Some(table) = entity.get("name").and_then(Value::as_str) else {
-            continue;
-        };
-        for m in entity
-            .get("measures")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-        {
-            if let Some(name) = m.get("name").and_then(Value::as_str) {
-                out.insert((table.to_lowercase(), name.to_lowercase()));
-            }
-        }
-    }
-    out
+/// The report-level measures of a report (PBIR `reportExtensions.json`).
+fn extension_measures(report: &Report) -> report::ExtensionMeasures {
+    report
+        .measures
+        .iter()
+        .map(|m| (m.table.to_lowercase(), m.name.to_lowercase()))
+        .collect()
 }
 
 /// Binds a report to one of `models` (`(folder, model)`; a `None` folder

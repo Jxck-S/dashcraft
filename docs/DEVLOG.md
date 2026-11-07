@@ -7,6 +7,34 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 report-level measures follow renames (M6.7, part 3)
+
+- **What:** `pbi-pbir` types `reportExtensions.json` (entities and measures, unknown keys kept);
+  the report AST gains `Report::measures` (`ReportMeasure`, `MeasureReference`). Renames move the
+  measures of a renamed table, rewrite their DAX at token level and their `references`;
+  `model.dependencies` and deletes list them (`report-level measure 'T'[Name] of report 'R'`);
+  a rename onto one of their names is refused (also in the model command). `doc.save` patches only
+  the changed strings of `reportExtensions.json`, and the linter reads them from the AST. A report
+  field whose name contains parentheses (`Orders.Sales (Scaled)`) was treated as a function call,
+  so a table rename left it behind (LINT003); only a name before `(` makes a call now.
+- **Why:** M6.7 (DESKTOP-PLAN), now ticked. GAPS `reportExtensions.json` row (1 → 2, File formats
+  3.1 → 3.2) and "Editing commands" row.
+- **Numbers:** new tests `report_extensions_are_report_measures` (pbir round-trip),
+  `renames_follow_report_level_measures_whose_names_are_taken` (model),
+  `renames_rewrite_report_level_measures` and `report_level_measures_are_dependents` (session),
+  `renames_follow_into_report_level_measures` (core save), `renames_rewrite_report_level_measures_and_save_them`
+  (ops save), linter and queryRef cases.
+
+  GT-6 s22 (Desktop 2.159): three report-level measures on a card of the Desktop copy of Acme's
+  Stores report, then DashCraft renamed a measure, a column and the table they use and saved.
+  Desktop loaded the renamed report without an error; its own card query (read from
+  `DISCOVER_SESSIONS` during a refresh) used the rewritten DAX and equals the one before the
+  renames once names are mapped; the card values with the page filters are equal before and
+  after, and so are the four unfiltered values. Negative control: a `dataType` outside the
+  schema (`Int64`) makes Desktop refuse the report, so it validates the file at load.
+- **Open:** report-level measures are not evaluated (M9.9) and not read from PBIR-Legacy or PBIX
+  layouts (`modelExtensions`); a report-level measure cannot itself be renamed yet.
+
 ### M6 M-aware rename (M6.7, part 2)
 
 - **What:** `model.object.rename` takes `expression` and renames an M query, parameter or

@@ -25,6 +25,10 @@ pub struct Report {
     /// Report-level filters (apply to every page).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub filters: Vec<Filter>,
+    /// Report-level measures (PBIR `definition/reportExtensions.json`), in
+    /// file order.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub measures: Vec<ReportMeasure>,
     /// Pages in display order (`pages.json` `pageOrder`).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub pages: Vec<Page>,
@@ -115,6 +119,51 @@ impl Report {
         self.filters.iter_mut().for_each(|x| x.visit_fields_mut(f));
         self.pages.iter_mut().for_each(|p| p.visit_fields_mut(f));
     }
+
+    /// Report-level measure by name (case-insensitive; the names are unique
+    /// across the model and the report's measures).
+    pub fn measure(&self, name: &str) -> Option<&ReportMeasure> {
+        self.measures.iter().find(|m| names_eq(&m.name, name))
+    }
+}
+
+/// A report-level measure: a DAX measure defined in the report (PBIR
+/// `definition/reportExtensions.json`) and shown in a model table. Visuals
+/// refer to it with the extension's schema (`SourceRef.Schema`).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ReportMeasure {
+    /// The model table it is shown in (`entities[].name`).
+    pub table: String,
+    pub name: String,
+    /// DAX.
+    pub expression: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format_string: Option<String>,
+    #[serde(skip_serializing_if = "is_false")]
+    pub hidden: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_folder: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// The measures its expression uses (`references.measures`), in file
+    /// order.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub references: Vec<MeasureReference>,
+}
+
+/// A measure a report-level measure uses.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct MeasureReference {
+    /// Empty for a model measure; the extension's name for another
+    /// report-level measure.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub schema: String,
+    pub table: String,
+    pub name: String,
 }
 
 /// Base and custom theme of a report.

@@ -28,15 +28,16 @@ fn conflict(name: &str, existing: String) -> CommandError {
 }
 
 /// Checks that measure `id` (unassigned for a new one) of table `table` can
-/// be named `name`: measure names are unique across the model and differ from
-/// the table's column names.
+/// be named `name`: measure names are unique across the model and the
+/// report-level measures, and differ from the table's column names.
 pub(super) fn check_measure_name(
-    model: &Model,
+    doc: &Document,
     table: usize,
     id: ObjectId,
     name: &str,
 ) -> Result<(), CommandError> {
     validate_name(name)?;
+    let model = model(doc)?;
     for other_table in &model.tables {
         if let Some(other) = other_table
             .measures
@@ -57,10 +58,35 @@ pub(super) fn check_measure_name(
             format!("column '{}'[{}]", t.name, other.name),
         ));
     }
+    check_report_measures(doc, None, name)
+}
+
+/// Refuses `name` if a report-level measure has it (one shown in `table`
+/// only, when given: a column cannot share its table with a measure of the
+/// same name).
+pub(super) fn check_report_measures(
+    doc: &Document,
+    table: Option<&str>,
+    name: &str,
+) -> Result<(), CommandError> {
+    for report in &doc.reports {
+        if let Some(m) = report.measure(name)
+            && table.is_none_or(|t| names_eq(&m.table, t))
+        {
+            return Err(conflict(
+                name,
+                format!(
+                    "report-level measure '{}'[{}] of report '{}'",
+                    m.table, m.name, report.name
+                ),
+            ));
+        }
+    }
     Ok(())
 }
 
-/// Snapshots of every report part whose field references change.
+/// Snapshots of every report part whose field references change (report
+/// filters and measures, page filters, visuals).
 fn report_snapshots(doc: &Document, rename: &Rename) -> Vec<Snapshot> {
     let mut out = Vec::new();
     for report in &doc.reports {
@@ -69,6 +95,13 @@ fn report_snapshots(doc: &Document, rename: &Rename) -> Vec<Snapshot> {
             out.push(Snapshot::ReportFilters {
                 report: report.id,
                 filters,
+            });
+        }
+        let mut measures = report.measures.clone();
+        if rename.apply_to_report_measures(&mut measures) {
+            out.push(Snapshot::ReportMeasures {
+                report: report.id,
+                measures,
             });
         }
         for page in &report.pages {
@@ -148,7 +181,8 @@ fn no_op(inverse: impl Command + 'static) -> Applied {
 }
 
 /// Renames a table and updates relationships, role table permissions, the
-/// query order and report field references.
+/// query order, report field references and report-level measures (the
+/// table they are shown in, their measure references).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenameTable {
     pub table: ObjectId,
@@ -331,6 +365,7 @@ impl Command for RenameColumn {
                 format!("measure '{}'[{}]", table.name, other.name),
             ));
         }
+        check_report_measures(doc, Some(&table.name), &self.new_name)?;
         let old = column.name.clone();
         if old == self.new_name {
             return Ok(no_op(self.clone()));
@@ -381,7 +416,8 @@ impl Command for RenameColumn {
     }
 }
 
-/// Renames a measure and updates report field references.
+/// Renames a measure and updates report field references and the measure
+/// references of report-level measures.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenameMeasure {
     pub measure: ObjectId,
@@ -406,7 +442,7 @@ impl Command for RenameMeasure {
             .measures
             .get(m)
             .ok_or(CommandError::NotFound(self.measure))?;
-        check_measure_name(model, t, measure.id, &self.new_name)?;
+        check_measure_name(doc, t, measure.id, &self.new_name)?;
         let old = measure.name.clone();
         if old == self.new_name {
             return Ok(no_op(self.clone()));

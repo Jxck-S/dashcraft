@@ -7,8 +7,8 @@ use serde::de::DeserializeOwned;
 use crate::error::{PbirError, codes};
 use crate::json::strip_bom;
 use crate::pbir::{
-    DefinitionPbir, PageJson, PagesJson, Platform, ReportJson, ThemeMetadataJson, VersionJson,
-    VisualContainerJson,
+    DefinitionPbir, PageJson, PagesJson, Platform, ReportExtensionsJson, ReportJson,
+    ThemeMetadataJson, VersionJson, VisualContainerJson,
 };
 use crate::source::FileSource;
 use crate::theme::ThemeJson;
@@ -23,6 +23,8 @@ pub const REPORT_JSON: &str = "definition/report.json";
 pub const VERSION_JSON: &str = "definition/version.json";
 /// `definition/pages/pages.json`.
 pub const PAGES_JSON: &str = "definition/pages/pages.json";
+/// `definition/reportExtensions.json` (report-level measures).
+pub const REPORT_EXTENSIONS_JSON: &str = "definition/reportExtensions.json";
 
 const PAGES_DIR: &str = "definition/pages/";
 
@@ -34,6 +36,8 @@ pub enum PbirFileKind {
     Report,
     Version,
     Pages,
+    /// `definition/reportExtensions.json`.
+    ReportExtensions,
     /// `definition/pages/<page>/page.json`.
     Page {
         page: String,
@@ -56,6 +60,7 @@ impl PbirFileKind {
             REPORT_JSON => return Self::Report,
             VERSION_JSON => return Self::Version,
             PAGES_JSON => return Self::Pages,
+            REPORT_EXTENSIONS_JSON => return Self::ReportExtensions,
             _ => {}
         }
         let Some(rest) = path.strip_prefix(PAGES_DIR) else {
@@ -121,6 +126,8 @@ pub struct PbirReport {
     pub report: Option<ReportJson>,
     pub version: Option<VersionJson>,
     pub pages_meta: Option<PagesJson>,
+    /// `definition/reportExtensions.json` (report-level measures).
+    pub extensions: Option<ReportExtensionsJson>,
     /// Pages in `pageOrder`, then unlisted pages by folder name.
     pub pages: Vec<PbirPage>,
     pub themes: Vec<PbirTheme>,
@@ -247,6 +254,7 @@ pub fn read_pbir(files: &impl FileSource) -> Result<PbirReport, PbirError> {
     out.report = out.parse_file(REPORT_JSON);
     out.version = out.parse_file(VERSION_JSON);
     out.pages_meta = out.parse_file(PAGES_JSON);
+    out.extensions = out.parse_file(REPORT_EXTENSIONS_JSON);
     if !out.files.contains_key(REPORT_JSON) {
         out.diagnostics.push(
             Diagnostic::warning(codes::MISSING_FILE, format!("{REPORT_JSON} is missing"))

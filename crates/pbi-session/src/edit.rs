@@ -2,10 +2,11 @@
 //!
 //! [`RenameObject`] renames a table, column, measure or shared expression
 //! like the `pbi-model` rename commands (structured references in
-//! relationships, roles, hierarchies, sort-by columns, report fields and
-//! the query order follow) and also rewrites the DAX that refers to it:
-//! measures, dynamic format strings, calculated columns, calculated tables,
-//! calculation items and role filters. Renaming a query (a table with an M
+//! relationships, roles, hierarchies, sort-by columns, report fields,
+//! report-level measures and the query order follow) and also rewrites the
+//! DAX that refers to it: measures, dynamic format strings, calculated
+//! columns, calculated tables, calculation items, role filters and
+//! report-level measures (PBIR `reportExtensions.json`). Renaming a query (a table with an M
 //! partition, or a shared expression: query, parameter or function) also
 //! rewrites the M that names it in partitions and shared expressions
 //! ([`pbi_m::rename_query`]); a rename the M could not follow (the new name
@@ -250,7 +251,8 @@ impl Plan {
             measure_named_old: model
                 .tables
                 .iter()
-                .any(|x| x.measures.iter().any(|m| names_eq(&m.name, &old))),
+                .any(|x| x.measures.iter().any(|m| names_eq(&m.name, &old)))
+                || doc.reports.iter().any(|r| r.measure(&old).is_some()),
             other_column_named_old: model
                 .tables
                 .iter()
@@ -372,6 +374,31 @@ impl Plan {
             }
             if changed {
                 out.items.push(Snapshot::Role(r));
+            }
+        }
+        for report in &doc.reports {
+            let mut measures = report.measures.clone();
+            let mut changed = false;
+            for m in &mut measures {
+                let location = report_measure_location(&m.table, &m.name, &report.name);
+                // Unqualified references resolve in the table it is shown
+                // in, but the measure stays in the report when that table
+                // is deleted: it has no home table to go with.
+                let owner = model.table(&m.table).map_or(ObjectId::UNASSIGNED, |t| t.id);
+                let (rewrites, warnings) = (out.owners.len(), out.warnings.len());
+                changed |= self.text(&mut m.expression, owner, &location, "expression", &mut out);
+                for o in out.owners.iter_mut().skip(rewrites) {
+                    *o = ObjectId::UNASSIGNED;
+                }
+                for (o, _) in out.warnings.iter_mut().skip(warnings) {
+                    *o = ObjectId::UNASSIGNED;
+                }
+            }
+            if changed {
+                out.items.push(Snapshot::ReportMeasures {
+                    report: report.id,
+                    measures,
+                });
             }
         }
         Ok(out)
@@ -593,6 +620,11 @@ impl Plan {
         });
         true
     }
+}
+
+/// How rewrites, warnings and dependents name a report-level measure.
+pub(crate) fn report_measure_location(table: &str, name: &str, report: &str) -> String {
+    format!("report-level measure '{table}'[{name}] of report '{report}'")
 }
 
 /// A DAX expression kept outside the document (a session derived column)
@@ -1060,6 +1092,95 @@ mod tests {
         assert!(
             matches!(ratio, ColumnKind::Calculated { expression } if expression == "[Line Amount] / [Revenue]")
         );
+    }
+
+    #[test]
+    fn renames_rewrite_report_level_measures() {
+        let mut d = doc();
+        d.reports.push(pbi_model::Report {
+            name: "Sales".into(),
+            measures: vec![
+                pbi_model::ReportMeasure {
+                    table: "Orders".into(),
+                    name: "Per Line".into(),
+                    expression: "DIVIDE([Total Sales], SUM([Line Amount]))".into(),
+                    references: vec![pbi_model::MeasureReference {
+                        schema: String::new(),
+                        table: "Orders".into(),
+                        name: "Total Sales".into(),
+                    }],
+                    ..pbi_model::ReportMeasure::default()
+                },
+                pbi_model::ReportMeasure {
+                    table: "Returns".into(),
+                    name: "Returned".into(),
+                    expression: "SUM(Orders[Line Amount]) - [Per Line]".into(),
+                    ..pbi_model::ReportMeasure::default()
+                },
+            ],
+            ..pbi_model::Report::default()
+        });
+        d.assign_ids();
+        let original = d.clone();
+        let location = "report-level measure 'Orders'[Per Line] of report 'Sales'";
+
+        let column = id(&d, |m| m.column("Orders", "Line Amount").map(|c| c.id));
+        let preview = preview_rename(&d, column, "Net Amount").unwrap();
+        assert!(
+            preview
+                .rewrites
+                .iter()
+                .any(|r| r.location == location
+                    && r.after == "DIVIDE([Total Sales], SUM([Net Amount]))"),
+            "{preview:#?}"
+        );
+        let applied = RenameObject {
+            object: column,
+            new_name: "Net Amount".into(),
+        }
+        .apply(&mut d)
+        .unwrap();
+        let measures = &d.reports[0].measures;
+        assert_eq!(
+            measures[0].expression,
+            "DIVIDE([Total Sales], SUM([Net Amount]))"
+        );
+        // Returns has its own [Line Amount]: only the qualified one follows.
+        assert_eq!(
+            measures[1].expression,
+            "SUM(Orders[Net Amount]) - [Per Line]"
+        );
+        applied.inverse.apply(&mut d).unwrap();
+        assert_eq!(d, original);
+
+        let table = id(&d, |m| m.table("Orders").map(|t| t.id));
+        RenameObject {
+            object: table,
+            new_name: "Sales".into(),
+        }
+        .apply(&mut d)
+        .unwrap();
+        let measures = &d.reports[0].measures;
+        assert_eq!(measures[0].table, "Sales");
+        assert_eq!(measures[0].references[0].table, "Sales");
+        assert_eq!(
+            measures[1].expression,
+            "SUM(Sales[Line Amount]) - [Per Line]"
+        );
+
+        let mut d = original.clone();
+        let measure = id(&d, |m| m.measure("Orders", "Total Sales").map(|x| x.id));
+        let applied = RenameObject {
+            object: measure,
+            new_name: "Revenue".into(),
+        }
+        .apply(&mut d)
+        .unwrap();
+        let per_line = &d.reports[0].measures[0];
+        assert_eq!(per_line.expression, "DIVIDE([Revenue], SUM([Line Amount]))");
+        assert_eq!(per_line.references[0].name, "Revenue");
+        applied.inverse.apply(&mut d).unwrap();
+        assert_eq!(d, original);
     }
 
     #[test]
