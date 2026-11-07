@@ -7,6 +7,23 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### TMDL writer: case variants of `calculationGroup`
+
+- **What:** `pbi-tmdl`'s writer (`Writer::table`) writes every spelling of `calculationGroup`
+  left in a table's untyped properties (the reader takes the first unnamed one as the
+  calculation group and keeps the others) after the typed group. It matched only the exact
+  spelling, so `calculationgroup` was written among the scalar properties, before the group, and
+  became the group on reading back. Regression test `fuzz_findings_round_trip` in
+  `crates/pbi-tmdl/tests/robustness.rs` (both writers, the fuzz target's invariants) and the seed
+  `fuzz/seeds/tmdl/regression-calc-group-keyword-case.tmdl`.
+- **Why:** M7 acceptance 4: a manual run of the `Fuzz` workflow on `main` (`f7afc32`, 60 s per
+  target) to cover the language-service targets added in M7. `dax_service`, `m_service` and
+  `tmdl_service` had no findings; the `tmdl` round-trip target found this one (a 353-byte input,
+  minimized by hand to 6 lines).
+- **Numbers:** the test fails without the fix and passes with it; `pbi-tmdl`, `pbi-core` and
+  `pbi-ops` tests pass unchanged (canonical output changes only for tables with such a property).
+- **Open:** A6 for M7.
+
 ### M7.6 `dashcraft lsp`
 
 - **What:** a Language Server Protocol 3.17 server, `dashcraft lsp [--stdio] [--model PATH]`
@@ -38,6 +55,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   protocol tests take 0.1 s in a debug build.
 - **Open:** A6 for M7 (a person); DAX-only navigation and tokens (M has no references or tokens
   service yet); no VS Code extension is shipped.
+- **Commit:** `3f872e3` (PR #64).
 
 ### M7.5b Formula editor keys and accessibility
 

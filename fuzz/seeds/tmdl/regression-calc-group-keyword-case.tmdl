@@ -1,0 +1,6 @@
+table T
+	calculationGroup
+		precedence: 1
+
+	calculationgroup
+		precedence: 2

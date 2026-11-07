@@ -1014,7 +1014,10 @@ optional language server.
 **Status.** M7 is complete (2026-11-07) apart from the screen-reader runs of acceptance 5 (A6),
 which need a person ([accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md)). The
 language services analyse the whole text on each request (incremental document sync in the LSP,
-P12 well within its target); the LSP drops cancelled requests before running them.
+P12 well within its target); the LSP drops cancelled requests before running them. Acceptance 4:
+a manual run of the `Fuzz` workflow on `main` (60 s per target) found nothing in `dax_service`,
+`m_service` and `tmdl_service`; the same run's finding in the TMDL round-trip target (a second
+`calculationGroup` spelled in another case) is fixed and replayed by a `regression-*` seed.
 
 **Crates and layers.** `pbi-dax`, `pbi-m`, `pbi-tmdl` (services, layer 1 and 2, no new edges),
 `pbi-ops` (commands), `dashcraft-cli` (`lsp`), `dashcraft-app` (editor integration).
