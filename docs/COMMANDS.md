@@ -101,7 +101,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`report.filters`](#reportfilters) | A report's filters (plus a page's) translated to column filters, with the ones that cannot be applied (Top N, relative date…). | A |
 | [`security.roles`](#securityroles) | The model's row-level security roles (permission, DAX table filters, members, dynamic or not) and the current "View as" state. | A |
 | [`model.setMeasureExpression`](#modelsetmeasureexpression) | Replaces a measure's DAX expression as one undoable document edit. | M A |
-| [`model.object.rename`](#modelobjectrename) | Renames a table, column or measure as one undoable edit; references, report fields and DAX follow and the loaded data is kept. dryRun previews it. | M A |
+| [`model.object.rename`](#modelobjectrename) | Renames a table, column, measure or M query/parameter as one undoable edit; DAX, M and report references follow and loaded data is kept. dryRun previews it. | M A |
 | [`model.object.setDescription`](#modelobjectsetdescription) | Sets or clears the description of a table, column, measure or other model object as one undoable edit. | M A |
 | [`model.measure.create`](#modelmeasurecreate) | Adds a DAX measure to a table as one undoable edit and returns its id. | M A |
 | [`model.measure.update`](#modelmeasureupdate) | Changes a measure's expression, format string, display folder, description or visibility as one undoable edit. | M A |
@@ -1715,7 +1715,7 @@ Examples:
 
 ### `model.object.rename`
 
-**Rename a table, column or measure.** Renames a table, column or measure as one undoable edit; references, report fields and DAX follow and the loaded data is kept. dryRun previews it.
+**Rename a table, column, measure or query.** Renames a table, column, measure or M query/parameter as one undoable edit; DAX, M and report references follow and loaded data is kept. dryRun previews it.
 
 _mutates the document, agent-safe; since 0.2.0._
 
@@ -1728,6 +1728,7 @@ Parameters:
 | `table` (optional) | string \| null | The table, or the table of `column` / `measure`. |
 | `column` (optional) | string \| null | A column of `table`. |
 | `measure` (optional) | string \| null | A measure of `table`. |
+| `expression` (optional) | string \| null | A shared expression (M query, parameter or function), instead of `table`. |
 | `newName` | string | The new name. |
 | `dryRun` (optional) | boolean | Only report what the rename would rewrite; the document is unchanged. |
 
@@ -1741,18 +1742,20 @@ Result:
 | `changedObjectIds` | integer[] |  |
 | `recalculated`? | RecalculatedOut[] | The calculated tables and columns the edit recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
 | `objectId` | integer | The renamed object's id. |
-| `kind` | string | `table`, `column` or `measure`. |
-| `table` | string | The renamed table's old name, or the table of the column or measure. |
+| `kind` | string | `table`, `column`, `measure` or `expression`. |
+| `table` | string | The renamed table's old name, or the table of the column or measure (empty for an expression). |
 | `oldName` | string |  |
 | `newName` | string |  |
 | `dryRun` | boolean |  |
 | `rewrites` | DaxRewriteOut[] | DAX expressions rewritten (or, with `dryRun`, to be rewritten). |
-| `warnings` | string[] | References left as they are that may need a manual fix (M queries, expressions that do not parse, ambiguous unqualified names). |
+| `mRewrites`? | MRewriteOut[] | M expressions rewritten (or to be rewritten) when a query is renamed: a table with an M partition or a shared expression (absent when none). |
+| `warnings` | string[] | References left as they are that may need a manual fix (DAX or M that does not parse, ambiguous unqualified names, refresh policies). |
 
 Examples:
 
 - Rename a column: `{"docId":"d1","table":"Orders","column":"Line Amount","newName":"Line Total"}`
 - Preview a table rename: `{"docId":"d1","table":"Orders","newName":"Sales Orders","dryRun":true}`
+- Rename a query parameter: `{"docId":"d1","expression":"StorageContainerUrl","newName":"Storage URL"}`
 
 ### `model.object.setDescription`
 

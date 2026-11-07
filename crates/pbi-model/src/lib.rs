@@ -51,10 +51,10 @@ pub(crate) mod test_support;
 pub use command::{
     Applied, ChangeEvent, Command, CommandError, CommandGroup, CreateColumn, CreateHierarchy,
     CreateMeasure, CreateRelationship, CreateTable, DeleteColumn, DeleteHierarchy, DeleteMeasure,
-    DeleteRelationship, DeleteTable, History, HistoryResult, RenameColumn, RenameMeasure,
-    RenameTable, ReplaceObjects, SetColumnProperties, SetDescription, SetMeasureExpression,
-    SetMeasureProperties, SetRelationshipProperties, SetTableDefinition, SetVisualPosition,
-    Snapshot,
+    DeleteRelationship, DeleteTable, History, HistoryResult, RenameColumn, RenameExpression,
+    RenameMeasure, RenameTable, ReplaceObjects, SetColumnProperties, SetDescription,
+    SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties, SetTableDefinition,
+    SetVisualPosition, Snapshot,
 };
 pub use document::{
     Diagnostic, Document, ModelStatus, ObjectKind, ObjectPath, ObjectRef, PartInfo, Severity,

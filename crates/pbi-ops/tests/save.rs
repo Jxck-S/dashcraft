@@ -14,7 +14,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 use common::{
-    ACME, MINI_TOTAL, MS_PBIX, PBIP, Runner, copy_dir, fixture, mini_pbip, ms_expected, tmp_dir,
+    ACME, MINI_TOTAL, MS_PBIX, PBIP, Runner, copy_dir, expected, fixture, mini_pbip, ms_expected,
+    tmp_dir,
 };
 use pbi_ops::OpErrorCode;
 use pbi_session::{SequentialIdentifiers, SessionOptions};
@@ -1420,5 +1421,105 @@ async fn updated_table_saves_and_reopens() {
     assert!(
         files(dir.path()) == before,
         "undoing the update saves the original project"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn renamed_queries_save_and_reopen() {
+    const DEF: &str = "AcmeOutfitters.SemanticModel/definition";
+    let (Some(acme), Some(exp)) = (fixture(ACME), expected()) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("rename-query-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let before = files(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    for (old, new) in [
+        ("StorageContainerUrl", "Storage URL"),
+        ("fnCleanKey", "Clean Key"),
+    ] {
+        r.run(
+            "model.object.rename",
+            json!({"docId": doc, "expression": old, "newName": new}),
+        )
+        .await;
+    }
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    let tables = [
+        "Customers",
+        "Orders",
+        "Products",
+        "Returns",
+        "Stores",
+        "Targets",
+        "Web Sessions",
+    ];
+    let mut expected_files: Vec<String> = ["expressions.tmdl", "model.tmdl"]
+        .iter()
+        .map(|f| format!("{DEF}/{f}"))
+        .chain(tables.iter().map(|t| format!("{DEF}/tables/{t}.tmdl")))
+        .collect();
+    expected_files.sort();
+    assert_eq!(sorted(&out["written"]), expected_files, "{out}");
+
+    // Only the names change: the declarations, the M references and the
+    // query order.
+    let text = |bytes: &[u8]| {
+        String::from_utf8(bytes.to_vec())
+            .unwrap()
+            .replace("\r\n", "\n")
+    };
+    for path in &expected_files {
+        let original = text(&before[path]);
+        let edited = if path.ends_with("/expressions.tmdl") {
+            original
+                .replace(
+                    "expression StorageContainerUrl = ",
+                    "expression 'Storage URL' = ",
+                )
+                .replace("expression fnCleanKey = ", "expression 'Clean Key' = ")
+        } else if path.ends_with("/model.tmdl") {
+            original.replace(
+                r#""StorageContainerUrl","fnCleanKey""#,
+                r#""Storage URL","Clean Key""#,
+            )
+        } else {
+            original
+                .replace("StorageContainerUrl", "#\"Storage URL\"")
+                .replace("fnCleanKey", "#\"Clean Key\"")
+        };
+        assert_ne!(edited, original, "{path}");
+        let saved = text(&fs::read(dir.path().join(path)).unwrap());
+        assert_eq!(saved, edited, "{path}");
+    }
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(
+            json!({"path": pbip, "blobMap": dir.path().join("blob-map.json"),
+            "source": "query", "autoRefresh": false}),
+        )
+        .await;
+    let refresh = fresh.run("data.refresh", json!({"docId": reopened})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    for (name, rows) in exp.row_counts() {
+        let t = refresh["tables"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|t| t["name"] == name)
+            .unwrap();
+        assert_eq!(t["rows"], rows, "{name}");
+    }
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.save", json!({"docId": doc})).await;
+    assert!(
+        files(dir.path()) == before,
+        "undoing the renames saves the original project"
     );
 }

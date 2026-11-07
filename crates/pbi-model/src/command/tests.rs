@@ -256,6 +256,143 @@ fn rename_case_only_and_same_name() {
     assert_eq!(doc, before);
 }
 
+fn with_query_order(doc: &mut Document) {
+    doc.model.as_mut().unwrap().annotations = vec![
+        crate::props::Annotation::new(
+            "PBI_QueryOrder",
+            r#"["StorageContainerUrl","Stores","Orders"]"#,
+        ),
+        crate::props::Annotation::new("PBI_ProTooling", r#"["DevMode"]"#),
+    ];
+}
+
+fn query_order(doc: &Document) -> &str {
+    &doc.model.as_ref().unwrap().annotations[0].value
+}
+
+#[test]
+fn rename_expression_updates_the_query_order_and_undoes_exactly() {
+    let mut doc = sample_document();
+    with_query_order(&mut doc);
+    let entity = |source: &str| crate::semantic::PartitionSource::Entity {
+        entity_name: "orders".into(),
+        expression_source: Some(source.into()),
+        schema_name: None,
+    };
+    doc.model.as_mut().unwrap().tables[1].partitions[0].source = entity("storagecontainerurl");
+    let model = doc.model.as_ref().unwrap();
+    let (id, model_id) = (model.expressions[0].id, model.id);
+    let command = RenameExpression {
+        expression: id,
+        new_name: "Storage URL".into(),
+    };
+    assert_round_trip(&mut doc, command, |doc, events| {
+        let model = doc.model.as_ref().unwrap();
+        assert_eq!(model.expressions[0].name, "Storage URL");
+        assert_eq!(
+            model.expressions[0].description.as_deref(),
+            Some("Azure Blob container holding the source CSVs.")
+        );
+        assert_eq!(query_order(doc), r#"["Storage URL","Stores","Orders"]"#);
+        assert_eq!(model.annotations[1].value, r#"["DevMode"]"#);
+        assert_eq!(model.tables[1].partitions[0].source, entity("Storage URL"));
+        assert!(events.contains(&ChangeEvent::ObjectRenamed {
+            id,
+            old: "StorageContainerUrl".into(),
+            new: "Storage URL".into(),
+        }));
+        assert!(events.contains(&ChangeEvent::ObjectChanged { id: model_id }));
+    });
+
+    // A table rename renames the query too; a model without the annotation
+    // or with an unreadable one is left as it is.
+    let stores = table_id(&doc, "Stores");
+    let mut history = History::new();
+    history
+        .execute(
+            &mut doc,
+            RenameTable {
+                table: stores,
+                new_name: "Shops".into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        query_order(&doc),
+        r#"["StorageContainerUrl","Shops","Orders"]"#
+    );
+    doc.model.as_mut().unwrap().annotations[0].value = "not json".into();
+    let before = doc.model.as_ref().unwrap().annotations.clone();
+    history
+        .execute(
+            &mut doc,
+            RenameTable {
+                table: stores,
+                new_name: "Outlets".into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(doc.model.as_ref().unwrap().annotations, before);
+}
+
+#[test]
+fn queries_share_one_namespace() {
+    let mut doc = sample_document();
+    let original = doc.clone();
+    let mut history = History::new();
+    let parameter = doc.model.as_ref().unwrap().expressions[0].id;
+    let stores = table_id(&doc, "Stores");
+    let calculated = table_id(&doc, "Unknown Store Orders");
+    let conflicts: Vec<Box<dyn Command>> = vec![
+        Box::new(RenameExpression {
+            expression: parameter,
+            new_name: "orders".into(),
+        }),
+        Box::new(RenameTable {
+            table: stores,
+            new_name: "storagecontainerurl".into(),
+        }),
+    ];
+    for command in conflicts {
+        let err = history.execute_boxed(&mut doc, command).unwrap_err();
+        assert!(matches!(err, CommandError::NameConflict { .. }), "{err}");
+        assert_eq!(doc, original);
+    }
+    let err = history
+        .execute(
+            &mut doc,
+            RenameExpression {
+                expression: stores,
+                new_name: "X".into(),
+            },
+        )
+        .unwrap_err();
+    assert!(matches!(err, CommandError::WrongKind { .. }), "{err}");
+    // A calculated table is not a query: it may share a name with one.
+    history
+        .execute(
+            &mut doc,
+            RenameTable {
+                table: calculated,
+                new_name: "StorageContainerUrl".into(),
+            },
+        )
+        .unwrap();
+    history
+        .execute(
+            &mut doc,
+            RenameExpression {
+                expression: parameter,
+                new_name: "STORAGECONTAINERURL".into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        doc.model.as_ref().unwrap().expressions[0].name,
+        "STORAGECONTAINERURL"
+    );
+}
+
 type ErrorCheck = fn(&CommandError) -> bool;
 
 #[test]

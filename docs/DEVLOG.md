@@ -7,6 +7,38 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 M-aware rename (M6.7, part 2)
+
+- **What:** `model.object.rename` takes `expression` and renames an M query, parameter or
+  function. `pbi-model` gains `RenameExpression`: Entity partitions that read the expression and
+  the `PBI_QueryOrder` annotation follow (new `Snapshot::ModelAnnotations`), and query names are
+  unique among expressions and M tables, ignoring case. A table rename does the same when the
+  table is an M query. `pbi-m` gains `refs` (`free_names`, `rename_query`): a scope-aware walk
+  rewrites free identifiers and `Section!member` names by span, quoting as `#"…"` when needed;
+  the M lint now uses it. `pbi-session` rewrites the M of table partitions and shared
+  expressions in the same undoable edit and reports `mRewrites`. A name the M cannot follow is
+  refused: a step, parameter or field in scope where the old name is used, or a library function.
+  M that does not parse is left as it is, with a warning.
+- **Why:** M6.7 (DESKTOP-PLAN). GAPS "Editing commands" row ("M-aware rename").
+- **Numbers:** new tests:
+  - `e2e` `query_renames_rewrite_m_and_keep_the_expected_values`;
+  - `save` `renamed_queries_save_and_reopen` (exact TMDL diff, reopen and refresh, undo restores
+    the bytes);
+  - session units `query_renames_rewrite_m_references` and
+    `query_renames_the_m_cannot_follow_are_refused`;
+  - model units `rename_expression_updates_the_query_order_and_undoes_exactly` and
+    `queries_share_one_namespace`;
+  - three `pbi-m` `refs` units;
+  - expression renames and M-hostile names in the property test.
+
+  GT-6 s21 (Desktop 2.159): DashCraft renamed five queries and parameters of the Desktop copy of
+  Acme (15 references in seven tables and one expression). Desktop opened and refreshed the saved
+  project, `INFO.EXPRESSIONS` and `INFO.PARTITIONS` show the new names and the rewritten M, and
+  all 643 recorded cases equal the committed recordings. The same renames on the example refresh
+  in DashCraft to the expected values.
+- **Open:** report-level measures (`reportExtensions.json`) are not renamed or rewritten, so
+  M6.7 stays unticked. Descriptions that mention the old name are left unchanged.
+
 ### M6 calculated table updates (M6.4, part 2)
 
 - **What:** `model.table.update` and the `updateTable` edit operation (`pbi-ops`): a calculated
@@ -28,6 +60,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   its refresh; 38 recorded cases changed and all 643 match.
 - **Open:** changes to calculation items are not tracked; page queries still run again after any
   model edit.
+- **Commit:** `5193c24` (PR #37).
 
 ### M6 recalculation (M6.4, part 1)
 

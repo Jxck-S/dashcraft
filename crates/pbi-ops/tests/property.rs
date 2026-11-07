@@ -291,6 +291,8 @@ struct Targets {
     measures: Vec<(u64, String, String)>,
     relationships: Vec<u64>,
     hierarchies: Vec<u64>,
+    /// Shared expression names.
+    expressions: Vec<String>,
     /// `(report, page, visual)`.
     visuals: Vec<(String, String, String)>,
 }
@@ -316,6 +318,8 @@ impl Targets {
             }
             t.relationships
                 .extend(model.relationships.iter().map(|r| r.id.0));
+            t.expressions
+                .extend(model.expressions.iter().map(|e| e.name.clone()));
         }
         for report in &doc.reports {
             for page in &report.pages {
@@ -348,6 +352,11 @@ impl Targets {
             .unwrap_or_else(|| (999_999, "Nope".to_owned(), "Nope".to_owned()))
     }
 
+    fn expression(&self, rng: &mut Rng) -> String {
+        rng.pick(&self.expressions)
+            .unwrap_or_else(|| "Nope".to_owned())
+    }
+
     fn measure(&self, rng: &mut Rng) -> (u64, String, String) {
         rng.pick(&self.measures)
             .unwrap_or_else(|| (999_999, "Nope".to_owned(), "Nope".to_owned()))
@@ -377,6 +386,10 @@ const ODD_NAMES: &[&str] = &[
     "Line Amount",
     "[Bracketed]",
     "tab\there",
+    "Source",
+    "Text.Upper",
+    "say \"hi\"",
+    "fnCleanKey",
 ];
 
 fn new_name(rng: &mut Rng) -> String {
@@ -467,12 +480,13 @@ fn random_edit(t: &Targets, rng: &mut Rng) -> (&'static str, Value) {
             json!({"measureId": t.measure(rng).0, "expression": measure_expression(t, rng)}),
         ),
         4 => {
-            let p = match rng.below(3) {
+            let p = match rng.below(4) {
                 0 => json!({"table": t.table(rng), "newName": new_name(rng)}),
                 1 => {
                     let (_, table, column) = t.column(rng, None);
                     json!({"table": table, "column": column, "newName": new_name(rng)})
                 }
+                2 => json!({"expression": t.expression(rng), "newName": new_name(rng)}),
                 _ => {
                     let (_, table, measure) = t.measure(rng);
                     json!({"table": table, "measure": measure, "newName": new_name(rng)})

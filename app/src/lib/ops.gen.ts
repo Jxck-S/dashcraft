@@ -1600,6 +1600,7 @@ export type EditOperation = {
   table?: string | null
   column?: string | null
   measure?: string | null
+  expression?: string | null
   newName: string
 } | {
   type: 'setVisualPosition'
@@ -2137,6 +2138,20 @@ export interface LintSummaryOut {
   byRule: { [key: string]: number }
   /** Checks that were skipped and why. */
   notes?: string[]
+}
+
+/** One M expression a query rename rewrites. */
+export interface MRewriteOut {
+  /**
+   * The object holding the expression, with the names after the rename:
+   * `table 'Orders'` (`table 'Orders' partition 'P'` when the table has
+   * several partitions) or `expression 'Clean Key'`.
+   */
+  location: string
+  /** `source` (a partition) or `expression` (a shared expression). */
+  property: string
+  before: string
+  after: string
 }
 
 export interface MashupConnectionOut {
@@ -2900,9 +2915,12 @@ export interface RenameObjectOut {
   recalculated?: RecalculatedOut[]
   /** The renamed object's id. */
   objectId: number
-  /** `table`, `column` or `measure`. */
+  /** `table`, `column`, `measure` or `expression`. */
   kind: string
-  /** The renamed table's old name, or the table of the column or measure. */
+  /**
+   * The renamed table's old name, or the table of the column or measure
+   * (empty for an expression).
+   */
   table: string
   oldName: string
   newName: string
@@ -2910,8 +2928,14 @@ export interface RenameObjectOut {
   /** DAX expressions rewritten (or, with `dryRun`, to be rewritten). */
   rewrites: DaxRewriteOut[]
   /**
-   * References left as they are that may need a manual fix (M queries,
-   * expressions that do not parse, ambiguous unqualified names).
+   * M expressions rewritten (or to be rewritten) when a query is renamed:
+   * a table with an M partition or a shared expression (absent when
+   * none).
+   */
+  mRewrites?: MRewriteOut[]
+  /**
+   * References left as they are that may need a manual fix (DAX or M
+   * that does not parse, ambiguous unqualified names, refresh policies).
    */
   warnings: string[]
 }
@@ -2927,6 +2951,11 @@ export interface RenameObjectParams {
   column?: string | null
   /** A measure of `table`. */
   measure?: string | null
+  /**
+   * A shared expression (M query, parameter or function), instead of
+   * `table`.
+   */
+  expression?: string | null
   /** The new name. */
   newName: string
   /** Only report what the rename would rewrite; the document is unchanged. */
@@ -3779,7 +3808,7 @@ export interface OpsCommands {
   'security.roles': { params: DocParams; output: SecurityRolesOut }
   /** Replaces a measure's DAX expression as one undoable document edit. */
   'model.setMeasureExpression': { params: SetMeasureExpressionParams; output: DocumentEditOut }
-  /** Renames a table, column or measure as one undoable edit; references, report fields and DAX follow and the loaded data is kept. dryRun previews it. */
+  /** Renames a table, column, measure or M query/parameter as one undoable edit; DAX, M and report references follow and loaded data is kept. dryRun previews it. */
   'model.object.rename': { params: RenameObjectParams; output: RenameObjectOut }
   /** Sets or clears the description of a table, column, measure or other model object as one undoable edit. */
   'model.object.setDescription': { params: SetObjectDescriptionParams; output: DocumentEditOut }
@@ -4044,7 +4073,7 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     securityRoles: (params: DocParams, options?: O) => run('security.roles', params, options),
     /** Replaces a measure's DAX expression as one undoable document edit. */
     modelSetMeasureExpression: (params: SetMeasureExpressionParams, options?: O) => run('model.setMeasureExpression', params, options),
-    /** Renames a table, column or measure as one undoable edit; references, report fields and DAX follow and the loaded data is kept. dryRun previews it. */
+    /** Renames a table, column, measure or M query/parameter as one undoable edit; DAX, M and report references follow and loaded data is kept. dryRun previews it. */
     modelObjectRename: (params: RenameObjectParams, options?: O) => run('model.object.rename', params, options),
     /** Sets or clears the description of a table, column, measure or other model object as one undoable edit. */
     modelObjectSetDescription: (params: SetObjectDescriptionParams, options?: O) => run('model.object.setDescription', params, options),
