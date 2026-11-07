@@ -7,6 +7,36 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.5a Formula bar IntelliSense
+
+- **What:** a reusable DAX editor, `app/src/components/DaxEditor.svelte`, now in the formula bar
+  (`FormulaBar.svelte`) for measures, calculated columns and calculated tables. A transparent
+  textarea over a coloured overlay keeps native editing, selection, IME and undo; the overlay
+  draws `dax.tokens` colours and `dax.diagnostics` squiggles, realigned while typing until the
+  next answer (150 ms debounce, late answers dropped). A suggestion list from `dax.complete`
+  opens on a name, `[` or `'` and on Ctrl+Space (↑ ↓ PgUp PgDn, Enter or Tab insert without
+  doubling a function's `(`, Esc closes; a listbox with `aria-activedescendant`, a side panel with
+  the item's description and a polite status); parameter info from `dax.signatureHelp` after `(`
+  and `,` and on Ctrl+Shift+Space (active parameter bold); descriptions from `dax.hover` and the
+  problems under the pointer or on Ctrl+K Ctrl+I; Shift+Alt+F formats the expression after
+  `Name =` with `dax.format`. The editor's accessible description carries the problem at the
+  caret, else the first error. Pure helpers in `app/src/lib/daxEditor.ts` (overlay segments, range
+  shifting, caret geometry, completion edits, keys); `backend.daxService` sends the requests for
+  the open document. The bundle's dependencies go to a `vendor` chunk (Vite's 500 kB warning).
+  `editing-a11y.mjs` now measures the contrast of the coloured overlay, since the textarea's
+  own text is transparent.
+- **Why:** M7.5 (DESKTOP-PLAN), the editor the M7.1 and M7.2 commands were built for; the keys
+  follow Microsoft's documentation of Power BI Desktop's formula editor. The calculation item,
+  format string and RLS editors (M10, M11) reuse the component.
+- **Numbers:** app node tests 19 → 35 (`daxEditor.test.ts` 15, one in `editing.test.ts`; token
+  colours at least 4.5:1 on the editor background); `formula-intellisense.mjs` 20 of 20 checks,
+  `editing-smoke.mjs` 23 of 23 and `editing-a11y.mjs` 17 of 17 (lowest text contrast 5.98:1) on
+  Windows / WebView2. Main chunk 486.65 kB → 445 kB plus a 64 kB vendor chunk. Found live: the
+  input handler ran before Svelte's `bind:value` updated, so requests used the previous text; the
+  editor now reads the textarea itself.
+- **Open:** M7.5b (Desktop's line-editing keys, Ctrl+M, A1–A6 for the completion list and
+  squiggles), M7.6 (`dashcraft lsp`).
+
 ### M7.4c TMDL formatter
 
 - **What:** `pbi_tmdl::service::format` (`service/format.rs`) with `FormatOptions` (tabs or
@@ -38,6 +68,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   space indentation cannot express); 20,000 release cases (seed 11): 11,666 of 11,686 formatted,
   20 declined, no other failure. Tests: `format.rs` 7 unit
   tests, `groundtruth.rs` 9 (3 new), `tmdl_language.rs` 10 (3 new).
+- **Commit:** `d414523` (PR #61).
 - **Open:** M7.5 (formula bar IntelliSense), M7.6 (`dashcraft lsp`).
 
 ### M7.4b TMDL completion and hover

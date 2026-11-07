@@ -1523,6 +1523,7 @@
         kind={formula.kind}
         explain={formula.kind === 'Measure' ? measureExplain : null}
         oncommit={canEdit ? commitFormula : null}
+        service={canEdit ? backend.daxService : null}
       />
     {/key}
   {/if}
