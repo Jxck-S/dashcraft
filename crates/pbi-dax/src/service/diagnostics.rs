@@ -1,5 +1,6 @@
 //! Diagnostics: syntax errors, unknown tables, columns, measures and
-//! variables, and functions DashCraft cannot evaluate.
+//! variables, calls with the wrong number of arguments, and functions
+//! DashCraft cannot evaluate.
 //!
 //! The reference checks never report a name that may be valid: a bare
 //! `[Name]` is accepted when it is a measure, a column of any table, a column
@@ -11,7 +12,7 @@ use std::collections::HashSet;
 
 use pbi_model::{Severity, closest_name, dax_column_ref, dax_measure_ref, dax_table_ref};
 
-use super::Schema;
+use super::{Schema, catalog};
 use crate::eval::{is_supported_function, supported_functions};
 use crate::syntax::{
     Define, Expr, ExprKind, Keyword, ParseError, Query, Span, TokenKind, for_each_expr, line_col,
@@ -33,6 +34,8 @@ pub enum DiagnosticCode {
     UnknownColumn,
     /// `[Name]` that is neither a measure nor a column.
     UnknownMeasure,
+    /// Too few or too many arguments for a function of the catalog.
+    ArgumentCount,
     /// A function DashCraft does not know or cannot evaluate yet. A warning:
     /// the expression may still be valid DAX.
     UnsupportedFunction,
@@ -47,6 +50,7 @@ impl DiagnosticCode {
             DiagnosticCode::UnknownTable => "unknownTable",
             DiagnosticCode::UnknownColumn => "unknownColumn",
             DiagnosticCode::UnknownMeasure => "unknownMeasure",
+            DiagnosticCode::ArgumentCount => "argumentCount",
             DiagnosticCode::UnsupportedFunction => "unsupportedFunction",
         }
     }
@@ -367,8 +371,20 @@ fn check(root: &Expr, src: &str, schema: &Schema, names: &Names, out: &mut Vec<D
                     .map(|m| format!("did you mean `{}`?", dax_measure_ref(m)));
                 out.push(diag);
             }
-            ExprKind::Call { name, raw_name, .. } => {
-                if is_supported_function(name) || schema.has_function(raw_name) {
+            ExprKind::Call {
+                name,
+                raw_name,
+                args,
+            } => {
+                if schema.has_function(raw_name) {
+                    return;
+                }
+                if let Some(f) = catalog::function(name)
+                    && !f.accepts(args.len())
+                {
+                    out.push(argument_count(f, raw_name, e, args));
+                }
+                if is_supported_function(name) {
                     return;
                 }
                 let start = e.span.start;
@@ -389,6 +405,38 @@ fn check(root: &Expr, src: &str, schema: &Schema, names: &Names, out: &mut Vec<D
             _ => {}
         }
     });
+}
+
+fn argument_count(
+    f: &catalog::FunctionInfo,
+    raw_name: &str,
+    call: &Expr,
+    args: &[Expr],
+) -> Diagnostic {
+    let plural = |n: usize| if n == 1 { "argument" } else { "arguments" };
+    let expected = match f.max_args {
+        Some(max) if max == f.min_args => format!("{max} {}", plural(max)),
+        Some(max) => format!("{} to {max} arguments", f.min_args),
+        None => format!("at least {} {}", f.min_args, plural(f.min_args)),
+    };
+    let given = args.len();
+    let verb = if given == 1 { "was" } else { "were" };
+    let name_span = Span::new(call.span.start, call.span.start + raw_name.len());
+    // Too many: underline the extra arguments; too few: the function name.
+    let span = match (f.max_args, args.last()) {
+        (Some(max), Some(last)) if given > max => args.get(max).map_or(name_span, |extra| {
+            Span::new(extra.span.start, last.span.end.max(extra.span.start))
+        }),
+        _ => name_span,
+    };
+    Diagnostic::error(
+        DiagnosticCode::ArgumentCount,
+        format!(
+            "`{raw_name}` takes {expected} but {given} {verb} given: {}",
+            f.signature
+        ),
+        span,
+    )
 }
 
 fn suggest_table(schema: &Schema, name: &str) -> Option<String> {

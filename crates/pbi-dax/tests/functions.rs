@@ -1911,6 +1911,44 @@ fn functions_md_lists_every_supported_function() {
     assert!(missing.is_empty(), "missing from FUNCTIONS.md: {missing:?}");
 }
 
+/// The argument counts of the language-service catalog accept every
+/// expression the evaluator is tested with.
+#[test]
+fn catalog_argument_counts_accept_every_tested_expression() {
+    let mut sources: Vec<&str> = Vec::new();
+    for cases in [
+        logical_cases(),
+        math_cases(),
+        text_cases(),
+        date_cases(),
+        aggregate_cases(),
+        context_cases(),
+        table_cases(),
+        date_more_cases(),
+        stats_cases(),
+        window_cases(),
+        misc_cases(),
+        visual_cases(),
+        time_intelligence_cases(),
+        library_cases(),
+    ] {
+        sources.extend(cases.into_iter().map(|(src, _)| src));
+    }
+    sources.extend(library_approx_cases().into_iter().map(|(src, _)| src));
+    let schema = pbi_dax::service::Schema::unknown();
+    let wrong: Vec<String> = sources
+        .iter()
+        .flat_map(|src| {
+            let kind = pbi_dax::service::SourceKind::detect(src);
+            pbi_dax::service::diagnostics(src, kind, &schema)
+                .into_iter()
+                .filter(|d| d.code == pbi_dax::service::DiagnosticCode::ArgumentCount)
+                .map(move |d| format!("{src}: {}", d.message))
+        })
+        .collect();
+    assert!(wrong.is_empty(), "{wrong:#?}");
+}
+
 /// Every registered function appears in at least one test expression.
 #[test]
 fn every_supported_function_is_tested() {

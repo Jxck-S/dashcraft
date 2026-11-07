@@ -7,6 +7,34 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.1b DAX function catalog, argument counts, signature help and hover
+
+- **What:** `pbi_dax::service` gains a function catalog (`catalog.txt`, parsed once by
+  `catalog.rs`: signature, parameters, argument count, return type, category and a DashCraft-written
+  description for each of the 299 functions), argument-count diagnostics (`argumentCount`),
+  `signature_help` and `hover` (functions, user-defined functions, tables, columns, measures with
+  their expression and format string, variables with their expression, keywords; the `DEFINE`s of
+  a query count). Both work on tokens, so they answer on text that does not parse yet. The
+  registry gains `dax.signatureHelp` and `dax.hover` (cursor as UTF-8 or UTF-16 offset or line and
+  column); `dax.diagnostics` and `dax.hover` share the document schema, which now carries the
+  report-level measures' details. Ground truth gains a `dax-arity` suite (`gen_corpus.py`): each
+  catalog function called with too few, the fewest, the most and too many arguments; suites can
+  set `recordValues: false` (`Record-GroundTruth.ps1` then records only columns, row count or
+  error).
+- **Why:** M7.1b (DESKTOP-PLAN), the next language-service step for the formula bar (M7.5).
+  Arity errors are only worth showing when they match Desktop, so the catalog's counts are
+  checked against it rather than written from memory.
+- **Numbers:** 929 arity probes recorded from Power BI Desktop 2.159: 285 accepted, 530 rejected
+  with an argument-count message, 114 inconclusive (another error first); DashCraft's catalog and
+  `diagnostics()` agree on all 815 conclusive ones, and no recorded query of any suite gets an
+  `argumentCount` error. Desktop's answers set counts the signatures alone got wrong
+  (`USERNAME` takes any number of arguments, `WINDOW` up to 10). Tests: `language_service.rs`
+  10 → 18 (pbi-dax), 6 catalog unit tests, `catalog_argument_counts_accept_every_tested_expression`
+  (every `functions.rs` expression), `dax_language.rs` 3 → 6 (pbi-ops). Ground truth: 2,259 →
+  3,188 recorded queries. 74 → 76 registry commands.
+- **Open:** M7.1c (completion, P12, a language-service fuzz target), M7.1d (semantic tokens, go to
+  definition, find references).
+
 ### M7.1a DAX diagnostics and `NAMEOF`
 
 - **What:** `pbi-dax` gains a language service (`pbi_dax::service`): `Schema` (tables, columns,
@@ -29,6 +57,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   registry commands.
 - **Open:** M7.1b (completion, signature help, hover, arity checks, P12), M7.1c (tokens,
   references), a fuzz target for diagnostics (acceptance 4).
+- **Commits:** `6185a50`, `d8339c6` (PR #48).
 
 ### M6 complete (docs)
 

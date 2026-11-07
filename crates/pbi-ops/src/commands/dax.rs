@@ -1,9 +1,10 @@
-//! `dax.query`, `dax.evaluateMeasure`, `measures.values`, `dax.diagnostics`.
+//! `dax.query`, `dax.evaluateMeasure`, `measures.values`, `dax.diagnostics`,
+//! `dax.signatureHelp`, `dax.hover`.
 
 use std::time::Instant;
 
 use pbi_model::Severity;
-use pbi_session::dax_service::{self, Schema, SourceKind};
+use pbi_session::dax_service::{self, HoverKind, NameDetails, Schema, SourceKind};
 use pbi_session::{FilterSpec, filters_from_page, filters_from_report};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -409,8 +410,8 @@ impl TextPositionOut {
 pub struct DaxDiagnosticOut {
     /// `error` or `warning` (a function DashCraft cannot evaluate yet).
     pub severity: String,
-    /// `syntax`, `unknownTable`, `unknownColumn`, `unknownMeasure` or
-    /// `unsupportedFunction`.
+    /// `syntax`, `unknownTable`, `unknownColumn`, `unknownMeasure`,
+    /// `argumentCount` or `unsupportedFunction`.
     pub code: String,
     pub message: String,
     /// Start of the text the problem covers.
@@ -444,7 +445,7 @@ impl Command for DaxDiagnostics {
         CommandMeta {
             id: "dax.diagnostics",
             title: "Check DAX",
-            summary: "Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded.",
+            summary: "Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion), wrong argument counts and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded.",
             category: Category::Dax,
             examples: &[
                 (
@@ -461,19 +462,7 @@ impl Command for DaxDiagnostics {
     }
 
     async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
-        let (document_revision, schema) = match &p.doc_id {
-            Some(id) => {
-                let entry = doc(ws, id)?;
-                let capture = entry.session().revision_snapshot();
-                let mut schema = Schema::from_model(&capture.model);
-                // Report-level measures (`reportExtensions.json`) of any report.
-                for m in capture.document.reports.iter().flat_map(|r| &r.measures) {
-                    schema.add_measure(&m.table, &m.name);
-                }
-                (Some(capture.revision), schema)
-            }
-            None => (None, Schema::unknown()),
-        };
+        let (document_revision, schema) = language_schema(ws, p.doc_id.as_deref())?;
         let kind = match p.kind {
             DaxTextKind::Auto => SourceKind::detect(&p.text),
             DaxTextKind::Expression => SourceKind::Expression,
@@ -504,6 +493,396 @@ impl Command for DaxDiagnostics {
             },
             ok: diagnostics.iter().all(|d| d.severity != "error"),
             diagnostics,
+        })
+    }
+}
+
+/// The names a DAX text can use: the model of `doc_id` (at its current
+/// revision) plus the report-level measures (`reportExtensions.json`) of
+/// any of its reports; without a document, an unknown schema.
+fn language_schema(ws: &Workspace, doc_id: Option<&str>) -> Result<(Option<u64>, Schema), OpError> {
+    let Some(id) = doc_id else {
+        return Ok((None, Schema::unknown()));
+    };
+    let entry = doc(ws, id)?;
+    let capture = entry.session().revision_snapshot();
+    let mut schema = Schema::from_model(&capture.model);
+    for m in capture.document.reports.iter().flat_map(|r| &r.measures) {
+        schema.add_measure_with(
+            &m.table,
+            &m.name,
+            NameDetails {
+                data_type: m.data_type.clone(),
+                expression: Some(m.expression.clone()),
+                format_string: m.format_string.clone(),
+                description: m.description.clone(),
+                hidden: m.hidden,
+            },
+        );
+    }
+    Ok((Some(capture.revision), schema))
+}
+
+/// A cursor in a DAX text: `offset`, `utf16Offset`, or `line` with
+/// `column`.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TextPositionIn {
+    /// UTF-8 byte offset (rounded down to a character boundary).
+    #[serde(default)]
+    pub offset: Option<usize>,
+    /// UTF-16 code-unit offset (JavaScript string index).
+    #[serde(default)]
+    pub utf16_offset: Option<usize>,
+    /// 1-based line (lines end at `\n`); needs `column`.
+    #[serde(default)]
+    pub line: Option<usize>,
+    /// 1-based column in characters; past the end of the line means its
+    /// end.
+    #[serde(default)]
+    pub column: Option<usize>,
+}
+
+impl TextPositionIn {
+    /// The UTF-8 byte offset in `src`.
+    fn resolve(self, src: &str) -> Result<usize, OpError> {
+        let bad = |m: &str| Err(OpError::invalid_params(format!("position: {m}")));
+        match (self.offset, self.utf16_offset, self.line, self.column) {
+            (Some(offset), None, None, None) => {
+                if offset > src.len() {
+                    return bad(&format!("offset {offset} is past the end ({})", src.len()));
+                }
+                let mut offset = offset;
+                while !src.is_char_boundary(offset) {
+                    offset = offset.saturating_sub(1);
+                }
+                Ok(offset)
+            }
+            (None, Some(units), None, None) => {
+                let mut seen = 0;
+                for (i, c) in src.char_indices() {
+                    if seen >= units {
+                        return Ok(i);
+                    }
+                    seen += c.len_utf16();
+                    if seen > units {
+                        // Inside a surrogate pair: the character's start.
+                        return Ok(i);
+                    }
+                }
+                if seen == units {
+                    Ok(src.len())
+                } else {
+                    bad(&format!("utf16Offset {units} is past the end ({seen})"))
+                }
+            }
+            (None, None, Some(line), Some(column)) => {
+                if line == 0 || column == 0 {
+                    return bad("line and column start at 1");
+                }
+                let mut start = 0;
+                for _ in 1..line {
+                    match src.get(start..).and_then(|rest| rest.find('\n')) {
+                        Some(i) => start += i + 1,
+                        None => return bad(&format!("line {line} is past the last line")),
+                    }
+                }
+                let rest = src.get(start..).unwrap_or("");
+                let text = rest.split('\n').next().unwrap_or("");
+                let within = text
+                    .char_indices()
+                    .nth(column - 1)
+                    .map_or(text.len(), |(i, _)| i);
+                Ok(start + within)
+            }
+            _ => bad("give exactly one of `offset`, `utf16Offset` or `line` with `column`"),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `dax.signatureHelp`.
+#[derive(Debug)]
+pub struct DaxSignatureHelp;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DaxSignatureHelpParams {
+    /// The DAX text.
+    pub text: String,
+    /// The cursor.
+    pub position: TextPositionIn,
+}
+
+/// One parameter of a signature.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxParameterOut {
+    pub name: String,
+    /// May be left out.
+    pub optional: bool,
+    /// Part of a group that may repeat.
+    pub repeating: bool,
+    /// Start of the name in `signature` (the signature is ASCII, so bytes,
+    /// characters and UTF-16 units agree).
+    pub label_start: usize,
+    /// End of the name in `signature` (exclusive).
+    pub label_end: usize,
+}
+
+/// The function call around the cursor.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxSignatureOut {
+    /// Upper-case name (`SUM`).
+    pub function: String,
+    /// `IF(logicalTest, valueIfTrue, [valueIfFalse])`.
+    pub signature: String,
+    /// The signature with its return type, `SUM(column) → number`.
+    pub label: String,
+    /// `any`, `boolean`, `currency`, `datetime`, `integer`, `number`,
+    /// `table` or `text`.
+    pub returns: String,
+    /// The function family (`Text`, `Time intelligence`, …).
+    pub category: String,
+    /// One sentence.
+    pub description: String,
+    /// Whether DashCraft can evaluate it.
+    pub supported: bool,
+    pub min_args: usize,
+    /// Absent when unlimited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_args: Option<usize>,
+    pub parameters: Vec<DaxParameterOut>,
+    /// 0-based index of the argument the cursor is in.
+    pub argument: usize,
+    /// The parameter that argument fills (repeating groups cycle); absent
+    /// past the last parameter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_parameter: Option<usize>,
+    /// Start of the function name in the text.
+    pub name_start: TextPositionOut,
+    /// End of the function name (exclusive).
+    pub name_end: TextPositionOut,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxSignatureHelpOut {
+    /// Absent outside a call of a known DAX function (or in a comment).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature: Option<DaxSignatureOut>,
+}
+
+impl Command for DaxSignatureHelp {
+    type Params = DaxSignatureHelpParams;
+    type Output = DaxSignatureHelpOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "dax.signatureHelp",
+            title: "DAX signature help",
+            summary: "The DAX function call around a cursor: its signature, parameters, return type, description and the parameter the cursor is in; works on text that does not parse yet.",
+            category: Category::Dax,
+            examples: &[(
+                "The cursor after the first comma of IF",
+                r#"{"text": "IF([Total Sales] > 0, ", "position": {"offset": 22}}"#,
+            )],
+            ..BASE
+        }
+    }
+
+    async fn run(_ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let src = p.text.as_str();
+        let offset = p.position.resolve(src)?;
+        let signature = dax_service::signature_help(src, offset).map(|h| {
+            let f = h.function;
+            DaxSignatureOut {
+                function: f.name.to_owned(),
+                signature: f.signature.to_owned(),
+                label: f.label(),
+                returns: f.returns.as_str().to_owned(),
+                category: f.category.to_owned(),
+                description: f.description.to_owned(),
+                supported: dax_service::is_supported_function(f.name),
+                min_args: f.min_args,
+                max_args: f.max_args,
+                parameters: f
+                    .params
+                    .iter()
+                    .map(|p| DaxParameterOut {
+                        name: p.name.to_owned(),
+                        optional: p.optional,
+                        repeating: p.repeating,
+                        label_start: p.label.0,
+                        label_end: p.label.1,
+                    })
+                    .collect(),
+                argument: h.argument,
+                active_parameter: h.active_parameter,
+                name_start: TextPositionOut::at(src, h.name_span.start),
+                name_end: TextPositionOut::at(src, h.name_span.end),
+            }
+        });
+        Ok(DaxSignatureHelpOut { signature })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `dax.hover`.
+#[derive(Debug)]
+pub struct DaxHover;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DaxHoverParams {
+    /// Describe tables, columns and measures of this document's model and
+    /// report-level measures (`d1`, …). Without it only functions,
+    /// keywords, variables and the query's own definitions are described.
+    #[serde(default)]
+    pub doc_id: Option<String>,
+    /// The DAX text.
+    pub text: String,
+    /// The cursor.
+    pub position: TextPositionIn,
+}
+
+/// What a hover describes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DaxHoverKind {
+    Function,
+    /// A user-defined function of the model or query.
+    UserFunction,
+    Table,
+    Column,
+    Measure,
+    Variable,
+    Keyword,
+}
+
+/// The name under the cursor.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxHoverInfo {
+    pub kind: DaxHoverKind,
+    /// The name as DAX: `SUM`, `Sales`, `'Product Category'[Category]`,
+    /// `[Total Sales]`, a variable, `VAR`.
+    pub name: String,
+    /// The home table of a column or measure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub table: Option<String>,
+    /// Start of the hovered name in the text.
+    pub start: TextPositionOut,
+    /// End (exclusive).
+    pub end: TextPositionOut,
+    /// Everything below as Markdown (code in `dax` fences).
+    pub markdown: String,
+    /// A function's signature, `SUM(column)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature: Option<String>,
+    /// A function's return type.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub returns: Option<String>,
+    /// A function's or keyword's description, or the model description.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// For a function: whether DashCraft can evaluate it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supported: Option<bool>,
+    /// A column's data type (`string`, `int64`, `dateTime`, …).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data_type: Option<String>,
+    /// The DAX of a measure, calculated column or variable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expression: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub format_string: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hidden: bool,
+    /// A table's column count.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub column_count: Option<usize>,
+    /// A table's measure count.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measure_count: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxHoverOut {
+    /// The document revision whose model was used (with `docId`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub document_revision: Option<u64>,
+    /// Absent when there is nothing to describe at the cursor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hover: Option<DaxHoverInfo>,
+}
+
+impl Command for DaxHover {
+    type Params = DaxHoverParams;
+    type Output = DaxHoverOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "dax.hover",
+            title: "DAX hover",
+            summary: "Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded.",
+            category: Category::Dax,
+            examples: &[
+                (
+                    "A measure of the model",
+                    r#"{"docId": "d1", "text": "[Total Sales] * 2", "position": {"offset": 3}}"#,
+                ),
+                (
+                    "A function, without a document",
+                    r#"{"text": "SUMX(Sales, 1)", "position": {"line": 1, "column": 2}}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let (document_revision, schema) = language_schema(ws, p.doc_id.as_deref())?;
+        let src = p.text.as_str();
+        let offset = p.position.resolve(src)?;
+        let hover = dax_service::hover(src, offset, &schema).map(|h| {
+            let markdown = h.markdown();
+            let is_function = h.kind == HoverKind::Function;
+            let description = h.description.or(h.details.description);
+            DaxHoverInfo {
+                kind: match h.kind {
+                    HoverKind::Function => DaxHoverKind::Function,
+                    HoverKind::UserFunction => DaxHoverKind::UserFunction,
+                    HoverKind::Table => DaxHoverKind::Table,
+                    HoverKind::Column => DaxHoverKind::Column,
+                    HoverKind::Measure => DaxHoverKind::Measure,
+                    HoverKind::Variable => DaxHoverKind::Variable,
+                    HoverKind::Keyword => DaxHoverKind::Keyword,
+                },
+                name: h.name,
+                table: h.table,
+                start: TextPositionOut::at(src, h.span.start),
+                end: TextPositionOut::at(src, h.span.end),
+                markdown,
+                signature: h.signature,
+                returns: h.returns.map(str::to_owned),
+                description,
+                supported: is_function.then_some(h.supported),
+                data_type: h.details.data_type,
+                expression: h.details.expression,
+                format_string: h.details.format_string,
+                hidden: h.details.hidden,
+                column_count: h.counts.map(|(c, _)| c),
+                measure_count: h.counts.map(|(_, m)| m),
+            }
+        });
+        Ok(DaxHoverOut {
+            document_revision,
+            hover,
         })
     }
 }

@@ -1,7 +1,8 @@
-//! `dax.diagnostics` through `Registry::execute`: positions and
-//! suggestions on the Acme Outfitters example, checks without a document,
-//! edits seen at once, and no false error on any DAX expression of the
-//! example and the Microsoft samples (M7 acceptance 2).
+//! `dax.diagnostics`, `dax.signatureHelp` and `dax.hover` through
+//! `Registry::execute`: positions and suggestions on the Acme Outfitters
+//! example, checks without a document, edits seen at once, cursor positions
+//! in every form, and no false error on any DAX expression of the example
+//! and the Microsoft samples (M7 acceptance 2).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -320,6 +321,273 @@ async fn without_a_document_only_syntax_and_functions_are_checked() {
 
     let err = r
         .try_run("dax.diagnostics", json!({"docId": "d404", "text": "1"}))
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, pbi_ops::OpErrorCode::NoDocument, "{err:?}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn signature_help_names_the_parameter_under_the_cursor() {
+    let r = Runner::new();
+    let text = "IF([Total Sales] > 0, ";
+    let out = r
+        .run(
+            "dax.signatureHelp",
+            json!({"text": text, "position": {"offset": text.len()}}),
+        )
+        .await;
+    let sig = &out["signature"];
+    assert_eq!(sig["function"], "IF", "{out}");
+    assert_eq!(
+        sig["signature"],
+        "IF(logicalTest, valueIfTrue, [valueIfFalse])"
+    );
+    assert_eq!(
+        sig["label"],
+        "IF(logicalTest, valueIfTrue, [valueIfFalse]) → any"
+    );
+    assert_eq!((&sig["minArgs"], &sig["maxArgs"]), (&json!(2), &json!(3)));
+    assert_eq!(
+        (&sig["argument"], &sig["activeParameter"]),
+        (&json!(1), &json!(1))
+    );
+    assert_eq!(
+        (&sig["category"], &sig["supported"]),
+        (&json!("Logical and information"), &json!(true))
+    );
+    let params = sig["parameters"].as_array().unwrap();
+    assert_eq!(params.len(), 3);
+    let signature = sig["signature"].as_str().unwrap();
+    for p in params {
+        let range =
+            p["labelStart"].as_u64().unwrap() as usize..p["labelEnd"].as_u64().unwrap() as usize;
+        assert_eq!(signature.get(range), p["name"].as_str());
+    }
+    assert_eq!(params[2]["optional"], true);
+    assert_eq!(
+        (&sig["nameStart"], &sig["nameEnd"]),
+        (
+            &json!({"offset": 0, "utf16Offset": 0, "line": 1, "column": 1}),
+            &json!({"offset": 2, "utf16Offset": 2, "line": 1, "column": 3})
+        )
+    );
+
+    // The same cursor as a UTF-16 offset and as a line and column, past an
+    // emoji (2 UTF-16 units, 4 bytes) and a line break.
+    let text = "\"😀\" &\n  ROUND(1, ";
+    let end = text.encode_utf16().count();
+    for position in [
+        json!({"offset": text.len()}),
+        json!({"utf16Offset": end}),
+        json!({"line": 2, "column": 12}),
+        json!({"line": 2, "column": 99}),
+    ] {
+        let out = r
+            .run(
+                "dax.signatureHelp",
+                json!({"text": text, "position": position}),
+            )
+            .await;
+        assert_eq!(out["signature"]["function"], "ROUND", "{position}: {out}");
+        assert_eq!(out["signature"]["activeParameter"], 1, "{position}");
+        assert_eq!(
+            out["signature"]["nameStart"],
+            json!({"offset": 11, "utf16Offset": 9, "line": 2, "column": 3})
+        );
+    }
+
+    // The innermost call wins; a repeating group cycles; nothing outside a
+    // call or after it closes.
+    let cases = [
+        ("SUMX(Orders, ROUND(", Some(("ROUND", 0))),
+        ("SUMX(Orders, ROUND(1, 2) + ", Some(("SUMX", 1))),
+        ("CALCULATE([Total Sales], A, B, ", Some(("CALCULATE", 1))),
+        ("SUM(Orders[Line Amount]) ", None),
+        ("1 + ", None),
+        ("MyFunction(1, ", None),
+    ];
+    for (text, expected) in cases {
+        let out = r
+            .run(
+                "dax.signatureHelp",
+                json!({"text": text, "position": {"offset": text.len()}}),
+            )
+            .await;
+        match expected {
+            Some((function, parameter)) => {
+                assert_eq!(out["signature"]["function"], function, "{text}: {out}");
+                assert_eq!(
+                    out["signature"]["activeParameter"], parameter,
+                    "{text}: {out}"
+                );
+            }
+            None => assert!(out.get("signature").is_none(), "{text}: {out}"),
+        }
+    }
+    let out = r
+        .run(
+            "dax.signatureHelp",
+            json!({"text": "SUMX(Orders, 1, 2, ", "position": {"offset": 19}}),
+        )
+        .await;
+    assert_eq!(out["signature"]["argument"], 3);
+    assert!(out["signature"].get("activeParameter").is_none(), "{out}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn positions_out_of_range_or_ambiguous_are_invalid_params() {
+    let r = Runner::new();
+    for position in [
+        json!({"offset": 4}),
+        json!({"utf16Offset": 4}),
+        json!({"line": 2, "column": 1}),
+        json!({"line": 0, "column": 1}),
+        json!({"line": 1}),
+        json!({"offset": 0, "utf16Offset": 0}),
+        json!({}),
+    ] {
+        for id in ["dax.signatureHelp", "dax.hover"] {
+            let err = r
+                .try_run(id, json!({"text": "SUM", "position": position}))
+                .await
+                .unwrap_err();
+            assert_eq!(
+                err.code,
+                pbi_ops::OpErrorCode::InvalidParams,
+                "{id} {position}: {err:?}"
+            );
+        }
+    }
+    // An offset inside a character rounds down to its start.
+    let out = r
+        .run(
+            "dax.hover",
+            json!({"text": "\"é\" & SUM(1)", "position": {"offset": 2}}),
+        )
+        .await;
+    assert!(out.get("hover").is_none(), "{out}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn hover_describes_model_names_and_functions() {
+    let Some(path) = fixture(PBIP) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r.open(json!({"path": s(&path)})).await;
+    let text =
+        "VAR region = Stores[Region]\nRETURN CALCULATE([Total Sales], Stores[Region] = region)";
+    let hover = |needle: &str, nth: usize| {
+        let offset = text.match_indices(needle).nth(nth).unwrap().0 + 1;
+        json!({"docId": doc, "text": text, "position": {"offset": offset}})
+    };
+
+    let out = r.run("dax.hover", hover("[Total Sales]", 0)).await;
+    assert!(out["documentRevision"].is_u64(), "{out}");
+    let h = &out["hover"];
+    assert_eq!(
+        (&h["kind"], &h["name"], &h["table"]),
+        (&json!("measure"), &json!("[Total Sales]"), &json!("Orders"))
+    );
+    assert_eq!(h["expression"], "SUM(Orders[Line Amount])");
+    assert!(
+        h["formatString"].as_str().unwrap().contains("#,0.00"),
+        "{h}"
+    );
+    let markdown = h["markdown"].as_str().unwrap();
+    assert!(
+        markdown.starts_with("`[Total Sales]`: measure in `Orders`"),
+        "{markdown}"
+    );
+    assert!(
+        markdown.contains("```dax\nSUM(Orders[Line Amount])\n```"),
+        "{markdown}"
+    );
+    let start = text.find("[Total Sales]").unwrap();
+    assert_eq!(h["start"]["offset"], start);
+    assert_eq!(h["end"]["offset"], start + "[Total Sales]".len());
+
+    let out = r.run("dax.hover", hover("[Region]", 1)).await;
+    let h = &out["hover"];
+    assert_eq!(
+        (&h["kind"], &h["name"], &h["dataType"]),
+        (&json!("column"), &json!("Stores[Region]"), &json!("string"))
+    );
+
+    let out = r.run("dax.hover", hover("Stores", 0)).await;
+    let h = &out["hover"];
+    assert_eq!(
+        (&h["kind"], &h["name"]),
+        (&json!("table"), &json!("Stores"))
+    );
+    assert!(h["columnCount"].as_u64().unwrap() > 1, "{h}");
+    assert!(h["measureCount"].is_u64(), "{h}");
+
+    let out = r.run("dax.hover", hover("region)", 0)).await;
+    let h = &out["hover"];
+    assert_eq!(
+        (&h["kind"], &h["name"], &h["expression"]),
+        (
+            &json!("variable"),
+            &json!("region"),
+            &json!("Stores[Region]")
+        )
+    );
+
+    let out = r.run("dax.hover", hover("CALCULATE", 0)).await;
+    let h = &out["hover"];
+    assert_eq!(
+        (&h["kind"], &h["signature"], &h["returns"], &h["supported"]),
+        (
+            &json!("function"),
+            &json!("CALCULATE(expression, [filter]...)"),
+            &json!("any"),
+            &json!(true)
+        )
+    );
+    assert!(h["description"].as_str().unwrap().ends_with('.'), "{h}");
+
+    let out = r.run("dax.hover", hover("RETURN", 0)).await;
+    assert_eq!(
+        (&out["hover"]["kind"], &out["hover"]["name"]),
+        (&json!("keyword"), &json!("RETURN"))
+    );
+    assert!(out["hover"].get("supported").is_none(), "{out}");
+
+    // Without a document, model names are not described; functions are.
+    let out = r
+        .run(
+            "dax.hover",
+            json!({"text": text, "position": {"offset": start + 1}}),
+        )
+        .await;
+    assert!(
+        out.get("hover").is_none() && out.get("documentRevision").is_none(),
+        "{out}"
+    );
+
+    // A measure created by an edit is described at once.
+    r.run(
+        "model.measure.create",
+        json!({"docId": doc, "table": "Stores", "name": "Store Count", "expression": "COUNTROWS(Stores)"}),
+    )
+    .await;
+    let out = r
+        .run(
+            "dax.hover",
+            json!({"docId": doc, "text": "[Store Count]", "position": {"offset": 1}}),
+        )
+        .await;
+    assert_eq!(
+        (&out["hover"]["table"], &out["hover"]["expression"]),
+        (&json!("Stores"), &json!("COUNTROWS(Stores)"))
+    );
+
+    let err = r
+        .try_run(
+            "dax.hover",
+            json!({"docId": "d404", "text": "1", "position": {"offset": 0}}),
+        )
         .await
         .unwrap_err();
     assert_eq!(err.code, pbi_ops::OpErrorCode::NoDocument, "{err:?}");

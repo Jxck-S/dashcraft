@@ -138,7 +138,9 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`dax.query`](#daxquery) | Evaluates a DAX query (EVALUATE …) and returns columns and rows per result table; loads the data on first use. | L A |
 | [`dax.evaluateMeasure`](#daxevaluatemeasure) | One measure's value (raw and formatted, or ⚠ error with its DAX) under report/page and column filters. | A |
 | [`measures.values`](#measuresvalues) | Every measure's formatted value under optional report/page filters; failed measures show ⚠ and their DAX. | L A |
-| [`dax.diagnostics`](#daxdiagnostics) | Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. | A |
+| [`dax.diagnostics`](#daxdiagnostics) | Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion), wrong argument counts and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. | A |
+| [`dax.signatureHelp`](#daxsignaturehelp) | The DAX function call around a cursor: its signature, parameters, return type, description and the parameter the cursor is in; works on text that does not parse yet. | A |
+| [`dax.hover`](#daxhover) | Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -1008,7 +1010,7 @@ Examples:
 
 ### `dax.diagnostics`
 
-**Check DAX.** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded.
+**Check DAX.** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion), wrong argument counts and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded.
 
 _agent-safe; since 0.2.0._
 
@@ -1033,6 +1035,55 @@ Examples:
 
 - A measure against the model: `{"docId":"d1","text":"CALCULATE([Total Sales], Stores[Regoin] = \"West\")"}`
 - Syntax only, without a document: `{"text":"EVALUATE ROW(\"n\", 1 +)"}`
+
+### `dax.signatureHelp`
+
+**DAX signature help.** The DAX function call around a cursor: its signature, parameters, return type, description and the parameter the cursor is in; works on text that does not parse yet.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `text` | string | The DAX text. |
+| `position` | TextPositionIn | The cursor. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `signature`? | DaxSignatureOut \| null | Absent outside a call of a known DAX function (or in a comment). |
+
+Examples:
+
+- The cursor after the first comma of IF: `{"text":"IF([Total Sales] > 0, ","position":{"offset":22}}`
+
+### `dax.hover`
+
+**DAX hover.** Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` (optional) | string \| null | Describe tables, columns and measures of this document's model and report-level measures (`d1`, …). Without it only functions, keywords, variables and the query's own definitions are described. |
+| `text` | string | The DAX text. |
+| `position` | TextPositionIn | The cursor. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `documentRevision`? | integer \| null | The document revision whose model was used (with `docId`). |
+| `hover`? | DaxHoverInfo \| null | Absent when there is nothing to describe at the cursor. |
+
+Examples:
+
+- A measure of the model: `{"docId":"d1","text":"[Total Sales] * 2","position":{"offset":3}}`
+- A function, without a document: `{"text":"SUMX(Sales, 1)","position":{"line":1,"column":2}}`
 
 ## Render
 

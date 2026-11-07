@@ -150,7 +150,12 @@ impl McpServer {
         }
         if let Some(check) = name("dax.diagnostics") {
             out.push_str(&format!(
-                " {check} checks DAX you write (names, syntax) before you run or save it."
+                " {check} checks DAX you write (names, syntax, argument counts) before you run or save it."
+            ));
+        }
+        if let Some(hover) = name("dax.hover") {
+            out.push_str(&format!(
+                " {hover} explains a DAX function or model name (signature, expression)."
             ));
         }
         out.push_str(&format!(

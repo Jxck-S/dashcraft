@@ -125,6 +125,8 @@ pub use deps::{
     Dependency, dependencies, dependencies_in, refers_to_table, transitive_dependencies,
 };
 pub use error::{DaxError, MAX_EVAL_DEPTH, Result};
+#[cfg(test)]
+pub(crate) use functions::returns_table;
 pub use functions::{is_supported_function, supported_functions};
 pub use query::evaluate_query;
 pub use table::{VColumn, VirtualTable, to_record_batch};
