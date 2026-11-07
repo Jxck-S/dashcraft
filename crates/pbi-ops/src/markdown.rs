@@ -31,7 +31,7 @@ dashcraft mcp                                        # MCP server for AI agents 
 ```
 
 - Parameters are camelCase JSON objects; unknown fields are rejected (`invalidParams`).
-- Documents are opened with `doc.open`, which returns a `docId` (`d1`, `d2`, …) for the other commands. Data commands (`data.page`, `dax.*`, `measures.values`, `render.*`, `canvas.*`, `export.table`) load the data on first use unless the document was opened with `"autoRefresh": false`; `data.refresh` reloads it.
+- Documents are opened with `doc.open`, which returns a `docId` (`d1`, `d2`, …) for the other commands. Data commands (`data.page`, `dax.query`, `dax.evaluateMeasure`, `measures.values`, `render.*`, `canvas.*`, `export.table`) load the data on first use unless the document was opened with `"autoRefresh": false`; `data.refresh` reloads it.
 - `dashcraft run` prints the result as JSON. Exit codes: 0 success; 1 fatal or usage error; 2 the input was read but data or expressions have errors (`query` errors, or a result with `"ok": false` — failed tables, ⚠ measures, failed visuals, lint findings).
 
 ### Batches

@@ -116,6 +116,12 @@
 //! list what refers to a table, column or measure, [`delete_dependents`] /
 //! [`Session::delete_dependents`] what breaks when it is deleted (see
 //! [`dependents`]).
+//!
+//! # Language services
+//!
+//! [`dax_service`] re-exports `pbi-dax`'s DAX language service
+//! (diagnostics against a model's names) for the layers above, which do not
+//! depend on `pbi-dax` directly.
 
 pub mod cache;
 mod created;
@@ -161,6 +167,7 @@ pub use identifiers::{IdentifierGenerator, RandomIdentifiers, SequentialIdentifi
 pub use options::{
     CsvOptions, CsvSource, ProgressFn, RefreshOptions, RefreshSource, SessionLimits, SessionOptions,
 };
+pub use pbi_dax::service as dax_service;
 pub use pbi_engine::{CancellationToken, ColumnStats, PageRequest, SortSpec, Value};
 pub use pbi_m::{Clock, FixedClock, SystemClock};
 pub use query::{MeasureValue, value_to_json};

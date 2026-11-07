@@ -16,6 +16,7 @@ pbi-engine = { workspace = true }
 arrow = { workspace = true }
 thiserror = { workspace = true }
 indexmap = { workspace = true }
+serde_json = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
 

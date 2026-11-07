@@ -1,4 +1,5 @@
-//! Name comparison and quoting helpers for DAX and TMDL.
+//! Name comparison and quoting helpers for DAX and TMDL, and "did you mean"
+//! matching of misspelt names ([`closest_name`]).
 //!
 //! Power BI object names are case-insensitive, so every lookup in this crate
 //! goes through [`names_eq`].
@@ -132,6 +133,79 @@ pub fn parse_tmdl_column_ref(text: &str) -> Option<ColumnRef> {
     Some(ColumnRef { table, column })
 }
 
+/// Names longer than this are not compared (bounds the DP table).
+const MAX_LEN: usize = 256;
+
+/// Case-insensitive Levenshtein distance over chars; `None` if either side
+/// is longer than [`MAX_LEN`].
+pub fn name_edit_distance(a: &str, b: &str) -> Option<usize> {
+    let a: Vec<char> = a.chars().flat_map(char::to_lowercase).collect();
+    let b: Vec<char> = b.chars().flat_map(char::to_lowercase).collect();
+    if a.len() > MAX_LEN || b.len() > MAX_LEN {
+        return None;
+    }
+    let mut prev: Vec<usize> = (0..=b.len()).collect();
+    let mut cur = vec![0; b.len() + 1];
+    for (i, ca) in a.iter().enumerate() {
+        cur[0] = i + 1;
+        for (j, cb) in b.iter().enumerate() {
+            let cost = usize::from(ca != cb);
+            cur[j + 1] = (prev[j] + cost).min(prev[j + 1] + 1).min(cur[j] + 1);
+        }
+        std::mem::swap(&mut prev, &mut cur);
+    }
+    prev.last().copied()
+}
+
+/// `long` starts or ends with `short` at a word boundary (case-insensitive),
+/// e.g. `Category Name` / `Category`.
+fn word_affix(short: &str, long: &str) -> bool {
+    let short = short.to_lowercase();
+    let long = long.to_lowercase();
+    if short.chars().count() < 4 || short.len() >= long.len() {
+        return false;
+    }
+    let boundary = |c: Option<char>| c.is_none_or(|c| !c.is_alphanumeric());
+    if let Some(rest) = long.strip_prefix(&short) {
+        return boundary(rest.chars().next());
+    }
+    if let Some(rest) = long.strip_suffix(&short) {
+        return boundary(rest.chars().last());
+    }
+    false
+}
+
+/// Score of `candidate` as a correction for `name` (lower is better), or
+/// `None` if it is not plausible: a small edit distance, or a word prefix or
+/// suffix (`Category` / `Category Name`).
+pub fn name_match_score(name: &str, candidate: &str) -> Option<usize> {
+    let d = name_edit_distance(name, candidate)?;
+    if d == 0 {
+        return Some(0);
+    }
+    let len = name.chars().count().max(candidate.chars().count());
+    let threshold = ((len + 2) / 4).max(1);
+    if d <= threshold || word_affix(name, candidate) || word_affix(candidate, name) {
+        Some(d)
+    } else {
+        None
+    }
+}
+
+/// The most plausible correction for `name` among `candidates` ("did you
+/// mean …"), ignoring an exact match.
+pub fn closest_name<'a>(
+    name: &str,
+    candidates: impl IntoIterator<Item = &'a str>,
+) -> Option<&'a str> {
+    candidates
+        .into_iter()
+        .filter(|c| *c != name)
+        .filter_map(|c| name_match_score(name, c).map(|s| (s, c)))
+        .min_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(b.1)))
+        .map(|(_, c)| c)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,5 +271,26 @@ mod tests {
         assert!(is_valid_object_name("Web Sessions"));
         assert!(!is_valid_object_name("   "));
         assert!(!is_valid_object_name("a\nb"));
+    }
+
+    #[test]
+    fn distances_are_case_insensitive() {
+        assert_eq!(name_edit_distance("Category", "categry"), Some(1));
+        assert_eq!(name_edit_distance("", "abc"), Some(3));
+        assert_eq!(name_edit_distance(&"x".repeat(300), "x"), None);
+    }
+
+    #[test]
+    fn closest_prefers_small_edits_and_word_prefixes() {
+        let names = ["Category Name", "Brand", "SKU", "StoreKey"];
+        assert_eq!(closest_name("Category", names), Some("Category Name"));
+        assert_eq!(closest_name("Brnd", names), Some("Brand"));
+        assert_eq!(closest_name("storekey", names), Some("StoreKey"));
+        assert_eq!(closest_name("Supplier", names), None);
+        assert_eq!(closest_name("Cat", ["Category Name"]), None);
+        assert_eq!(
+            closest_name("Returns count", ["Returns", "Net Returns"]),
+            Some("Returns")
+        );
     }
 }

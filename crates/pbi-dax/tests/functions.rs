@@ -790,6 +790,28 @@ fn misc_cases() -> Vec<(&'static str, Value)> {
             "COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", IGNORE([Total Qty])))",
             i(5),
         ),
+        // Names in the model's spelling, the table always quoted (Power BI
+        // Desktop 2.159).
+        ("NAMEOF(sales[qty])", s("'Sales'[Qty]")),
+        ("NAMEOF([total qty])", s("'Sales'[Total Qty]")),
+        (
+            "NAMEOF(Product[Product Count])",
+            s("'Product'[Product Count]"),
+        ),
+        ("NAMEOF(product)", s("'Product'")),
+        ("NAMEOF((Sales[Qty]), self)", s("[Qty]")),
+        ("NAMEOF(Sales[Qty], COLUMN)", s("[Qty]")),
+        ("NAMEOF(Sales[Qty], PARENT)", s("'Sales'")),
+        ("NAMEOF(Sales[Qty], TABLE)", s("'Sales'")),
+        ("NAMEOF([Total Qty], MEASURE)", s("[Total Qty]")),
+        ("NAMEOF([Total Qty], Full)", s("'Sales'[Total Qty]")),
+        ("NAMEOF(Product, SELF)", s("'Product'")),
+        ("NAMEOF(Sales[Qty], MEASURE)", expect_error()),
+        ("NAMEOF([Total Qty], COLUMN)", expect_error()),
+        ("NAMEOF(Product, PARENT)", expect_error()),
+        ("NAMEOF(Sales[Qty], \"TABLE\")", expect_error()),
+        ("NAMEOF([Qty])", expect_error()),
+        ("NAMEOF(1)", expect_error()),
     ]
 }
 
@@ -1570,6 +1592,38 @@ fn summarizecolumns_rollup_rows_and_scope() {
             vec![Value::Blank, Value::Blank, b(true), b(true), i(1)],
         ]
     );
+}
+
+/// `NAMEOF` quotes like Power BI Desktop (`'` doubled, `]` as `]]`), names
+/// query tables, and fails with Desktop's messages.
+#[test]
+fn nameof_quoting_query_tables_and_errors() {
+    let f = fx();
+    let q = "DEFINE TABLE 'It''s' = SELECTCOLUMNS({1}, \"A]B\", [Value]) EVALUATE {(NAMEOF('it''s'[a]]b]), NAMEOF('It''s'[A]]B], SELF), NAMEOF('It''s'))}";
+    let t = &pbi_dax::evaluate_query(&f.engine.snapshot(), &f.model, q).unwrap()[0];
+    assert_eq!(
+        t.rows(),
+        vec![vec![s("'It''s'[A]]B]"), s("[A]]B]"), s("'It''s'")]]
+    );
+    let message = |src: &str| f.err(src).to_string();
+    let reference = "Only measure or fully-qualified column or table or calendar references are allowed in NAMEOF function.";
+    for src in [
+        "NAMEOF(1)",
+        "NAMEOF([Qty])",
+        "VAR v = 1 RETURN NAMEOF(v)",
+        "NAMEOF(BLANK())",
+    ] {
+        assert!(message(src).contains(reference), "{src}: {}", message(src));
+    }
+    assert!(message("NAMEOF(Sales[Nope])").contains(
+        "Column 'Nope' in table 'Sales' cannot be found or may not be used in this expression."
+    ));
+    assert!(message("NAMEOF(Sales[Qty], \"FULL\")").contains(
+        "Valid arguments for component are TABLE, COLUMN, MEASURE, CALENDAR, FULL, SELF, and PARENT."
+    ));
+    assert!(message("NAMEOF(Product, PARENT)").contains(
+        "The value of component, 'PARENT', is not valid for the given object in NAMEOF function."
+    ));
 }
 
 /// `Orders[OrderDate] → 'Date'[Date]` (active) and `Orders[ShipDate] →

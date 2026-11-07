@@ -7,6 +7,29 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.1a DAX diagnostics and `NAMEOF`
+
+- **What:** `pbi-dax` gains a language service (`pbi_dax::service`): `Schema` (tables, columns,
+  measures and user-defined functions from a model, or `Schema::unknown()` for syntax and
+  function checks only) and `diagnostics` (syntax errors, unknown tables, columns and measures with
+  "did you mean" suggestions, functions DashCraft cannot evaluate as warnings; sorted, capped at
+  1000). The registry command `dax.diagnostics` (`pbi-ops`, through `pbi_session::dax_service`)
+  checks a text against a document's model and report-level measures, with UTF-8, UTF-16 and
+  line/column positions. The name matching of the linter's suggestions moved to `pbi-model`
+  (`closest_name`) and is shared. The evaluator gains `NAMEOF` (components `TABLE`, `COLUMN`,
+  `MEASURE`, `FULL`, `SELF`, `PARENT`, Desktop's quoting and error messages).
+- **Why:** M7.1 (DESKTOP-PLAN), the first step of the language foundation; acceptance 2 asks for
+  no false errors on every Acme and sample expression. The only warning left there was `NAMEOF`
+  in Corporate Spend's field parameters, so it was implemented rather than accepted.
+- **Numbers:** 136 DAX expressions (Acme 54, Corporate Spend 23, COVID-19 US Tracking 28, Regional
+  Sales 23, Revenue Opportunities 8): no errors, no warnings. Tests: `language_service.rs` (10,
+  pbi-dax), `dax_language.rs` (3, pbi-ops), `nameof_quoting_query_tables_and_errors` and 17
+  `NAMEOF` cases in `functions.rs`. Ground truth: `dax-functions` 552 → 569 cases, all equal to
+  Power BI Desktop 2.159 (2,259 recorded queries). 298 → 299 DAX functions (24 partial); 73 → 74
+  registry commands.
+- **Open:** M7.1b (completion, signature help, hover, arity checks, P12), M7.1c (tokens,
+  references), a fuzz target for diagnostics (acceptance 4).
+
 ### M6 complete (docs)
 
 - **What:** M6 ticked in the ROADMAP; the plan, ROADMAP and GAPS say where the last open items

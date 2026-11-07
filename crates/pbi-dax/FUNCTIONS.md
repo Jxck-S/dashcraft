@@ -418,6 +418,7 @@ values of the `ORDERBY`/`PARTITIONBY` columns (one table) are used.
 | `USERNAME` | supported | Same value as `USERPRINCIPALNAME` (as in the Power BI service). |
 | `USEROBJECTID` | supported | The configured object id; empty text when none. |
 | `CUSTOMDATA` | supported | The configured custom data; BLANK when none. |
+| `NAMEOF` | partial | Name of a measure, fully qualified column or table as DAX text in the model's spelling, the table always quoted (`'Sales'[Qty]`; `'` doubled, `]` as `]]`); component keyword `TABLE`, `COLUMN`, `MEASURE`, `FULL`, `SELF` or `PARENT`, with Power BI Desktop's errors for other arguments (checked against Desktop 2.159). Calendar references are not supported. |
 
 ## Not supported yet (selection)
 

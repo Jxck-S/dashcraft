@@ -17,7 +17,7 @@ reimplementation of Power BI Desktop ([ADR-0004](docs/adr/0004-desktop-ready-arc
   then (`[Unreleased]`): the command registry, `run`/`serve`/`mcp`, the opt-in AI layer (also in
   the app), the app on the registry, perf budgets, the DashCraft name, scatter/funnel/gauge/
   treemap/waterfall visuals, conditional formatting, calculation groups, many-to-many
-  relationships, RLS "View as" and 298 DAX functions. Details:
+  relationships, RLS "View as" and 299 DAX functions. Details:
   [docs/ROADMAP.md](docs/ROADMAP.md), [CHANGELOG.md](CHANGELOG.md), [docs/GAPS.md](docs/GAPS.md).
 - Product name: **DashCraft** (§10, [ADR-0009](docs/adr/0009-naming-dashcraft.md),
   [ADR-0010](docs/adr/0010-dashcraft-everywhere.md)). The CLI binary is `dashcraft`, the app

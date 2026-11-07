@@ -86,7 +86,7 @@ Every screenshot is the real app on the synthetic Acme Outfitters example in thi
     <td width="50%" valign="top">
       <img src="docs/images/dashcraft-dax.png" alt="DAX query view: a SUMMARIZECOLUMNS query of total sales, order count and margin by region, and its five-row result" width="100%">
       <br>
-      <b>Query with DAX.</b> 298 DAX functions with filter and row context, calculation groups and many-to-many relationships; run <code>EVALUATE</code> queries in the DAX query view.
+      <b>Query with DAX.</b> 299 DAX functions with filter and row context, calculation groups and many-to-many relationships; run <code>EVALUATE</code> queries in the DAX query view.
     </td>
   </tr>
 </table>
