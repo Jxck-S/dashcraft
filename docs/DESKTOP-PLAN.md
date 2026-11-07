@@ -856,9 +856,12 @@ optional language server.
     with "did you mean" suggestions, unsupported functions as warnings. Acceptance 2 met: no false
     errors (and no warnings) on the 136 DAX expressions of Acme and the committed samples.
     `NAMEOF` added to the evaluator on the way (matched against Desktop 2.159).
-  - [ ] M7.1b completion, signature help, hover, a function catalog with DashCraft-written
-    descriptions, arity diagnostics, P12.
-  - [ ] M7.1c semantic tokens, go to definition, find references.
+  - [x] M7.1b (2026-11-07) a function catalog with DashCraft-written descriptions (all 299
+    functions), argument-count diagnostics checked against Desktop (929 probes, suite
+    `dax-arity`), signature help and hover; the `dax.signatureHelp` and `dax.hover` commands.
+  - [ ] M7.1c completion (`dax.complete`), P12, a language-service fuzz target.
+  - [ ] M7.1d semantic tokens, go to definition, find references (`dax.tokens`,
+    `dax.references`).
 - [ ] **M7.2 DAX formatter.** Deterministic and idempotent, keeps comments, options for line
   width and casing.
 - [ ] **M7.3 M language service and formatter.** In `pbi-m`: completion of library functions,

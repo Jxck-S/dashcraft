@@ -1,0 +1,5590 @@
+{
+  "schemaVersion": 1,
+  "suite": "dax-arity",
+  "title": "Every catalog.txt function called with too few, the fewest, the most and too many arguments on the dax-lab fixture",
+  "fixture": "dax-lab",
+  "requiresTables": [
+    "Product",
+    "Sales",
+    "Date",
+    "Orders",
+    "Emp"
+  ],
+  "cases": [
+    {
+      "id": "IF/1",
+      "function": "IF",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", IF(TRUE()))"
+    },
+    {
+      "id": "IF/2",
+      "function": "IF",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", IF(TRUE(), 1))"
+    },
+    {
+      "id": "IF/3",
+      "function": "IF",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", IF(TRUE(), 1, 1))"
+    },
+    {
+      "id": "IF/4",
+      "function": "IF",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", IF(TRUE(), 1, 1, 1))"
+    },
+    {
+      "id": "SWITCH/2",
+      "function": "SWITCH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SWITCH(1, 1))"
+    },
+    {
+      "id": "SWITCH/3",
+      "function": "SWITCH",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", SWITCH(1, 1, 1))"
+    },
+    {
+      "id": "SWITCH/7",
+      "function": "SWITCH",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", SWITCH(1, 1, 1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "COALESCE/1",
+      "function": "COALESCE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COALESCE(1))"
+    },
+    {
+      "id": "COALESCE/2",
+      "function": "COALESCE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COALESCE(1, 1))"
+    },
+    {
+      "id": "COALESCE/6",
+      "function": "COALESCE",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COALESCE(1, 1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "AND/1",
+      "function": "AND",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", AND(TRUE()))"
+    },
+    {
+      "id": "AND/2",
+      "function": "AND",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", AND(TRUE(), TRUE()))"
+    },
+    {
+      "id": "AND/3",
+      "function": "AND",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", AND(TRUE(), TRUE(), TRUE()))"
+    },
+    {
+      "id": "OR/1",
+      "function": "OR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", OR(TRUE()))"
+    },
+    {
+      "id": "OR/2",
+      "function": "OR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", OR(TRUE(), TRUE()))"
+    },
+    {
+      "id": "OR/3",
+      "function": "OR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", OR(TRUE(), TRUE(), TRUE()))"
+    },
+    {
+      "id": "NOT/0",
+      "function": "NOT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", NOT())"
+    },
+    {
+      "id": "NOT/1",
+      "function": "NOT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", NOT(TRUE()))"
+    },
+    {
+      "id": "NOT/2",
+      "function": "NOT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", NOT(TRUE(), TRUE()))"
+    },
+    {
+      "id": "TRUE/0",
+      "function": "TRUE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", TRUE())"
+    },
+    {
+      "id": "TRUE/1",
+      "function": "TRUE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TRUE(1))"
+    },
+    {
+      "id": "FALSE/0",
+      "function": "FALSE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", FALSE())"
+    },
+    {
+      "id": "FALSE/1",
+      "function": "FALSE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", FALSE(1))"
+    },
+    {
+      "id": "BLANK/0",
+      "function": "BLANK",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", BLANK())"
+    },
+    {
+      "id": "BLANK/1",
+      "function": "BLANK",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", BLANK(1))"
+    },
+    {
+      "id": "ISBLANK/0",
+      "function": "ISBLANK",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISBLANK())"
+    },
+    {
+      "id": "ISBLANK/1",
+      "function": "ISBLANK",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISBLANK(1))"
+    },
+    {
+      "id": "ISBLANK/2",
+      "function": "ISBLANK",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISBLANK(1, 1))"
+    },
+    {
+      "id": "IFERROR/1",
+      "function": "IFERROR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", IFERROR(1))"
+    },
+    {
+      "id": "IFERROR/2",
+      "function": "IFERROR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", IFERROR(1, 1))"
+    },
+    {
+      "id": "IFERROR/3",
+      "function": "IFERROR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", IFERROR(1, 1, 1))"
+    },
+    {
+      "id": "ISERROR/0",
+      "function": "ISERROR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISERROR())"
+    },
+    {
+      "id": "ISERROR/1",
+      "function": "ISERROR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISERROR(1))"
+    },
+    {
+      "id": "ISERROR/2",
+      "function": "ISERROR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISERROR(1, 1))"
+    },
+    {
+      "id": "ISNUMBER/0",
+      "function": "ISNUMBER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISNUMBER())"
+    },
+    {
+      "id": "ISNUMBER/1",
+      "function": "ISNUMBER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISNUMBER(1))"
+    },
+    {
+      "id": "ISNUMBER/2",
+      "function": "ISNUMBER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISNUMBER(1, 1))"
+    },
+    {
+      "id": "ISTEXT/0",
+      "function": "ISTEXT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISTEXT())"
+    },
+    {
+      "id": "ISTEXT/1",
+      "function": "ISTEXT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISTEXT(1))"
+    },
+    {
+      "id": "ISTEXT/2",
+      "function": "ISTEXT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISTEXT(1, 1))"
+    },
+    {
+      "id": "ISNONTEXT/0",
+      "function": "ISNONTEXT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISNONTEXT())"
+    },
+    {
+      "id": "ISNONTEXT/1",
+      "function": "ISNONTEXT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISNONTEXT(1))"
+    },
+    {
+      "id": "ISNONTEXT/2",
+      "function": "ISNONTEXT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISNONTEXT(1, 1))"
+    },
+    {
+      "id": "ISLOGICAL/0",
+      "function": "ISLOGICAL",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISLOGICAL())"
+    },
+    {
+      "id": "ISLOGICAL/1",
+      "function": "ISLOGICAL",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISLOGICAL(1))"
+    },
+    {
+      "id": "ISLOGICAL/2",
+      "function": "ISLOGICAL",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISLOGICAL(1, 1))"
+    },
+    {
+      "id": "ISEVEN/0",
+      "function": "ISEVEN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISEVEN())"
+    },
+    {
+      "id": "ISEVEN/1",
+      "function": "ISEVEN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISEVEN(1))"
+    },
+    {
+      "id": "ISEVEN/2",
+      "function": "ISEVEN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISEVEN(1, 1))"
+    },
+    {
+      "id": "ISODD/0",
+      "function": "ISODD",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISODD())"
+    },
+    {
+      "id": "ISODD/1",
+      "function": "ISODD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISODD(1))"
+    },
+    {
+      "id": "ISODD/2",
+      "function": "ISODD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISODD(1, 1))"
+    },
+    {
+      "id": "CONVERT/1",
+      "function": "CONVERT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CONVERT(1))"
+    },
+    {
+      "id": "CONVERT/2",
+      "function": "CONVERT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CONVERT(1, 1))"
+    },
+    {
+      "id": "CONVERT/3",
+      "function": "CONVERT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CONVERT(1, 1, 1))"
+    },
+    {
+      "id": "CONTAINS/2",
+      "function": "CONTAINS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CONTAINS(Sales, Sales[Qty]))"
+    },
+    {
+      "id": "CONTAINS/3",
+      "function": "CONTAINS",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CONTAINS(Sales, Sales[Qty], 1))"
+    },
+    {
+      "id": "CONTAINS/7",
+      "function": "CONTAINS",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", CONTAINS(Sales, Sales[Qty], 1, Sales[Qty], 1, 1, 1))"
+    },
+    {
+      "id": "CONTAINSROW/1",
+      "function": "CONTAINSROW",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CONTAINSROW(Sales))"
+    },
+    {
+      "id": "CONTAINSROW/2",
+      "function": "CONTAINSROW",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CONTAINSROW(Sales, 1))"
+    },
+    {
+      "id": "CONTAINSROW/6",
+      "function": "CONTAINSROW",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", CONTAINSROW(Sales, 1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "IF.EAGER/1",
+      "function": "IF.EAGER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", IF.EAGER(TRUE()))"
+    },
+    {
+      "id": "IF.EAGER/2",
+      "function": "IF.EAGER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", IF.EAGER(TRUE(), 1))"
+    },
+    {
+      "id": "IF.EAGER/3",
+      "function": "IF.EAGER",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", IF.EAGER(TRUE(), 1, 1))"
+    },
+    {
+      "id": "IF.EAGER/4",
+      "function": "IF.EAGER",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", IF.EAGER(TRUE(), 1, 1, 1))"
+    },
+    {
+      "id": "ERROR/0",
+      "function": "ERROR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ERROR())"
+    },
+    {
+      "id": "ERROR/1",
+      "function": "ERROR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ERROR(\"a\"))"
+    },
+    {
+      "id": "ERROR/2",
+      "function": "ERROR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ERROR(\"a\", \"a\"))"
+    },
+    {
+      "id": "EVALUATEANDLOG/0",
+      "function": "EVALUATEANDLOG",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", EVALUATEANDLOG())"
+    },
+    {
+      "id": "EVALUATEANDLOG/1",
+      "function": "EVALUATEANDLOG",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", EVALUATEANDLOG(1))"
+    },
+    {
+      "id": "EVALUATEANDLOG/3",
+      "function": "EVALUATEANDLOG",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", EVALUATEANDLOG(1, \"a\", 1))"
+    },
+    {
+      "id": "EVALUATEANDLOG/4",
+      "function": "EVALUATEANDLOG",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", EVALUATEANDLOG(1, \"a\", 1, 1))"
+    },
+    {
+      "id": "USERCULTURE/0",
+      "function": "USERCULTURE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", USERCULTURE())"
+    },
+    {
+      "id": "USERCULTURE/1",
+      "function": "USERCULTURE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", USERCULTURE(1))"
+    },
+    {
+      "id": "ISAFTER/1",
+      "function": "ISAFTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISAFTER(1))"
+    },
+    {
+      "id": "ISAFTER/2",
+      "function": "ISAFTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISAFTER(1, 1))"
+    },
+    {
+      "id": "ISAFTER/6",
+      "function": "ISAFTER",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", ISAFTER(1, 1, ASC, 1, 1, ASC))"
+    },
+    {
+      "id": "ISONORAFTER/1",
+      "function": "ISONORAFTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISONORAFTER(1))"
+    },
+    {
+      "id": "ISONORAFTER/2",
+      "function": "ISONORAFTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISONORAFTER(1, 1))"
+    },
+    {
+      "id": "ISONORAFTER/6",
+      "function": "ISONORAFTER",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", ISONORAFTER(1, 1, ASC, 1, 1, ASC))"
+    },
+    {
+      "id": "BITAND/1",
+      "function": "BITAND",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", BITAND(1))"
+    },
+    {
+      "id": "BITAND/2",
+      "function": "BITAND",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", BITAND(1, 1))"
+    },
+    {
+      "id": "BITAND/3",
+      "function": "BITAND",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", BITAND(1, 1, 1))"
+    },
+    {
+      "id": "BITOR/1",
+      "function": "BITOR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", BITOR(1))"
+    },
+    {
+      "id": "BITOR/2",
+      "function": "BITOR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", BITOR(1, 1))"
+    },
+    {
+      "id": "BITOR/3",
+      "function": "BITOR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", BITOR(1, 1, 1))"
+    },
+    {
+      "id": "BITXOR/1",
+      "function": "BITXOR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", BITXOR(1))"
+    },
+    {
+      "id": "BITXOR/2",
+      "function": "BITXOR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", BITXOR(1, 1))"
+    },
+    {
+      "id": "BITXOR/3",
+      "function": "BITXOR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", BITXOR(1, 1, 1))"
+    },
+    {
+      "id": "BITLSHIFT/1",
+      "function": "BITLSHIFT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", BITLSHIFT(1))"
+    },
+    {
+      "id": "BITLSHIFT/2",
+      "function": "BITLSHIFT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", BITLSHIFT(1, 1))"
+    },
+    {
+      "id": "BITLSHIFT/3",
+      "function": "BITLSHIFT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", BITLSHIFT(1, 1, 1))"
+    },
+    {
+      "id": "BITRSHIFT/1",
+      "function": "BITRSHIFT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", BITRSHIFT(1))"
+    },
+    {
+      "id": "BITRSHIFT/2",
+      "function": "BITRSHIFT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", BITRSHIFT(1, 1))"
+    },
+    {
+      "id": "BITRSHIFT/3",
+      "function": "BITRSHIFT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", BITRSHIFT(1, 1, 1))"
+    },
+    {
+      "id": "DIVIDE/1",
+      "function": "DIVIDE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1))"
+    },
+    {
+      "id": "DIVIDE/2",
+      "function": "DIVIDE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1, 1))"
+    },
+    {
+      "id": "DIVIDE/3",
+      "function": "DIVIDE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1, 1, 1))"
+    },
+    {
+      "id": "DIVIDE/4",
+      "function": "DIVIDE",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", DIVIDE(1, 1, 1, 1))"
+    },
+    {
+      "id": "ABS/0",
+      "function": "ABS",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ABS())"
+    },
+    {
+      "id": "ABS/1",
+      "function": "ABS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ABS(1))"
+    },
+    {
+      "id": "ABS/2",
+      "function": "ABS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ABS(1, 1))"
+    },
+    {
+      "id": "INT/0",
+      "function": "INT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", INT())"
+    },
+    {
+      "id": "INT/1",
+      "function": "INT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", INT(1))"
+    },
+    {
+      "id": "INT/2",
+      "function": "INT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", INT(1, 1))"
+    },
+    {
+      "id": "ROUND/1",
+      "function": "ROUND",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ROUND(1))"
+    },
+    {
+      "id": "ROUND/2",
+      "function": "ROUND",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ROUND(1, 1))"
+    },
+    {
+      "id": "ROUND/3",
+      "function": "ROUND",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", ROUND(1, 1, 1))"
+    },
+    {
+      "id": "ROUNDUP/1",
+      "function": "ROUNDUP",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ROUNDUP(1))"
+    },
+    {
+      "id": "ROUNDUP/2",
+      "function": "ROUNDUP",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ROUNDUP(1, 1))"
+    },
+    {
+      "id": "ROUNDUP/3",
+      "function": "ROUNDUP",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", ROUNDUP(1, 1, 1))"
+    },
+    {
+      "id": "ROUNDDOWN/1",
+      "function": "ROUNDDOWN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ROUNDDOWN(1))"
+    },
+    {
+      "id": "ROUNDDOWN/2",
+      "function": "ROUNDDOWN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ROUNDDOWN(1, 1))"
+    },
+    {
+      "id": "ROUNDDOWN/3",
+      "function": "ROUNDDOWN",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", ROUNDDOWN(1, 1, 1))"
+    },
+    {
+      "id": "TRUNC/0",
+      "function": "TRUNC",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", TRUNC())"
+    },
+    {
+      "id": "TRUNC/1",
+      "function": "TRUNC",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TRUNC(1))"
+    },
+    {
+      "id": "TRUNC/2",
+      "function": "TRUNC",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", TRUNC(1, 1))"
+    },
+    {
+      "id": "TRUNC/3",
+      "function": "TRUNC",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", TRUNC(1, 1, 1))"
+    },
+    {
+      "id": "MOD/1",
+      "function": "MOD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MOD(1))"
+    },
+    {
+      "id": "MOD/2",
+      "function": "MOD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MOD(1, 1))"
+    },
+    {
+      "id": "MOD/3",
+      "function": "MOD",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", MOD(1, 1, 1))"
+    },
+    {
+      "id": "POWER/1",
+      "function": "POWER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", POWER(1))"
+    },
+    {
+      "id": "POWER/2",
+      "function": "POWER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", POWER(1, 1))"
+    },
+    {
+      "id": "POWER/3",
+      "function": "POWER",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", POWER(1, 1, 1))"
+    },
+    {
+      "id": "SQRT/0",
+      "function": "SQRT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SQRT())"
+    },
+    {
+      "id": "SQRT/1",
+      "function": "SQRT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SQRT(1))"
+    },
+    {
+      "id": "SQRT/2",
+      "function": "SQRT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SQRT(1, 1))"
+    },
+    {
+      "id": "SIGN/0",
+      "function": "SIGN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SIGN())"
+    },
+    {
+      "id": "SIGN/1",
+      "function": "SIGN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SIGN(1))"
+    },
+    {
+      "id": "SIGN/2",
+      "function": "SIGN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SIGN(1, 1))"
+    },
+    {
+      "id": "CURRENCY/0",
+      "function": "CURRENCY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", CURRENCY())"
+    },
+    {
+      "id": "CURRENCY/1",
+      "function": "CURRENCY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CURRENCY(1))"
+    },
+    {
+      "id": "CURRENCY/2",
+      "function": "CURRENCY",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CURRENCY(1, 1))"
+    },
+    {
+      "id": "PI/0",
+      "function": "PI",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", PI())"
+    },
+    {
+      "id": "PI/1",
+      "function": "PI",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PI(1))"
+    },
+    {
+      "id": "SQRTPI/0",
+      "function": "SQRTPI",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SQRTPI())"
+    },
+    {
+      "id": "SQRTPI/1",
+      "function": "SQRTPI",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SQRTPI(1))"
+    },
+    {
+      "id": "SQRTPI/2",
+      "function": "SQRTPI",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SQRTPI(1, 1))"
+    },
+    {
+      "id": "EXP/0",
+      "function": "EXP",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", EXP())"
+    },
+    {
+      "id": "EXP/1",
+      "function": "EXP",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", EXP(1))"
+    },
+    {
+      "id": "EXP/2",
+      "function": "EXP",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", EXP(1, 1))"
+    },
+    {
+      "id": "LN/0",
+      "function": "LN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", LN())"
+    },
+    {
+      "id": "LN/1",
+      "function": "LN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", LN(1))"
+    },
+    {
+      "id": "LN/2",
+      "function": "LN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", LN(1, 1))"
+    },
+    {
+      "id": "LOG/0",
+      "function": "LOG",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", LOG())"
+    },
+    {
+      "id": "LOG/1",
+      "function": "LOG",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", LOG(1))"
+    },
+    {
+      "id": "LOG/2",
+      "function": "LOG",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", LOG(1, 1))"
+    },
+    {
+      "id": "LOG/3",
+      "function": "LOG",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", LOG(1, 1, 1))"
+    },
+    {
+      "id": "LOG10/0",
+      "function": "LOG10",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", LOG10())"
+    },
+    {
+      "id": "LOG10/1",
+      "function": "LOG10",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", LOG10(1))"
+    },
+    {
+      "id": "LOG10/2",
+      "function": "LOG10",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", LOG10(1, 1))"
+    },
+    {
+      "id": "SIN/0",
+      "function": "SIN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SIN())"
+    },
+    {
+      "id": "SIN/1",
+      "function": "SIN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SIN(1))"
+    },
+    {
+      "id": "SIN/2",
+      "function": "SIN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SIN(1, 1))"
+    },
+    {
+      "id": "COS/0",
+      "function": "COS",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COS())"
+    },
+    {
+      "id": "COS/1",
+      "function": "COS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COS(1))"
+    },
+    {
+      "id": "COS/2",
+      "function": "COS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COS(1, 1))"
+    },
+    {
+      "id": "TAN/0",
+      "function": "TAN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", TAN())"
+    },
+    {
+      "id": "TAN/1",
+      "function": "TAN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TAN(1))"
+    },
+    {
+      "id": "TAN/2",
+      "function": "TAN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", TAN(1, 1))"
+    },
+    {
+      "id": "COT/0",
+      "function": "COT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COT())"
+    },
+    {
+      "id": "COT/1",
+      "function": "COT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COT(1))"
+    },
+    {
+      "id": "COT/2",
+      "function": "COT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COT(1, 1))"
+    },
+    {
+      "id": "ASIN/0",
+      "function": "ASIN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ASIN())"
+    },
+    {
+      "id": "ASIN/1",
+      "function": "ASIN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ASIN(1))"
+    },
+    {
+      "id": "ASIN/2",
+      "function": "ASIN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ASIN(1, 1))"
+    },
+    {
+      "id": "ACOS/0",
+      "function": "ACOS",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ACOS())"
+    },
+    {
+      "id": "ACOS/1",
+      "function": "ACOS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ACOS(1))"
+    },
+    {
+      "id": "ACOS/2",
+      "function": "ACOS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ACOS(1, 1))"
+    },
+    {
+      "id": "ATAN/0",
+      "function": "ATAN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ATAN())"
+    },
+    {
+      "id": "ATAN/1",
+      "function": "ATAN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ATAN(1))"
+    },
+    {
+      "id": "ATAN/2",
+      "function": "ATAN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ATAN(1, 1))"
+    },
+    {
+      "id": "ACOT/0",
+      "function": "ACOT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ACOT())"
+    },
+    {
+      "id": "ACOT/1",
+      "function": "ACOT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ACOT(1))"
+    },
+    {
+      "id": "ACOT/2",
+      "function": "ACOT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ACOT(1, 1))"
+    },
+    {
+      "id": "SINH/0",
+      "function": "SINH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SINH())"
+    },
+    {
+      "id": "SINH/1",
+      "function": "SINH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SINH(1))"
+    },
+    {
+      "id": "SINH/2",
+      "function": "SINH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SINH(1, 1))"
+    },
+    {
+      "id": "COSH/0",
+      "function": "COSH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COSH())"
+    },
+    {
+      "id": "COSH/1",
+      "function": "COSH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COSH(1))"
+    },
+    {
+      "id": "COSH/2",
+      "function": "COSH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COSH(1, 1))"
+    },
+    {
+      "id": "TANH/0",
+      "function": "TANH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", TANH())"
+    },
+    {
+      "id": "TANH/1",
+      "function": "TANH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TANH(1))"
+    },
+    {
+      "id": "TANH/2",
+      "function": "TANH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", TANH(1, 1))"
+    },
+    {
+      "id": "COTH/0",
+      "function": "COTH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COTH())"
+    },
+    {
+      "id": "COTH/1",
+      "function": "COTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COTH(1))"
+    },
+    {
+      "id": "COTH/2",
+      "function": "COTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COTH(1, 1))"
+    },
+    {
+      "id": "ASINH/0",
+      "function": "ASINH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ASINH())"
+    },
+    {
+      "id": "ASINH/1",
+      "function": "ASINH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ASINH(1))"
+    },
+    {
+      "id": "ASINH/2",
+      "function": "ASINH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ASINH(1, 1))"
+    },
+    {
+      "id": "ACOSH/0",
+      "function": "ACOSH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ACOSH())"
+    },
+    {
+      "id": "ACOSH/1",
+      "function": "ACOSH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ACOSH(1))"
+    },
+    {
+      "id": "ACOSH/2",
+      "function": "ACOSH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ACOSH(1, 1))"
+    },
+    {
+      "id": "ATANH/0",
+      "function": "ATANH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ATANH())"
+    },
+    {
+      "id": "ATANH/1",
+      "function": "ATANH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ATANH(1))"
+    },
+    {
+      "id": "ATANH/2",
+      "function": "ATANH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ATANH(1, 1))"
+    },
+    {
+      "id": "ACOTH/0",
+      "function": "ACOTH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ACOTH())"
+    },
+    {
+      "id": "ACOTH/1",
+      "function": "ACOTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ACOTH(1))"
+    },
+    {
+      "id": "ACOTH/2",
+      "function": "ACOTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ACOTH(1, 1))"
+    },
+    {
+      "id": "DEGREES/0",
+      "function": "DEGREES",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", DEGREES())"
+    },
+    {
+      "id": "DEGREES/1",
+      "function": "DEGREES",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", DEGREES(1))"
+    },
+    {
+      "id": "DEGREES/2",
+      "function": "DEGREES",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", DEGREES(1, 1))"
+    },
+    {
+      "id": "RADIANS/0",
+      "function": "RADIANS",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", RADIANS())"
+    },
+    {
+      "id": "RADIANS/1",
+      "function": "RADIANS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", RADIANS(1))"
+    },
+    {
+      "id": "RADIANS/2",
+      "function": "RADIANS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", RADIANS(1, 1))"
+    },
+    {
+      "id": "FACT/0",
+      "function": "FACT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", FACT())"
+    },
+    {
+      "id": "FACT/1",
+      "function": "FACT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", FACT(1))"
+    },
+    {
+      "id": "FACT/2",
+      "function": "FACT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", FACT(1, 1))"
+    },
+    {
+      "id": "COMBIN/1",
+      "function": "COMBIN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COMBIN(1))"
+    },
+    {
+      "id": "COMBIN/2",
+      "function": "COMBIN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COMBIN(1, 1))"
+    },
+    {
+      "id": "COMBIN/3",
+      "function": "COMBIN",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COMBIN(1, 1, 1))"
+    },
+    {
+      "id": "COMBINA/1",
+      "function": "COMBINA",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COMBINA(1))"
+    },
+    {
+      "id": "COMBINA/2",
+      "function": "COMBINA",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COMBINA(1, 1))"
+    },
+    {
+      "id": "COMBINA/3",
+      "function": "COMBINA",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COMBINA(1, 1, 1))"
+    },
+    {
+      "id": "PERMUT/1",
+      "function": "PERMUT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PERMUT(1))"
+    },
+    {
+      "id": "PERMUT/2",
+      "function": "PERMUT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PERMUT(1, 1))"
+    },
+    {
+      "id": "PERMUT/3",
+      "function": "PERMUT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PERMUT(1, 1, 1))"
+    },
+    {
+      "id": "GCD/1",
+      "function": "GCD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", GCD(1))"
+    },
+    {
+      "id": "GCD/2",
+      "function": "GCD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", GCD(1, 1))"
+    },
+    {
+      "id": "GCD/3",
+      "function": "GCD",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", GCD(1, 1, 1))"
+    },
+    {
+      "id": "LCM/1",
+      "function": "LCM",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", LCM(1))"
+    },
+    {
+      "id": "LCM/2",
+      "function": "LCM",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", LCM(1, 1))"
+    },
+    {
+      "id": "LCM/3",
+      "function": "LCM",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", LCM(1, 1, 1))"
+    },
+    {
+      "id": "QUOTIENT/1",
+      "function": "QUOTIENT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", QUOTIENT(1))"
+    },
+    {
+      "id": "QUOTIENT/2",
+      "function": "QUOTIENT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", QUOTIENT(1, 1))"
+    },
+    {
+      "id": "QUOTIENT/3",
+      "function": "QUOTIENT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", QUOTIENT(1, 1, 1))"
+    },
+    {
+      "id": "EVEN/0",
+      "function": "EVEN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", EVEN())"
+    },
+    {
+      "id": "EVEN/1",
+      "function": "EVEN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", EVEN(1))"
+    },
+    {
+      "id": "EVEN/2",
+      "function": "EVEN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", EVEN(1, 1))"
+    },
+    {
+      "id": "ODD/0",
+      "function": "ODD",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ODD())"
+    },
+    {
+      "id": "ODD/1",
+      "function": "ODD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ODD(1))"
+    },
+    {
+      "id": "ODD/2",
+      "function": "ODD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ODD(1, 1))"
+    },
+    {
+      "id": "MROUND/1",
+      "function": "MROUND",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MROUND(1))"
+    },
+    {
+      "id": "MROUND/2",
+      "function": "MROUND",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MROUND(1, 1))"
+    },
+    {
+      "id": "MROUND/3",
+      "function": "MROUND",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", MROUND(1, 1, 1))"
+    },
+    {
+      "id": "CEILING/1",
+      "function": "CEILING",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CEILING(1))"
+    },
+    {
+      "id": "CEILING/2",
+      "function": "CEILING",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CEILING(1, 1))"
+    },
+    {
+      "id": "CEILING/3",
+      "function": "CEILING",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CEILING(1, 1, 1))"
+    },
+    {
+      "id": "ISO.CEILING/0",
+      "function": "ISO.CEILING",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING())"
+    },
+    {
+      "id": "ISO.CEILING/1",
+      "function": "ISO.CEILING",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING(1))"
+    },
+    {
+      "id": "ISO.CEILING/2",
+      "function": "ISO.CEILING",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING(1, 1))"
+    },
+    {
+      "id": "ISO.CEILING/3",
+      "function": "ISO.CEILING",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", ISO.CEILING(1, 1, 1))"
+    },
+    {
+      "id": "FLOOR/1",
+      "function": "FLOOR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", FLOOR(1))"
+    },
+    {
+      "id": "FLOOR/2",
+      "function": "FLOOR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", FLOOR(1, 1))"
+    },
+    {
+      "id": "FLOOR/3",
+      "function": "FLOOR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", FLOOR(1, 1, 1))"
+    },
+    {
+      "id": "RAND/0",
+      "function": "RAND",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", RAND())"
+    },
+    {
+      "id": "RAND/1",
+      "function": "RAND",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", RAND(1))"
+    },
+    {
+      "id": "RANDBETWEEN/1",
+      "function": "RANDBETWEEN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", RANDBETWEEN(1))"
+    },
+    {
+      "id": "RANDBETWEEN/2",
+      "function": "RANDBETWEEN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", RANDBETWEEN(1, 1))"
+    },
+    {
+      "id": "RANDBETWEEN/3",
+      "function": "RANDBETWEEN",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", RANDBETWEEN(1, 1, 1))"
+    },
+    {
+      "id": "PRODUCT/0",
+      "function": "PRODUCT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", PRODUCT())"
+    },
+    {
+      "id": "PRODUCT/1",
+      "function": "PRODUCT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PRODUCT(Sales[Qty]))"
+    },
+    {
+      "id": "PRODUCT/2",
+      "function": "PRODUCT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PRODUCT(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "PRODUCTX/1",
+      "function": "PRODUCTX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PRODUCTX(Sales))"
+    },
+    {
+      "id": "PRODUCTX/2",
+      "function": "PRODUCTX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PRODUCTX(Sales, 1))"
+    },
+    {
+      "id": "PRODUCTX/3",
+      "function": "PRODUCTX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PRODUCTX(Sales, 1, 1))"
+    },
+    {
+      "id": "MEDIAN/0",
+      "function": "MEDIAN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", MEDIAN())"
+    },
+    {
+      "id": "MEDIAN/1",
+      "function": "MEDIAN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MEDIAN(Sales[Qty]))"
+    },
+    {
+      "id": "MEDIAN/2",
+      "function": "MEDIAN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MEDIAN(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "MEDIANX/1",
+      "function": "MEDIANX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MEDIANX(Sales))"
+    },
+    {
+      "id": "MEDIANX/2",
+      "function": "MEDIANX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MEDIANX(Sales, 1))"
+    },
+    {
+      "id": "MEDIANX/3",
+      "function": "MEDIANX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", MEDIANX(Sales, 1, 1))"
+    },
+    {
+      "id": "PERCENTILE.INC/1",
+      "function": "PERCENTILE.INC",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.INC(Sales[Qty]))"
+    },
+    {
+      "id": "PERCENTILE.INC/2",
+      "function": "PERCENTILE.INC",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.INC(Sales[Qty], 1))"
+    },
+    {
+      "id": "PERCENTILE.INC/3",
+      "function": "PERCENTILE.INC",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.INC(Sales[Qty], 1, 1))"
+    },
+    {
+      "id": "PERCENTILE.EXC/1",
+      "function": "PERCENTILE.EXC",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.EXC(Sales[Qty]))"
+    },
+    {
+      "id": "PERCENTILE.EXC/2",
+      "function": "PERCENTILE.EXC",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.EXC(Sales[Qty], 1))"
+    },
+    {
+      "id": "PERCENTILE.EXC/3",
+      "function": "PERCENTILE.EXC",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PERCENTILE.EXC(Sales[Qty], 1, 1))"
+    },
+    {
+      "id": "PERCENTILEX.INC/2",
+      "function": "PERCENTILEX.INC",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.INC(Sales, 1))"
+    },
+    {
+      "id": "PERCENTILEX.INC/3",
+      "function": "PERCENTILEX.INC",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.INC(Sales, 1, 1))"
+    },
+    {
+      "id": "PERCENTILEX.INC/4",
+      "function": "PERCENTILEX.INC",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.INC(Sales, 1, 1, 1))"
+    },
+    {
+      "id": "PERCENTILEX.EXC/2",
+      "function": "PERCENTILEX.EXC",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.EXC(Sales, 1))"
+    },
+    {
+      "id": "PERCENTILEX.EXC/3",
+      "function": "PERCENTILEX.EXC",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.EXC(Sales, 1, 1))"
+    },
+    {
+      "id": "PERCENTILEX.EXC/4",
+      "function": "PERCENTILEX.EXC",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", PERCENTILEX.EXC(Sales, 1, 1, 1))"
+    },
+    {
+      "id": "STDEV.S/0",
+      "function": "STDEV.S",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", STDEV.S())"
+    },
+    {
+      "id": "STDEV.S/1",
+      "function": "STDEV.S",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", STDEV.S(Sales[Qty]))"
+    },
+    {
+      "id": "STDEV.S/2",
+      "function": "STDEV.S",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", STDEV.S(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "STDEV.P/0",
+      "function": "STDEV.P",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", STDEV.P())"
+    },
+    {
+      "id": "STDEV.P/1",
+      "function": "STDEV.P",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", STDEV.P(Sales[Qty]))"
+    },
+    {
+      "id": "STDEV.P/2",
+      "function": "STDEV.P",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", STDEV.P(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "STDEVX.S/1",
+      "function": "STDEVX.S",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", STDEVX.S(Sales))"
+    },
+    {
+      "id": "STDEVX.S/2",
+      "function": "STDEVX.S",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", STDEVX.S(Sales, 1))"
+    },
+    {
+      "id": "STDEVX.S/3",
+      "function": "STDEVX.S",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", STDEVX.S(Sales, 1, 1))"
+    },
+    {
+      "id": "STDEVX.P/1",
+      "function": "STDEVX.P",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", STDEVX.P(Sales))"
+    },
+    {
+      "id": "STDEVX.P/2",
+      "function": "STDEVX.P",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", STDEVX.P(Sales, 1))"
+    },
+    {
+      "id": "STDEVX.P/3",
+      "function": "STDEVX.P",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", STDEVX.P(Sales, 1, 1))"
+    },
+    {
+      "id": "VAR.S/0",
+      "function": "VAR.S",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", VAR.S())"
+    },
+    {
+      "id": "VAR.S/1",
+      "function": "VAR.S",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", VAR.S(Sales[Qty]))"
+    },
+    {
+      "id": "VAR.S/2",
+      "function": "VAR.S",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", VAR.S(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "VAR.P/0",
+      "function": "VAR.P",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", VAR.P())"
+    },
+    {
+      "id": "VAR.P/1",
+      "function": "VAR.P",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", VAR.P(Sales[Qty]))"
+    },
+    {
+      "id": "VAR.P/2",
+      "function": "VAR.P",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", VAR.P(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "VARX.S/1",
+      "function": "VARX.S",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", VARX.S(Sales))"
+    },
+    {
+      "id": "VARX.S/2",
+      "function": "VARX.S",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", VARX.S(Sales, 1))"
+    },
+    {
+      "id": "VARX.S/3",
+      "function": "VARX.S",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", VARX.S(Sales, 1, 1))"
+    },
+    {
+      "id": "VARX.P/1",
+      "function": "VARX.P",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", VARX.P(Sales))"
+    },
+    {
+      "id": "VARX.P/2",
+      "function": "VARX.P",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", VARX.P(Sales, 1))"
+    },
+    {
+      "id": "VARX.P/3",
+      "function": "VARX.P",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", VARX.P(Sales, 1, 1))"
+    },
+    {
+      "id": "RANKX/1",
+      "function": "RANKX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", RANKX(Sales))"
+    },
+    {
+      "id": "RANKX/2",
+      "function": "RANKX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", RANKX(Sales, 1))"
+    },
+    {
+      "id": "RANKX/5",
+      "function": "RANKX",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", RANKX(Sales, 1, 1, ASC, 1))"
+    },
+    {
+      "id": "RANKX/6",
+      "function": "RANKX",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", RANKX(Sales, 1, 1, ASC, 1, 1))"
+    },
+    {
+      "id": "RANK.EQ/1",
+      "function": "RANK.EQ",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(1))"
+    },
+    {
+      "id": "RANK.EQ/2",
+      "function": "RANK.EQ",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(1, Sales[Qty]))"
+    },
+    {
+      "id": "RANK.EQ/3",
+      "function": "RANK.EQ",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(1, Sales[Qty], ASC))"
+    },
+    {
+      "id": "RANK.EQ/4",
+      "function": "RANK.EQ",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", RANK.EQ(1, Sales[Qty], ASC, ASC))"
+    },
+    {
+      "id": "GEOMEAN/0",
+      "function": "GEOMEAN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", GEOMEAN())"
+    },
+    {
+      "id": "GEOMEAN/1",
+      "function": "GEOMEAN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", GEOMEAN(Sales[Qty]))"
+    },
+    {
+      "id": "GEOMEAN/2",
+      "function": "GEOMEAN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", GEOMEAN(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "GEOMEANX/1",
+      "function": "GEOMEANX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", GEOMEANX(Sales))"
+    },
+    {
+      "id": "GEOMEANX/2",
+      "function": "GEOMEANX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", GEOMEANX(Sales, 1))"
+    },
+    {
+      "id": "GEOMEANX/3",
+      "function": "GEOMEANX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", GEOMEANX(Sales, 1, 1))"
+    },
+    {
+      "id": "NORM.DIST/3",
+      "function": "NORM.DIST",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", NORM.DIST(1, 1, 1))"
+    },
+    {
+      "id": "NORM.DIST/4",
+      "function": "NORM.DIST",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", NORM.DIST(1, 1, 1, TRUE()))"
+    },
+    {
+      "id": "NORM.DIST/5",
+      "function": "NORM.DIST",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", NORM.DIST(1, 1, 1, TRUE(), TRUE()))"
+    },
+    {
+      "id": "NORM.INV/2",
+      "function": "NORM.INV",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", NORM.INV(1, 1))"
+    },
+    {
+      "id": "NORM.INV/3",
+      "function": "NORM.INV",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", NORM.INV(1, 1, 1))"
+    },
+    {
+      "id": "NORM.INV/4",
+      "function": "NORM.INV",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", NORM.INV(1, 1, 1, 1))"
+    },
+    {
+      "id": "NORM.S.DIST/1",
+      "function": "NORM.S.DIST",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", NORM.S.DIST(1))"
+    },
+    {
+      "id": "NORM.S.DIST/2",
+      "function": "NORM.S.DIST",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", NORM.S.DIST(1, TRUE()))"
+    },
+    {
+      "id": "NORM.S.DIST/3",
+      "function": "NORM.S.DIST",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", NORM.S.DIST(1, TRUE(), TRUE()))"
+    },
+    {
+      "id": "NORM.S.INV/0",
+      "function": "NORM.S.INV",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", NORM.S.INV())"
+    },
+    {
+      "id": "NORM.S.INV/1",
+      "function": "NORM.S.INV",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", NORM.S.INV(1))"
+    },
+    {
+      "id": "NORM.S.INV/2",
+      "function": "NORM.S.INV",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", NORM.S.INV(1, 1))"
+    },
+    {
+      "id": "EXPON.DIST/2",
+      "function": "EXPON.DIST",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", EXPON.DIST(1, 1))"
+    },
+    {
+      "id": "EXPON.DIST/3",
+      "function": "EXPON.DIST",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", EXPON.DIST(1, 1, TRUE()))"
+    },
+    {
+      "id": "EXPON.DIST/4",
+      "function": "EXPON.DIST",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", EXPON.DIST(1, 1, TRUE(), TRUE()))"
+    },
+    {
+      "id": "POISSON.DIST/2",
+      "function": "POISSON.DIST",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", POISSON.DIST(1, 1))"
+    },
+    {
+      "id": "POISSON.DIST/3",
+      "function": "POISSON.DIST",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", POISSON.DIST(1, 1, TRUE()))"
+    },
+    {
+      "id": "POISSON.DIST/4",
+      "function": "POISSON.DIST",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", POISSON.DIST(1, 1, TRUE(), TRUE()))"
+    },
+    {
+      "id": "BETA.DIST/3",
+      "function": "BETA.DIST",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", BETA.DIST(1, 1, 1))"
+    },
+    {
+      "id": "BETA.DIST/4",
+      "function": "BETA.DIST",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", BETA.DIST(1, 1, 1, TRUE()))"
+    },
+    {
+      "id": "BETA.DIST/6",
+      "function": "BETA.DIST",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", BETA.DIST(1, 1, 1, TRUE(), 1, 1))"
+    },
+    {
+      "id": "BETA.DIST/7",
+      "function": "BETA.DIST",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", BETA.DIST(1, 1, 1, TRUE(), 1, 1, 1))"
+    },
+    {
+      "id": "BETA.INV/2",
+      "function": "BETA.INV",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", BETA.INV(1, 1))"
+    },
+    {
+      "id": "BETA.INV/3",
+      "function": "BETA.INV",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", BETA.INV(1, 1, 1))"
+    },
+    {
+      "id": "BETA.INV/5",
+      "function": "BETA.INV",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", BETA.INV(1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "BETA.INV/6",
+      "function": "BETA.INV",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", BETA.INV(1, 1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "CHISQ.DIST/2",
+      "function": "CHISQ.DIST",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST(1, 1))"
+    },
+    {
+      "id": "CHISQ.DIST/3",
+      "function": "CHISQ.DIST",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST(1, 1, TRUE()))"
+    },
+    {
+      "id": "CHISQ.DIST/4",
+      "function": "CHISQ.DIST",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST(1, 1, TRUE(), TRUE()))"
+    },
+    {
+      "id": "CHISQ.DIST.RT/1",
+      "function": "CHISQ.DIST.RT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST.RT(1))"
+    },
+    {
+      "id": "CHISQ.DIST.RT/2",
+      "function": "CHISQ.DIST.RT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST.RT(1, 1))"
+    },
+    {
+      "id": "CHISQ.DIST.RT/3",
+      "function": "CHISQ.DIST.RT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CHISQ.DIST.RT(1, 1, 1))"
+    },
+    {
+      "id": "CHISQ.INV/1",
+      "function": "CHISQ.INV",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV(1))"
+    },
+    {
+      "id": "CHISQ.INV/2",
+      "function": "CHISQ.INV",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV(1, 1))"
+    },
+    {
+      "id": "CHISQ.INV/3",
+      "function": "CHISQ.INV",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV(1, 1, 1))"
+    },
+    {
+      "id": "CHISQ.INV.RT/1",
+      "function": "CHISQ.INV.RT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV.RT(1))"
+    },
+    {
+      "id": "CHISQ.INV.RT/2",
+      "function": "CHISQ.INV.RT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV.RT(1, 1))"
+    },
+    {
+      "id": "CHISQ.INV.RT/3",
+      "function": "CHISQ.INV.RT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CHISQ.INV.RT(1, 1, 1))"
+    },
+    {
+      "id": "T.DIST/2",
+      "function": "T.DIST",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", T.DIST(1, 1))"
+    },
+    {
+      "id": "T.DIST/3",
+      "function": "T.DIST",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", T.DIST(1, 1, TRUE()))"
+    },
+    {
+      "id": "T.DIST/4",
+      "function": "T.DIST",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", T.DIST(1, 1, TRUE(), TRUE()))"
+    },
+    {
+      "id": "T.DIST.2T/1",
+      "function": "T.DIST.2T",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", T.DIST.2T(1))"
+    },
+    {
+      "id": "T.DIST.2T/2",
+      "function": "T.DIST.2T",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", T.DIST.2T(1, 1))"
+    },
+    {
+      "id": "T.DIST.2T/3",
+      "function": "T.DIST.2T",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", T.DIST.2T(1, 1, 1))"
+    },
+    {
+      "id": "T.DIST.RT/1",
+      "function": "T.DIST.RT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", T.DIST.RT(1))"
+    },
+    {
+      "id": "T.DIST.RT/2",
+      "function": "T.DIST.RT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", T.DIST.RT(1, 1))"
+    },
+    {
+      "id": "T.DIST.RT/3",
+      "function": "T.DIST.RT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", T.DIST.RT(1, 1, 1))"
+    },
+    {
+      "id": "T.INV/1",
+      "function": "T.INV",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", T.INV(1))"
+    },
+    {
+      "id": "T.INV/2",
+      "function": "T.INV",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", T.INV(1, 1))"
+    },
+    {
+      "id": "T.INV/3",
+      "function": "T.INV",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", T.INV(1, 1, 1))"
+    },
+    {
+      "id": "T.INV.2T/1",
+      "function": "T.INV.2T",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", T.INV.2T(1))"
+    },
+    {
+      "id": "T.INV.2T/2",
+      "function": "T.INV.2T",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", T.INV.2T(1, 1))"
+    },
+    {
+      "id": "T.INV.2T/3",
+      "function": "T.INV.2T",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", T.INV.2T(1, 1, 1))"
+    },
+    {
+      "id": "CONFIDENCE.NORM/2",
+      "function": "CONFIDENCE.NORM",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.NORM(1, 1))"
+    },
+    {
+      "id": "CONFIDENCE.NORM/3",
+      "function": "CONFIDENCE.NORM",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.NORM(1, 1, 1))"
+    },
+    {
+      "id": "CONFIDENCE.NORM/4",
+      "function": "CONFIDENCE.NORM",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.NORM(1, 1, 1, 1))"
+    },
+    {
+      "id": "CONFIDENCE.T/2",
+      "function": "CONFIDENCE.T",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.T(1, 1))"
+    },
+    {
+      "id": "CONFIDENCE.T/3",
+      "function": "CONFIDENCE.T",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.T(1, 1, 1))"
+    },
+    {
+      "id": "CONFIDENCE.T/4",
+      "function": "CONFIDENCE.T",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", CONFIDENCE.T(1, 1, 1, 1))"
+    },
+    {
+      "id": "PMT/2",
+      "function": "PMT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PMT(1, 1))"
+    },
+    {
+      "id": "PMT/3",
+      "function": "PMT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PMT(1, 1, 1))"
+    },
+    {
+      "id": "PMT/5",
+      "function": "PMT",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", PMT(1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "PMT/6",
+      "function": "PMT",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", PMT(1, 1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "PV/2",
+      "function": "PV",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PV(1, 1))"
+    },
+    {
+      "id": "PV/3",
+      "function": "PV",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PV(1, 1, 1))"
+    },
+    {
+      "id": "PV/5",
+      "function": "PV",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", PV(1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "PV/6",
+      "function": "PV",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", PV(1, 1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "FV/2",
+      "function": "FV",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", FV(1, 1))"
+    },
+    {
+      "id": "FV/3",
+      "function": "FV",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", FV(1, 1, 1))"
+    },
+    {
+      "id": "FV/5",
+      "function": "FV",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", FV(1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "FV/6",
+      "function": "FV",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", FV(1, 1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "NPER/2",
+      "function": "NPER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", NPER(1, 1))"
+    },
+    {
+      "id": "NPER/3",
+      "function": "NPER",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", NPER(1, 1, 1))"
+    },
+    {
+      "id": "NPER/5",
+      "function": "NPER",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", NPER(1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "NPER/6",
+      "function": "NPER",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", NPER(1, 1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "UPPER/0",
+      "function": "UPPER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", UPPER())"
+    },
+    {
+      "id": "UPPER/1",
+      "function": "UPPER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", UPPER(\"a\"))"
+    },
+    {
+      "id": "UPPER/2",
+      "function": "UPPER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", UPPER(\"a\", \"a\"))"
+    },
+    {
+      "id": "LOWER/0",
+      "function": "LOWER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", LOWER())"
+    },
+    {
+      "id": "LOWER/1",
+      "function": "LOWER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", LOWER(\"a\"))"
+    },
+    {
+      "id": "LOWER/2",
+      "function": "LOWER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", LOWER(\"a\", \"a\"))"
+    },
+    {
+      "id": "LEN/0",
+      "function": "LEN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", LEN())"
+    },
+    {
+      "id": "LEN/1",
+      "function": "LEN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", LEN(\"a\"))"
+    },
+    {
+      "id": "LEN/2",
+      "function": "LEN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", LEN(\"a\", \"a\"))"
+    },
+    {
+      "id": "LEFT/0",
+      "function": "LEFT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", LEFT())"
+    },
+    {
+      "id": "LEFT/1",
+      "function": "LEFT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", LEFT(\"a\"))"
+    },
+    {
+      "id": "LEFT/2",
+      "function": "LEFT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", LEFT(\"a\", 1))"
+    },
+    {
+      "id": "LEFT/3",
+      "function": "LEFT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", LEFT(\"a\", 1, 1))"
+    },
+    {
+      "id": "RIGHT/0",
+      "function": "RIGHT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", RIGHT())"
+    },
+    {
+      "id": "RIGHT/1",
+      "function": "RIGHT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", RIGHT(\"a\"))"
+    },
+    {
+      "id": "RIGHT/2",
+      "function": "RIGHT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", RIGHT(\"a\", 1))"
+    },
+    {
+      "id": "RIGHT/3",
+      "function": "RIGHT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", RIGHT(\"a\", 1, 1))"
+    },
+    {
+      "id": "MID/2",
+      "function": "MID",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MID(\"a\", 1))"
+    },
+    {
+      "id": "MID/3",
+      "function": "MID",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", MID(\"a\", 1, 1))"
+    },
+    {
+      "id": "MID/4",
+      "function": "MID",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", MID(\"a\", 1, 1, 1))"
+    },
+    {
+      "id": "TRIM/0",
+      "function": "TRIM",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", TRIM())"
+    },
+    {
+      "id": "TRIM/1",
+      "function": "TRIM",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TRIM(\"a\"))"
+    },
+    {
+      "id": "TRIM/2",
+      "function": "TRIM",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", TRIM(\"a\", \"a\"))"
+    },
+    {
+      "id": "CONCATENATE/1",
+      "function": "CONCATENATE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CONCATENATE(\"a\"))"
+    },
+    {
+      "id": "CONCATENATE/2",
+      "function": "CONCATENATE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CONCATENATE(\"a\", \"a\"))"
+    },
+    {
+      "id": "CONCATENATE/3",
+      "function": "CONCATENATE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CONCATENATE(\"a\", \"a\", \"a\"))"
+    },
+    {
+      "id": "COMBINEVALUES/2",
+      "function": "COMBINEVALUES",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COMBINEVALUES(\"a\", 1))"
+    },
+    {
+      "id": "COMBINEVALUES/3",
+      "function": "COMBINEVALUES",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COMBINEVALUES(\"a\", 1, 1))"
+    },
+    {
+      "id": "COMBINEVALUES/7",
+      "function": "COMBINEVALUES",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", COMBINEVALUES(\"a\", 1, 1, 1, 1, 1, 1))"
+    },
+    {
+      "id": "SUBSTITUTE/2",
+      "function": "SUBSTITUTE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SUBSTITUTE(\"a\", \"a\"))"
+    },
+    {
+      "id": "SUBSTITUTE/3",
+      "function": "SUBSTITUTE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", SUBSTITUTE(\"a\", \"a\", \"a\"))"
+    },
+    {
+      "id": "SUBSTITUTE/4",
+      "function": "SUBSTITUTE",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", SUBSTITUTE(\"a\", \"a\", \"a\", 1))"
+    },
+    {
+      "id": "SUBSTITUTE/5",
+      "function": "SUBSTITUTE",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", SUBSTITUTE(\"a\", \"a\", \"a\", 1, 1))"
+    },
+    {
+      "id": "REPLACE/3",
+      "function": "REPLACE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", REPLACE(\"a\", 1, 1))"
+    },
+    {
+      "id": "REPLACE/4",
+      "function": "REPLACE",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", REPLACE(\"a\", 1, 1, \"a\"))"
+    },
+    {
+      "id": "REPLACE/5",
+      "function": "REPLACE",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", REPLACE(\"a\", 1, 1, \"a\", \"a\"))"
+    },
+    {
+      "id": "REPT/1",
+      "function": "REPT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", REPT(\"a\"))"
+    },
+    {
+      "id": "REPT/2",
+      "function": "REPT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", REPT(\"a\", 1))"
+    },
+    {
+      "id": "REPT/3",
+      "function": "REPT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", REPT(\"a\", 1, 1))"
+    },
+    {
+      "id": "SEARCH/1",
+      "function": "SEARCH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"a\"))"
+    },
+    {
+      "id": "SEARCH/2",
+      "function": "SEARCH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"a\", \"a\"))"
+    },
+    {
+      "id": "SEARCH/4",
+      "function": "SEARCH",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"a\", \"a\", 1, 1))"
+    },
+    {
+      "id": "SEARCH/5",
+      "function": "SEARCH",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", SEARCH(\"a\", \"a\", 1, 1, 1))"
+    },
+    {
+      "id": "FIND/1",
+      "function": "FIND",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", FIND(\"a\"))"
+    },
+    {
+      "id": "FIND/2",
+      "function": "FIND",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", FIND(\"a\", \"a\"))"
+    },
+    {
+      "id": "FIND/4",
+      "function": "FIND",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", FIND(\"a\", \"a\", 1, 1))"
+    },
+    {
+      "id": "FIND/5",
+      "function": "FIND",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", FIND(\"a\", \"a\", 1, 1, 1))"
+    },
+    {
+      "id": "CONTAINSSTRING/1",
+      "function": "CONTAINSSTRING",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRING(\"a\"))"
+    },
+    {
+      "id": "CONTAINSSTRING/2",
+      "function": "CONTAINSSTRING",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRING(\"a\", \"a\"))"
+    },
+    {
+      "id": "CONTAINSSTRING/3",
+      "function": "CONTAINSSTRING",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRING(\"a\", \"a\", \"a\"))"
+    },
+    {
+      "id": "CONTAINSSTRINGEXACT/1",
+      "function": "CONTAINSSTRINGEXACT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRINGEXACT(\"a\"))"
+    },
+    {
+      "id": "CONTAINSSTRINGEXACT/2",
+      "function": "CONTAINSSTRINGEXACT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRINGEXACT(\"a\", \"a\"))"
+    },
+    {
+      "id": "CONTAINSSTRINGEXACT/3",
+      "function": "CONTAINSSTRINGEXACT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CONTAINSSTRINGEXACT(\"a\", \"a\", \"a\"))"
+    },
+    {
+      "id": "EXACT/1",
+      "function": "EXACT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", EXACT(\"a\"))"
+    },
+    {
+      "id": "EXACT/2",
+      "function": "EXACT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", EXACT(\"a\", \"a\"))"
+    },
+    {
+      "id": "EXACT/3",
+      "function": "EXACT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", EXACT(\"a\", \"a\", \"a\"))"
+    },
+    {
+      "id": "VALUE/0",
+      "function": "VALUE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", VALUE())"
+    },
+    {
+      "id": "VALUE/1",
+      "function": "VALUE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", VALUE(\"a\"))"
+    },
+    {
+      "id": "VALUE/2",
+      "function": "VALUE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", VALUE(\"a\", \"a\"))"
+    },
+    {
+      "id": "FORMAT/1",
+      "function": "FORMAT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", FORMAT(1))"
+    },
+    {
+      "id": "FORMAT/2",
+      "function": "FORMAT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", FORMAT(1, \"a\"))"
+    },
+    {
+      "id": "FORMAT/3",
+      "function": "FORMAT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", FORMAT(1, \"a\", \"a\"))"
+    },
+    {
+      "id": "FORMAT/4",
+      "function": "FORMAT",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", FORMAT(1, \"a\", \"a\", \"a\"))"
+    },
+    {
+      "id": "FIXED/0",
+      "function": "FIXED",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", FIXED())"
+    },
+    {
+      "id": "FIXED/1",
+      "function": "FIXED",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", FIXED(1))"
+    },
+    {
+      "id": "FIXED/3",
+      "function": "FIXED",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", FIXED(1, 1, 1))"
+    },
+    {
+      "id": "FIXED/4",
+      "function": "FIXED",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", FIXED(1, 1, 1, 1))"
+    },
+    {
+      "id": "UNICHAR/0",
+      "function": "UNICHAR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", UNICHAR())"
+    },
+    {
+      "id": "UNICHAR/1",
+      "function": "UNICHAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", UNICHAR(1))"
+    },
+    {
+      "id": "UNICHAR/2",
+      "function": "UNICHAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", UNICHAR(1, 1))"
+    },
+    {
+      "id": "UNICODE/0",
+      "function": "UNICODE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", UNICODE())"
+    },
+    {
+      "id": "UNICODE/1",
+      "function": "UNICODE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", UNICODE(\"a\"))"
+    },
+    {
+      "id": "UNICODE/2",
+      "function": "UNICODE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", UNICODE(\"a\", \"a\"))"
+    },
+    {
+      "id": "DATE/2",
+      "function": "DATE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", DATE(1, 1))"
+    },
+    {
+      "id": "DATE/3",
+      "function": "DATE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", DATE(1, 1, 1))"
+    },
+    {
+      "id": "DATE/4",
+      "function": "DATE",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", DATE(1, 1, 1, 1))"
+    },
+    {
+      "id": "TIME/2",
+      "function": "TIME",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", TIME(1, 1))"
+    },
+    {
+      "id": "TIME/3",
+      "function": "TIME",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", TIME(1, 1, 1))"
+    },
+    {
+      "id": "TIME/4",
+      "function": "TIME",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", TIME(1, 1, 1, 1))"
+    },
+    {
+      "id": "DATEVALUE/0",
+      "function": "DATEVALUE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", DATEVALUE())"
+    },
+    {
+      "id": "DATEVALUE/1",
+      "function": "DATEVALUE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", DATEVALUE(\"2024-01-01\"))"
+    },
+    {
+      "id": "DATEVALUE/2",
+      "function": "DATEVALUE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", DATEVALUE(\"2024-01-01\", \"2024-01-01\"))"
+    },
+    {
+      "id": "TIMEVALUE/0",
+      "function": "TIMEVALUE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", TIMEVALUE())"
+    },
+    {
+      "id": "TIMEVALUE/1",
+      "function": "TIMEVALUE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TIMEVALUE(\"12:00\"))"
+    },
+    {
+      "id": "TIMEVALUE/2",
+      "function": "TIMEVALUE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", TIMEVALUE(\"12:00\", \"12:00\"))"
+    },
+    {
+      "id": "NOW/0",
+      "function": "NOW",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", NOW())"
+    },
+    {
+      "id": "NOW/1",
+      "function": "NOW",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", NOW(1))"
+    },
+    {
+      "id": "TODAY/0",
+      "function": "TODAY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", TODAY())"
+    },
+    {
+      "id": "TODAY/1",
+      "function": "TODAY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TODAY(1))"
+    },
+    {
+      "id": "UTCNOW/0",
+      "function": "UTCNOW",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", UTCNOW())"
+    },
+    {
+      "id": "UTCNOW/1",
+      "function": "UTCNOW",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", UTCNOW(1))"
+    },
+    {
+      "id": "UTCTODAY/0",
+      "function": "UTCTODAY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", UTCTODAY())"
+    },
+    {
+      "id": "UTCTODAY/1",
+      "function": "UTCTODAY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", UTCTODAY(1))"
+    },
+    {
+      "id": "YEAR/0",
+      "function": "YEAR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", YEAR())"
+    },
+    {
+      "id": "YEAR/1",
+      "function": "YEAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", YEAR(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "YEAR/2",
+      "function": "YEAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", YEAR(DATE(2024, 1, 1), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "QUARTER/0",
+      "function": "QUARTER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", QUARTER())"
+    },
+    {
+      "id": "QUARTER/1",
+      "function": "QUARTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", QUARTER(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "QUARTER/2",
+      "function": "QUARTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", QUARTER(DATE(2024, 1, 1), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "MONTH/0",
+      "function": "MONTH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", MONTH())"
+    },
+    {
+      "id": "MONTH/1",
+      "function": "MONTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MONTH(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "MONTH/2",
+      "function": "MONTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MONTH(DATE(2024, 1, 1), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "DAY/0",
+      "function": "DAY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", DAY())"
+    },
+    {
+      "id": "DAY/1",
+      "function": "DAY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", DAY(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "DAY/2",
+      "function": "DAY",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", DAY(DATE(2024, 1, 1), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "HOUR/0",
+      "function": "HOUR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", HOUR())"
+    },
+    {
+      "id": "HOUR/1",
+      "function": "HOUR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", HOUR(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "HOUR/2",
+      "function": "HOUR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", HOUR(DATE(2024, 1, 1), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "MINUTE/0",
+      "function": "MINUTE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", MINUTE())"
+    },
+    {
+      "id": "MINUTE/1",
+      "function": "MINUTE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MINUTE(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "MINUTE/2",
+      "function": "MINUTE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MINUTE(DATE(2024, 1, 1), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "SECOND/0",
+      "function": "SECOND",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SECOND())"
+    },
+    {
+      "id": "SECOND/1",
+      "function": "SECOND",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SECOND(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "SECOND/2",
+      "function": "SECOND",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SECOND(DATE(2024, 1, 1), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "WEEKDAY/0",
+      "function": "WEEKDAY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", WEEKDAY())"
+    },
+    {
+      "id": "WEEKDAY/1",
+      "function": "WEEKDAY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", WEEKDAY(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "WEEKDAY/2",
+      "function": "WEEKDAY",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", WEEKDAY(DATE(2024, 1, 1), 1))"
+    },
+    {
+      "id": "WEEKDAY/3",
+      "function": "WEEKDAY",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", WEEKDAY(DATE(2024, 1, 1), 1, 1))"
+    },
+    {
+      "id": "WEEKNUM/0",
+      "function": "WEEKNUM",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", WEEKNUM())"
+    },
+    {
+      "id": "WEEKNUM/1",
+      "function": "WEEKNUM",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", WEEKNUM(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "WEEKNUM/2",
+      "function": "WEEKNUM",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", WEEKNUM(DATE(2024, 1, 1), 1))"
+    },
+    {
+      "id": "WEEKNUM/3",
+      "function": "WEEKNUM",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", WEEKNUM(DATE(2024, 1, 1), 1, 1))"
+    },
+    {
+      "id": "EOMONTH/1",
+      "function": "EOMONTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", EOMONTH(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "EOMONTH/2",
+      "function": "EOMONTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", EOMONTH(DATE(2024, 1, 1), 1))"
+    },
+    {
+      "id": "EOMONTH/3",
+      "function": "EOMONTH",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", EOMONTH(DATE(2024, 1, 1), 1, 1))"
+    },
+    {
+      "id": "EDATE/1",
+      "function": "EDATE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", EDATE(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "EDATE/2",
+      "function": "EDATE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", EDATE(DATE(2024, 1, 1), 1))"
+    },
+    {
+      "id": "EDATE/3",
+      "function": "EDATE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", EDATE(DATE(2024, 1, 1), 1, 1))"
+    },
+    {
+      "id": "DATEDIFF/2",
+      "function": "DATEDIFF",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(1, 1))"
+    },
+    {
+      "id": "DATEDIFF/3",
+      "function": "DATEDIFF",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(1, 1, MONTH))"
+    },
+    {
+      "id": "DATEDIFF/4",
+      "function": "DATEDIFF",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", DATEDIFF(1, 1, MONTH, MONTH))"
+    },
+    {
+      "id": "YEARFRAC/1",
+      "function": "YEARFRAC",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "YEARFRAC/2",
+      "function": "YEARFRAC",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2024, 1, 1), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "YEARFRAC/3",
+      "function": "YEARFRAC",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2024, 1, 1), DATE(2024, 1, 1), 1))"
+    },
+    {
+      "id": "YEARFRAC/4",
+      "function": "YEARFRAC",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", YEARFRAC(DATE(2024, 1, 1), DATE(2024, 1, 1), 1, 1))"
+    },
+    {
+      "id": "NETWORKDAYS/1",
+      "function": "NETWORKDAYS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "NETWORKDAYS/2",
+      "function": "NETWORKDAYS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 1)))"
+    },
+    {
+      "id": "NETWORKDAYS/4",
+      "function": "NETWORKDAYS",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 1), 1, 1))"
+    },
+    {
+      "id": "NETWORKDAYS/5",
+      "function": "NETWORKDAYS",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 1), 1, 1, 1))"
+    },
+    {
+      "id": "CALENDAR/1",
+      "function": "CALENDAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDAR(DATE(2024, 1, 1))))"
+    },
+    {
+      "id": "CALENDAR/2",
+      "function": "CALENDAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 1, 1))))"
+    },
+    {
+      "id": "CALENDAR/3",
+      "function": "CALENDAR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 1, 1), DATE(2024, 1, 1))))"
+    },
+    {
+      "id": "CALENDARAUTO/0",
+      "function": "CALENDARAUTO",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDARAUTO()))"
+    },
+    {
+      "id": "CALENDARAUTO/1",
+      "function": "CALENDARAUTO",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDARAUTO(1)))"
+    },
+    {
+      "id": "CALENDARAUTO/2",
+      "function": "CALENDARAUTO",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALENDARAUTO(1, 1)))"
+    },
+    {
+      "id": "DATESYTD/0",
+      "function": "DATESYTD",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESYTD()))"
+    },
+    {
+      "id": "DATESYTD/1",
+      "function": "DATESYTD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESYTD('Date'[Date])))"
+    },
+    {
+      "id": "DATESYTD/2",
+      "function": "DATESYTD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESYTD('Date'[Date], \"12-31\")))"
+    },
+    {
+      "id": "DATESYTD/3",
+      "function": "DATESYTD",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESYTD('Date'[Date], \"12-31\", \"12-31\")))"
+    },
+    {
+      "id": "DATESQTD/0",
+      "function": "DATESQTD",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESQTD()))"
+    },
+    {
+      "id": "DATESQTD/1",
+      "function": "DATESQTD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESQTD('Date'[Date])))"
+    },
+    {
+      "id": "DATESQTD/2",
+      "function": "DATESQTD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESQTD('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "DATESMTD/0",
+      "function": "DATESMTD",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESMTD()))"
+    },
+    {
+      "id": "DATESMTD/1",
+      "function": "DATESMTD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESMTD('Date'[Date])))"
+    },
+    {
+      "id": "DATESMTD/2",
+      "function": "DATESMTD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESMTD('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "TOTALYTD/1",
+      "function": "TOTALYTD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TOTALYTD(1))"
+    },
+    {
+      "id": "TOTALYTD/2",
+      "function": "TOTALYTD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", TOTALYTD(1, 'Date'[Date]))"
+    },
+    {
+      "id": "TOTALYTD/4",
+      "function": "TOTALYTD",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", TOTALYTD(1, 'Date'[Date], TRUE(), \"12-31\"))"
+    },
+    {
+      "id": "TOTALYTD/5",
+      "function": "TOTALYTD",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", TOTALYTD(1, 'Date'[Date], TRUE(), \"12-31\", \"12-31\"))"
+    },
+    {
+      "id": "TOTALQTD/1",
+      "function": "TOTALQTD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TOTALQTD(1))"
+    },
+    {
+      "id": "TOTALQTD/2",
+      "function": "TOTALQTD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", TOTALQTD(1, 'Date'[Date]))"
+    },
+    {
+      "id": "TOTALQTD/3",
+      "function": "TOTALQTD",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", TOTALQTD(1, 'Date'[Date], TRUE()))"
+    },
+    {
+      "id": "TOTALQTD/4",
+      "function": "TOTALQTD",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", TOTALQTD(1, 'Date'[Date], TRUE(), TRUE()))"
+    },
+    {
+      "id": "TOTALMTD/1",
+      "function": "TOTALMTD",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", TOTALMTD(1))"
+    },
+    {
+      "id": "TOTALMTD/2",
+      "function": "TOTALMTD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", TOTALMTD(1, 'Date'[Date]))"
+    },
+    {
+      "id": "TOTALMTD/3",
+      "function": "TOTALMTD",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", TOTALMTD(1, 'Date'[Date], TRUE()))"
+    },
+    {
+      "id": "TOTALMTD/4",
+      "function": "TOTALMTD",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", TOTALMTD(1, 'Date'[Date], TRUE(), TRUE()))"
+    },
+    {
+      "id": "SAMEPERIODLASTYEAR/0",
+      "function": "SAMEPERIODLASTYEAR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SAMEPERIODLASTYEAR()))"
+    },
+    {
+      "id": "SAMEPERIODLASTYEAR/1",
+      "function": "SAMEPERIODLASTYEAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date])))"
+    },
+    {
+      "id": "SAMEPERIODLASTYEAR/2",
+      "function": "SAMEPERIODLASTYEAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "DATEADD/2",
+      "function": "DATEADD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATEADD('Date'[Date], 1)))"
+    },
+    {
+      "id": "DATEADD/3",
+      "function": "DATEADD",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATEADD('Date'[Date], 1, MONTH)))"
+    },
+    {
+      "id": "DATEADD/4",
+      "function": "DATEADD",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATEADD('Date'[Date], 1, MONTH, MONTH)))"
+    },
+    {
+      "id": "PARALLELPERIOD/2",
+      "function": "PARALLELPERIOD",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PARALLELPERIOD('Date'[Date], 1)))"
+    },
+    {
+      "id": "PARALLELPERIOD/3",
+      "function": "PARALLELPERIOD",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PARALLELPERIOD('Date'[Date], 1, MONTH)))"
+    },
+    {
+      "id": "PARALLELPERIOD/4",
+      "function": "PARALLELPERIOD",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PARALLELPERIOD('Date'[Date], 1, MONTH, MONTH)))"
+    },
+    {
+      "id": "PREVIOUSDAY/0",
+      "function": "PREVIOUSDAY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSDAY()))"
+    },
+    {
+      "id": "PREVIOUSDAY/1",
+      "function": "PREVIOUSDAY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSDAY('Date'[Date])))"
+    },
+    {
+      "id": "PREVIOUSDAY/2",
+      "function": "PREVIOUSDAY",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSDAY('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "PREVIOUSMONTH/0",
+      "function": "PREVIOUSMONTH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSMONTH()))"
+    },
+    {
+      "id": "PREVIOUSMONTH/1",
+      "function": "PREVIOUSMONTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSMONTH('Date'[Date])))"
+    },
+    {
+      "id": "PREVIOUSMONTH/2",
+      "function": "PREVIOUSMONTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSMONTH('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "PREVIOUSQUARTER/0",
+      "function": "PREVIOUSQUARTER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSQUARTER()))"
+    },
+    {
+      "id": "PREVIOUSQUARTER/1",
+      "function": "PREVIOUSQUARTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSQUARTER('Date'[Date])))"
+    },
+    {
+      "id": "PREVIOUSQUARTER/2",
+      "function": "PREVIOUSQUARTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSQUARTER('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "PREVIOUSYEAR/0",
+      "function": "PREVIOUSYEAR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSYEAR()))"
+    },
+    {
+      "id": "PREVIOUSYEAR/1",
+      "function": "PREVIOUSYEAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSYEAR('Date'[Date])))"
+    },
+    {
+      "id": "PREVIOUSYEAR/2",
+      "function": "PREVIOUSYEAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSYEAR('Date'[Date], \"12-31\")))"
+    },
+    {
+      "id": "PREVIOUSYEAR/3",
+      "function": "PREVIOUSYEAR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(PREVIOUSYEAR('Date'[Date], \"12-31\", \"12-31\")))"
+    },
+    {
+      "id": "NEXTDAY/0",
+      "function": "NEXTDAY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTDAY()))"
+    },
+    {
+      "id": "NEXTDAY/1",
+      "function": "NEXTDAY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTDAY('Date'[Date])))"
+    },
+    {
+      "id": "NEXTDAY/2",
+      "function": "NEXTDAY",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTDAY('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "NEXTMONTH/0",
+      "function": "NEXTMONTH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTMONTH()))"
+    },
+    {
+      "id": "NEXTMONTH/1",
+      "function": "NEXTMONTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTMONTH('Date'[Date])))"
+    },
+    {
+      "id": "NEXTMONTH/2",
+      "function": "NEXTMONTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTMONTH('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "NEXTQUARTER/0",
+      "function": "NEXTQUARTER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTQUARTER()))"
+    },
+    {
+      "id": "NEXTQUARTER/1",
+      "function": "NEXTQUARTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTQUARTER('Date'[Date])))"
+    },
+    {
+      "id": "NEXTQUARTER/2",
+      "function": "NEXTQUARTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTQUARTER('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "NEXTYEAR/0",
+      "function": "NEXTYEAR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTYEAR()))"
+    },
+    {
+      "id": "NEXTYEAR/1",
+      "function": "NEXTYEAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTYEAR('Date'[Date])))"
+    },
+    {
+      "id": "NEXTYEAR/2",
+      "function": "NEXTYEAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTYEAR('Date'[Date], \"12-31\")))"
+    },
+    {
+      "id": "NEXTYEAR/3",
+      "function": "NEXTYEAR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NEXTYEAR('Date'[Date], \"12-31\", \"12-31\")))"
+    },
+    {
+      "id": "STARTOFMONTH/0",
+      "function": "STARTOFMONTH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFMONTH()))"
+    },
+    {
+      "id": "STARTOFMONTH/1",
+      "function": "STARTOFMONTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFMONTH('Date'[Date])))"
+    },
+    {
+      "id": "STARTOFMONTH/2",
+      "function": "STARTOFMONTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFMONTH('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "STARTOFQUARTER/0",
+      "function": "STARTOFQUARTER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFQUARTER()))"
+    },
+    {
+      "id": "STARTOFQUARTER/1",
+      "function": "STARTOFQUARTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFQUARTER('Date'[Date])))"
+    },
+    {
+      "id": "STARTOFQUARTER/2",
+      "function": "STARTOFQUARTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFQUARTER('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "STARTOFYEAR/0",
+      "function": "STARTOFYEAR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFYEAR()))"
+    },
+    {
+      "id": "STARTOFYEAR/1",
+      "function": "STARTOFYEAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFYEAR('Date'[Date])))"
+    },
+    {
+      "id": "STARTOFYEAR/2",
+      "function": "STARTOFYEAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFYEAR('Date'[Date], \"12-31\")))"
+    },
+    {
+      "id": "STARTOFYEAR/3",
+      "function": "STARTOFYEAR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(STARTOFYEAR('Date'[Date], \"12-31\", \"12-31\")))"
+    },
+    {
+      "id": "ENDOFMONTH/0",
+      "function": "ENDOFMONTH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFMONTH()))"
+    },
+    {
+      "id": "ENDOFMONTH/1",
+      "function": "ENDOFMONTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFMONTH('Date'[Date])))"
+    },
+    {
+      "id": "ENDOFMONTH/2",
+      "function": "ENDOFMONTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFMONTH('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "ENDOFQUARTER/0",
+      "function": "ENDOFQUARTER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFQUARTER()))"
+    },
+    {
+      "id": "ENDOFQUARTER/1",
+      "function": "ENDOFQUARTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFQUARTER('Date'[Date])))"
+    },
+    {
+      "id": "ENDOFQUARTER/2",
+      "function": "ENDOFQUARTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFQUARTER('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "ENDOFYEAR/0",
+      "function": "ENDOFYEAR",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFYEAR()))"
+    },
+    {
+      "id": "ENDOFYEAR/1",
+      "function": "ENDOFYEAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFYEAR('Date'[Date])))"
+    },
+    {
+      "id": "ENDOFYEAR/2",
+      "function": "ENDOFYEAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFYEAR('Date'[Date], \"12-31\")))"
+    },
+    {
+      "id": "ENDOFYEAR/3",
+      "function": "ENDOFYEAR",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ENDOFYEAR('Date'[Date], \"12-31\", \"12-31\")))"
+    },
+    {
+      "id": "FIRSTDATE/0",
+      "function": "FIRSTDATE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FIRSTDATE()))"
+    },
+    {
+      "id": "FIRSTDATE/1",
+      "function": "FIRSTDATE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FIRSTDATE('Date'[Date])))"
+    },
+    {
+      "id": "FIRSTDATE/2",
+      "function": "FIRSTDATE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FIRSTDATE('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "LASTDATE/0",
+      "function": "LASTDATE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(LASTDATE()))"
+    },
+    {
+      "id": "LASTDATE/1",
+      "function": "LASTDATE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(LASTDATE('Date'[Date])))"
+    },
+    {
+      "id": "LASTDATE/2",
+      "function": "LASTDATE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(LASTDATE('Date'[Date], 'Date'[Date])))"
+    },
+    {
+      "id": "DATESBETWEEN/2",
+      "function": "DATESBETWEEN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2024, 1, 1))))"
+    },
+    {
+      "id": "DATESBETWEEN/3",
+      "function": "DATESBETWEEN",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2024, 1, 1), DATE(2024, 1, 1))))"
+    },
+    {
+      "id": "DATESBETWEEN/4",
+      "function": "DATESBETWEEN",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2024, 1, 1), DATE(2024, 1, 1), DATE(2024, 1, 1))))"
+    },
+    {
+      "id": "DATESINPERIOD/3",
+      "function": "DATESINPERIOD",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 1, 1), 1)))"
+    },
+    {
+      "id": "DATESINPERIOD/4",
+      "function": "DATESINPERIOD",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 1, 1), 1, MONTH)))"
+    },
+    {
+      "id": "DATESINPERIOD/5",
+      "function": "DATESINPERIOD",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 1, 1), 1, MONTH, MONTH)))"
+    },
+    {
+      "id": "FIRSTNONBLANK/1",
+      "function": "FIRSTNONBLANK",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FIRSTNONBLANK(Sales[Qty])))"
+    },
+    {
+      "id": "FIRSTNONBLANK/2",
+      "function": "FIRSTNONBLANK",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FIRSTNONBLANK(Sales[Qty], 1)))"
+    },
+    {
+      "id": "FIRSTNONBLANK/3",
+      "function": "FIRSTNONBLANK",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FIRSTNONBLANK(Sales[Qty], 1, 1)))"
+    },
+    {
+      "id": "LASTNONBLANK/1",
+      "function": "LASTNONBLANK",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(LASTNONBLANK(Sales[Qty])))"
+    },
+    {
+      "id": "LASTNONBLANK/2",
+      "function": "LASTNONBLANK",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(LASTNONBLANK(Sales[Qty], 1)))"
+    },
+    {
+      "id": "LASTNONBLANK/3",
+      "function": "LASTNONBLANK",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(LASTNONBLANK(Sales[Qty], 1, 1)))"
+    },
+    {
+      "id": "FIRSTNONBLANKVALUE/1",
+      "function": "FIRSTNONBLANKVALUE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", FIRSTNONBLANKVALUE(Sales[Qty]))"
+    },
+    {
+      "id": "FIRSTNONBLANKVALUE/2",
+      "function": "FIRSTNONBLANKVALUE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", FIRSTNONBLANKVALUE(Sales[Qty], 1))"
+    },
+    {
+      "id": "FIRSTNONBLANKVALUE/3",
+      "function": "FIRSTNONBLANKVALUE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", FIRSTNONBLANKVALUE(Sales[Qty], 1, 1))"
+    },
+    {
+      "id": "LASTNONBLANKVALUE/1",
+      "function": "LASTNONBLANKVALUE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", LASTNONBLANKVALUE(Sales[Qty]))"
+    },
+    {
+      "id": "LASTNONBLANKVALUE/2",
+      "function": "LASTNONBLANKVALUE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", LASTNONBLANKVALUE(Sales[Qty], 1))"
+    },
+    {
+      "id": "LASTNONBLANKVALUE/3",
+      "function": "LASTNONBLANKVALUE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", LASTNONBLANKVALUE(Sales[Qty], 1, 1))"
+    },
+    {
+      "id": "OPENINGBALANCEMONTH/1",
+      "function": "OPENINGBALANCEMONTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEMONTH(1))"
+    },
+    {
+      "id": "OPENINGBALANCEMONTH/2",
+      "function": "OPENINGBALANCEMONTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEMONTH(1, 'Date'[Date]))"
+    },
+    {
+      "id": "OPENINGBALANCEMONTH/3",
+      "function": "OPENINGBALANCEMONTH",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEMONTH(1, 'Date'[Date], TRUE()))"
+    },
+    {
+      "id": "OPENINGBALANCEMONTH/4",
+      "function": "OPENINGBALANCEMONTH",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEMONTH(1, 'Date'[Date], TRUE(), TRUE()))"
+    },
+    {
+      "id": "OPENINGBALANCEQUARTER/1",
+      "function": "OPENINGBALANCEQUARTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEQUARTER(1))"
+    },
+    {
+      "id": "OPENINGBALANCEQUARTER/2",
+      "function": "OPENINGBALANCEQUARTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEQUARTER(1, 'Date'[Date]))"
+    },
+    {
+      "id": "OPENINGBALANCEQUARTER/3",
+      "function": "OPENINGBALANCEQUARTER",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEQUARTER(1, 'Date'[Date], TRUE()))"
+    },
+    {
+      "id": "OPENINGBALANCEQUARTER/4",
+      "function": "OPENINGBALANCEQUARTER",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEQUARTER(1, 'Date'[Date], TRUE(), TRUE()))"
+    },
+    {
+      "id": "OPENINGBALANCEYEAR/1",
+      "function": "OPENINGBALANCEYEAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEYEAR(1))"
+    },
+    {
+      "id": "OPENINGBALANCEYEAR/2",
+      "function": "OPENINGBALANCEYEAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEYEAR(1, 'Date'[Date]))"
+    },
+    {
+      "id": "OPENINGBALANCEYEAR/4",
+      "function": "OPENINGBALANCEYEAR",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEYEAR(1, 'Date'[Date], TRUE(), \"12-31\"))"
+    },
+    {
+      "id": "OPENINGBALANCEYEAR/5",
+      "function": "OPENINGBALANCEYEAR",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", OPENINGBALANCEYEAR(1, 'Date'[Date], TRUE(), \"12-31\", \"12-31\"))"
+    },
+    {
+      "id": "CLOSINGBALANCEMONTH/1",
+      "function": "CLOSINGBALANCEMONTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEMONTH(1))"
+    },
+    {
+      "id": "CLOSINGBALANCEMONTH/2",
+      "function": "CLOSINGBALANCEMONTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEMONTH(1, 'Date'[Date]))"
+    },
+    {
+      "id": "CLOSINGBALANCEMONTH/3",
+      "function": "CLOSINGBALANCEMONTH",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEMONTH(1, 'Date'[Date], TRUE()))"
+    },
+    {
+      "id": "CLOSINGBALANCEMONTH/4",
+      "function": "CLOSINGBALANCEMONTH",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEMONTH(1, 'Date'[Date], TRUE(), TRUE()))"
+    },
+    {
+      "id": "CLOSINGBALANCEQUARTER/1",
+      "function": "CLOSINGBALANCEQUARTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEQUARTER(1))"
+    },
+    {
+      "id": "CLOSINGBALANCEQUARTER/2",
+      "function": "CLOSINGBALANCEQUARTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEQUARTER(1, 'Date'[Date]))"
+    },
+    {
+      "id": "CLOSINGBALANCEQUARTER/3",
+      "function": "CLOSINGBALANCEQUARTER",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEQUARTER(1, 'Date'[Date], TRUE()))"
+    },
+    {
+      "id": "CLOSINGBALANCEQUARTER/4",
+      "function": "CLOSINGBALANCEQUARTER",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEQUARTER(1, 'Date'[Date], TRUE(), TRUE()))"
+    },
+    {
+      "id": "CLOSINGBALANCEYEAR/1",
+      "function": "CLOSINGBALANCEYEAR",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEYEAR(1))"
+    },
+    {
+      "id": "CLOSINGBALANCEYEAR/2",
+      "function": "CLOSINGBALANCEYEAR",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEYEAR(1, 'Date'[Date]))"
+    },
+    {
+      "id": "CLOSINGBALANCEYEAR/4",
+      "function": "CLOSINGBALANCEYEAR",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEYEAR(1, 'Date'[Date], TRUE(), \"12-31\"))"
+    },
+    {
+      "id": "CLOSINGBALANCEYEAR/5",
+      "function": "CLOSINGBALANCEYEAR",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", CLOSINGBALANCEYEAR(1, 'Date'[Date], TRUE(), \"12-31\", \"12-31\"))"
+    },
+    {
+      "id": "SUM/0",
+      "function": "SUM",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SUM())"
+    },
+    {
+      "id": "SUM/1",
+      "function": "SUM",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SUM(Sales[Qty]))"
+    },
+    {
+      "id": "SUM/2",
+      "function": "SUM",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SUM(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "AVERAGE/0",
+      "function": "AVERAGE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", AVERAGE())"
+    },
+    {
+      "id": "AVERAGE/1",
+      "function": "AVERAGE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", AVERAGE(Sales[Qty]))"
+    },
+    {
+      "id": "AVERAGE/2",
+      "function": "AVERAGE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", AVERAGE(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "MIN/0",
+      "function": "MIN",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", MIN())"
+    },
+    {
+      "id": "MIN/1",
+      "function": "MIN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MIN(Sales[Qty]))"
+    },
+    {
+      "id": "MIN/2",
+      "function": "MIN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MIN(Sales[Qty], 1))"
+    },
+    {
+      "id": "MIN/3",
+      "function": "MIN",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", MIN(Sales[Qty], 1, 1))"
+    },
+    {
+      "id": "MAX/0",
+      "function": "MAX",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", MAX())"
+    },
+    {
+      "id": "MAX/1",
+      "function": "MAX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MAX(Sales[Qty]))"
+    },
+    {
+      "id": "MAX/2",
+      "function": "MAX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MAX(Sales[Qty], 1))"
+    },
+    {
+      "id": "MAX/3",
+      "function": "MAX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", MAX(Sales[Qty], 1, 1))"
+    },
+    {
+      "id": "COUNT/0",
+      "function": "COUNT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNT())"
+    },
+    {
+      "id": "COUNT/1",
+      "function": "COUNT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNT(Sales[Qty]))"
+    },
+    {
+      "id": "COUNT/2",
+      "function": "COUNT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNT(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "COUNTA/0",
+      "function": "COUNTA",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTA())"
+    },
+    {
+      "id": "COUNTA/1",
+      "function": "COUNTA",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTA(Sales[Qty]))"
+    },
+    {
+      "id": "COUNTA/2",
+      "function": "COUNTA",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTA(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "COUNTBLANK/0",
+      "function": "COUNTBLANK",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTBLANK())"
+    },
+    {
+      "id": "COUNTBLANK/1",
+      "function": "COUNTBLANK",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTBLANK(Sales[Qty]))"
+    },
+    {
+      "id": "COUNTBLANK/2",
+      "function": "COUNTBLANK",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTBLANK(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "COUNTROWS/0",
+      "function": "COUNTROWS",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS())"
+    },
+    {
+      "id": "COUNTROWS/1",
+      "function": "COUNTROWS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(Sales))"
+    },
+    {
+      "id": "COUNTROWS/2",
+      "function": "COUNTROWS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(Sales, Sales))"
+    },
+    {
+      "id": "DISTINCTCOUNT/0",
+      "function": "DISTINCTCOUNT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNT())"
+    },
+    {
+      "id": "DISTINCTCOUNT/1",
+      "function": "DISTINCTCOUNT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNT(Sales[Qty]))"
+    },
+    {
+      "id": "DISTINCTCOUNT/2",
+      "function": "DISTINCTCOUNT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNT(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "DISTINCTCOUNTNOBLANK/0",
+      "function": "DISTINCTCOUNTNOBLANK",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNTNOBLANK())"
+    },
+    {
+      "id": "DISTINCTCOUNTNOBLANK/1",
+      "function": "DISTINCTCOUNTNOBLANK",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNTNOBLANK(Sales[Qty]))"
+    },
+    {
+      "id": "DISTINCTCOUNTNOBLANK/2",
+      "function": "DISTINCTCOUNTNOBLANK",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", DISTINCTCOUNTNOBLANK(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "SUMX/1",
+      "function": "SUMX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SUMX(Sales))"
+    },
+    {
+      "id": "SUMX/2",
+      "function": "SUMX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SUMX(Sales, 1))"
+    },
+    {
+      "id": "SUMX/3",
+      "function": "SUMX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", SUMX(Sales, 1, 1))"
+    },
+    {
+      "id": "AVERAGEX/1",
+      "function": "AVERAGEX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", AVERAGEX(Sales))"
+    },
+    {
+      "id": "AVERAGEX/2",
+      "function": "AVERAGEX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", AVERAGEX(Sales, 1))"
+    },
+    {
+      "id": "AVERAGEX/3",
+      "function": "AVERAGEX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", AVERAGEX(Sales, 1, 1))"
+    },
+    {
+      "id": "MINX/1",
+      "function": "MINX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MINX(Sales))"
+    },
+    {
+      "id": "MINX/2",
+      "function": "MINX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MINX(Sales, 1))"
+    },
+    {
+      "id": "MINX/3",
+      "function": "MINX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", MINX(Sales, 1, 1))"
+    },
+    {
+      "id": "MINX/4",
+      "function": "MINX",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", MINX(Sales, 1, 1, 1))"
+    },
+    {
+      "id": "MAXX/1",
+      "function": "MAXX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MAXX(Sales))"
+    },
+    {
+      "id": "MAXX/2",
+      "function": "MAXX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MAXX(Sales, 1))"
+    },
+    {
+      "id": "MAXX/3",
+      "function": "MAXX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", MAXX(Sales, 1, 1))"
+    },
+    {
+      "id": "MAXX/4",
+      "function": "MAXX",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", MAXX(Sales, 1, 1, 1))"
+    },
+    {
+      "id": "COUNTX/1",
+      "function": "COUNTX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTX(Sales))"
+    },
+    {
+      "id": "COUNTX/2",
+      "function": "COUNTX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTX(Sales, 1))"
+    },
+    {
+      "id": "COUNTX/3",
+      "function": "COUNTX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTX(Sales, 1, 1))"
+    },
+    {
+      "id": "COUNTAX/1",
+      "function": "COUNTAX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTAX(Sales))"
+    },
+    {
+      "id": "COUNTAX/2",
+      "function": "COUNTAX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTAX(Sales, 1))"
+    },
+    {
+      "id": "COUNTAX/3",
+      "function": "COUNTAX",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTAX(Sales, 1, 1))"
+    },
+    {
+      "id": "CONCATENATEX/1",
+      "function": "CONCATENATEX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CONCATENATEX(Sales))"
+    },
+    {
+      "id": "CONCATENATEX/2",
+      "function": "CONCATENATEX",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CONCATENATEX(Sales, 1))"
+    },
+    {
+      "id": "CONCATENATEX/6",
+      "function": "CONCATENATEX",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", CONCATENATEX(Sales, 1, \"a\", Sales[Qty], ASC, ASC))"
+    },
+    {
+      "id": "MAXA/0",
+      "function": "MAXA",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", MAXA())"
+    },
+    {
+      "id": "MAXA/1",
+      "function": "MAXA",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MAXA(Sales[Qty]))"
+    },
+    {
+      "id": "MAXA/2",
+      "function": "MAXA",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MAXA(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "MINA/0",
+      "function": "MINA",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", MINA())"
+    },
+    {
+      "id": "MINA/1",
+      "function": "MINA",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MINA(Sales[Qty]))"
+    },
+    {
+      "id": "MINA/2",
+      "function": "MINA",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", MINA(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "AVERAGEA/0",
+      "function": "AVERAGEA",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", AVERAGEA())"
+    },
+    {
+      "id": "AVERAGEA/1",
+      "function": "AVERAGEA",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", AVERAGEA(Sales[Qty]))"
+    },
+    {
+      "id": "AVERAGEA/2",
+      "function": "AVERAGEA",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", AVERAGEA(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "CALCULATE/0",
+      "function": "CALCULATE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", CALCULATE())"
+    },
+    {
+      "id": "CALCULATE/1",
+      "function": "CALCULATE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CALCULATE(1))"
+    },
+    {
+      "id": "CALCULATE/5",
+      "function": "CALCULATE",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", CALCULATE(1, TRUE(), TRUE(), TRUE(), TRUE()))"
+    },
+    {
+      "id": "CALCULATETABLE/0",
+      "function": "CALCULATETABLE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE()))"
+    },
+    {
+      "id": "CALCULATETABLE/1",
+      "function": "CALCULATETABLE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(Sales)))"
+    },
+    {
+      "id": "CALCULATETABLE/5",
+      "function": "CALCULATETABLE",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(Sales, TRUE(), TRUE(), TRUE(), TRUE())))"
+    },
+    {
+      "id": "FILTER/1",
+      "function": "FILTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(Sales)))"
+    },
+    {
+      "id": "FILTER/2",
+      "function": "FILTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(Sales, TRUE())))"
+    },
+    {
+      "id": "FILTER/3",
+      "function": "FILTER",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(Sales, TRUE(), TRUE())))"
+    },
+    {
+      "id": "ALL/0",
+      "function": "ALL",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALL()))"
+    },
+    {
+      "id": "ALL/4",
+      "function": "ALL",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALL(Sales, Sales[Qty], Sales[Qty], Sales[Qty])))"
+    },
+    {
+      "id": "ALLNOBLANKROW/0",
+      "function": "ALLNOBLANKROW",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLNOBLANKROW()))"
+    },
+    {
+      "id": "ALLNOBLANKROW/1",
+      "function": "ALLNOBLANKROW",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLNOBLANKROW(Sales)))"
+    },
+    {
+      "id": "ALLNOBLANKROW/5",
+      "function": "ALLNOBLANKROW",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLNOBLANKROW(Sales, Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty])))"
+    },
+    {
+      "id": "ALLEXCEPT/1",
+      "function": "ALLEXCEPT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLEXCEPT(Sales)))"
+    },
+    {
+      "id": "ALLEXCEPT/2",
+      "function": "ALLEXCEPT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLEXCEPT(Sales, Sales[Qty])))"
+    },
+    {
+      "id": "ALLEXCEPT/6",
+      "function": "ALLEXCEPT",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLEXCEPT(Sales, Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty])))"
+    },
+    {
+      "id": "REMOVEFILTERS/0",
+      "function": "REMOVEFILTERS",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(REMOVEFILTERS()))"
+    },
+    {
+      "id": "REMOVEFILTERS/4",
+      "function": "REMOVEFILTERS",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(REMOVEFILTERS(Sales, Sales[Qty], Sales[Qty], Sales[Qty])))"
+    },
+    {
+      "id": "KEEPFILTERS/0",
+      "function": "KEEPFILTERS",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(KEEPFILTERS()))"
+    },
+    {
+      "id": "KEEPFILTERS/1",
+      "function": "KEEPFILTERS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(KEEPFILTERS(1)))"
+    },
+    {
+      "id": "KEEPFILTERS/2",
+      "function": "KEEPFILTERS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(KEEPFILTERS(1, 1)))"
+    },
+    {
+      "id": "ALLSELECTED/0",
+      "function": "ALLSELECTED",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLSELECTED()))"
+    },
+    {
+      "id": "ALLSELECTED/4",
+      "function": "ALLSELECTED",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ALLSELECTED(Sales, Sales[Qty], Sales[Qty], Sales[Qty])))"
+    },
+    {
+      "id": "VALUES/0",
+      "function": "VALUES",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(VALUES()))"
+    },
+    {
+      "id": "VALUES/1",
+      "function": "VALUES",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(VALUES(Sales)))"
+    },
+    {
+      "id": "VALUES/2",
+      "function": "VALUES",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(VALUES(Sales, Sales)))"
+    },
+    {
+      "id": "DISTINCT/0",
+      "function": "DISTINCT",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DISTINCT()))"
+    },
+    {
+      "id": "DISTINCT/1",
+      "function": "DISTINCT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DISTINCT(Sales)))"
+    },
+    {
+      "id": "DISTINCT/2",
+      "function": "DISTINCT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DISTINCT(Sales, Sales)))"
+    },
+    {
+      "id": "FILTERS/0",
+      "function": "FILTERS",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTERS()))"
+    },
+    {
+      "id": "FILTERS/1",
+      "function": "FILTERS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTERS(Sales[Qty])))"
+    },
+    {
+      "id": "FILTERS/2",
+      "function": "FILTERS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTERS(Sales[Qty], Sales[Qty])))"
+    },
+    {
+      "id": "ISFILTERED/0",
+      "function": "ISFILTERED",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISFILTERED())"
+    },
+    {
+      "id": "ISFILTERED/1",
+      "function": "ISFILTERED",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISFILTERED(Sales))"
+    },
+    {
+      "id": "ISFILTERED/2",
+      "function": "ISFILTERED",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISFILTERED(Sales, Sales))"
+    },
+    {
+      "id": "ISCROSSFILTERED/0",
+      "function": "ISCROSSFILTERED",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISCROSSFILTERED())"
+    },
+    {
+      "id": "ISCROSSFILTERED/1",
+      "function": "ISCROSSFILTERED",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISCROSSFILTERED(Sales))"
+    },
+    {
+      "id": "ISCROSSFILTERED/2",
+      "function": "ISCROSSFILTERED",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISCROSSFILTERED(Sales, Sales))"
+    },
+    {
+      "id": "HASONEFILTER/0",
+      "function": "HASONEFILTER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", HASONEFILTER())"
+    },
+    {
+      "id": "HASONEFILTER/1",
+      "function": "HASONEFILTER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", HASONEFILTER(Sales[Qty]))"
+    },
+    {
+      "id": "HASONEFILTER/2",
+      "function": "HASONEFILTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", HASONEFILTER(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "HASONEVALUE/0",
+      "function": "HASONEVALUE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", HASONEVALUE())"
+    },
+    {
+      "id": "HASONEVALUE/1",
+      "function": "HASONEVALUE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", HASONEVALUE(Sales[Qty]))"
+    },
+    {
+      "id": "HASONEVALUE/2",
+      "function": "HASONEVALUE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", HASONEVALUE(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "SELECTEDVALUE/0",
+      "function": "SELECTEDVALUE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SELECTEDVALUE())"
+    },
+    {
+      "id": "SELECTEDVALUE/1",
+      "function": "SELECTEDVALUE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SELECTEDVALUE(Sales[Qty]))"
+    },
+    {
+      "id": "SELECTEDVALUE/2",
+      "function": "SELECTEDVALUE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", SELECTEDVALUE(Sales[Qty], 1))"
+    },
+    {
+      "id": "SELECTEDVALUE/3",
+      "function": "SELECTEDVALUE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", SELECTEDVALUE(Sales[Qty], 1, 1))"
+    },
+    {
+      "id": "ISINSCOPE/0",
+      "function": "ISINSCOPE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISINSCOPE())"
+    },
+    {
+      "id": "ISINSCOPE/1",
+      "function": "ISINSCOPE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISINSCOPE(Sales[Qty]))"
+    },
+    {
+      "id": "ISINSCOPE/2",
+      "function": "ISINSCOPE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISINSCOPE(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "ISEMPTY/0",
+      "function": "ISEMPTY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISEMPTY())"
+    },
+    {
+      "id": "ISEMPTY/1",
+      "function": "ISEMPTY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISEMPTY(Sales))"
+    },
+    {
+      "id": "ISEMPTY/2",
+      "function": "ISEMPTY",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ISEMPTY(Sales, Sales))"
+    },
+    {
+      "id": "RELATED/0",
+      "function": "RELATED",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", RELATED())"
+    },
+    {
+      "id": "RELATED/1",
+      "function": "RELATED",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", RELATED(Sales[Qty]))"
+    },
+    {
+      "id": "RELATED/2",
+      "function": "RELATED",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", RELATED(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "RELATEDTABLE/0",
+      "function": "RELATEDTABLE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(RELATEDTABLE()))"
+    },
+    {
+      "id": "RELATEDTABLE/1",
+      "function": "RELATEDTABLE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(RELATEDTABLE(Sales)))"
+    },
+    {
+      "id": "RELATEDTABLE/2",
+      "function": "RELATEDTABLE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(RELATEDTABLE(Sales, Sales)))"
+    },
+    {
+      "id": "EARLIER/0",
+      "function": "EARLIER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", EARLIER())"
+    },
+    {
+      "id": "EARLIER/1",
+      "function": "EARLIER",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", EARLIER(Sales[Qty]))"
+    },
+    {
+      "id": "EARLIER/2",
+      "function": "EARLIER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", EARLIER(Sales[Qty], 1))"
+    },
+    {
+      "id": "EARLIER/3",
+      "function": "EARLIER",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", EARLIER(Sales[Qty], 1, 1))"
+    },
+    {
+      "id": "EARLIEST/0",
+      "function": "EARLIEST",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", EARLIEST())"
+    },
+    {
+      "id": "EARLIEST/1",
+      "function": "EARLIEST",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", EARLIEST(Sales[Qty]))"
+    },
+    {
+      "id": "EARLIEST/2",
+      "function": "EARLIEST",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", EARLIEST(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "LOOKUPVALUE/2",
+      "function": "LOOKUPVALUE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", LOOKUPVALUE(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "LOOKUPVALUE/3",
+      "function": "LOOKUPVALUE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", LOOKUPVALUE(Sales[Qty], Sales[Qty], 1))"
+    },
+    {
+      "id": "LOOKUPVALUE/7",
+      "function": "LOOKUPVALUE",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", LOOKUPVALUE(Sales[Qty], Sales[Qty], 1, Sales[Qty], 1, 1, 1))"
+    },
+    {
+      "id": "TREATAS/1",
+      "function": "TREATAS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TREATAS(Sales)))"
+    },
+    {
+      "id": "TREATAS/2",
+      "function": "TREATAS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TREATAS(Sales, Sales[Qty])))"
+    },
+    {
+      "id": "TREATAS/6",
+      "function": "TREATAS",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TREATAS(Sales, Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty])))"
+    },
+    {
+      "id": "USERELATIONSHIP/1",
+      "function": "USERELATIONSHIP",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", USERELATIONSHIP(Sales[Qty]))"
+    },
+    {
+      "id": "USERELATIONSHIP/2",
+      "function": "USERELATIONSHIP",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", USERELATIONSHIP(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "USERELATIONSHIP/3",
+      "function": "USERELATIONSHIP",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", USERELATIONSHIP(Sales[Qty], Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "CROSSFILTER/2",
+      "function": "CROSSFILTER",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", CROSSFILTER(Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "CROSSFILTER/3",
+      "function": "CROSSFILTER",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", CROSSFILTER(Sales[Qty], Sales[Qty], 1))"
+    },
+    {
+      "id": "CROSSFILTER/4",
+      "function": "CROSSFILTER",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", CROSSFILTER(Sales[Qty], Sales[Qty], 1, 1))"
+    },
+    {
+      "id": "SUMMARIZE/1",
+      "function": "SUMMARIZE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZE(Sales)))"
+    },
+    {
+      "id": "SUMMARIZE/2",
+      "function": "SUMMARIZE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZE(Sales, Sales[Qty])))"
+    },
+    {
+      "id": "SUMMARIZE/6",
+      "function": "SUMMARIZE",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZE(Sales, Sales[Qty], Sales[Qty], \"a\", 1, 1)))"
+    },
+    {
+      "id": "SUMMARIZECOLUMNS/0",
+      "function": "SUMMARIZECOLUMNS",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS()))"
+    },
+    {
+      "id": "SUMMARIZECOLUMNS/1",
+      "function": "SUMMARIZECOLUMNS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Sales[Qty])))"
+    },
+    {
+      "id": "SUMMARIZECOLUMNS/5",
+      "function": "SUMMARIZECOLUMNS",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Sales[Qty], Sales, \"a\", 1, 1)))"
+    },
+    {
+      "id": "ROLLUPADDISSUBTOTAL/1",
+      "function": "ROLLUPADDISSUBTOTAL",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ROLLUPADDISSUBTOTAL(Sales[Qty]))"
+    },
+    {
+      "id": "ROLLUPADDISSUBTOTAL/2",
+      "function": "ROLLUPADDISSUBTOTAL",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", ROLLUPADDISSUBTOTAL(Sales[Qty], \"a\"))"
+    },
+    {
+      "id": "ROLLUPADDISSUBTOTAL/6",
+      "function": "ROLLUPADDISSUBTOTAL",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", ROLLUPADDISSUBTOTAL(Sales[Qty], \"a\", TRUE(), Sales[Qty], \"a\", TRUE()))"
+    },
+    {
+      "id": "ROLLUPGROUP/0",
+      "function": "ROLLUPGROUP",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ROLLUPGROUP())"
+    },
+    {
+      "id": "ROLLUPGROUP/1",
+      "function": "ROLLUPGROUP",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ROLLUPGROUP(Sales[Qty]))"
+    },
+    {
+      "id": "ROLLUPGROUP/5",
+      "function": "ROLLUPGROUP",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", ROLLUPGROUP(Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "IGNORE/0",
+      "function": "IGNORE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", IGNORE())"
+    },
+    {
+      "id": "IGNORE/1",
+      "function": "IGNORE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", IGNORE(1))"
+    },
+    {
+      "id": "IGNORE/2",
+      "function": "IGNORE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", IGNORE(1, 1))"
+    },
+    {
+      "id": "GROUPBY/1",
+      "function": "GROUPBY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GROUPBY(Sales)))"
+    },
+    {
+      "id": "GROUPBY/2",
+      "function": "GROUPBY",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GROUPBY(Sales, Sales[Qty])))"
+    },
+    {
+      "id": "GROUPBY/6",
+      "function": "GROUPBY",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GROUPBY(Sales, Sales[Qty], \"a\", 1, 1, 1)))"
+    },
+    {
+      "id": "CURRENTGROUP/0",
+      "function": "CURRENTGROUP",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CURRENTGROUP()))"
+    },
+    {
+      "id": "CURRENTGROUP/1",
+      "function": "CURRENTGROUP",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CURRENTGROUP(1)))"
+    },
+    {
+      "id": "SELECTCOLUMNS/1",
+      "function": "SELECTCOLUMNS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SELECTCOLUMNS(Sales)))"
+    },
+    {
+      "id": "SELECTCOLUMNS/2",
+      "function": "SELECTCOLUMNS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SELECTCOLUMNS(Sales, \"a\")))"
+    },
+    {
+      "id": "SELECTCOLUMNS/6",
+      "function": "SELECTCOLUMNS",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(SELECTCOLUMNS(Sales, \"a\", 1, \"a\", 1, 1)))"
+    },
+    {
+      "id": "ADDCOLUMNS/2",
+      "function": "ADDCOLUMNS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ADDCOLUMNS(Sales, \"a\")))"
+    },
+    {
+      "id": "ADDCOLUMNS/3",
+      "function": "ADDCOLUMNS",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ADDCOLUMNS(Sales, \"a\", 1)))"
+    },
+    {
+      "id": "ADDCOLUMNS/7",
+      "function": "ADDCOLUMNS",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ADDCOLUMNS(Sales, \"a\", 1, \"a\", 1, 1, 1)))"
+    },
+    {
+      "id": "TOPN/1",
+      "function": "TOPN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(1)))"
+    },
+    {
+      "id": "TOPN/2",
+      "function": "TOPN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(1, Sales)))"
+    },
+    {
+      "id": "TOPN/6",
+      "function": "TOPN",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(TOPN(1, Sales, Sales[Qty], ASC, ASC, ASC)))"
+    },
+    {
+      "id": "GENERATE/1",
+      "function": "GENERATE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATE(Sales)))"
+    },
+    {
+      "id": "GENERATE/2",
+      "function": "GENERATE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATE(Sales, Sales)))"
+    },
+    {
+      "id": "GENERATE/3",
+      "function": "GENERATE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATE(Sales, Sales, Sales)))"
+    },
+    {
+      "id": "GENERATEALL/1",
+      "function": "GENERATEALL",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATEALL(Sales)))"
+    },
+    {
+      "id": "GENERATEALL/2",
+      "function": "GENERATEALL",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATEALL(Sales, Sales)))"
+    },
+    {
+      "id": "GENERATEALL/3",
+      "function": "GENERATEALL",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATEALL(Sales, Sales, Sales)))"
+    },
+    {
+      "id": "NATURALINNERJOIN/1",
+      "function": "NATURALINNERJOIN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALINNERJOIN(Sales)))"
+    },
+    {
+      "id": "NATURALINNERJOIN/2",
+      "function": "NATURALINNERJOIN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALINNERJOIN(Sales, Sales)))"
+    },
+    {
+      "id": "NATURALINNERJOIN/3",
+      "function": "NATURALINNERJOIN",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALINNERJOIN(Sales, Sales, Sales)))"
+    },
+    {
+      "id": "NATURALLEFTOUTERJOIN/1",
+      "function": "NATURALLEFTOUTERJOIN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALLEFTOUTERJOIN(Sales)))"
+    },
+    {
+      "id": "NATURALLEFTOUTERJOIN/2",
+      "function": "NATURALLEFTOUTERJOIN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALLEFTOUTERJOIN(Sales, Sales)))"
+    },
+    {
+      "id": "NATURALLEFTOUTERJOIN/3",
+      "function": "NATURALLEFTOUTERJOIN",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(NATURALLEFTOUTERJOIN(Sales, Sales, Sales)))"
+    },
+    {
+      "id": "CROSSJOIN/1",
+      "function": "CROSSJOIN",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CROSSJOIN(Sales)))"
+    },
+    {
+      "id": "CROSSJOIN/2",
+      "function": "CROSSJOIN",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CROSSJOIN(Sales, Sales)))"
+    },
+    {
+      "id": "CROSSJOIN/6",
+      "function": "CROSSJOIN",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(CROSSJOIN(Sales, Sales, Sales, Sales, Sales, Sales)))"
+    },
+    {
+      "id": "UNION/1",
+      "function": "UNION",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(UNION(Sales)))"
+    },
+    {
+      "id": "UNION/2",
+      "function": "UNION",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(UNION(Sales, Sales)))"
+    },
+    {
+      "id": "UNION/6",
+      "function": "UNION",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(UNION(Sales, Sales, Sales, Sales, Sales, Sales)))"
+    },
+    {
+      "id": "INTERSECT/1",
+      "function": "INTERSECT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(INTERSECT(Sales)))"
+    },
+    {
+      "id": "INTERSECT/2",
+      "function": "INTERSECT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(INTERSECT(Sales, Sales)))"
+    },
+    {
+      "id": "INTERSECT/3",
+      "function": "INTERSECT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(INTERSECT(Sales, Sales, Sales)))"
+    },
+    {
+      "id": "EXCEPT/1",
+      "function": "EXCEPT",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(EXCEPT(Sales)))"
+    },
+    {
+      "id": "EXCEPT/2",
+      "function": "EXCEPT",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(EXCEPT(Sales, Sales)))"
+    },
+    {
+      "id": "EXCEPT/3",
+      "function": "EXCEPT",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(EXCEPT(Sales, Sales, Sales)))"
+    },
+    {
+      "id": "ROW/1",
+      "function": "ROW",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ROW(\"a\")))"
+    },
+    {
+      "id": "ROW/2",
+      "function": "ROW",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ROW(\"a\", 1)))"
+    },
+    {
+      "id": "ROW/6",
+      "function": "ROW",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(ROW(\"a\", 1, \"a\", 1, 1, 1)))"
+    },
+    {
+      "id": "DATATABLE/2",
+      "function": "DATATABLE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATATABLE(\"a\", 1)))"
+    },
+    {
+      "id": "DATATABLE/3",
+      "function": "DATATABLE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATATABLE(\"a\", 1, \"a\")))"
+    },
+    {
+      "id": "DATATABLE/7",
+      "function": "DATATABLE",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(DATATABLE(\"a\", 1, \"a\", 1, Sales, Sales, Sales)))"
+    },
+    {
+      "id": "GENERATESERIES/1",
+      "function": "GENERATESERIES",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATESERIES(1)))"
+    },
+    {
+      "id": "GENERATESERIES/2",
+      "function": "GENERATESERIES",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATESERIES(1, 1)))"
+    },
+    {
+      "id": "GENERATESERIES/3",
+      "function": "GENERATESERIES",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATESERIES(1, 1, 1)))"
+    },
+    {
+      "id": "GENERATESERIES/4",
+      "function": "GENERATESERIES",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(GENERATESERIES(1, 1, 1, 1)))"
+    },
+    {
+      "id": "INDEX/0",
+      "function": "INDEX",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(INDEX()))"
+    },
+    {
+      "id": "INDEX/1",
+      "function": "INDEX",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(INDEX(1)))"
+    },
+    {
+      "id": "INDEX/7",
+      "function": "INDEX",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(INDEX(1, Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1)))"
+    },
+    {
+      "id": "INDEX/8",
+      "function": "INDEX",
+      "args": 8,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(INDEX(1, Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1, 1)))"
+    },
+    {
+      "id": "OFFSET/0",
+      "function": "OFFSET",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(OFFSET()))"
+    },
+    {
+      "id": "OFFSET/1",
+      "function": "OFFSET",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(OFFSET(1)))"
+    },
+    {
+      "id": "OFFSET/7",
+      "function": "OFFSET",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(OFFSET(1, Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1)))"
+    },
+    {
+      "id": "OFFSET/8",
+      "function": "OFFSET",
+      "args": 8,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(OFFSET(1, Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1, 1)))"
+    },
+    {
+      "id": "WINDOW/1",
+      "function": "WINDOW",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(WINDOW(1)))"
+    },
+    {
+      "id": "WINDOW/2",
+      "function": "WINDOW",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(WINDOW(1, 1)))"
+    },
+    {
+      "id": "WINDOW/10",
+      "function": "WINDOW",
+      "args": 10,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(WINDOW(1, 1, 1, 1, Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1)))"
+    },
+    {
+      "id": "WINDOW/11",
+      "function": "WINDOW",
+      "args": 11,
+      "query": "EVALUATE ROW(\"v\", COUNTROWS(WINDOW(1, 1, 1, 1, Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1, 1)))"
+    },
+    {
+      "id": "RANK/0",
+      "function": "RANK",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", RANK())"
+    },
+    {
+      "id": "RANK/7",
+      "function": "RANK",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", RANK(1, Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1))"
+    },
+    {
+      "id": "RANK/8",
+      "function": "RANK",
+      "args": 8,
+      "query": "EVALUATE ROW(\"v\", RANK(1, Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1, 1))"
+    },
+    {
+      "id": "ROWNUMBER/0",
+      "function": "ROWNUMBER",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ROWNUMBER())"
+    },
+    {
+      "id": "ROWNUMBER/6",
+      "function": "ROWNUMBER",
+      "args": 6,
+      "query": "EVALUATE ROW(\"v\", ROWNUMBER(Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1))"
+    },
+    {
+      "id": "ROWNUMBER/7",
+      "function": "ROWNUMBER",
+      "args": 7,
+      "query": "EVALUATE ROW(\"v\", ROWNUMBER(Sales, ORDERBY(Sales[Qty]), 1, PARTITIONBY(Sales[Line]), MATCHBY(Sales[Id]), 1, 1))"
+    },
+    {
+      "id": "ORDERBY/0",
+      "function": "ORDERBY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ORDERBY())"
+    },
+    {
+      "id": "ORDERBY/1",
+      "function": "ORDERBY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ORDERBY(Sales[Qty]))"
+    },
+    {
+      "id": "ORDERBY/5",
+      "function": "ORDERBY",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", ORDERBY(Sales[Qty], ASC, Sales[Qty], ASC, ASC))"
+    },
+    {
+      "id": "PARTITIONBY/0",
+      "function": "PARTITIONBY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", PARTITIONBY())"
+    },
+    {
+      "id": "PARTITIONBY/1",
+      "function": "PARTITIONBY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PARTITIONBY(Sales[Qty]))"
+    },
+    {
+      "id": "PARTITIONBY/5",
+      "function": "PARTITIONBY",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", PARTITIONBY(Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "MATCHBY/0",
+      "function": "MATCHBY",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", MATCHBY())"
+    },
+    {
+      "id": "MATCHBY/1",
+      "function": "MATCHBY",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", MATCHBY(Sales[Qty]))"
+    },
+    {
+      "id": "MATCHBY/5",
+      "function": "MATCHBY",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", MATCHBY(Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty], Sales[Qty]))"
+    },
+    {
+      "id": "PATH/1",
+      "function": "PATH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PATH(Emp[Id]))"
+    },
+    {
+      "id": "PATH/2",
+      "function": "PATH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PATH(Emp[Id], Emp[Parent]))"
+    },
+    {
+      "id": "PATH/3",
+      "function": "PATH",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PATH(Emp[Id], Emp[Parent], Emp[Parent]))"
+    },
+    {
+      "id": "PATHITEM/1",
+      "function": "PATHITEM",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"a\"))"
+    },
+    {
+      "id": "PATHITEM/2",
+      "function": "PATHITEM",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"a\", 1))"
+    },
+    {
+      "id": "PATHITEM/3",
+      "function": "PATHITEM",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"a\", 1, 1))"
+    },
+    {
+      "id": "PATHITEM/4",
+      "function": "PATHITEM",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", PATHITEM(\"a\", 1, 1, 1))"
+    },
+    {
+      "id": "PATHITEMREVERSE/1",
+      "function": "PATHITEMREVERSE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PATHITEMREVERSE(\"a\"))"
+    },
+    {
+      "id": "PATHITEMREVERSE/2",
+      "function": "PATHITEMREVERSE",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PATHITEMREVERSE(\"a\", 1))"
+    },
+    {
+      "id": "PATHITEMREVERSE/3",
+      "function": "PATHITEMREVERSE",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PATHITEMREVERSE(\"a\", 1, 1))"
+    },
+    {
+      "id": "PATHITEMREVERSE/4",
+      "function": "PATHITEMREVERSE",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", PATHITEMREVERSE(\"a\", 1, 1, 1))"
+    },
+    {
+      "id": "PATHLENGTH/0",
+      "function": "PATHLENGTH",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", PATHLENGTH())"
+    },
+    {
+      "id": "PATHLENGTH/1",
+      "function": "PATHLENGTH",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PATHLENGTH(\"a\"))"
+    },
+    {
+      "id": "PATHLENGTH/2",
+      "function": "PATHLENGTH",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PATHLENGTH(\"a\", \"a\"))"
+    },
+    {
+      "id": "PATHCONTAINS/1",
+      "function": "PATHCONTAINS",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", PATHCONTAINS(\"a\"))"
+    },
+    {
+      "id": "PATHCONTAINS/2",
+      "function": "PATHCONTAINS",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", PATHCONTAINS(\"a\", \"a\"))"
+    },
+    {
+      "id": "PATHCONTAINS/3",
+      "function": "PATHCONTAINS",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", PATHCONTAINS(\"a\", \"a\", \"a\"))"
+    },
+    {
+      "id": "SELECTEDMEASURE/0",
+      "function": "SELECTEDMEASURE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SELECTEDMEASURE())"
+    },
+    {
+      "id": "SELECTEDMEASURE/1",
+      "function": "SELECTEDMEASURE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SELECTEDMEASURE(1))"
+    },
+    {
+      "id": "SELECTEDMEASURENAME/0",
+      "function": "SELECTEDMEASURENAME",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SELECTEDMEASURENAME())"
+    },
+    {
+      "id": "SELECTEDMEASURENAME/1",
+      "function": "SELECTEDMEASURENAME",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SELECTEDMEASURENAME(1))"
+    },
+    {
+      "id": "ISSELECTEDMEASURE/0",
+      "function": "ISSELECTEDMEASURE",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", ISSELECTEDMEASURE())"
+    },
+    {
+      "id": "ISSELECTEDMEASURE/1",
+      "function": "ISSELECTEDMEASURE",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", ISSELECTEDMEASURE([Total Qty]))"
+    },
+    {
+      "id": "ISSELECTEDMEASURE/5",
+      "function": "ISSELECTEDMEASURE",
+      "args": 5,
+      "query": "EVALUATE ROW(\"v\", ISSELECTEDMEASURE([Total Qty], [Total Qty], [Total Qty], [Total Qty], [Total Qty]))"
+    },
+    {
+      "id": "SELECTEDMEASUREFORMATSTRING/0",
+      "function": "SELECTEDMEASUREFORMATSTRING",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", SELECTEDMEASUREFORMATSTRING())"
+    },
+    {
+      "id": "SELECTEDMEASUREFORMATSTRING/1",
+      "function": "SELECTEDMEASUREFORMATSTRING",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", SELECTEDMEASUREFORMATSTRING(1))"
+    },
+    {
+      "id": "USERPRINCIPALNAME/0",
+      "function": "USERPRINCIPALNAME",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", USERPRINCIPALNAME())"
+    },
+    {
+      "id": "USERPRINCIPALNAME/1",
+      "function": "USERPRINCIPALNAME",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", USERPRINCIPALNAME(1))"
+    },
+    {
+      "id": "USERNAME/0",
+      "function": "USERNAME",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", USERNAME())"
+    },
+    {
+      "id": "USERNAME/4",
+      "function": "USERNAME",
+      "args": 4,
+      "query": "EVALUATE ROW(\"v\", USERNAME(1, 1, 1, 1))"
+    },
+    {
+      "id": "USEROBJECTID/0",
+      "function": "USEROBJECTID",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", USEROBJECTID())"
+    },
+    {
+      "id": "USEROBJECTID/1",
+      "function": "USEROBJECTID",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", USEROBJECTID(1))"
+    },
+    {
+      "id": "CUSTOMDATA/0",
+      "function": "CUSTOMDATA",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", CUSTOMDATA())"
+    },
+    {
+      "id": "CUSTOMDATA/1",
+      "function": "CUSTOMDATA",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", CUSTOMDATA(1))"
+    },
+    {
+      "id": "NAMEOF/0",
+      "function": "NAMEOF",
+      "args": 0,
+      "query": "EVALUATE ROW(\"v\", NAMEOF())"
+    },
+    {
+      "id": "NAMEOF/1",
+      "function": "NAMEOF",
+      "args": 1,
+      "query": "EVALUATE ROW(\"v\", NAMEOF(1))"
+    },
+    {
+      "id": "NAMEOF/2",
+      "function": "NAMEOF",
+      "args": 2,
+      "query": "EVALUATE ROW(\"v\", NAMEOF(1, 1))"
+    },
+    {
+      "id": "NAMEOF/3",
+      "function": "NAMEOF",
+      "args": 3,
+      "query": "EVALUATE ROW(\"v\", NAMEOF(1, 1, 1))"
+    }
+  ],
+  "recordValues": false
+}

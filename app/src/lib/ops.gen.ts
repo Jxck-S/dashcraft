@@ -1140,8 +1140,8 @@ export interface DaxDiagnosticOut {
   /** `error` or `warning` (a function DashCraft cannot evaluate yet). */
   severity: string
   /**
-   * `syntax`, `unknownTable`, `unknownColumn`, `unknownMeasure` or
-   * `unsupportedFunction`.
+   * `syntax`, `unknownTable`, `unknownColumn`, `unknownMeasure`,
+   * `argumentCount` or `unsupportedFunction`.
    */
   code: string
   message: string
@@ -1174,6 +1174,81 @@ export interface DaxDiagnosticsParams {
   text: string
   /** `auto` (default), `expression` or `query`. */
   kind?: DaxTextKind
+}
+
+/** The name under the cursor. */
+export interface DaxHoverInfo {
+  kind: DaxHoverKind
+  /**
+   * The name as DAX: `SUM`, `Sales`, `'Product Category'[Category]`,
+   * `[Total Sales]`, a variable, `VAR`.
+   */
+  name: string
+  /** The home table of a column or measure. */
+  table?: string | null
+  /** Start of the hovered name in the text. */
+  start: TextPositionOut
+  /** End (exclusive). */
+  end: TextPositionOut
+  /** Everything below as Markdown (code in `dax` fences). */
+  markdown: string
+  /** A function's signature, `SUM(column)`. */
+  signature?: string | null
+  /** A function's return type. */
+  returns?: string | null
+  /** A function's or keyword's description, or the model description. */
+  description?: string | null
+  /** For a function: whether DashCraft can evaluate it. */
+  supported?: boolean | null
+  /** A column's data type (`string`, `int64`, `dateTime`, …). */
+  dataType?: string | null
+  /** The DAX of a measure, calculated column or variable. */
+  expression?: string | null
+  formatString?: string | null
+  hidden?: boolean
+  /** A table's column count. */
+  columnCount?: number | null
+  /** A table's measure count. */
+  measureCount?: number | null
+}
+
+/** What a hover describes. */
+export type DaxHoverKind = 'function' | 'table' | 'column' | 'measure' | 'variable' | 'keyword' | 'userFunction'
+
+export interface DaxHoverOut {
+  /** The document revision whose model was used (with `docId`). */
+  documentRevision?: number | null
+  /** Absent when there is nothing to describe at the cursor. */
+  hover?: DaxHoverInfo | null
+}
+
+export interface DaxHoverParams {
+  /**
+   * Describe tables, columns and measures of this document's model and
+   * report-level measures (`d1`, …). Without it only functions,
+   * keywords, variables and the query's own definitions are described.
+   */
+  docId?: string | null
+  /** The DAX text. */
+  text: string
+  /** The cursor. */
+  position: TextPositionIn
+}
+
+/** One parameter of a signature. */
+export interface DaxParameterOut {
+  name: string
+  /** May be left out. */
+  optional: boolean
+  /** Part of a group that may repeat. */
+  repeating: boolean
+  /**
+   * Start of the name in `signature` (the signature is ASCII, so bytes,
+   * characters and UTF-16 units agree).
+   */
+  labelStart: number
+  /** End of the name in `signature` (exclusive). */
+  labelEnd: number
 }
 
 export interface DaxQueryOut {
@@ -1210,6 +1285,54 @@ export interface DaxRewriteOut {
   property: string
   before: string
   after: string
+}
+
+export interface DaxSignatureHelpOut {
+  /** Absent outside a call of a known DAX function (or in a comment). */
+  signature?: DaxSignatureOut | null
+}
+
+export interface DaxSignatureHelpParams {
+  /** The DAX text. */
+  text: string
+  /** The cursor. */
+  position: TextPositionIn
+}
+
+/** The function call around the cursor. */
+export interface DaxSignatureOut {
+  /** Upper-case name (`SUM`). */
+  function: string
+  /** `IF(logicalTest, valueIfTrue, [valueIfFalse])`. */
+  signature: string
+  /** The signature with its return type, `SUM(column) → number`. */
+  label: string
+  /**
+   * `any`, `boolean`, `currency`, `datetime`, `integer`, `number`,
+   * `table` or `text`.
+   */
+  returns: string
+  /** The function family (`Text`, `Time intelligence`, …). */
+  category: string
+  /** One sentence. */
+  description: string
+  /** Whether DashCraft can evaluate it. */
+  supported: boolean
+  minArgs: number
+  /** Absent when unlimited. */
+  maxArgs?: number | null
+  parameters: DaxParameterOut[]
+  /** 0-based index of the argument the cursor is in. */
+  argument: number
+  /**
+   * The parameter that argument fills (repeating groups cycle); absent
+   * past the last parameter.
+   */
+  activeParameter?: number | null
+  /** Start of the function name in the text. */
+  nameStart: TextPositionOut
+  /** End of the function name (exclusive). */
+  nameEnd: TextPositionOut
 }
 
 /** One result table of a DAX query. */
@@ -3572,6 +3695,24 @@ export interface TableUpdateOut {
   removedColumns?: string[]
 }
 
+/**
+ * A cursor in a DAX text: `offset`, `utf16Offset`, or `line` with
+ * `column`.
+ */
+export interface TextPositionIn {
+  /** UTF-8 byte offset (rounded down to a character boundary). */
+  offset?: number | null
+  /** UTF-16 code-unit offset (JavaScript string index). */
+  utf16Offset?: number | null
+  /** 1-based line (lines end at `\n`); needs `column`. */
+  line?: number | null
+  /**
+   * 1-based column in characters; past the end of the line means its
+   * end.
+   */
+  column?: number | null
+}
+
 /** A position in the checked text. */
 export interface TextPositionOut {
   /** UTF-8 byte offset. */
@@ -3968,8 +4109,12 @@ export interface OpsCommands {
   'dax.evaluateMeasure': { params: EvaluateMeasureParams; output: EvaluateMeasureOut }
   /** Every measure's formatted value under optional report/page filters; failed measures show ⚠ and their DAX. */
   'measures.values': { params: MeasuresValuesParams; output: MeasuresValuesOut }
-  /** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. */
+  /** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion), wrong argument counts and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. */
   'dax.diagnostics': { params: DaxDiagnosticsParams; output: DaxDiagnosticsOut }
+  /** The DAX function call around a cursor: its signature, parameters, return type, description and the parameter the cursor is in; works on text that does not parse yet. */
+  'dax.signatureHelp': { params: DaxSignatureHelpParams; output: DaxSignatureHelpOut }
+  /** Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded. */
+  'dax.hover': { params: DaxHoverParams; output: DaxHoverOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4089,6 +4234,8 @@ export const OPS_META = {
   'dax.evaluateMeasure': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'measures.values': { category: 'dax', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: false },
   'dax.diagnostics': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'dax.signatureHelp': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'dax.hover': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4236,8 +4383,12 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     daxEvaluateMeasure: (params: EvaluateMeasureParams, options?: O) => run('dax.evaluateMeasure', params, options),
     /** Every measure's formatted value under optional report/page filters; failed measures show ⚠ and their DAX. */
     measuresValues: (params: MeasuresValuesParams, options?: O) => run('measures.values', params, options),
-    /** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. */
+    /** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion), wrong argument counts and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. */
     daxDiagnostics: (params: DaxDiagnosticsParams, options?: O) => run('dax.diagnostics', params, options),
+    /** The DAX function call around a cursor: its signature, parameters, return type, description and the parameter the cursor is in; works on text that does not parse yet. */
+    daxSignatureHelp: (params: DaxSignatureHelpParams, options?: O) => run('dax.signatureHelp', params, options),
+    /** Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded. */
+    daxHover: (params: DaxHoverParams, options?: O) => run('dax.hover', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */

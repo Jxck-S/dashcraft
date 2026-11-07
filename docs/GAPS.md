@@ -33,6 +33,10 @@ and accessibility rows (§10). Canvas selections now follow model renames (cross
 score unchanged). Renames rewrite KPI and detail-rows DAX, saved in Desktop's form (editing and
 TMDL rows, GT-6 s25; scores unchanged).
 
+Update **2026-11-07** (later): DAX signature help and hover, and argument-count diagnostics checked
+against Power BI Desktop (M7.1b), raised the language-service row 2 → 3 (§3; the §3 summary now
+counts that row).
+
 Update **2026-11-07** (later): M7 started. DAX diagnostics (`dax.diagnostics`, M7.1) added the DAX
 language-service row (§3), and `NAMEOF` the function-library row (299 functions; score unchanged).
 
@@ -60,7 +64,7 @@ edits moved to M14 and M10 (editing row, no score change).
 |---|---|---|---|---|
 | 1 | [File formats](#1-file-formats) | 3.2 | 11 / 8 / 6 | Bookmarks, images, `DataMashup` only kept; report-level measures not evaluated; Fabric remote mode |
 | 2 | [M language and library](#2-m-language-and-library) | 3.1 | 5 / 2 / 3 | Library breadth (349 names), cultures, other data sources |
-| 3 | [DAX](#3-dax) | 3.9 | 5 / 5 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; relationship overrides in `RELATED`/`SUMMARIZE` |
+| 3 | [DAX](#3-dax) | 3.8 | 5 / 6 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; relationship overrides in `RELATED`/`SUMMARIZE` |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh, drill-down |
 | 5 | [Visuals](#5-visuals) | 2.1 | 15 / 6 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
 | 6 | [Interactions](#6-interactions) | 1.6 | 7 / 2 / 10 | Highlighting, bookmarks, drillthrough, drill-down, synced slicers |
@@ -151,7 +155,7 @@ Source: `crates/pbi-dax`, [FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md) (kept i
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
 | Lexer, parser, printer, `DEFINE`/`EVALUATE` | ✅ | 5 | `crates/pbi-dax/tests/{syntax,roundtrip}.rs`; fuzz `dax_parse` | — |
-| Language service (M7.1) | 🟡 | 2 | `dax.diagnostics`: syntax, unknown tables, columns and measures with "did you mean", unsupported functions, UTF-8/UTF-16/line-column positions (`pbi_dax::service`, `crates/pbi-dax/tests/language_service.rs`); no false errors or warnings on the 136 expressions of Acme and the committed samples (`crates/pbi-ops/tests/dax_language.rs`) | Completion, signature help, hover, arity checks, semantic tokens, references (M7.1), formatter (M7.2) |
+| Language service (M7.1) | 🟡 | 3 | `dax.diagnostics`: syntax, unknown tables, columns and measures with "did you mean", argument counts (checked against Power BI Desktop: 929 probes, `dax-arity`), unsupported functions; `dax.signatureHelp` and `dax.hover` from a catalog of all 299 functions with DashCraft-written descriptions; UTF-8/UTF-16/line-column positions (`pbi_dax::service`, `crates/pbi-dax/tests/language_service.rs`); no false errors or warnings on the 136 expressions of Acme and the committed samples (`crates/pbi-ops/tests/dax_language.rs`) | Completion and P12 (M7.1c), semantic tokens and references (M7.1d), formatter (M7.2) |
 | Function library breadth | 🟡 | 4 | 299 functions (table above); added `NAMEOF` (matched against Power BI Desktop), logarithms, trigonometry, distributions (~1e-13 relative error against SciPy references), financial functions (`PMT`, `PV`, `FV`, `NPER`; DAX payment-type rounding and period bounds, stable tiny rates, long-horizon discounting and small growth ratios), `GEOMEAN`, `MAXA`/`MINA`/`AVERAGEA`, `YEARFRAC`, `NETWORKDAYS` and more, with a 33,200-call random-argument sweep (`crates/pbi-dax/tests/functions_library.rs`) | Missing: remaining financial functions (`XIRR`, `XNPV`, …), `LINEST`, visual-calculation functions, `INFO.*` (FUNCTIONS.md "Not supported yet") |
 | Filter and row context, context transition, expanded tables, BLANK | ✅ | 4 | `crates/pbi-dax/tests/eval.rs`; the example's acceptance values | Context transition on duplicate rows of keyless tables |
 | `CALCULATE` modifiers, `ALLSELECTED`, `USERELATIONSHIP`/`CROSSFILTER` | 🟡 | 4 | `ALLSELECTED` shadow contexts per iteration and `SUMMARIZECOLUMNS` row, `KEEPFILTERS` iterators, `IGNORE` and `CROSSFILTER` validity equal to Desktop (ground-truth suite `dax-functions`); FUNCTIONS.md "Known semantic gaps" | Overrides for `RELATED` and `SUMMARIZE` |
@@ -159,7 +163,7 @@ Source: `crates/pbi-dax`, [FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md) (kept i
 | `FORMAT` and format strings | 🟡 | 4 | `format_value`; dynamic format strings per cell (`EvalContext::evaluate_measure_format_strings`, used by visuals); 747 `FORMAT` cases equal to Desktop's (ground-truth suite `format`); en-US only | Other cultures |
 | User-defined functions, `DEFINE COLUMN` | 🟡 | 2 | `EXPR` parameters and `DEFINE COLUMN` missing | — |
 | Calculation groups (`SELECTEDMEASURE` & co.) | ✅ | 4 | typed `CalculationGroup`/`CalculationItem`, lossless TMDL and TMSL (`crates/pbi-tmdl/tests/calc_groups.rs`); precedence, selection expressions, sideways recursion, dynamic format strings (`crates/pbi-dax/tests/model_features.rs`, `crates/pbi-session/tests/security.rs`); per-cell format strings in visuals (`crates/pbi-render/tests/conditional_format.rs`); items without an `ordinal` (as Desktop saves them) numbered by position, as Desktop answers (GT-4 s24) | Hide subtotals of `nonvisual` items; differential tests (blocked: Windows) |
-| Differential testing against Analysis Services | ✅ | 4 | 2,259 queries recorded from Power BI Desktop 2.159's engine (Acme measures per page and filter, tables, metadata, calculation groups and RLS, `FORMAT`, every `functions.rs` case, three MIT samples) and compared value by value; 1 ledger entry (float summation order, by design) (`crates/pbi-session/tests/groundtruth.rs`, [reference/groundtruth](../reference/groundtruth/README.md), ADR-0011) | The queries Desktop's visuals send (Performance analyzer, manual) |
+| Differential testing against Analysis Services | ✅ | 4 | 2,259 queries recorded from Power BI Desktop 2.159's engine (Acme measures per page and filter, tables, metadata, calculation groups and RLS, `FORMAT`, every `functions.rs` case, three MIT samples) and compared value by value, plus 929 argument-count probes compared with the function catalog; 1 ledger entry (float summation order, by design) (`crates/pbi-session/tests/groundtruth.rs`, [reference/groundtruth](../reference/groundtruth/README.md), ADR-0011) | The queries Desktop's visuals send (Performance analyzer, manual) |
 | Performance (P04: 5 measures over 1M rows) | ✅ | 5 | 26 ms vs 100 ms target (`perf/baseline.json`): `SUMX`/`AVERAGEX`/`MINX`/`MAXX`/`COUNTX`/`COUNTAX` compile simple column arithmetic to columnar loops (was 114 ms) | — |
 
 ## 4. Engine features

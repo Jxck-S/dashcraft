@@ -4,7 +4,9 @@
 Each corpus is a list of DAX queries that the recorder (Record-GroundTruth.ps1) runs against
 Power BI Desktop and that `crates/pbi-session/tests/groundtruth.rs` runs against DashCraft. The
 inputs are committed files only: the Acme Outfitters model (TMDL), its `expected.json` (report,
-page and slicer filters), and the DAX function cases of `crates/pbi-dax/tests/functions.rs`.
+page and slicer filters), the DAX function cases of `crates/pbi-dax/tests/functions.rs` and the
+function catalog of the DAX language service (`crates/pbi-dax/src/service/catalog.txt`; the
+`dax-arity` suite, checked by `crates/pbi-dax/tests/language_service.rs`, not by groundtruth.rs).
 
 Case ids are stable: they are derived from the case content, never from list positions, so
 adding a case does not invalidate the other recordings. A recording is stale when its query
@@ -27,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ACME = ROOT / "reference" / "examples" / "acme-outfitters"
 ACME_DEF = ACME / "AcmeOutfitters.SemanticModel" / "definition"
 FUNCTIONS_RS = ROOT / "crates" / "pbi-dax" / "tests" / "functions.rs"
+CATALOG_TXT = ROOT / "crates" / "pbi-dax" / "src" / "service" / "catalog.txt"
 OUT = ROOT / "reference" / "groundtruth" / "corpus"
 
 ACME_TABLES = [
@@ -847,6 +850,98 @@ def dax_lab_tables_suite() -> dict:
     return suite("dax-lab-tables", "Every dax-lab table after refresh", "dax-lab", DAX_LAB_TABLES, cases)
 
 
+CATALOG_LINE = re.compile(r"^([A-Z][A-Z0-9.]*)\((.*)\)\s*(?:\{(\d+)\.\.(\d+|\*)\})?\s*->\s*(\w+)\s*\|")
+
+# A placeholder per parameter name: plausible enough that Desktop checks the
+# argument count; whether it then accepts the types does not matter.
+ARITY_PLACEHOLDERS = [
+    (re.compile(r"^dates$"), "'Date'[Date]"),
+    (re.compile(r"^(idColumn)$"), "Emp[Id]"),
+    (re.compile(r"^(parentColumn)$"), "Emp[Parent]"),
+    (re.compile(r"(?i)table|^relation$|^data$"), "Sales"),
+    (re.compile(r"(?i)column|^orderByExpression$"), "Sales[Qty]"),
+    (re.compile(r"^measure$"), "[Total Qty]"),
+    (re.compile(r"^orderBy$"), "ORDERBY(Sales[Qty])"),
+    (re.compile(r"^partitionBy$"), "PARTITIONBY(Sales[Line])"),
+    (re.compile(r"^matchBy$"), "MATCHBY(Sales[Id])"),
+    (re.compile(r"^yearEndDate$"), '"12-31"'),
+    (re.compile(r"(?i)date$|^datetime$"), "DATE(2024, 1, 1)"),
+    (re.compile(r"^dateText$"), '"2024-01-01"'),
+    (re.compile(r"^timeText$"), '"12:00"'),
+    (re.compile(r"^interval$"), "MONTH"),
+    (re.compile(r"^order$"), "ASC"),
+    (re.compile(r"(?i)^(filter|logical\d?|logicalTest|cumulative)$"), "TRUE()"),
+    (re.compile(r"(?i)name$|text\d?$|^(label|delimiter|formatString|path|item|localeName)$"), '"a"'),
+]
+
+
+def catalog_entries() -> list[tuple[str, list[str], int, int | None, str]]:
+    """(name, flattened parameter names, min, max, returns) of every catalog.txt function.
+
+    Mirrors crates/pbi-dax/src/service/catalog.rs; the test compares Desktop with the Rust
+    catalog, so a difference here only moves the probes.
+    """
+    out = []
+    for line in CATALOG_TXT.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        m = CATALOG_LINE.match(line)
+        if not m:
+            raise SystemExit(f"catalog.txt: cannot parse {line!r}")
+        name, params, lo, hi, returns = m.groups()
+        items, depth, cur = [], 0, ""
+        for ch in params:
+            if ch == "," and depth == 0:
+                items.append(cur.strip())
+                cur = ""
+                continue
+            depth += ch == "["
+            depth -= ch == "]"
+            cur += ch
+        if cur.strip():
+            items.append(cur.strip())
+        flat = [w for i in items for w in re.findall(r"[A-Za-z][A-Za-z0-9]*", i)]
+        repeating = any(i.endswith("...") for i in items)
+        min_args = sum(1 for i in items if not i.startswith("["))
+        max_args = None if repeating else len(flat)
+        if lo is not None:
+            min_args, max_args = int(lo), (None if hi == "*" else int(hi))
+        out.append((name, flat, min_args, max_args, returns))
+    return out
+
+
+def arity_placeholder(param: str) -> str:
+    for pattern, value in ARITY_PLACEHOLDERS:
+        if pattern.search(param):
+            return value
+    return "1"
+
+
+def dax_arity_suite() -> dict:
+    cases = []
+    for name, params, lo, hi, returns in catalog_entries():
+        counts = {lo, lo + 4} if hi is None else {lo, hi, hi + 1}
+        if lo > 0:
+            counts.add(lo - 1)
+        for n in sorted(counts):
+            # Past the listed parameters, repeat the last ones.
+            args = [arity_placeholder(params[min(i, len(params) - 1)]) if params else "1" for i in range(n)]
+            call = f"{name}({', '.join(args)})"
+            inner = f"COUNTROWS({call})" if returns == "table" else call
+            cases.append({"id": f"{name}/{n}", "function": name, "args": n, "query": f'EVALUATE ROW("v", {inner})'})
+    doc = suite(
+        "dax-arity",
+        "Every catalog.txt function called with too few, the fewest, the most and too many arguments on the dax-lab fixture",
+        "dax-lab",
+        DAX_LAB_TABLES,
+        cases,
+    )
+    # Only whether Desktop accepts the argument count matters: never record values (USERNAME…).
+    doc["recordValues"] = False
+    return doc
+
+
 def render(doc: dict) -> str:
     return json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
 
@@ -865,6 +960,7 @@ def main() -> int:
         format_suite(),
         dax_lab_tables_suite(),
         dax_functions_suite(),
+        dax_arity_suite(),
         *sample_suites(),
     ]
     stale = []

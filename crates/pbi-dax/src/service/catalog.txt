@@ -1,0 +1,339 @@
+# DashCraft's DAX function catalog: signatures and one-line descriptions for
+# completion, signature help, hover and argument-count diagnostics.
+#
+# The descriptions are DashCraft's own words. Line format:
+#
+#   NAME(param, [optional], [repeated]..., [name, expression]...) {min..max} -> returns | Description.
+#
+# `[…]` is optional, `…...` may repeat (any number of times), `{min..max}`
+# overrides the argument count the parameters imply (`*` = no maximum).
+# `## Title` starts a category. Every function the evaluator supports has a
+# line (test `catalog_lists_every_supported_function`); the argument counts
+# are checked against Power BI Desktop (`reference/groundtruth/recordings/dax-arity.json`,
+# test `catalog_argument_counts_match_power_bi_desktop`).
+
+## Logical and information
+IF(logicalTest, valueIfTrue, [valueIfFalse]) -> any | Returns the second argument when the test is TRUE and the third (BLANK when omitted) when it is FALSE.
+SWITCH(expression, value, result, [value, result]..., [else]) -> any | Returns the result paired with the first value equal to the expression, or the final else value.
+COALESCE(expression, expression, [expression]...) -> any | Returns the first argument that is not BLANK.
+AND(logical1, logical2) -> boolean | TRUE only when both arguments are TRUE.
+OR(logical1, logical2) -> boolean | TRUE when either argument is TRUE.
+NOT(logical) -> boolean | Flips TRUE to FALSE and FALSE to TRUE.
+TRUE() -> boolean | The logical value TRUE.
+FALSE() -> boolean | The logical value FALSE.
+BLANK() -> any | The empty value DAX uses for "nothing here".
+ISBLANK(value) -> boolean | TRUE when the value is BLANK.
+IFERROR(value, valueIfError) -> any | Evaluates the first argument and falls back to the second if it raises an error.
+ISERROR(value) -> boolean | TRUE when evaluating the value raises an error.
+ISNUMBER(value) -> boolean | TRUE when the value is a number.
+ISTEXT(value) -> boolean | TRUE when the value is text.
+ISNONTEXT(value) -> boolean | TRUE when the value is not text (BLANK counts as non-text).
+ISLOGICAL(value) -> boolean | TRUE when the value is TRUE or FALSE.
+ISEVEN(number) -> boolean | TRUE when the integer part of the number is even.
+ISODD(number) -> boolean | TRUE when the integer part of the number is odd.
+CONVERT(expression, dataType) -> any | Changes a value to another data type (INTEGER, DOUBLE, STRING, BOOLEAN, CURRENCY, DATETIME).
+CONTAINS(table, columnName, value, [columnName, value]...) -> boolean | TRUE when some row of the table has all the given column values.
+CONTAINSROW(tableExpression, value, [value]...) -> boolean | TRUE when the table has a row equal to the given values (the IN operator).
+IF.EAGER(logicalTest, valueIfTrue, [valueIfFalse]) -> any | Like IF, but both branches are evaluated before the test picks one.
+ERROR(text) -> any | Stops the calculation with the given error message.
+EVALUATEANDLOG(value, [label], [maxRows]) -> any | Returns the value unchanged; Power BI also logs it for debugging.
+USERCULTURE() -> text | The locale of the current user, such as en-US.
+ISAFTER(value1, value2, [order], [value1, value2, order]...) -> boolean | TRUE when the first values sort after the second ones (used by START AT).
+ISONORAFTER(value1, value2, [order], [value1, value2, order]...) -> boolean | TRUE when the first values sort at or after the second ones.
+BITAND(number1, number2) -> integer | Bitwise AND of two integers.
+BITOR(number1, number2) -> integer | Bitwise OR of two integers.
+BITXOR(number1, number2) -> integer | Bitwise exclusive OR of two integers.
+BITLSHIFT(number, shiftAmount) -> integer | Shifts the bits of an integer to the left.
+BITRSHIFT(number, shiftAmount) -> integer | Shifts the bits of an integer to the right.
+
+## Math and statistics
+DIVIDE(numerator, denominator, [alternateResult]) -> number | Division that returns the alternate result (BLANK by default) instead of failing on zero.
+ABS(number) -> number | The number without its sign.
+INT(number) -> integer | Rounds down to the nearest integer.
+ROUND(number, numDigits) -> number | Rounds to the given number of digits, halves away from zero.
+ROUNDUP(number, numDigits) -> number | Rounds away from zero to the given number of digits.
+ROUNDDOWN(number, numDigits) -> number | Rounds toward zero to the given number of digits.
+TRUNC(number, [numDigits]) -> number | Drops the digits after the given position without rounding.
+MOD(number, divisor) -> number | The remainder of a division, with the divisor's sign.
+POWER(number, power) -> number | Raises a number to a power.
+SQRT(number) -> number | The square root.
+SIGN(number) -> integer | 1, 0 or -1 for positive, zero or negative numbers.
+CURRENCY(value) -> currency | Converts a value to the fixed-decimal currency type.
+PI() -> number | The constant pi.
+SQRTPI(number) -> number | The square root of the number times pi.
+EXP(number) -> number | e raised to the given power.
+LN(number) -> number | The natural logarithm.
+LOG(number, [base]) -> number | The logarithm in the given base (10 by default).
+LOG10(number) -> number | The base-10 logarithm.
+SIN(number) -> number | Sine of an angle in radians.
+COS(number) -> number | Cosine of an angle in radians.
+TAN(number) -> number | Tangent of an angle in radians.
+COT(number) -> number | Cotangent of an angle in radians.
+ASIN(number) -> number | Inverse sine, in radians.
+ACOS(number) -> number | Inverse cosine, in radians.
+ATAN(number) -> number | Inverse tangent, in radians.
+ACOT(number) -> number | Inverse cotangent, in radians.
+SINH(number) -> number | Hyperbolic sine.
+COSH(number) -> number | Hyperbolic cosine.
+TANH(number) -> number | Hyperbolic tangent.
+COTH(number) -> number | Hyperbolic cotangent.
+ASINH(number) -> number | Inverse hyperbolic sine.
+ACOSH(number) -> number | Inverse hyperbolic cosine.
+ATANH(number) -> number | Inverse hyperbolic tangent.
+ACOTH(number) -> number | Inverse hyperbolic cotangent.
+DEGREES(angle) -> number | Converts radians to degrees.
+RADIANS(angle) -> number | Converts degrees to radians.
+FACT(number) -> number | The factorial of a non-negative integer.
+COMBIN(number, numberChosen) -> number | Ways to choose items without repetition, order ignored.
+COMBINA(number, numberChosen) -> number | Ways to choose items with repetition, order ignored.
+PERMUT(number, numberChosen) -> number | Ways to arrange chosen items where order matters.
+GCD(number1, number2) -> integer | Greatest common divisor.
+LCM(number1, number2) -> integer | Least common multiple.
+QUOTIENT(numerator, denominator) -> integer | The integer part of a division.
+EVEN(number) -> integer | Rounds away from zero to the next even integer.
+ODD(number) -> integer | Rounds away from zero to the next odd integer.
+MROUND(number, multiple) -> number | Rounds to the nearest multiple.
+CEILING(number, significance) -> number | Rounds up to the next multiple of the significance.
+ISO.CEILING(number, [significance]) -> number | Rounds up to the next multiple, whatever the sign.
+FLOOR(number, significance) -> number | Rounds down to the previous multiple of the significance.
+RAND() -> number | A random number from 0 up to (not including) 1.
+RANDBETWEEN(bottom, top) -> integer | A random integer between the two bounds.
+PRODUCT(column) -> number | Multiplies the numbers of a column.
+PRODUCTX(table, expression) -> number | Multiplies an expression over the rows of a table.
+MEDIAN(column) -> number | The middle number of a column.
+MEDIANX(table, expression) -> number | The middle value of an expression over a table.
+PERCENTILE.INC(column, k) -> number | The k-th percentile of a column, k from 0 to 1 inclusive.
+PERCENTILE.EXC(column, k) -> number | The k-th percentile of a column, k strictly between 0 and 1.
+PERCENTILEX.INC(table, expression, k) -> number | The k-th percentile of an expression over a table, inclusive.
+PERCENTILEX.EXC(table, expression, k) -> number | The k-th percentile of an expression over a table, exclusive.
+STDEV.S(column) -> number | Standard deviation of a sample.
+STDEV.P(column) -> number | Standard deviation of a whole population.
+STDEVX.S(table, expression) -> number | Sample standard deviation of an expression over a table.
+STDEVX.P(table, expression) -> number | Population standard deviation of an expression over a table.
+VAR.S(column) -> number | Variance of a sample.
+VAR.P(column) -> number | Variance of a whole population.
+VARX.S(table, expression) -> number | Sample variance of an expression over a table.
+VARX.P(table, expression) -> number | Population variance of an expression over a table.
+RANKX(table, expression, [value], [order], [ties]) -> integer | Position of the current value among the expression's values over a table.
+RANK.EQ(value, column, [order]) -> integer | Position of a value among the numbers of a column.
+GEOMEAN(column) -> number | Geometric mean of a column.
+GEOMEANX(table, expression) -> number | Geometric mean of an expression over a table.
+
+## Statistical distributions
+NORM.DIST(x, mean, standardDev, cumulative) -> number | Normal distribution: density, or cumulative probability.
+NORM.INV(probability, mean, standardDev) -> number | The value at which the normal distribution reaches a probability.
+NORM.S.DIST(z, cumulative) -> number | Standard normal distribution (mean 0, deviation 1).
+NORM.S.INV(probability) -> number | Inverse of the standard normal distribution.
+EXPON.DIST(x, lambda, cumulative) -> number | Exponential distribution.
+POISSON.DIST(x, mean, cumulative) -> number | Poisson distribution of event counts.
+BETA.DIST(x, alpha, beta, cumulative, [a], [b]) -> number | Beta distribution, optionally on the interval a to b.
+BETA.INV(probability, alpha, beta, [a], [b]) -> number | Inverse of the beta distribution.
+CHISQ.DIST(x, degFreedom, cumulative) -> number | Left-tailed chi-squared distribution.
+CHISQ.DIST.RT(x, degFreedom) -> number | Right-tailed chi-squared probability.
+CHISQ.INV(probability, degFreedom) -> number | Inverse of the left-tailed chi-squared distribution.
+CHISQ.INV.RT(probability, degFreedom) -> number | Inverse of the right-tailed chi-squared probability.
+T.DIST(x, degFreedom, cumulative) -> number | Left-tailed Student's t-distribution.
+T.DIST.2T(x, degFreedom) -> number | Two-tailed Student's t probability.
+T.DIST.RT(x, degFreedom) -> number | Right-tailed Student's t probability.
+T.INV(probability, degFreedom) -> number | Inverse of the left-tailed t-distribution.
+T.INV.2T(probability, degFreedom) -> number | Inverse of the two-tailed t probability.
+CONFIDENCE.NORM(alpha, standardDev, size) -> number | Half-width of a confidence interval using the normal distribution.
+CONFIDENCE.T(alpha, standardDev, size) -> number | Half-width of a confidence interval using the t-distribution.
+
+## Financial
+PMT(rate, nper, pv, [fv], [type]) -> number | The periodic payment of a loan with a constant rate.
+PV(rate, nper, pmt, [fv], [type]) -> number | The present value of a series of equal payments.
+FV(rate, nper, pmt, [pv], [type]) -> number | The future value of an investment with equal payments.
+NPER(rate, pmt, pv, [fv], [type]) -> number | How many periods equal payments need to reach a value.
+
+## Text
+UPPER(text) -> text | The text in capitals.
+LOWER(text) -> text | The text in lower case.
+LEN(text) -> integer | The number of characters.
+LEFT(text, [numChars]) -> text | The first characters of the text (one by default).
+RIGHT(text, [numChars]) -> text | The last characters of the text (one by default).
+MID(text, startNum, numChars) -> text | Characters from the middle of the text, counting from 1.
+TRIM(text) -> text | Removes leading and trailing spaces and collapses repeated inner spaces.
+CONCATENATE(text1, text2) -> text | Joins two texts (the & operator).
+COMBINEVALUES(delimiter, expression, expression, [expression]...) -> text | Joins values with a delimiter; also helps relationships on combined keys.
+SUBSTITUTE(text, oldText, newText, [instanceNum]) -> text | Replaces occurrences of a text, or only the n-th one.
+REPLACE(oldText, startNum, numChars, newText) -> text | Replaces characters at a position.
+REPT(text, numTimes) -> text | Repeats the text.
+SEARCH(findText, withinText, [startNum], [notFoundValue]) -> integer | Position of a text, ignoring case; wildcards allowed.
+FIND(findText, withinText, [startNum], [notFoundValue]) -> integer | Position of a text, matching case.
+CONTAINSSTRING(withinText, findText) -> boolean | TRUE when the text contains another, ignoring case.
+CONTAINSSTRINGEXACT(withinText, findText) -> boolean | TRUE when the text contains another, matching case.
+EXACT(text1, text2) -> boolean | TRUE when two texts are identical, case included.
+VALUE(text) -> number | Converts text to a number.
+FORMAT(value, formatString, [localeName]) -> text | Turns a value into text with a format string such as "#,0.00" or "yyyy-mm-dd".
+FIXED(number, [decimals], [noCommas]) -> text | Rounds a number and formats it as text with fixed decimals.
+UNICHAR(number) -> text | The character with the given Unicode code point.
+UNICODE(text) -> integer | The Unicode code point of the first character.
+
+## Date and time
+DATE(year, month, day) -> datetime | Builds a date; out-of-range months and days roll over.
+TIME(hour, minute, second) -> datetime | Builds a time of day.
+DATEVALUE(dateText) -> datetime | Converts text to a date.
+TIMEVALUE(timeText) -> datetime | Converts text to a time of day.
+NOW() -> datetime | The current date and time.
+TODAY() -> datetime | The current date at midnight.
+UTCNOW() -> datetime | The current date and time in UTC.
+UTCTODAY() -> datetime | The current UTC date at midnight.
+YEAR(date) -> integer | The year of a date.
+QUARTER(date) -> integer | The quarter of a date, 1 to 4.
+MONTH(date) -> integer | The month of a date, 1 to 12.
+DAY(date) -> integer | The day of the month, 1 to 31.
+HOUR(datetime) -> integer | The hour, 0 to 23.
+MINUTE(datetime) -> integer | The minute, 0 to 59.
+SECOND(datetime) -> integer | The second, 0 to 59.
+WEEKDAY(date, [returnType]) -> integer | The day of the week as a number; the return type picks the first day.
+WEEKNUM(date, [returnType]) -> integer | The week of the year.
+EOMONTH(startDate, months) -> datetime | The last day of the month a number of months away.
+EDATE(startDate, months) -> datetime | The same day a number of months away.
+DATEDIFF(date1, date2, interval) -> integer | Interval boundaries crossed between two dates (DAY, MONTH, YEAR, …).
+YEARFRAC(startDate, endDate, [basis]) -> number | The fraction of a year between two dates.
+NETWORKDAYS(startDate, endDate, [weekend], [holidays]) -> integer | Working days between two dates, both included.
+CALENDAR(startDate, endDate) -> table | A one-column table of every date between two dates.
+CALENDARAUTO([fiscalYearEndMonth]) -> table | A date table covering every date in the model.
+
+## Time intelligence
+DATESYTD(dates, [yearEndDate]) -> table | Dates from the start of the year up to the latest date in context.
+DATESQTD(dates) -> table | Dates from the start of the quarter up to the latest date in context.
+DATESMTD(dates) -> table | Dates from the start of the month up to the latest date in context.
+TOTALYTD(expression, dates, [filter], [yearEndDate]) -> any | The expression over the year to date.
+TOTALQTD(expression, dates, [filter]) -> any | The expression over the quarter to date.
+TOTALMTD(expression, dates, [filter]) -> any | The expression over the month to date.
+SAMEPERIODLASTYEAR(dates) -> table | The dates in context moved back one year.
+DATEADD(dates, numberOfIntervals, interval) -> table | The dates in context moved by a number of days, months, quarters or years.
+PARALLELPERIOD(dates, numberOfIntervals, interval) -> table | Whole months, quarters or years moved from the dates in context.
+PREVIOUSDAY(dates) -> table | The day before the first date in context.
+PREVIOUSMONTH(dates) -> table | Every date of the month before the first date in context.
+PREVIOUSQUARTER(dates) -> table | Every date of the quarter before the first date in context.
+PREVIOUSYEAR(dates, [yearEndDate]) -> table | Every date of the year before the first date in context.
+NEXTDAY(dates) -> table | The day after the last date in context.
+NEXTMONTH(dates) -> table | Every date of the month after the last date in context.
+NEXTQUARTER(dates) -> table | Every date of the quarter after the last date in context.
+NEXTYEAR(dates, [yearEndDate]) -> table | Every date of the year after the last date in context.
+STARTOFMONTH(dates) -> table | The first date of the month in context.
+STARTOFQUARTER(dates) -> table | The first date of the quarter in context.
+STARTOFYEAR(dates, [yearEndDate]) -> table | The first date of the year in context.
+ENDOFMONTH(dates) -> table | The last date of the month in context.
+ENDOFQUARTER(dates) -> table | The last date of the quarter in context.
+ENDOFYEAR(dates, [yearEndDate]) -> table | The last date of the year in context.
+FIRSTDATE(dates) -> table | The earliest date in context.
+LASTDATE(dates) -> table | The latest date in context.
+DATESBETWEEN(dates, startDate, endDate) -> table | Dates from a start date to an end date, both included.
+DATESINPERIOD(dates, startDate, numberOfIntervals, interval) -> table | Dates in a period of a given length from a start date.
+FIRSTNONBLANK(column, expression) -> table | The first column value for which the expression is not BLANK.
+LASTNONBLANK(column, expression) -> table | The last column value for which the expression is not BLANK.
+FIRSTNONBLANKVALUE(column, expression) -> any | The expression's first non-BLANK value, in column order.
+LASTNONBLANKVALUE(column, expression) -> any | The expression's last non-BLANK value, in column order.
+OPENINGBALANCEMONTH(expression, dates, [filter]) -> any | The expression at the end of the previous month.
+OPENINGBALANCEQUARTER(expression, dates, [filter]) -> any | The expression at the end of the previous quarter.
+OPENINGBALANCEYEAR(expression, dates, [filter], [yearEndDate]) -> any | The expression at the end of the previous year.
+CLOSINGBALANCEMONTH(expression, dates, [filter]) -> any | The expression on the last date of the month.
+CLOSINGBALANCEQUARTER(expression, dates, [filter]) -> any | The expression on the last date of the quarter.
+CLOSINGBALANCEYEAR(expression, dates, [filter], [yearEndDate]) -> any | The expression on the last date of the year.
+
+## Aggregation and iterators
+SUM(column) -> number | Adds up the numbers in a column.
+AVERAGE(column) -> number | The arithmetic mean of a column's numbers.
+MIN(columnOrExpression, [expression]) -> any | The smallest value of a column, or the smaller of two values.
+MAX(columnOrExpression, [expression]) -> any | The largest value of a column, or the larger of two values.
+COUNT(column) -> integer | Counts the non-blank numbers, dates or texts of a column.
+COUNTA(column) -> integer | Counts the non-blank values of a column.
+COUNTBLANK(column) -> integer | Counts the blank values of a column.
+COUNTROWS([table]) -> integer | Counts the rows of a table.
+DISTINCTCOUNT(column) -> integer | Counts the different values of a column, BLANK included.
+DISTINCTCOUNTNOBLANK(column) -> integer | Counts the different values of a column, BLANK excluded.
+SUMX(table, expression) -> number | Adds up an expression evaluated for every row of a table.
+AVERAGEX(table, expression) -> number | The mean of an expression evaluated for every row of a table.
+MINX(table, expression, [variant]) -> any | The smallest value of an expression over a table.
+MAXX(table, expression, [variant]) -> any | The largest value of an expression over a table.
+COUNTX(table, expression) -> integer | Counts the rows where the expression is a non-blank number, date or text.
+COUNTAX(table, expression) -> integer | Counts the rows where the expression is not blank.
+CONCATENATEX(table, expression, [delimiter], [orderByExpression, [order]]...) -> text | Joins an expression's values over a table, optionally sorted.
+MAXA(column) -> any | The largest value of a column, counting TRUE as 1 and FALSE as 0.
+MINA(column) -> any | The smallest value of a column, counting TRUE as 1 and FALSE as 0.
+AVERAGEA(column) -> number | The mean of a column, counting text as 0 and TRUE as 1.
+
+## Filter and context
+CALCULATE(expression, [filter]...) -> any | Evaluates an expression in a filter context changed by the filter arguments.
+CALCULATETABLE(table, [filter]...) -> table | Evaluates a table expression in a filter context changed by the filter arguments.
+FILTER(table, filter) -> table | The rows of a table for which the condition is TRUE.
+ALL([tableOrColumn], [column]...) -> table | Every row or value, ignoring filters; as a CALCULATE argument it removes them.
+ALLNOBLANKROW(tableOrColumn, [column]...) -> table | Like ALL, without the blank row added for unmatched relationship keys.
+ALLEXCEPT(table, column, [column]...) -> table | Removes every filter on a table except those on the listed columns.
+REMOVEFILTERS([tableOrColumn], [column]...) -> table | Clears filters on a table or columns (a CALCULATE modifier).
+KEEPFILTERS(expression) -> table | Makes a CALCULATE filter intersect the existing filters instead of replacing them.
+ALLSELECTED([tableOrColumn], [column]...) -> table | Rows or values as selected outside the current visual, ignoring its inner filters.
+VALUES(tableOrColumn) -> table | The distinct values of a column (with the blank row when present), or a table's rows.
+DISTINCT(tableOrColumn) -> table | The distinct values of a column, or a table's distinct rows.
+FILTERS(column) -> table | The values directly filtered on a column.
+ISFILTERED(tableOrColumn) -> boolean | TRUE when a table or column is directly filtered.
+ISCROSSFILTERED(tableOrColumn) -> boolean | TRUE when a table or column is filtered directly or through relationships.
+HASONEFILTER(column) -> boolean | TRUE when exactly one value is directly filtered on a column.
+HASONEVALUE(column) -> boolean | TRUE when the filter context leaves exactly one value of a column.
+SELECTEDVALUE(column, [alternateResult]) -> any | The column's value when only one is left in context, else the alternate result.
+ISINSCOPE(column) -> boolean | TRUE when the column is a grouping level at the current position of a visual.
+ISEMPTY(table) -> boolean | TRUE when the table has no rows.
+RELATED(column) -> any | The value of a related column on the one side of a relationship, in row context.
+RELATEDTABLE(table) -> table | The rows of a related table that match the current row.
+EARLIER(column, [number]) -> any | The column's value in an outer row context.
+EARLIEST(column) -> any | The column's value in the outermost row context.
+LOOKUPVALUE(resultColumn, searchColumn, searchValue, [searchColumn, searchValue]..., [alternateResult]) -> any | The result column's value in the row matching every search value.
+TREATAS(tableExpression, column, [column]...) -> table | Applies a table's values as filters on unrelated columns.
+USERELATIONSHIP(column1, column2) -> any | Activates an inactive relationship for one CALCULATE.
+CROSSFILTER(column1, column2, direction) -> any | Changes a relationship's filter direction (BOTH, ONEWAY, NONE, …) for one CALCULATE.
+
+## Table manipulation
+SUMMARIZE(table, groupByColumn, [groupByColumn]..., [name, expression]...) -> table | Groups a table by columns, optionally adding named expressions.
+SUMMARIZECOLUMNS([groupByColumn]..., [filterTable]..., [name, expression]...) {1..*} -> table | Groups by columns from any tables under filters, keeping only rows with a non-blank expression.
+ROLLUPADDISSUBTOTAL(groupByColumn, isSubtotalName, [filter], [groupByColumn, isSubtotalName, filter]...) -> any | Adds subtotal rows to SUMMARIZECOLUMNS, with a flag column per level.
+ROLLUPGROUP(groupByColumn, [groupByColumn]...) -> any | Groups columns into one subtotal level of ROLLUPADDISSUBTOTAL.
+IGNORE(expression) -> any | Leaves an expression out of the non-blank test of SUMMARIZECOLUMNS.
+GROUPBY(table, [groupByColumn]..., [name, expression]...) {2..*} -> table | Groups a table; the expressions iterate each group through CURRENTGROUP.
+CURRENTGROUP() -> table | The rows of the current group, inside GROUPBY.
+SELECTCOLUMNS(table, [name], expression, [[name], expression]...) -> table | A table with one row per input row and only the listed columns.
+ADDCOLUMNS(table, name, expression, [name, expression]...) -> table | The table with extra calculated columns.
+TOPN(n, table, [orderByExpression, [order]]...) -> table | The first n rows of a table in the given order (ties included).
+GENERATE(table1, table2) -> table | Joins each row of the first table with the rows the second table gives for it.
+GENERATEALL(table1, table2) -> table | Like GENERATE, keeping rows for which the second table is empty.
+NATURALINNERJOIN(leftTable, rightTable) -> table | Joins two tables on their common columns, keeping matching rows.
+NATURALLEFTOUTERJOIN(leftTable, rightTable) -> table | Joins two tables on their common columns, keeping every left row.
+CROSSJOIN(table, table, [table]...) -> table | Every combination of the rows of the tables.
+UNION(table, table, [table]...) -> table | Appends the rows of tables with the same number of columns.
+INTERSECT(leftTable, rightTable) -> table | The rows of the first table that are also in the second.
+EXCEPT(leftTable, rightTable) -> table | The rows of the first table that are not in the second.
+ROW(name, expression, [name, expression]...) -> table | A one-row table with the named values.
+DATATABLE(name, type, [name, type]..., data) -> table | A table written inline: column names and types, then rows of constants.
+GENERATESERIES(startValue, endValue, [incrementValue]) -> table | A one-column table of numbers or dates from start to end.
+
+## Window functions
+INDEX(position, [relation], [orderBy], [blanks], [partitionBy], [matchBy], [reset]) -> table | The row at an absolute position in a sorted, optionally partitioned table.
+OFFSET(delta, [relation], [orderBy], [blanks], [partitionBy], [matchBy], [reset]) -> table | The row a number of positions before or after the current one.
+WINDOW(from, [fromType], to, [toType], [relation], [orderBy], [blanks], [partitionBy], [matchBy], [reset]) {2..10} -> table | The rows between two positions, absolute or relative to the current row.
+RANK([ties], [relation], [orderBy], [blanks], [partitionBy], [matchBy], [reset]) -> integer | The rank of the current row in a sorted, optionally partitioned table.
+ROWNUMBER([relation], [orderBy], [blanks], [partitionBy], [matchBy], [reset]) -> integer | The unique position of the current row in a sorted table.
+ORDERBY(orderByExpression, [order], [orderByExpression, order]...) -> any | The sort columns of a window function.
+PARTITIONBY(partitionByColumn, [partitionByColumn]...) -> any | The partition columns of a window function.
+MATCHBY(matchByColumn, [matchByColumn]...) -> any | The columns that identify the current row in a window function.
+
+## Parent-child
+PATH(idColumn, parentColumn) -> text | The pipe-separated chain of ancestors of the current row, root first.
+PATHITEM(path, position, [type]) -> any | The item at a position of a path, counting from the root.
+PATHITEMREVERSE(path, position, [type]) -> any | The item at a position of a path, counting from the end.
+PATHLENGTH(path) -> integer | The number of items in a path.
+PATHCONTAINS(path, item) -> boolean | TRUE when a path contains the item.
+
+## Calculation groups and security
+SELECTEDMEASURE() -> any | The measure a calculation item is applied to.
+SELECTEDMEASURENAME() -> text | The name of the measure a calculation item is applied to.
+ISSELECTEDMEASURE(measure, [measure]...) -> boolean | TRUE when the measure a calculation item is applied to is one of the listed ones.
+SELECTEDMEASUREFORMATSTRING() -> text | The format string of the measure a calculation item is applied to.
+USERPRINCIPALNAME() -> text | The signed-in user's principal name, as row-level security sees it.
+# Desktop accepts any arguments to USERNAME and ignores them.
+USERNAME() {0..*} -> text | The signed-in user's name (domain\user in Desktop).
+USEROBJECTID() -> text | The signed-in user's object ID.
+CUSTOMDATA() -> text | The CustomData value of the connection, if any.
+NAMEOF(reference, [component]) -> text | The fully qualified name of a column, measure or table, as DAX text.

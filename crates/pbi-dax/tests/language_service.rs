@@ -1,9 +1,10 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 //! The DAX language service (M7.1): diagnostics with spans and "did you
-//! mean" suggestions, on a synthetic model.
+//! mean" suggestions, signature help and hover, on a synthetic model.
 
 use pbi_dax::service::{
-    Diagnostic, DiagnosticCode, MAX_DIAGNOSTICS, Schema, SourceKind, diagnostics,
+    Diagnostic, DiagnosticCode, Hover, HoverKind, MAX_DIAGNOSTICS, Schema, SourceKind, diagnostics,
+    hover, signature_help,
 };
 use pbi_model::{Column, DataType, Measure, Model, PropValue, RawObject, Severity, Table};
 
@@ -286,4 +287,373 @@ fn without_a_model_only_syntax_and_functions_are_checked() {
             .map(|d| d.code),
         Some(DiagnosticCode::Syntax)
     );
+}
+
+#[test]
+fn wrong_argument_counts_are_errors_with_the_signature() {
+    let src = "SUM()";
+    let d = one(src);
+    assert_eq!(
+        (d.code, d.severity, d.span.text(src)),
+        (DiagnosticCode::ArgumentCount, Severity::Error, "SUM")
+    );
+    assert_eq!(
+        d.message,
+        "`SUM` takes 1 argument but 0 were given: SUM(column)"
+    );
+
+    // Too many: the extra arguments are underlined.
+    let src = "if(TRUE, 1, 2, 3, 4)";
+    let d = one(src);
+    assert_eq!(d.span.text(src), "3, 4");
+    assert_eq!(
+        d.message,
+        "`if` takes 2 to 3 arguments but 5 were given: IF(logicalTest, valueIfTrue, [valueIfFalse])"
+    );
+    assert!(
+        one("SWITCH(1)")
+            .message
+            .contains("at least 3 arguments but 1 was given")
+    );
+    assert_eq!(
+        summary("SUMX(Sales, ROUND(Sales[Amount]))"),
+        [("argumentCount", "ROUND", None)]
+    );
+    // Repeating parameters have no maximum.
+    for src in [
+        "SWITCH(1, 1, \"a\", 2, \"b\", 3, \"c\", \"z\")",
+        "COALESCE(1, 2, 3, 4, 5)",
+        "CALCULATE([Total Sales], Sales[Amount] > 1, Sales[Amount] < 9, ALL(Sales))",
+        "TODAY()",
+        "COUNTROWS()",
+    ] {
+        assert!(check(src).is_empty(), "{src:?}: {:?}", check(src));
+    }
+}
+
+/// `marked` without its `¦` cursor, and the cursor's byte offset.
+fn cursor(marked: &str) -> (String, usize) {
+    let offset = marked.find('¦').expect("a ¦ cursor");
+    (marked.replacen('¦', "", 1), offset)
+}
+
+/// `(function, argument, active parameter)` at the cursor.
+fn sig(marked: &str) -> Option<(&'static str, usize, Option<usize>)> {
+    let (src, offset) = cursor(marked);
+    signature_help(&src, offset).map(|h| (h.function.name, h.argument, h.active_parameter))
+}
+
+#[test]
+fn signature_help_follows_the_argument_under_the_cursor() {
+    assert_eq!(sig("SUM(¦"), Some(("SUM", 0, Some(0))));
+    assert_eq!(sig("IF(a > 1, ¦"), Some(("IF", 1, Some(1))));
+    assert_eq!(sig("IF(a > 1, 2, 3¦)"), Some(("IF", 2, Some(2))));
+    assert_eq!(sig("if(a, b, c, ¦"), Some(("IF", 3, None)));
+    // The innermost call; groups, row constructors and lists are skipped.
+    assert_eq!(
+        sig("CALCULATE(SUM(Sales[Amount]), ¦"),
+        Some(("CALCULATE", 1, Some(1)))
+    );
+    assert_eq!(
+        sig("CALCULATE(SUM(¦Sales[Amount]), x"),
+        Some(("SUM", 0, Some(0)))
+    );
+    assert_eq!(sig("ROUND((1 + 2) * 3, ¦"), Some(("ROUND", 1, Some(1))));
+    assert_eq!(sig("ROUND((1, ¦"), Some(("ROUND", 0, Some(0))));
+    assert_eq!(sig("SUMX({1, 2, 3}, ¦"), Some(("SUMX", 1, Some(1))));
+    assert_eq!(
+        sig("CONCATENATE(\"a, (b\", ¦"),
+        Some(("CONCATENATE", 1, Some(1)))
+    );
+    assert_eq!(
+        sig("CALCULATE(VAR a = 1 RETURN (a¦"),
+        Some(("CALCULATE", 0, Some(0)))
+    );
+    assert_eq!(sig("CALCULATE([M], NOT(¦"), Some(("NOT", 0, Some(0))));
+    // A repeating pair cycles: value, result, value, result, …
+    assert_eq!(
+        sig("SWITCH(x, 1, \"a\", 2, ¦"),
+        Some(("SWITCH", 4, Some(4)))
+    );
+    assert_eq!(
+        sig("SWITCH(x, 1, \"a\", 2, \"b\", ¦"),
+        Some(("SWITCH", 5, Some(3)))
+    );
+    let (src, offset) = cursor("ROUND(Sales[Amount], ¦)");
+    let help = signature_help(&src, offset).unwrap();
+    assert_eq!(help.name_span.text(&src), "ROUND");
+    assert_eq!(help.function.signature, "ROUND(number, numDigits)");
+    for marked in [
+        "¦SUM(1)",
+        "SUM¦(1)",
+        "SUM(1)¦",
+        "SUM(1) + ¦",
+        "SUM(x -- a note, ¦",
+        "SUM(x /* a, ¦ */",
+        "Twice(¦",
+        "RETURN (¦",
+        "¦",
+    ] {
+        assert_eq!(sig(marked), None, "{marked}");
+    }
+    // Offsets past the end or inside a character are clamped.
+    assert_eq!(signature_help("SUM(", 99).map(|h| h.argument), Some(0));
+    assert_eq!(signature_help("SUM(\"é\"", 6).map(|h| h.argument), Some(0));
+}
+
+fn hover_at(marked: &str) -> Hover {
+    let (src, offset) = cursor(marked);
+    hover(&src, offset, &Schema::from_model(&model()))
+        .unwrap_or_else(|| panic!("{marked}: no hover"))
+}
+
+#[test]
+fn hover_describes_functions_and_keywords() {
+    let h = hover_at("SU¦M(Sales[Amount])");
+    assert_eq!((h.kind, h.name.as_str()), (HoverKind::Function, "SUM"));
+    assert_eq!(h.signature.as_deref(), Some("SUM(column)"));
+    assert_eq!(h.returns, Some("number"));
+    assert!(h.supported);
+    assert_eq!(
+        h.markdown(),
+        "```dax\nSUM(column)\n```\nReturns number.\n\nAdds up the numbers in a column."
+    );
+    // The token that ends at the cursor counts too.
+    assert_eq!(hover_at("sum¦(1)").name, "SUM");
+
+    let h = hover_at("twi¦ce(1)");
+    assert_eq!(
+        (h.kind, h.name.as_str()),
+        (HoverKind::UserFunction, "Twice")
+    );
+
+    let h = hover_at("V¦AR x = 1 RETURN x");
+    assert_eq!((h.kind, h.name.as_str()), (HoverKind::Keyword, "VAR"));
+    assert!(h.description.is_some());
+    let h = hover_at("DATEADD(Sales[Order Date], -1, mon¦th)");
+    assert_eq!((h.kind, h.name.as_str()), (HoverKind::Keyword, "MONTH"));
+
+    // Functions work without a model.
+    let h = hover("ROUND(1, 2)", 1, &Schema::unknown()).unwrap();
+    assert_eq!(h.kind, HoverKind::Function);
+}
+
+#[test]
+fn hover_shows_model_details_of_tables_columns_and_measures() {
+    let h = hover_at("SUM(Sa¦les[Amount])");
+    assert_eq!((h.kind, h.name.as_str()), (HoverKind::Table, "Sales"));
+    assert_eq!(h.counts, Some((3, 1)));
+    assert_eq!(h.markdown(), "`Sales`: table, 3 columns, 1 measure");
+
+    let h = hover_at("SUM(Sales[Amou¦nt])");
+    assert_eq!(
+        (h.kind, h.name.as_str()),
+        (HoverKind::Column, "Sales[Amount]")
+    );
+    assert_eq!(h.table.as_deref(), Some("Sales"));
+    assert_eq!(h.details.data_type.as_deref(), Some("double"));
+    assert_eq!(h.markdown(), "`Sales[Amount]`: column (double)");
+
+    let h = hover_at("[Mar¦gin] + 1");
+    assert_eq!(h.kind, HoverKind::Column);
+    assert_eq!(h.details.expression.as_deref(), Some("Sales[Amount] * 0.1"));
+
+    let h = hover_at("[total sales¦]");
+    assert_eq!(
+        (h.kind, h.name.as_str()),
+        (HoverKind::Measure, "[Total Sales]")
+    );
+    assert_eq!(
+        h.markdown(),
+        "`[Total Sales]`: measure in `Sales`\n\n```dax\nSUM(Sales[Amount])\n```"
+    );
+
+    let h = hover_at("COUNTROWS('Product Cat¦egory')");
+    assert_eq!(
+        (h.kind, h.name.as_str()),
+        (HoverKind::Table, "'Product Category'")
+    );
+    let h = hover_at("'Product Category'[Cate¦gory]");
+    assert_eq!(h.name, "'Product Category'[Category]");
+}
+
+#[test]
+fn hover_shows_variables_and_query_definitions() {
+    let h = hover_at("VAR total = SUM(Sales[Amount]) VAR x = 2 RETURN tot¦al * x");
+    assert_eq!((h.kind, h.name.as_str()), (HoverKind::Variable, "total"));
+    assert_eq!(h.details.expression.as_deref(), Some("SUM(Sales[Amount])"));
+    let h = hover_at("VAR to¦tal = 1 RETURN total");
+    assert_eq!(h.details.expression.as_deref(), Some("1"));
+    let h = hover_at("SUMX(Sales, VAR a = Sales[Amount] RETURN a¦ * 2)");
+    assert_eq!(h.details.expression.as_deref(), Some("Sales[Amount]"));
+
+    let q = "DEFINE MEASURE Sales[Double] = [Total Sales] * 2 VAR _n = 3 \
+             EVALUATE ROW(\"x\", [Dou¦ble] * _n)";
+    let h = hover_at(q);
+    assert_eq!((h.kind, h.name.as_str()), (HoverKind::Measure, "[Double]"));
+    assert_eq!(h.details.expression.as_deref(), Some("[Total Sales] * 2"));
+    let h = hover_at(&q.replace("¦", "").replace("* _n)", "* _¦n)"));
+    assert_eq!(h.details.expression.as_deref(), Some("3"));
+    // A query measure replaces the model's.
+    let h = hover_at("DEFINE MEASURE Sales[Total Sales] = 1 EVALUATE ROW(\"x\", [Total ¦Sales])");
+    assert_eq!(h.details.expression.as_deref(), Some("1"));
+    let h = hover_at(
+        "DEFINE COLUMN Sales[Half] = Sales[Amount] / 2 \
+         EVALUATE SELECTCOLUMNS(Sales, \"h\", Sales[Ha¦lf])",
+    );
+    assert_eq!(h.kind, HoverKind::Column);
+    assert_eq!(h.details.expression.as_deref(), Some("Sales[Amount] / 2"));
+    let h = hover_at("DEFINE TABLE Top = TOPN(1, Sales) EVALUATE To¦p");
+    assert_eq!((h.kind, h.counts), (HoverKind::Table, Some((0, 0))));
+}
+
+#[test]
+fn hover_is_none_for_unknown_names_literals_and_comments() {
+    let schema = Schema::from_model(&model());
+    for marked in [
+        "SUM(No¦pe[x])",
+        "\"te¦xt\"",
+        "12¦3",
+        "-- SU¦M(1)",
+        "[Unkn¦own]",
+        "Sales[Unkn¦own]",
+        "Myst¦ery(1)",
+        "1 +¦ 2",
+        "¦",
+    ] {
+        let (src, offset) = cursor(marked);
+        assert_eq!(hover(&src, offset, &schema), None, "{marked}");
+    }
+    assert_eq!(hover("'Ünïcode'", 2, &schema), None);
+}
+
+fn reference_root() -> std::path::PathBuf {
+    std::env::var_os("DASHCRAFT_REFERENCE").map_or_else(
+        || std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference"),
+        std::path::PathBuf::from,
+    )
+}
+
+fn read_json(path: &std::path::Path) -> Option<serde_json::Value> {
+    if !path.exists() {
+        println!("SKIP: {} missing", path.display());
+        return None;
+    }
+    Some(serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap())
+}
+
+fn has_argument_count_error(query: &str) -> bool {
+    diagnostics(query, SourceKind::detect(query), &Schema::unknown())
+        .iter()
+        .any(|d| d.code == DiagnosticCode::ArgumentCount)
+}
+
+/// The number after `marker` in a Desktop error message.
+fn number_after(message: &str, marker: &str) -> Option<usize> {
+    let rest = &message[message.find(marker)? + marker.len()..];
+    let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+    digits.parse().ok()
+}
+
+/// Power BI Desktop's verdict on every catalog function called with too
+/// few, the fewest, the most and too many arguments
+/// (`reference/groundtruth/recordings/dax-arity.json`, generated by
+/// `scripts/groundtruth/gen_corpus.py`; ADR-0011): `argumentCount` fires
+/// exactly where Desktop rejects the argument count, and the catalog's
+/// minimum and maximum are the ones Desktop states.
+#[test]
+fn catalog_argument_counts_match_power_bi_desktop() {
+    let root = reference_root().join("groundtruth");
+    let (Some(corpus), Some(recording)) = (
+        read_json(&root.join("corpus/dax-arity.json")),
+        read_json(&root.join("recordings/dax-arity.json")),
+    ) else {
+        return;
+    };
+    let queries: std::collections::HashMap<&str, (&str, &str, usize)> = corpus["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| {
+            let n = usize::try_from(c["args"].as_u64().unwrap()).unwrap();
+            let entry = (
+                c["query"].as_str().unwrap(),
+                c["function"].as_str().unwrap(),
+                n,
+            );
+            (c["id"].as_str().unwrap(), entry)
+        })
+        .collect();
+    let (mut accepted, mut rejected, mut inconclusive) = (0, 0, 0);
+    let mut wrong = Vec::new();
+    for rec in recording["cases"].as_array().unwrap() {
+        let id = rec["id"].as_str().unwrap();
+        // Stale or changed cases are `cargo xtask groundtruth`'s business.
+        let Some(&(query, name, n)) = queries.get(id) else {
+            continue;
+        };
+        if rec["query"] != query {
+            continue;
+        }
+        let f = pbi_dax::service::catalog::function(name).unwrap();
+        let flagged = has_argument_count_error(query);
+        let Some(error) = rec["error"].as_str() else {
+            accepted += 1;
+            if flagged || !f.accepts(n) {
+                wrong.push(format!("{id}: Desktop accepts {n} arguments"));
+            }
+            continue;
+        };
+        let min = number_after(error, "minimum argument count for the function is ");
+        let max = number_after(error, "maximum argument count for the function is ");
+        let other = error.contains("Maximum argument count of") || error.contains(" only takes ");
+        if min.is_none() && max.is_none() && !other {
+            inconclusive += 1;
+            continue;
+        }
+        rejected += 1;
+        if !flagged || f.accepts(n) {
+            wrong.push(format!("{id}: Desktop rejects {n} arguments: {error}"));
+        }
+        if min.is_some_and(|m| m != f.min_args) || max.is_some_and(|m| Some(m) != f.max_args) {
+            wrong.push(format!(
+                "{id}: catalog {}..{:?}, Desktop: {error}",
+                f.min_args, f.max_args
+            ));
+        }
+    }
+    println!("dax-arity: {accepted} accepted, {rejected} rejected, {inconclusive} inconclusive");
+    assert!(wrong.is_empty(), "{wrong:#?}");
+    assert!(accepted > 0 && rejected > 0);
+}
+
+/// No query Power BI Desktop ran without an error, in any recording, gets
+/// an `argumentCount` diagnostic.
+#[test]
+fn queries_desktop_runs_have_no_argument_count_errors() {
+    let dir = reference_root().join("groundtruth/recordings");
+    if !dir.is_dir() {
+        println!("SKIP: {} missing", dir.display());
+        return;
+    }
+    let mut checked = 0;
+    let mut wrong = Vec::new();
+    for entry in std::fs::read_dir(&dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|e| e != "json") {
+            continue;
+        }
+        let recording = read_json(&path).unwrap();
+        for case in recording["cases"].as_array().into_iter().flatten() {
+            let (Some(query), None) = (case["query"].as_str(), case.get("error")) else {
+                continue;
+            };
+            checked += 1;
+            if has_argument_count_error(query) {
+                wrong.push(format!("{}: {}", path.display(), case["id"]));
+            }
+        }
+    }
+    assert!(wrong.is_empty(), "{wrong:#?}");
+    assert!(checked > 0);
 }

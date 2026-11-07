@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use pbi_model::{Model, PropValue};
+use pbi_model::{ColumnKind, Model, PropValue};
 
 /// Tables with their columns and measures, and user-defined functions, as
 /// the language service sees them. DAX names are case-insensitive: every
@@ -21,6 +21,18 @@ pub struct Schema {
     unknown: bool,
 }
 
+/// What hover shows about a table, column or measure (from the model).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct NameDetails {
+    /// Column data type in TMDL spelling (`string`, `int64`, `dateTime`, …).
+    pub data_type: Option<String>,
+    /// DAX of a measure or calculated column.
+    pub expression: Option<String>,
+    pub format_string: Option<String>,
+    pub description: Option<String>,
+    pub hidden: bool,
+}
+
 /// One table of a [`Schema`].
 #[derive(Debug, Clone, Default)]
 pub struct SchemaTable {
@@ -30,6 +42,9 @@ pub struct SchemaTable {
     column_keys: HashSet<String>,
     measure_keys: HashSet<String>,
     open: bool,
+    details: NameDetails,
+    column_details: HashMap<String, NameDetails>,
+    measure_details: HashMap<String, NameDetails>,
 }
 
 impl SchemaTable {
@@ -69,6 +84,36 @@ impl SchemaTable {
     pub fn has_measure(&self, name: &str) -> bool {
         self.measure_keys.contains(&name.to_lowercase())
     }
+
+    /// The table's description and hidden flag.
+    #[must_use]
+    pub fn details(&self) -> &NameDetails {
+        &self.details
+    }
+
+    /// Model details of the column `name`, if the schema has them.
+    #[must_use]
+    pub fn column_details(&self, name: &str) -> Option<&NameDetails> {
+        self.column_details.get(&name.to_lowercase())
+    }
+
+    /// Model details of the measure `name`, if the schema has them.
+    #[must_use]
+    pub fn measure_details(&self, name: &str) -> Option<&NameDetails> {
+        self.measure_details.get(&name.to_lowercase())
+    }
+
+    /// The name as written in the schema of a column or measure of this
+    /// table (any case).
+    #[must_use]
+    pub fn spelling(&self, name: &str) -> Option<&str> {
+        let key = name.to_lowercase();
+        self.columns
+            .iter()
+            .chain(&self.measures)
+            .find(|n| n.to_lowercase() == key)
+            .map(String::as_str)
+    }
 }
 
 impl Schema {
@@ -106,6 +151,42 @@ impl Schema {
             }
             for measure in &table.measures {
                 schema.add_measure_at(index, &measure.name);
+            }
+            let Some(t) = schema.tables.get_mut(index) else {
+                continue;
+            };
+            t.details = NameDetails {
+                description: table.description.clone(),
+                hidden: table.is_hidden,
+                ..NameDetails::default()
+            };
+            for column in &table.columns {
+                let expression = match &column.kind {
+                    ColumnKind::Calculated { expression } => Some(expression.clone()),
+                    _ => None,
+                };
+                t.column_details.insert(
+                    column.name.to_lowercase(),
+                    NameDetails {
+                        data_type: Some(column.data_type.as_str().to_string()),
+                        expression,
+                        format_string: column.format_string.clone(),
+                        description: column.description.clone(),
+                        hidden: column.is_hidden,
+                    },
+                );
+            }
+            for measure in &table.measures {
+                t.measure_details.insert(
+                    measure.name.to_lowercase(),
+                    NameDetails {
+                        data_type: None,
+                        expression: Some(measure.expression.clone()),
+                        format_string: measure.format_string.clone(),
+                        description: measure.description.clone(),
+                        hidden: measure.is_hidden,
+                    },
+                );
             }
         }
         for (key, value) in &model.extra {
@@ -192,6 +273,26 @@ impl Schema {
     pub fn add_measure(&mut self, table: &str, name: &str) {
         let i = self.add_table(table);
         self.add_measure_at(i, name);
+    }
+
+    /// Adds (or redefines) the measure `table[name]` with its details (a
+    /// report-level measure, a query `MEASURE`).
+    pub fn add_measure_with(&mut self, table: &str, name: &str, details: NameDetails) {
+        let i = self.add_table(table);
+        self.add_measure_at(i, name);
+        if let Some(t) = self.tables.get_mut(i) {
+            t.measure_details.insert(name.to_lowercase(), details);
+        }
+    }
+
+    /// Adds (or redefines) the column `table[name]` with its details (a
+    /// query `COLUMN`).
+    pub fn add_column_with(&mut self, table: &str, name: &str, details: NameDetails) {
+        let i = self.add_table(table);
+        self.add_column_at(i, name);
+        if let Some(t) = self.tables.get_mut(i) {
+            t.column_details.insert(name.to_lowercase(), details);
+        }
     }
 
     /// Adds a user-defined function.

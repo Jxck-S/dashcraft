@@ -9,7 +9,9 @@ and writes reference/groundtruth/recordings/<suite>.json. Windows only, PowerShe
 fixture in Desktop first (reference/groundtruth/README.md).
 
 Cases marked "volatile" record their columns and row count only, never their values (they
-may contain the clock, random numbers or the signed-in Windows user).
+may contain the clock, random numbers or the signed-in Windows user); so does every case of a
+corpus with "recordValues": false (dax-arity, which only needs to know whether Desktop accepted
+the query).
 
 .EXAMPLE
 pwsh scripts/groundtruth/Record-GroundTruth.ps1 -Refresh
@@ -73,7 +75,8 @@ foreach ($file in $Corpus) {
                 $connections[$key] = if ($roles) { Open-GtConnection -Port $instancePort -Roles $roles } else { Open-GtConnection -Port $instancePort }
             }
             $r = Invoke-GtQuery -Connection $connections[$key] -Query $case.query
-            $volatile = [bool]$case.PSObject.Properties['volatile']
+            $volatile = [bool]$case.PSObject.Properties['volatile'] -or
+                ($suite.PSObject.Properties['recordValues'] -and -not $suite.recordValues)
 
             [void]$out.Append($(if ($first) { "`n" } else { ",`n" }))
             $first = $false
