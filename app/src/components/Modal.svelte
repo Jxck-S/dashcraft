@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import Icon from './Icon.svelte'
+  import { modal } from '../lib/modal'
 
   // Minimal modal dialog: backdrop, title bar, body and footer; Esc or the close button closes.
   let {
@@ -17,12 +18,6 @@
     footer?: Snippet
   } = $props()
 
-  let dialog = $state<HTMLDivElement | null>(null)
-
-  $effect(() => {
-    dialog?.focus()
-  })
-
   function keydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       event.stopPropagation()
@@ -34,7 +29,7 @@
 <div class="backdrop" role="presentation" onclick={(e) => e.target === e.currentTarget && onclose()}>
   <div
     class="dialog"
-    bind:this={dialog}
+    use:modal
     role="dialog"
     aria-modal="true"
     aria-label={title}

@@ -69,9 +69,14 @@ try {
 
   await caretAt(`${bar}.value.indexOf('SUM(') + 1`)
   await key('k', 'KeyK', 75, CTRL)
+  // Ctrl released and pressed again between the two keys keeps the chord.
+  await key('Control', 'ControlLeft', 17, CTRL)
   await key('i', 'KeyI', 73, CTRL)
   const hover = await waitFor(`document.querySelector('.formula-bar .tip')?.textContent`, 5000)
   check('Ctrl+K Ctrl+I describes the function at the caret', /SUM/.test(hover ?? ''), hover?.slice(0, 80))
+  const spoken = await waitFor(`(() => { const s = [...document.querySelectorAll('.formula-bar [role=status]')].map((s) => s.textContent).join(' '); return /SUM/.test(s) && s })()`, 5000)
+  check('the description is announced in the status live region', spoken, (spoken || 'silent').slice(0, 80))
+  check('the description is part of the accessible description', await evaluate(`(${bar}.getAttribute('aria-describedby') ?? '').split(' ').some((id) => document.getElementById(id)?.classList.contains('tip'))`))
   await key('Escape', 'Escape', 27)
   check('Esc closes the description', await waitFor(`!document.querySelector('.formula-bar .tip')`, 3000))
 

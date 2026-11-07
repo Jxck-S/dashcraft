@@ -129,6 +129,14 @@ export function editShortcut(event: { key: string; ctrlKey: boolean; metaKey: bo
   return null
 }
 
+/**
+ * Alt+Q, which focuses the title bar search as in Desktop. Matched by the physical key too: on
+ * macOS Option+Q types `œ`, so `key` alone never matches there.
+ */
+export function isSearchShortcut(event: { key: string; code?: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean }): boolean {
+  return event.altKey && !event.ctrlKey && !event.metaKey && (event.key.toLowerCase() === 'q' || event.code === 'KeyQ')
+}
+
 /** Edited text of a Properties pane field: `undefined` when unchanged, `''` clears the value. */
 export function changedValue(original: string | null | undefined, edited: string): string | undefined {
   const before = original ?? ''
