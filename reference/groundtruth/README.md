@@ -40,7 +40,7 @@ ready-to-edit ledger entries to `target/tmp/groundtruth/<suite>.proposed.json`.
 | `dax-lab-tables` | dax-lab | 5 | The dax-lab tables |
 | `dax-arity` | dax-lab | 929 | Every function of the DAX catalog (`crates/pbi-dax/src/service/catalog.txt`) with too few, the fewest, the most and too many arguments; no values, only whether Desktop accepts the call. Checked in `pbi-dax` (`catalog_argument_counts_match_power_bi_desktop`), not by `groundtruth.rs` |
 | `samples-*` | Microsoft samples | 286 | Metadata, row counts, column aggregates, small tables and every measure of three MIT PBIX samples (VertiPaq decoding against Desktop) |
-| `m-functions` | any | 177 | M expressions: literals, operators, `try` and errors, and every family of DashCraft's M library (text, numbers and their formats, rounding, dates and times, lists, records, tables, splitters, CSV, binary). Compared by `crates/pbi-m/tests/groundtruth.rs` |
+| `m-functions` | any | 202 | M expressions: literals, operators, `try` and errors, and every family of DashCraft's M library (text, numbers and their formats, rounding, dates and times, lists, records, tables, splitters, CSV, binary). Compared by `crates/pbi-m/tests/groundtruth.rs` |
 | `m-library` | any | 1 | Desktop's whole M standard library: every dotted name of `#shared` with its kind, parameters, return type, type or constant value (`scripts/groundtruth/m-library.m`). Generates `crates/pbi-m/src/service/library.txt` and is checked by `crates/pbi-m/tests/library.rs` |
 
 `cargo xtask groundtruth` prints the current counts.

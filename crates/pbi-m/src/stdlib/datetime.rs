@@ -12,10 +12,11 @@ use super::convert::{
     parse_date, parse_datetime, parse_datetimezone, parse_duration, parse_time, to_date,
     to_datetime, to_datetimezone, to_duration, to_time,
 };
+use super::date_names::date_names;
 use crate::eval::interp::{Interp, convert_error};
 use crate::merror::MError;
-use crate::value::Value;
 use crate::value::format::value_to_text;
+use crate::value::{RecordValue, Value};
 
 pub(super) fn register(b: &mut Builder) {
     b.func("#date", &["year", "month", "day"], hash_date);
@@ -112,6 +113,53 @@ pub(super) fn register(b: &mut Builder) {
     b.func("Date.EndOfMonth", &["dateTime"], end_of_month);
     b.func("Date.StartOfYear", &["dateTime"], start_of_year);
     b.func("Date.EndOfYear", &["dateTime"], end_of_year);
+    b.func("Date.AddWeeks", &["dateTime", "numberOfWeeks"], add_weeks);
+    b.func(
+        "Date.AddQuarters",
+        &["dateTime", "numberOfQuarters"],
+        add_quarters,
+    );
+    b.func("Date.StartOfDay", &["dateTime"], start_of_day_fn);
+    b.func("Date.EndOfDay", &["dateTime"], end_of_day_fn);
+    b.func(
+        "Date.StartOfWeek",
+        &["dateTime", "?firstDayOfWeek"],
+        start_of_week,
+    );
+    b.func(
+        "Date.EndOfWeek",
+        &["dateTime", "?firstDayOfWeek"],
+        end_of_week,
+    );
+    b.func("Date.StartOfQuarter", &["dateTime"], start_of_quarter);
+    b.func("Date.EndOfQuarter", &["dateTime"], end_of_quarter);
+    b.func(
+        "Date.WeekOfYear",
+        &["dateTime", "?firstDayOfWeek"],
+        week_of_year,
+    );
+    b.func(
+        "Date.WeekOfMonth",
+        &["dateTime", "?firstDayOfWeek"],
+        week_of_month,
+    );
+    b.func("Date.QuarterOfYear", &["dateTime"], quarter_of_year);
+    b.func("Date.MonthName", &["date", "?culture"], month_name);
+    b.func(
+        "Date.DayOfWeekName",
+        &["date", "?culture"],
+        day_of_week_name,
+    );
+    b.func("Date.ToRecord", &["date"], date_to_record);
+    b.func("Time.ToRecord", &["time"], time_to_record);
+    b.func("DateTime.ToRecord", &["dateTime"], datetime_to_record);
+    b.func(
+        "DateTimeZone.ToRecord",
+        &["dateTimeZone"],
+        datetimezone_to_record,
+    );
+    b.func("Time.StartOfHour", &["dateTime"], start_of_hour);
+    b.func("Time.EndOfHour", &["dateTime"], end_of_hour);
     b.func("Time.Hour", &["dateTime"], hour);
     b.func("Time.Minute", &["dateTime"], minute);
     b.func("Time.Second", &["dateTime"], second);
@@ -410,10 +458,171 @@ fn day(_: &Interp, args: &[Value]) -> Result<Value, MError> {
 }
 
 fn day_of_week(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    let first = num_arg(args, 1)?.unwrap_or(0.0) as u32 % 7;
-    date_part(args, |d| {
-        f64::from((d.weekday().num_days_from_sunday() + 7 - first) % 7)
+    let first = first_day(args, 1)?;
+    date_part(args, |d| f64::from(weekday_from(d, first)))
+}
+
+/// The day of the week of `d` counted from `first` (0 = Sunday).
+fn weekday_from(d: NaiveDate, first: u32) -> u32 {
+    (d.weekday().num_days_from_sunday() + 7 - first) % 7
+}
+
+/// An integral number that fits in 32 bits (Desktop's `Int32` arguments).
+fn int32_arg(args: &[Value], i: usize) -> Result<Option<i64>, MError> {
+    match num_arg(args, i)? {
+        None => Ok(None),
+        Some(n) if n.fract() == 0.0 && n >= f64::from(i32::MIN) && n <= f64::from(i32::MAX) => {
+            Ok(Some(n as i64))
+        }
+        Some(_) => Err(MError::expression(
+            "The number is out of range of a 32 bit integer value.",
+        )),
+    }
+}
+
+fn req_int32(args: &[Value], i: usize) -> Result<i64, MError> {
+    int32_arg(args, i)?.ok_or_else(|| convert_error(&Value::Null, "Number"))
+}
+
+/// The optional `firstDayOfWeek` argument: `Day.Sunday` (0) to `Day.Saturday` (6).
+fn first_day(args: &[Value], i: usize) -> Result<u32, MError> {
+    match int32_arg(args, i)? {
+        None => Ok(0),
+        Some(n) => u32::try_from(n)
+            .ok()
+            .filter(|d| *d < 7)
+            .ok_or_else(|| MError::expression("The Day value provided is invalid.")),
+    }
+}
+
+fn no_date_component() -> MError {
+    MError::expression("The Date value must contain the Date component.")
+}
+
+/// The date of a date/datetime/datetimezone; `None` for null, an error for anything else.
+fn date_of(v: &Value) -> Result<Option<NaiveDate>, MError> {
+    match parts(v) {
+        Ok(None) => Ok(None),
+        Ok(Some((Some(d), _))) => Ok(Some(d)),
+        _ => Err(no_date_component()),
+    }
+}
+
+fn date_number(args: &[Value], f: impl FnOnce(NaiveDate) -> u32) -> Result<Value, MError> {
+    Ok(date_of(arg(args, 0))?.map_or(Value::Null, |d| Value::Number(f64::from(f(d)))))
+}
+
+fn week_of_year(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let first = first_day(args, 1)?;
+    date_number(args, |d| {
+        let jan1 = d.with_ordinal(1).unwrap_or(d);
+        (d.ordinal0() + weekday_from(jan1, first)) / 7 + 1
     })
+}
+
+fn week_of_month(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let first = first_day(args, 1)?;
+    date_number(args, |d| {
+        let day1 = d.with_day(1).unwrap_or(d);
+        (d.day0() + weekday_from(day1, first)) / 7 + 1
+    })
+}
+
+fn quarter_of_year(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    date_number(args, |d| d.month0() / 3 + 1)
+}
+
+/// The date used for names: times count as Desktop's base date, 1899-12-30.
+fn name_date(v: &Value) -> Result<Option<NaiveDate>, MError> {
+    match v.plain() {
+        Value::Time(_) => Ok(NaiveDate::from_ymd_opt(1899, 12, 30)),
+        other => date_of(other),
+    }
+}
+
+fn month_name(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let Some(d) = name_date(arg(args, 0))? else {
+        return Ok(Value::Null);
+    };
+    let names = date_names(text_arg(args, 1, "")?);
+    let name = names.months.get(d.month0() as usize).copied().unwrap_or("");
+    Ok(Value::text(name))
+}
+
+fn day_of_week_name(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let Some(d) = name_date(arg(args, 0))? else {
+        return Ok(Value::Null);
+    };
+    let names = date_names(text_arg(args, 1, "")?);
+    let day = d.weekday().num_days_from_sunday() as usize;
+    Ok(Value::text(names.days.get(day).copied().unwrap_or("")))
+}
+
+fn num(n: impl Into<f64>) -> Value {
+    Value::Number(n.into())
+}
+
+fn seconds_of(t: NaiveTime) -> f64 {
+    f64::from(t.second()) + f64::from(t.nanosecond() % 1_000_000_000) / 1e9
+}
+
+fn date_fields(d: NaiveDate) -> [(&'static str, Value); 3] {
+    [
+        ("Year", num(d.year())),
+        ("Month", num(d.month())),
+        ("Day", num(d.day())),
+    ]
+}
+
+fn time_fields(t: NaiveTime) -> [(&'static str, Value); 3] {
+    [
+        ("Hour", num(t.hour())),
+        ("Minute", num(t.minute())),
+        ("Second", num(seconds_of(t))),
+    ]
+}
+
+fn record_of(fields: Vec<(&'static str, Value)>) -> Result<Value, MError> {
+    Ok(Value::Record(RecordValue::from_pairs(fields)?))
+}
+
+fn date_to_record(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    match arg(args, 0).plain() {
+        Value::Date(d) => record_of(date_fields(*d).to_vec()),
+        other => Err(convert_error(other, "Date")),
+    }
+}
+
+fn time_to_record(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    match arg(args, 0).plain() {
+        Value::Time(t) => record_of(time_fields(*t).to_vec()),
+        other => Err(convert_error(other, "Time")),
+    }
+}
+
+fn datetime_to_record(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    match arg(args, 0).plain() {
+        Value::DateTime(dt) => {
+            let mut fields = date_fields(dt.date()).to_vec();
+            fields.extend(time_fields(dt.time()));
+            record_of(fields)
+        }
+        other => Err(convert_error(other, "DateTime")),
+    }
+}
+
+fn datetimezone_to_record(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    match arg(args, 0).plain() {
+        Value::DateTimeZone(dt) => {
+            let mut fields = date_fields(dt.date_naive()).to_vec();
+            fields.extend(time_fields(dt.time()));
+            let offset = dt.offset().local_minus_utc() / 60;
+            fields.push(("ZoneHours", num(offset / 60)));
+            fields.push(("ZoneMinutes", num(offset % 60)));
+            record_of(fields)
+        }
+        other => Err(convert_error(other, "DateTimeZone")),
+    }
 }
 
 fn day_of_year(_: &Interp, args: &[Value]) -> Result<Value, MError> {
@@ -439,30 +648,65 @@ fn is_leap_year(_: &Interp, args: &[Value]) -> Result<Value, MError> {
     }
 }
 
+fn date_overflow() -> MError {
+    MError::expression(
+        "The Date operation failed because the resulting value falls outside the range of allowed values.",
+    )
+}
+
 /// Applies a date transformation to a date/datetime/datetimezone, keeping its kind.
 fn map_date(v: &Value, f: impl FnOnce(NaiveDate) -> Option<NaiveDate>) -> Result<Value, MError> {
+    // Desktop's dates run from 0001-01-01 to 9999-12-31.
+    let f = |d| f(d).filter(|r: &NaiveDate| (1..=9999).contains(&r.year()));
     Ok(match v.plain() {
         Value::Null => Value::Null,
-        Value::Date(d) => Value::Date(f(*d).ok_or_else(invalid_date)?),
+        Value::Date(d) => Value::Date(f(*d).ok_or_else(date_overflow)?),
         Value::DateTime(dt) => Value::DateTime(NaiveDateTime::new(
-            f(dt.date()).ok_or_else(invalid_date)?,
+            f(dt.date()).ok_or_else(date_overflow)?,
             dt.time(),
         )),
         Value::DateTimeZone(dt) => {
-            let local = NaiveDateTime::new(f(dt.date_naive()).ok_or_else(invalid_date)?, dt.time());
+            let local =
+                NaiveDateTime::new(f(dt.date_naive()).ok_or_else(date_overflow)?, dt.time());
             Value::DateTimeZone(
                 dt.offset()
                     .from_local_datetime(&local)
                     .single()
-                    .ok_or_else(invalid_date)?,
+                    .ok_or_else(date_overflow)?,
             )
         }
+        Value::Time(_) => return Err(no_date_component()),
         other => return Err(convert_error(other, "Date")),
     })
 }
 
+/// Applies a time transformation to a time/datetime/datetimezone, keeping its kind; dates are
+/// returned unchanged.
+fn map_time(v: &Value, f: impl FnOnce(NaiveTime) -> Option<NaiveTime>) -> Result<Value, MError> {
+    Ok(match v.plain() {
+        Value::Null => Value::Null,
+        Value::Date(d) => Value::Date(*d),
+        Value::Time(t) => Value::Time(f(*t).ok_or_else(date_overflow)?),
+        Value::DateTime(dt) => Value::DateTime(NaiveDateTime::new(
+            dt.date(),
+            f(dt.time()).ok_or_else(date_overflow)?,
+        )),
+        Value::DateTimeZone(dt) => {
+            let local =
+                NaiveDateTime::new(dt.date_naive(), f(dt.time()).ok_or_else(date_overflow)?);
+            Value::DateTimeZone(
+                dt.offset()
+                    .from_local_datetime(&local)
+                    .single()
+                    .ok_or_else(date_overflow)?,
+            )
+        }
+        other => return Err(convert_error(other, "Time")),
+    })
+}
+
 fn add_days(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    let n = int_part(args, 1)?;
+    let n = req_int32(args, 1)?;
     map_date(arg(args, 0), |d| {
         d.checked_add_signed(TimeDelta::try_days(n)?)
     })
@@ -478,13 +722,78 @@ fn add_months_to(d: NaiveDate, n: i64) -> Option<NaiveDate> {
 }
 
 fn add_months(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    let n = int_part(args, 1)?;
+    let n = req_int32(args, 1)?;
     map_date(arg(args, 0), |d| add_months_to(d, n))
 }
 
 fn add_years(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    let n = int_part(args, 1)?;
+    let n = req_int32(args, 1)?;
     map_date(arg(args, 0), |d| add_months_to(d, n.checked_mul(12)?))
+}
+
+fn add_weeks(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let n = req_int32(args, 1)?;
+    map_date(arg(args, 0), |d| {
+        d.checked_add_signed(TimeDelta::try_days(n.checked_mul(7)?)?)
+    })
+}
+
+fn add_quarters(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let n = req_int32(args, 1)?;
+    map_date(arg(args, 0), |d| add_months_to(d, n.checked_mul(3)?))
+}
+
+fn start_of_day_fn(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    map_date(arg(args, 0), Some).map(start_of_day)
+}
+
+fn end_of_day_fn(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    map_date(arg(args, 0), Some).map(end_of_day)
+}
+
+fn start_of_week(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let first = first_day(args, 1)?;
+    map_date(arg(args, 0), |d| {
+        d.checked_sub_signed(TimeDelta::try_days(i64::from(weekday_from(d, first)))?)
+    })
+    .map(start_of_day)
+}
+
+fn end_of_week(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let first = first_day(args, 1)?;
+    map_date(arg(args, 0), |d| {
+        d.checked_add_signed(TimeDelta::try_days(i64::from(6 - weekday_from(d, first)))?)
+    })
+    .map(end_of_day)
+}
+
+fn quarter_start(d: NaiveDate) -> Option<NaiveDate> {
+    NaiveDate::from_ymd_opt(d.year(), d.month0() / 3 * 3 + 1, 1)
+}
+
+fn start_of_quarter(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    map_date(arg(args, 0), quarter_start).map(start_of_day)
+}
+
+fn end_of_quarter(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    map_date(arg(args, 0), |d| {
+        let last_month = NaiveDate::from_ymd_opt(d.year(), d.month0() / 3 * 3 + 3, 1)?;
+        last_month.with_day(month_length(last_month))
+    })
+    .map(end_of_day)
+}
+
+/// The last instant of a day or an hour, in Desktop's 100-nanosecond ticks.
+const LAST_TICK: u32 = 999_999_900;
+
+fn start_of_hour(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    map_time(arg(args, 0), |t| NaiveTime::from_hms_opt(t.hour(), 0, 0))
+}
+
+fn end_of_hour(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    map_time(arg(args, 0), |t| {
+        NaiveTime::from_hms_nano_opt(t.hour(), 59, 59, LAST_TICK)
+    })
 }
 
 fn start_of_day(v: Value) -> Value {
@@ -500,7 +809,7 @@ fn start_of_day(v: Value) -> Value {
 }
 
 fn end_of_day(v: Value) -> Value {
-    let end = NaiveTime::from_hms_micro_opt(23, 59, 59, 999_999).unwrap_or(NaiveTime::MIN);
+    let end = NaiveTime::from_hms_nano_opt(23, 59, 59, LAST_TICK).unwrap_or(NaiveTime::MIN);
     match v {
         Value::DateTime(dt) => Value::DateTime(NaiveDateTime::new(dt.date(), end)),
         Value::DateTimeZone(dt) => dt
@@ -543,9 +852,7 @@ fn minute(_: &Interp, args: &[Value]) -> Result<Value, MError> {
 }
 
 fn second(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    time_part(args, |t| {
-        f64::from(t.second()) + f64::from(t.nanosecond() % 1_000_000_000) / 1e9
-    })
+    time_part(args, seconds_of)
 }
 
 fn duration_arg(args: &[Value]) -> Result<Option<TimeDelta>, MError> {

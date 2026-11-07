@@ -7,8 +7,10 @@
 //! explaining that DashCraft never reads files, databases or the network from M.
 
 pub(crate) mod args;
+mod binary;
 pub(crate) mod convert;
 mod csv;
+mod date_names;
 mod datetime;
 mod list;
 mod number;
@@ -98,6 +100,7 @@ pub(crate) fn library() -> &'static Library {
         datetime::register(&mut b);
         csv::register(&mut b);
         value_fns::register(&mut b);
+        binary::register(&mut b);
         b.func(
             "AzureStorage.Blobs",
             &["account", "?options"],

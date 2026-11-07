@@ -94,6 +94,32 @@ pub(super) fn register(b: &mut Builder) {
     for f in Facet::ALL {
         b.value(f.type_name(), Value::Type(TypeValue::facet(f)));
     }
+    // The enumerations' types are `type number`.
+    for name in [
+        "BinaryEncoding.Type",
+        "BinaryOccurrence.Type",
+        "CsvStyle.Type",
+        "Day.Type",
+        "ExtraValues.Type",
+        "GroupKind.Type",
+        "JoinAlgorithm.Type",
+        "JoinKind.Type",
+        "JoinSide.Type",
+        "MissingField.Type",
+        "Occurrence.Type",
+        "Order.Type",
+        "PercentileMode.Type",
+        "QuoteStyle.Type",
+        "RelativePosition.Type",
+        "RoundingMode.Type",
+        "TextEncoding.Type",
+        "TraceLevel.Type",
+    ] {
+        b.value(
+            name,
+            Value::Type(TypeValue::primitive(PrimitiveType::Number)),
+        );
+    }
     b.consts(&[
         ("QuoteStyle.None", 0.0),
         ("QuoteStyle.Csv", 1.0),
@@ -124,6 +150,27 @@ pub(super) fn register(b: &mut Builder) {
         ("JoinKind.FullOuter", 3.0),
         ("JoinKind.LeftAnti", 4.0),
         ("JoinKind.RightAnti", 5.0),
+        ("JoinKind.LeftSemi", 6.0),
+        ("JoinKind.RightSemi", 7.0),
+        ("JoinAlgorithm.Dynamic", 0.0),
+        ("JoinAlgorithm.PairwiseHash", 1.0),
+        ("JoinAlgorithm.SortMerge", 2.0),
+        ("JoinAlgorithm.LeftHash", 3.0),
+        ("JoinAlgorithm.RightHash", 4.0),
+        ("JoinAlgorithm.LeftIndex", 5.0),
+        ("JoinAlgorithm.RightIndex", 6.0),
+        ("JoinSide.Left", 0.0),
+        ("JoinSide.Right", 1.0),
+        ("PercentileMode.ExcelInc", 1.0),
+        ("PercentileMode.ExcelExc", 2.0),
+        ("PercentileMode.SqlDisc", 3.0),
+        ("PercentileMode.SqlCont", 4.0),
+        ("Occurrence.Optional", 0.0),
+        ("Occurrence.Required", 1.0),
+        ("Occurrence.Repeating", 2.0),
+        ("BinaryOccurrence.Optional", 0.0),
+        ("BinaryOccurrence.Required", 1.0),
+        ("BinaryOccurrence.Repeating", 2.0),
         ("GroupKind.Local", 0.0),
         ("GroupKind.Global", 1.0),
         ("TraceLevel.Critical", 1.0),
@@ -442,7 +489,7 @@ fn placeholder_text(it: &Interp, v: &Value) -> Result<String, MError> {
     })
 }
 
-fn base64_encode(bytes: &[u8]) -> String {
+pub(crate) fn base64_encode(bytes: &[u8]) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {

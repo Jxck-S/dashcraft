@@ -350,6 +350,22 @@
       "query": "Text.Length(Text.NewGuid())"
     },
     {
+      "id": "Text.NewGuid/format",
+      "query": "let g = Text.NewGuid() in {Text.Length(g), Text.At(g, 8), Text.At(g, 14), Text.Lower(g) = g, List.Count(Text.Split(g, \"-\"))}"
+    },
+    {
+      "id": "Text.PositionOfAny/basic",
+      "query": "{Text.PositionOfAny(\"abcabc\", {\"c\", \"b\"}), Text.PositionOfAny(\"abcabc\", {\"c\"}, Occurrence.Last), Text.PositionOfAny(\"abcabc\", {\"b\", \"c\"}, Occurrence.All), Text.PositionOfAny(\"abc\", {\"z\"})}"
+    },
+    {
+      "id": "Splitter/more",
+      "query": "{Splitter.SplitTextByRepeatedLengths(2)(\"abcde\"), Splitter.SplitTextByRepeatedLengths(2, true)(\"abcde\"), Splitter.SplitTextByRanges({{0, 2}, {3, 1}})(\"abcdef\"), Splitter.SplitTextByWhitespace()(\"a  b#(tab)c\"), Splitter.SplitTextByAnyDelimiter({\",\", \";\"})(\"a,b;c\")}"
+    },
+    {
+      "id": "Splitter/start-at-end",
+      "query": "{Splitter.SplitTextByLengths({1, 2}, true)(\"abcdef\"), Splitter.SplitTextByPositions({0, 2}, true)(\"abcdef\"), Splitter.SplitTextByEachDelimiter({\",\", \";\"}, QuoteStyle.None, true)(\"a,b;c,d\"), Splitter.SplitTextByCharacterTransition({\"a\"..\"z\"}, {\"0\"..\"9\"})(\"ab12cd3\")}"
+    },
+    {
       "id": "Number.Round/banker",
       "query": "{Number.Round(2.5), Number.Round(3.5), Number.Round(-2.5), Number.Round(2.345, 2)}"
     },
@@ -384,6 +400,10 @@
     {
       "id": "Number.Bitwise/basic",
       "query": "{Number.BitwiseAnd(12, 10), Number.BitwiseOr(12, 10), Number.BitwiseXor(12, 10), Number.BitwiseShiftLeft(1, 4)}"
+    },
+    {
+      "id": "Number.Bitwise/edges",
+      "query": "{Number.BitwiseNot(5), Number.BitwiseShiftRight(-16, 2), Number.BitwiseAnd(null, 1), Number.BitwiseShiftLeft(1, 64), Number.BitwiseXor(-1, 5)}"
     },
     {
       "id": "Number.IsEven/basic",
@@ -450,6 +470,18 @@
       "query": "{List.Median({1, 3, 2, 4}), List.Mode({1, 2, 2, 3}), List.StandardDeviation({1, 2, 3, 4}), List.Product({2, 3})}"
     },
     {
+      "id": "List.Statistics/more",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {e(try List.Modes({1, 2, 2, 3, 3})), e(try List.Covariance({1, 2, 3}, {2, 4, 7})), e(try List.Median({})), e(try List.StandardDeviation({1})), e(try List.Median({\"b\", \"a\", \"c\"})), e(try List.Product({})), e(try List.Mode({}))}"
+    },
+    {
+      "id": "List.Percentile/basic",
+      "query": "{List.Percentile({1, 2, 3, 4}, 0.5), List.Percentile({1, 2, 3, 4}, {0.25, 0.75}), List.Percentile({1, 2, 3, 4}, 0.25, [PercentileMode = PercentileMode.ExcelExc]), List.Percentile({1, 2, 3, 4}, 0.3, [PercentileMode = PercentileMode.SqlDisc]), List.Percentile({null, 5}, 0.5), List.Percentile({#date(2024, 1, 1), #date(2024, 1, 4)}, 0.5)}"
+    },
+    {
+      "id": "List.Percentile/errors",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {e(try List.Percentile({1, \"a\"}, 0.5)), e(try List.Percentile({\"a\", \"b\"}, 0.5)), e(try List.Percentile({1, 2}, 1.5)), e(try List.Percentile({1, 2}, 0.9, [PercentileMode = PercentileMode.ExcelExc]))}"
+    },
+    {
       "id": "List.Split/basic",
       "query": "{List.Split({1..5}, 2), List.Alternate({1..10}, 1, 1), List.Repeat({1, 2}, 2), List.Buffer({1})}"
     },
@@ -464,6 +496,10 @@
     {
       "id": "List.ReplaceValue/basic",
       "query": "{List.ReplaceValue({\"a\", \"b\"}, \"a\", \"z\", Replacer.ReplaceValue), List.ReplaceValue({\"ab\", \"b\"}, \"b\", \"z\", Replacer.ReplaceText), List.InsertRange({1, 4}, 1, {2, 3}), List.ReplaceRange({1, 2, 3}, 1, 1, {9})}"
+    },
+    {
+      "id": "List.Edit/more",
+      "query": "{List.RemoveRange({1..5}, 1, 2), List.Positions({\"a\", \"b\"}), List.IsDistinct({1, 2, 1}), List.MaxN({3, 1, 4, 1, 5}, 2), List.MinN({3, 1, 4}, each _ < 4), List.RemoveLastN({1..5}, 2), List.RemoveMatchingItems({1, 2, 3, 2}, {2}), List.ReplaceMatchingItems({1, 2, 3}, {{2, 9}}), List.TransformMany({1, 2}, each {_, _ * 10}, (x, y) => x + y), List.PositionOfAny({1, 2, 3}, {3, 2})}"
     },
     {
       "id": "List.Item/out-of-range",
@@ -486,8 +522,32 @@
       "query": "{Date.DayOfWeek(#date(2024, 1, 7)), Date.DayOfWeek(#date(2024, 1, 7), Day.Monday), Date.DayOfYear(#date(2024, 3, 1)), Date.WeekOfYear(#date(2024, 12, 31)), Date.WeekOfMonth(#date(2024, 1, 31)), Date.QuarterOfYear(#date(2024, 8, 1))}"
     },
     {
+      "id": "Date.Week/edges",
+      "query": "{Date.WeekOfYear(#date(2024, 12, 31), Day.Monday), Date.WeekOfYear(#date(2023, 1, 1), Day.Monday), Date.WeekOfMonth(#date(2024, 3, 31)), Date.WeekOfMonth(#date(2024, 3, 31), Day.Monday), Date.QuarterOfYear(null), Date.QuarterOfYear(#datetime(2024, 12, 1, 0, 0, 0)), Date.WeekOfYear(null)}"
+    },
+    {
+      "id": "Date.StartOf/kinds",
+      "query": "{Date.StartOfWeek(#datetimezone(2024, 1, 3, 10, 0, 0, 2, 0)), Date.EndOfWeek(#date(2024, 1, 3), Day.Monday), Date.EndOfWeek(#datetime(2024, 1, 3, 10, 0, 0)), Date.StartOfQuarter(#datetime(2024, 5, 10, 3, 0, 0)), Date.EndOfQuarter(#datetimezone(2024, 5, 10, 3, 0, 0, 1, 0)), Date.EndOfQuarter(#date(2024, 11, 10)), Date.StartOfDay(#datetimezone(2024, 1, 2, 3, 4, 5, -5, 0)), Date.EndOfDay(#datetime(2024, 1, 2, 3, 4, 5)), Date.EndOfDay(#date(2024, 1, 2)), Date.EndOfMonth(#datetime(2024, 2, 3, 4, 5, 6))}"
+    },
+    {
+      "id": "Time.StartOfHour/basic",
+      "query": "{Time.StartOfHour(#time(5, 30, 10)), Time.EndOfHour(#time(5, 30, 10)), Time.StartOfHour(#datetime(2024, 1, 2, 5, 30, 10)), Time.EndOfHour(#datetimezone(2024, 1, 2, 5, 30, 10, 2, 0)), Time.StartOfHour(#date(2024, 1, 2)), Time.StartOfHour(null)}"
+    },
+    {
+      "id": "Date.AddWeeks/kinds",
+      "query": "{Date.AddWeeks(null, 1), Date.AddWeeks(#datetime(2024, 1, 31, 1, 2, 3), -2), Date.AddQuarters(#date(2024, 1, 31), 1), Date.AddQuarters(#datetimezone(2024, 11, 30, 1, 0, 0, 1, 0), 1), Date.AddQuarters(#date(2024, 1, 1), 2.0)}"
+    },
+    {
+      "id": "Date/errors",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {e(try Date.AddWeeks(#date(2024, 1, 1), 1.6)), e(try Date.AddWeeks(#date(9999, 12, 30), 1)), e(try Date.StartOfWeek(#date(2024, 1, 3), 7)), e(try Date.StartOfWeek(#date(1, 1, 1))), e(try Date.StartOfDay(#time(1, 2, 3))), e(try Date.WeekOfYear(\"2024-01-01\")), e(try Date.DayOfWeek(#date(2024, 1, 3), -1)), e(try Date.AddDays(#date(2024, 1, 1), 1.5))}"
+    },
+    {
       "id": "Date.Names/basic",
       "query": "{Date.MonthName(#date(2024, 3, 1)), Date.DayOfWeekName(#date(2024, 3, 1)), Date.MonthName(#date(2024, 3, 1), \"fr-FR\")}"
+    },
+    {
+      "id": "Date.Names/cultures",
+      "query": "{Date.MonthName(#date(2024, 5, 1), \"de-DE\"), Date.DayOfWeekName(#date(2024, 5, 3), \"es-ES\"), Date.MonthName(#date(2024, 2, 1), \"ja-JP\"), Date.DayOfWeekName(#date(2024, 5, 5), \"nl-NL\"), Date.MonthName(#date(2024, 2, 1), \"pt-BR\"), Date.MonthName(#date(2024, 3, 1), \"xx-YY\"), Date.MonthName(null), Date.DayOfWeekName(#datetimezone(2024, 5, 1, 1, 0, 0, 2, 0)), Date.MonthName(#time(1, 0, 0)), Date.DayOfWeekName(#date(2024, 1, 1), \"ru-RU\")}"
     },
     {
       "id": "Date.IsLeapYear/basic",
@@ -504,6 +564,14 @@
     {
       "id": "Date.ToRecord/basic",
       "query": "{Date.ToRecord(#date(2024, 1, 2)), Time.ToRecord(#time(1, 2, 3)), DateTime.Date(#datetime(2024, 1, 2, 3, 4, 5)), DateTime.Time(#datetime(2024, 1, 2, 3, 4, 5))}"
+    },
+    {
+      "id": "Date.ToRecord/kinds",
+      "query": "{Time.ToRecord(#time(1, 2, 3.5)), DateTime.ToRecord(#datetime(2024, 1, 2, 3, 4, 5.25)), DateTimeZone.ToRecord(#datetimezone(2024, 1, 2, 3, 4, 5, -5, -30))}"
+    },
+    {
+      "id": "Date.ToRecord/errors",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {e(try Date.ToRecord(#datetime(2024, 1, 2, 3, 4, 5))), e(try Date.ToRecord(null)), e(try Time.ToRecord(#datetime(2024, 1, 2, 3, 4, 5))), e(try DateTimeZone.ToRecord(#datetime(2024, 1, 2, 3, 4, 5)))}"
     },
     {
       "id": "Date.Arithmetic/basic",
@@ -528,6 +596,14 @@
     {
       "id": "Record/transform",
       "query": "{Record.TransformFields([a = 1, b = 2], {\"a\", each _ * 10}), Record.RemoveFields([a = 1, b = 2], \"a\"), Record.RenameFields([a = 1], {\"a\", \"z\"}), Record.ReorderFields([a = 1, b = 2], {\"b\", \"a\"})}"
+    },
+    {
+      "id": "Record.TransformFields/edges",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {e(try Record.TransformFields([a = 1, b = 2], {{\"a\", each _ + 1}, {\"b\", Text.From}})), e(try Record.TransformFields([a = 1], {\"z\", each _}, MissingField.Ignore)), e(try Record.TransformFields([a = 1], {\"z\", each _}, MissingField.UseNull)), e(try Record.TransformFields([a = 1], {\"z\", each _})), e(try Record.TransformFields([a = 1], {{\"a\", each _}, {\"a\", each _}}))}"
+    },
+    {
+      "id": "Record.ReorderFields/edges",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {e(try Record.ReorderFields([a = 1, b = 2, c = 3], {\"c\", \"a\"})), e(try Record.ReorderFields([a = 1, b = 2], {\"z\", \"b\"}, MissingField.UseNull)), e(try Record.ReorderFields([a = 1, b = 2], {\"z\", \"b\"}, MissingField.Ignore)), e(try Record.ReorderFields([a = 1], {\"q\"}))}"
     },
     {
       "id": "Record.ToTable/basic",
@@ -650,12 +726,36 @@
       "query": "{Text.ToBinary(\"hé\"), Binary.ToText(Text.ToBinary(\"abc\"), BinaryEncoding.Hex), Binary.FromText(\"AQI=\"), Binary.Length(#binary({1, 2, 3})), Text.FromBinary(#binary({104, 105}))}"
     },
     {
+      "id": "Binary/functions",
+      "query": "{Binary.ToText(#binary({1, 2, 255})), Binary.ToText(#binary({1, 2, 255}), BinaryEncoding.Hex), Binary.ToList(Binary.FromText(\"0A0b\", BinaryEncoding.Hex)), Binary.ToList(Binary.FromText(\" AQ I= \")), Binary.ToList(Binary.From(\"AQI=\")), Binary.From(null), Binary.ToList(Binary.Combine({#binary({1}), #binary({2, 3})})), Binary.ToList(Binary.Range(#binary({1, 2, 3, 4}), 1, 2)), Binary.ToList(Binary.Range(#binary({1, 2, 3, 4}), 2, 5)), List.Transform(Binary.Split(#binary({1, 2, 3, 4, 5}), 2), Binary.ToList), Binary.ApproximateLength(#binary({1, 2, 3})), Binary.ToList(Binary.Buffer(#binary({9}))), Binary.ToList(Binary.FromList({0, 255}))}"
+    },
+    {
+      "id": "Binary/errors",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {e(try Binary.Length(Binary.FromText(\"012\", BinaryEncoding.Hex))), e(try Binary.Length(Binary.FromText(\"0g\", BinaryEncoding.Hex))), e(try Binary.Length(Binary.FromText(\"AQI\"))), e(try Binary.Length(Binary.From(1))), e(try Binary.Length(Binary.FromList({1, 256}))), e(try Binary.Length(Binary.FromList({1.5}))), e(try Binary.Length(Binary.Range(#binary({1}), -1))), e(try Binary.Split(#binary({1}), 0)), e(try Binary.Length(Binary.Combine({null}))), e(try Binary.Length(Binary.ToText(#binary({1}), 5)))}"
+    },
+    {
       "id": "Json.Document/basic",
       "query": "Json.Document(\"{\"\"a\"\":[1,2.5,{\"\"b\"\":null}],\"\"c\"\":true}\")"
     },
     {
       "id": "Json.FromValue/basic",
       "query": "Text.FromBinary(Json.FromValue([a = {1, \"x\"}, b = null, c = #date(2024, 1, 2)]))"
+    },
+    {
+      "id": "Json.FromValue/kinds",
+      "query": "Text.FromBinary(Json.FromValue({1e21, 1e-7, -0, 1.5, 0 / 0, \"a/b\\\"\"c\", \"é#(lf)\", #datetime(2024, 1, 2, 3, 4, 5.25), #time(1, 2, 3), #datetimezone(2024, 1, 2, 3, 4, 5, 1, 0), #duration(1, 2, 3, 4), -#duration(0, 23, 59, 59.5), #binary({1, 2}), true, #table({\"a\"}, {{1}, {2}})}))"
+    },
+    {
+      "id": "Json.FromValue/utf16",
+      "query": "Binary.ToText(Json.FromValue(\"é\", TextEncoding.Utf16), BinaryEncoding.Hex)"
+    },
+    {
+      "id": "Json.FromValue/errors",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {e(try Binary.Length(Json.FromValue(each _))), e(try Binary.Length(Json.FromValue(type text)))}"
+    },
+    {
+      "id": "constants/enums",
+      "query": "{JoinKind.LeftSemi, JoinKind.RightSemi, JoinAlgorithm.SortMerge, JoinSide.Right, PercentileMode.SqlCont, Occurrence.Repeating, BinaryOccurrence.Required, BinaryEncoding.Hex, Type.Is(Day.Type, type number)}"
     },
     {
       "id": "Comparer/basic",

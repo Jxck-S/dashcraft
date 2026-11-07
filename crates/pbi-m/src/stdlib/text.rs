@@ -17,7 +17,7 @@ use crate::eval::interp::{Interp, convert_error};
 use crate::merror::MError;
 use crate::value::format::value_to_text;
 use crate::value::ops::equals;
-use crate::value::{BinaryValue, FunctionValue, NativeImpl, Value};
+use crate::value::{BinaryValue, FunctionValue, ListValue, NativeImpl, Value};
 
 pub(super) fn register(b: &mut Builder) {
     b.func("Text.Trim", &["text", "?trim"], trim);
@@ -87,6 +87,12 @@ pub(super) fn register(b: &mut Builder) {
     b.func("Text.Reverse", &["text"], reverse);
     b.func("Text.ToList", &["text"], to_list);
     b.func("Text.Clean", &["text"], clean);
+    b.func("Text.NewGuid", &[], new_guid);
+    b.func(
+        "Text.PositionOfAny",
+        &["text", "characters", "?occurrence"],
+        position_of_any,
+    );
     b.func(
         "Text.Format",
         &["formatString", "arguments", "?culture"],
@@ -127,6 +133,41 @@ pub(super) fn register(b: &mut Builder) {
         splitter_by_any_delimiter,
     );
     b.func("Splitter.SplitByNothing", &[], splitter_by_nothing);
+    b.func(
+        "Splitter.SplitTextByEachDelimiter",
+        &["delimiters", "?quoteStyle", "?startAtEnd"],
+        splitter_by_each_delimiter,
+    );
+    b.func(
+        "Splitter.SplitTextByPositions",
+        &["positions", "?startAtEnd"],
+        splitter_by_positions,
+    );
+    b.func(
+        "Splitter.SplitTextByLengths",
+        &["lengths", "?startAtEnd"],
+        splitter_by_lengths,
+    );
+    b.func(
+        "Splitter.SplitTextByRanges",
+        &["ranges", "?startAtEnd"],
+        splitter_by_ranges,
+    );
+    b.func(
+        "Splitter.SplitTextByRepeatedLengths",
+        &["length", "?startAtEnd"],
+        splitter_by_repeated_lengths,
+    );
+    b.func(
+        "Splitter.SplitTextByWhitespace",
+        &["?quoteStyle"],
+        splitter_by_whitespace,
+    );
+    b.func(
+        "Splitter.SplitTextByCharacterTransition",
+        &["before", "after"],
+        splitter_by_character_transition,
+    );
     b.func(
         "Combiner.CombineTextByDelimiter",
         &["delimiter", "?quoteStyle"],
@@ -897,6 +938,404 @@ fn splitter_by_any_delimiter(it: &Interp, args: &[Value]) -> Result<Value, MErro
             split_quoted(t, &delimiters, quotes)
         }
     }))
+}
+
+/// The texts of a list argument (delimiters).
+fn texts_of(it: &Interp, l: &ListValue) -> Result<Vec<String>, MError> {
+    items(it, l)?
+        .into_iter()
+        .map(|v| {
+            v.as_text()
+                .map(str::to_owned)
+                .ok_or_else(|| convert_error(&v, "Text"))
+        })
+        .collect()
+}
+
+/// The integers of a list argument (positions, lengths), checked by `valid`.
+fn ints_of(
+    it: &Interp,
+    l: &ListValue,
+    mut valid: impl FnMut(i64) -> bool,
+    message: &str,
+) -> Result<Vec<usize>, MError> {
+    let mut out = Vec::new();
+    for v in items(it, l)? {
+        let n = match v {
+            Value::Number(n) if n.fract() == 0.0 && n.abs() <= 9.007_199_254_740_992e15 => n as i64,
+            _ => return Err(MError::expression(message)),
+        };
+        if !valid(n) {
+            return Err(MError::expression(message));
+        }
+        out.push(usize::try_from(n).unwrap_or(usize::MAX));
+    }
+    Ok(out)
+}
+
+/// Splits by character offsets: `split` sees the characters; `startAtEnd` splits the reversed
+/// text and reverses the parts back.
+fn split_chars(text: &str, from_end: bool, split: &dyn Fn(&[char]) -> Vec<String>) -> Vec<String> {
+    if !from_end {
+        let chars: Vec<char> = text.chars().collect();
+        return split(&chars);
+    }
+    let chars: Vec<char> = text.chars().rev().collect();
+    let mut parts: Vec<String> = split(&chars)
+        .into_iter()
+        .map(|p| p.chars().rev().collect())
+        .collect();
+    parts.reverse();
+    parts
+}
+
+/// The characters `start..start + count` (both clamped to the text).
+fn char_slice(chars: &[char], start: usize, count: usize) -> String {
+    let start = start.min(chars.len());
+    let end = start.saturating_add(count).min(chars.len());
+    chars.get(start..end).unwrap_or_default().iter().collect()
+}
+
+/// Applies each delimiter once, in order: after the last one, the rest of the text is one part.
+fn split_each(text: &str, delimiters: &[String], quotes: SplitQuotes) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut part = String::new();
+    let mut in_quotes = false;
+    let mut part_start = true;
+    let mut next = 0;
+    let mut rest = text;
+    while let Some(c) = rest.chars().next() {
+        if in_quotes {
+            if c == '"' {
+                if rest[1..].starts_with('"') {
+                    part.push('"');
+                    rest = &rest[2..];
+                } else {
+                    in_quotes = false;
+                    rest = &rest[1..];
+                }
+            } else {
+                part.push(c);
+                rest = &rest[c.len_utf8()..];
+            }
+            continue;
+        }
+        if let Some(d) = delimiters.get(next)
+            && rest.starts_with(d.as_str())
+        {
+            parts.push(std::mem::take(&mut part));
+            part_start = true;
+            next += 1;
+            rest = &rest[d.len()..];
+            continue;
+        }
+        let opens = match quotes {
+            SplitQuotes::None => false,
+            SplitQuotes::AfterDelimiter => part_start,
+            SplitQuotes::Always => true,
+        };
+        part_start = false;
+        if c == '"' && opens {
+            in_quotes = true;
+            rest = &rest[1..];
+            continue;
+        }
+        part.push(c);
+        rest = &rest[c.len_utf8()..];
+    }
+    parts.push(part);
+    parts
+}
+
+fn splitter_by_each_delimiter(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let delimiters = texts_of(it, req_list(args, 0)?)?;
+    for d in &delimiters {
+        check_delimiter(d)?;
+    }
+    let quotes = split_quotes(args, 1, None)?;
+    let from_end = super::args::bool_arg(args, 2)?.unwrap_or(false);
+    Ok(splitter("Splitter.SplitTextByEachDelimiter", move |t| {
+        if from_end {
+            let reversed: String = t.chars().rev().collect();
+            let delimiters: Vec<String> = delimiters
+                .iter()
+                .map(|d| d.chars().rev().collect())
+                .collect();
+            let mut parts = split_each(&reversed, &delimiters, quotes);
+            parts.reverse();
+            parts
+                .into_iter()
+                .map(|p| p.chars().rev().collect())
+                .collect()
+        } else {
+            split_each(t, &delimiters, quotes)
+        }
+    }))
+}
+
+fn splitter_by_positions(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let mut previous = 0;
+    let positions = ints_of(
+        it,
+        req_list(args, 0)?,
+        |n| {
+            let ok = n >= previous;
+            previous = n;
+            ok
+        },
+        "A position must be numeric and greater than or equal to the previous position.",
+    )?;
+    let from_end = super::args::bool_arg(args, 1)?.unwrap_or(false);
+    Ok(splitter("Splitter.SplitTextByPositions", move |t| {
+        split_chars(t, from_end, &|chars| {
+            positions
+                .iter()
+                .enumerate()
+                .map(|(i, &start)| {
+                    let end = positions.get(i + 1).copied().unwrap_or(usize::MAX);
+                    char_slice(chars, start, end - start)
+                })
+                .collect()
+        })
+    }))
+}
+
+fn splitter_by_lengths(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let lengths = ints_of(
+        it,
+        req_list(args, 0)?,
+        |n| n >= 0,
+        "A length must be greater than or equal to zero.",
+    )?;
+    let from_end = super::args::bool_arg(args, 1)?.unwrap_or(false);
+    Ok(splitter("Splitter.SplitTextByLengths", move |t| {
+        split_chars(t, from_end, &|chars| {
+            let mut start = 0usize;
+            lengths
+                .iter()
+                .map(|&n| {
+                    let part = char_slice(chars, start, n);
+                    start = start.saturating_add(n);
+                    part
+                })
+                .collect()
+        })
+    }))
+}
+
+fn splitter_by_ranges(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let mut ranges = Vec::new();
+    for range in items(it, req_list(args, 0)?)? {
+        let Value::List(pair) = &range else {
+            return Err(convert_error(&range, "List"));
+        };
+        let pair = items(it, pair)?;
+        let bound = |i: usize| -> Result<Option<usize>, MError> {
+            match pair.get(i) {
+                None | Some(Value::Null) => Ok(None),
+                Some(Value::Number(n)) if n.fract() == 0.0 && *n >= 0.0 => Ok(Some(*n as usize)),
+                Some(_) => Err(MError::expression(
+                    "A range must be a list of an offset and a count, both non-negative integers.",
+                )),
+            }
+        };
+        let offset = bound(0)?.ok_or_else(|| {
+            MError::expression(
+                "A range must be a list of an offset and a count, both non-negative integers.",
+            )
+        })?;
+        ranges.push((offset, bound(1)?.unwrap_or(usize::MAX)));
+    }
+    let from_end = super::args::bool_arg(args, 1)?.unwrap_or(false);
+    Ok(splitter("Splitter.SplitTextByRanges", move |t| {
+        split_chars(t, from_end, &|chars| {
+            ranges
+                .iter()
+                .map(|&(offset, count)| char_slice(chars, offset, count))
+                .collect()
+        })
+    }))
+}
+
+fn splitter_by_repeated_lengths(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let length = match super::args::int_arg(args, 0)? {
+        Some(n) if n > 0 => usize::try_from(n).unwrap_or(usize::MAX),
+        _ => return Err(MError::expression("A length must be greater than zero.")),
+    };
+    let from_end = super::args::bool_arg(args, 1)?.unwrap_or(false);
+    Ok(splitter("Splitter.SplitTextByRepeatedLengths", move |t| {
+        split_chars(t, from_end, &|chars| {
+            chars.chunks(length).map(|c| c.iter().collect()).collect()
+        })
+    }))
+}
+
+/// Splits at runs of whitespace outside quotes; leading or trailing whitespace gives an empty
+/// first or last part.
+fn split_whitespace(text: &str, quotes: SplitQuotes) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut part = String::new();
+    let mut in_quotes = false;
+    let mut part_start = true;
+    let mut rest = text;
+    while let Some(c) = rest.chars().next() {
+        if in_quotes {
+            if c == '"' {
+                if rest[1..].starts_with('"') {
+                    part.push('"');
+                    rest = &rest[2..];
+                } else {
+                    in_quotes = false;
+                    rest = &rest[1..];
+                }
+            } else {
+                part.push(c);
+                rest = &rest[c.len_utf8()..];
+            }
+            continue;
+        }
+        if c.is_whitespace() {
+            parts.push(std::mem::take(&mut part));
+            part_start = true;
+            rest = rest.trim_start_matches(char::is_whitespace);
+            continue;
+        }
+        let opens = match quotes {
+            SplitQuotes::None => false,
+            SplitQuotes::AfterDelimiter => part_start,
+            SplitQuotes::Always => true,
+        };
+        part_start = false;
+        if c == '"' && opens {
+            in_quotes = true;
+            rest = &rest[1..];
+            continue;
+        }
+        part.push(c);
+        rest = &rest[c.len_utf8()..];
+    }
+    parts.push(part);
+    parts
+}
+
+fn splitter_by_whitespace(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let quotes = split_quotes(args, 0, None)?;
+    Ok(splitter("Splitter.SplitTextByWhitespace", move |t| {
+        split_whitespace(t, quotes)
+    }))
+}
+
+/// A character test of `Splitter.SplitTextByCharacterTransition`: a list of characters or a
+/// function of a one-character text.
+enum CharTest {
+    Chars(Vec<char>),
+    Function(FunctionValue),
+}
+
+impl CharTest {
+    fn from_arg(it: &Interp, v: &Value) -> Result<CharTest, MError> {
+        match v {
+            Value::Function(f) => Ok(CharTest::Function(f.clone())),
+            Value::List(l) => {
+                let mut chars = Vec::new();
+                for item in items(it, l)? {
+                    let mut it = item.as_text().unwrap_or_default().chars();
+                    match (it.next(), it.next()) {
+                        (Some(c), None) => chars.push(c),
+                        _ => return Err(convert_error(&item, "Character")),
+                    }
+                }
+                Ok(CharTest::Chars(chars))
+            }
+            other => Err(convert_error(other, "Function")),
+        }
+    }
+
+    fn test(&self, it: &Interp, c: char) -> Result<bool, MError> {
+        match self {
+            CharTest::Chars(chars) => Ok(chars.contains(&c)),
+            CharTest::Function(f) => match it.call(f, &[Value::text(c.to_string())])? {
+                Value::Logical(b) => Ok(b),
+                other => Err(convert_error(&other, "Logical")),
+            },
+        }
+    }
+}
+
+fn splitter_by_character_transition(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let before = CharTest::from_arg(it, arg(args, 0))?;
+    let after = CharTest::from_arg(it, arg(args, 1))?;
+    Ok(dyn_fn(
+        "Splitter.SplitTextByCharacterTransition",
+        &[("line", false)],
+        move |it, a| {
+            let Some(t) = text_arg(a, 0, "")? else {
+                return Ok(Value::list([]));
+            };
+            let mut parts = Vec::new();
+            let mut part = String::new();
+            let mut previous: Option<char> = None;
+            for c in t.chars() {
+                it.tick()?;
+                if let Some(p) = previous
+                    && before.test(it, p)?
+                    && after.test(it, c)?
+                {
+                    parts.push(Value::text(std::mem::take(&mut part)));
+                }
+                part.push(c);
+                previous = Some(c);
+            }
+            parts.push(Value::text(part));
+            it.check_rows(parts.len())?;
+            Ok(Value::list(parts))
+        },
+    ))
+}
+
+/// A random (version 4) GUID in lowercase `8-4-4-4-12` form.
+fn new_guid(it: &Interp, _: &[Value]) -> Result<Value, MError> {
+    let hi = it.next_random();
+    let lo = it.next_random();
+    let hi = (hi & !0xf000) | 0x4000;
+    let lo = (lo & !(0xc << 60)) | (0x8 << 60);
+    text(format!(
+        "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
+        hi >> 32,
+        (hi >> 16) & 0xffff,
+        hi & 0xffff,
+        lo >> 48,
+        lo & 0xffff_ffff_ffff
+    ))
+}
+
+fn position_of_any(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let Some(t) = text_arg(args, 0, "")? else {
+        return Ok(Value::Null);
+    };
+    let mut chars = Vec::new();
+    for v in items(it, req_list(args, 1)?)? {
+        let mut cs = v.as_text().unwrap_or_default().chars();
+        match (cs.next(), cs.next()) {
+            (Some(c), None) => chars.push(c),
+            _ => return Err(convert_error(&v, "Character")),
+        }
+    }
+    let found: Vec<usize> = t
+        .chars()
+        .enumerate()
+        .filter(|(_, c)| chars.contains(c))
+        .map(|(i, _)| i)
+        .collect();
+    let index = |i: Option<&usize>| Value::Number(i.map_or(-1.0, |&i| i as f64));
+    match super::args::num_arg(args, 2)? {
+        None | Some(0.0) => Ok(index(found.first())),
+        Some(1.0) => Ok(index(found.last())),
+        Some(2.0) => Ok(Value::list(
+            found.into_iter().map(|i| Value::Number(i as f64)),
+        )),
+        Some(_) => Err(MError::expression("The specified Occurrence is invalid.")),
+    }
 }
 
 fn splitter_by_nothing(_: &Interp, _: &[Value]) -> Result<Value, MError> {

@@ -882,6 +882,12 @@ optional language server.
     (suite `m-functions`) and compared by `crates/pbi-m/tests/groundtruth.rs`: 149 match, 27
     call functions DashCraft lacks (ledgered, next), 1 differs by design (decimal literals).
     Number text and rounding now follow Desktop.
+  - [x] M7.3 library growth, part 1 (2026-11-07): 69 more functions (splitters, `Text.NewGuid`,
+    bitwise, list statistics and editing, week/quarter/day dates, month and day names in 18
+    languages, `*.ToRecord`, `Record.TransformFields`/`ReorderFields`, `Binary.*`,
+    `Json.FromValue`) and the enum constants and `*.Type` values: 461 library names, 335 of
+    Desktop's 941 functions; `m-functions` 202 expressions, 191 match Desktop, 10 table functions
+    ledgered for part 2.
 - [ ] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of
   properties and object references, formatting that matches the writer.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,

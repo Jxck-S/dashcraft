@@ -31,6 +31,31 @@ pub(super) fn register(b: &mut Builder) {
         round_away_from_zero,
     );
     b.func("Number.Abs", &["number"], abs);
+    b.func("Number.BitwiseAnd", &["number1", "number2"], |_, a| {
+        bitwise(a, |x, y| x & y)
+    });
+    b.func("Number.BitwiseOr", &["number1", "number2"], |_, a| {
+        bitwise(a, |x, y| x | y)
+    });
+    b.func("Number.BitwiseXor", &["number1", "number2"], |_, a| {
+        bitwise(a, |x, y| x ^ y)
+    });
+    b.func(
+        "Number.BitwiseShiftLeft",
+        &["number1", "number2"],
+        |_, a| bitwise(a, |x, y| x.wrapping_shl((y & 63) as u32)),
+    );
+    b.func(
+        "Number.BitwiseShiftRight",
+        &["number1", "number2"],
+        |_, a| bitwise(a, |x, y| x.wrapping_shr((y & 63) as u32)),
+    );
+    b.func("Number.BitwiseNot", &["number"], |_, a| {
+        match num_arg(a, 0)? {
+            None => Ok(Value::Null),
+            Some(n) => Ok(Value::Number(!to_int64(n)? as f64)),
+        }
+    });
     b.func("Number.Sign", &["number"], sign);
     b.func("Number.Mod", &["number", "divisor", "?precision"], modulo);
     b.func(
@@ -379,6 +404,28 @@ fn binary(args: &[Value], f: impl FnOnce(f64, f64) -> f64) -> Result<Value, MErr
 
 fn modulo(_: &Interp, args: &[Value]) -> Result<Value, MError> {
     binary(args, |a, b| a % b)
+}
+
+/// 2^63, the first `f64` outside the `i64` range.
+const TWO_POW_63: f64 = 9_223_372_036_854_775_808.0;
+
+/// A number as a 64-bit integer for the bitwise functions.
+fn to_int64(n: f64) -> Result<i64, MError> {
+    if n.fract() == 0.0 && (-TWO_POW_63..TWO_POW_63).contains(&n) {
+        Ok(n as i64)
+    } else {
+        Err(MError::expression(
+            "The number is out of range of a 64 bit integer value.",
+        ))
+    }
+}
+
+/// A binary bitwise operation on two 64-bit integers; `null` gives `null`.
+fn bitwise(args: &[Value], op: impl Fn(i64, i64) -> i64) -> Result<Value, MError> {
+    match (num_arg(args, 0)?, num_arg(args, 1)?) {
+        (Some(x), Some(y)) => Ok(Value::Number(op(to_int64(x)?, to_int64(y)?) as f64)),
+        _ => Ok(Value::Null),
+    }
 }
 
 fn integer_divide(_: &Interp, args: &[Value]) -> Result<Value, MError> {

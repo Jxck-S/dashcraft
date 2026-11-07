@@ -7,6 +7,32 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.3 M library growth, part 1
+
+- **What:** `pbi-m`'s library gains 69 functions, the missing enum constants and 18 enum `*.Type`
+  values. `stdlib/text.rs`: seven `Splitter.SplitTextBy*` functions, `Text.NewGuid` (version-4
+  GUIDs from a generator seeded by the evaluation clock, so a `FixedClock` repeats them),
+  `Text.PositionOfAny`; `number.rs`: `Number.Bitwise*`; `list.rs`: statistics (`Median`, `Mode`,
+  `Modes`, `StandardDeviation`, `Covariance`, `Product`, `Percentile` with `PercentileMode`) and
+  editing (`Split`, `Alternate`, `InsertRange`, `ReplaceRange`, `RemoveRange`, `MaxN`, `MinN`,
+  `TransformMany`, …); `datetime.rs`: week, quarter, day and hour boundaries, `AddWeeks`,
+  `AddQuarters`, `*.ToRecord`, `MonthName`/`DayOfWeekName` (names for 18 languages from Desktop in
+  the new `date_names.rs`), Desktop's 0001–9999 date range and its overflow and `Day` errors;
+  `record.rs`: `TransformFields`, `ReorderFields`; new `binary.rs`: `Binary.*`, `BinaryEncoding`,
+  `Json.FromValue` (Desktop's escaping, durations as `P1DT2H3M4S`, NaN as `null`).
+- **Why:** M7.3 (DESKTOP-PLAN), GAPS §2 "Standard library": the ledgered functions of M7.3a.
+- **Desktop check:** 11 probe batches against Power BI Desktop 2.159 settled the edge cases
+  (splitter quoting, percentile interpolation, week numbering, culture names, overflow messages,
+  strict base64, JSON escaping). Suite `m-functions` grows from 177 to 202 expressions: 191 match,
+  10 table functions ledgered `unsupported` (part 2), 1 by design. Desktop evaluates `Binary` values
+  lazily, so an error inside `try Binary.FromList(…)` escapes the `try`; the corpus forces such
+  values with `Binary.Length`.
+- **Numbers:** library 351 → 461 names (266 → 335 functions, 31 → 49 types, 54 → 77 constants);
+  ledger 29 → 12 entries; new tests in `stdlib.rs` (GUIDs, date range, JSON, base64) and
+  `binary.rs`.
+- **Open:** part 2, the table functions (`Table.Group`, `Pivot`, `Unpivot`, `Join`, `NestedJoin`,
+  `Transpose`, `SplitColumn`, `Max`, `Schema`, expansions).
+
 ### M7.3a M library catalog and Desktop conformance
 
 - **What:** the ground-truth recorder evaluates M: a corpus with `"language": "m"` runs each
