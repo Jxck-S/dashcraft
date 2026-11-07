@@ -6,8 +6,8 @@ GitHub Actions). Every workflow defaults to `permissions: contents: read`; only 
 release jobs get `contents: write`.
 
 The Rust toolchain always comes from `rust-toolchain.toml` (installed with
-`rustup toolchain install`), so CI and local builds use the same compiler. The fuzz
-workflow is the exception: it uses nightly.
+`rustup toolchain install`), so CI and local builds use the same compiler. The
+`cargo-fuzz` job of the fuzz workflow is the exception: it uses nightly.
 
 ## `ci.yml`: push and PR to `main`
 
@@ -260,6 +260,42 @@ If the Tauri updater is enabled later, also add `TAURI_SIGNING_PRIVATE_KEY` and
 - The corpus (`fuzz/corpus`) is cached between runs.
 - On failure, crash inputs from `fuzz/artifacts` are uploaded as the
   `fuzz-artifacts` artifact.
+- A second job, `registry property tests`, runs the property tests of the
+  command registry (`crates/pbi-ops/tests/property.rs`, M6.11) in release with
+  the pinned toolchain: `DASHCRAFT_PROPERTY_STEPS=10000` and
+  `DASHCRAFT_PROPERTY_SEED` set to the run number, so every night walks new
+  edit sequences (below).
+
+### Registry property tests
+
+`crates/pbi-ops/tests/property.rs` drives the command registry the way an
+agent or the app does, through `Registry::execute`:
+
+- every catalog command is called with its examples, with parameters derived
+  from its JSON Schema and with mutated parameters (wrong types, missing and
+  unknown fields, odd strings and numbers): no panic, which the registry reports
+  as an `internal` error, and no call over 60 seconds;
+- seeded random sequences of edits (some invalid), undos and redos on the Acme
+  Outfitters example: a refused or no-op edit changes nothing, undoing
+  everything gives a document equal to the original, and on loaded data the
+  edited document saves as a new PBIP project that reads back with the same
+  model and visuals, with every measure value back after the undos.
+
+`cargo test` runs a quarter of the steps in debug builds (2,500 and 250) and
+all of them in release (10,000 and 1,000). Two environment variables change
+that:
+
+| Variable | Effect |
+|---|---|
+| `DASHCRAFT_PROPERTY_STEPS` | Steps of each random test |
+| `DASHCRAFT_PROPERTY_SEED` | Mixed into each test's seed; the log prints the seed |
+
+To reproduce a nightly failure, rerun with the run's values:
+
+```sh
+DASHCRAFT_PROPERTY_STEPS=10000 DASHCRAFT_PROPERTY_SEED=<run number> \
+  cargo test --release -p pbi-ops --test property -- --nocapture
+```
 
 ### Fuzz targets
 
@@ -359,6 +395,7 @@ cargo deny check                         # advisories needs network
 cargo deny check bans licenses sources   # works offline once the index is cached
 
 # Fuzzing (same as `fuzz.yml`)
+DASHCRAFT_PROPERTY_STEPS=10000 cargo test --release -p pbi-ops --test property
 cargo install cargo-fuzz --locked
 cargo +nightly fuzz list
 bash fuzz/run.sh <target> 60

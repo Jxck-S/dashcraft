@@ -359,6 +359,63 @@ fn renames_move_the_table_file_and_follow_into_the_report() {
 }
 
 #[test]
+fn renamed_then_deleted_objects_keep_their_new_names_in_the_report() {
+    // A rename rewrites the report and a delete leaves it pointing at the
+    // new name, as in Power BI Desktop: the save writes those references.
+    for delete_table in [false, true] {
+        let (_dir, root) = project();
+        let opened = open(&root);
+        let mut fingerprint = ProjectFingerprint::scan(&opened).unwrap();
+        let mut edited = opened.document.clone();
+        rename(
+            &mut edited,
+            &Rename::Measure {
+                table: "Web Sessions".into(),
+                old: "Sessions".into(),
+                new: "Visits".into(),
+            },
+        );
+        let entity = if delete_table {
+            rename(
+                &mut edited,
+                &Rename::Table {
+                    old: "Web Sessions".into(),
+                    new: "Site Sessions".into(),
+                },
+            );
+            let model = edited.model.as_mut().unwrap();
+            model.tables.retain(|t| t.name != "Site Sessions");
+            "Site Sessions"
+        } else {
+            let model = edited.model.as_mut().unwrap();
+            let table = model.table_mut("Web Sessions").unwrap();
+            table.measures.retain(|m| m.name != "Visits");
+            "Web Sessions"
+        };
+
+        save_in_place(&opened, &mut fingerprint, &edited, false).unwrap();
+        let card = std::fs::read_to_string(root.join(SESSIONS_CARD)).unwrap();
+        assert!(
+            card.contains(&format!("\"Entity\": \"{entity}\"")),
+            "{card}"
+        );
+        assert!(card.contains("\"Property\": \"Visits\""), "{card}");
+        assert!(
+            card.contains(&format!("\"queryRef\": \"{entity}.Visits\"")),
+            "{card}"
+        );
+        let reopened = open(&root);
+        let model = reopened.document.model.as_ref().unwrap();
+        assert!(model.measure(entity, "Visits").is_none());
+        assert_eq!(model.table("Web Sessions").is_none(), delete_table);
+        assert_eq!(
+            normalized(&reopened.document.reports),
+            normalized(&edited.reports)
+        );
+    }
+}
+
+#[test]
 fn case_only_table_rename_renames_the_file() {
     let (_dir, root) = project();
     let opened = open(&root);

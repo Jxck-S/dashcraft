@@ -498,9 +498,18 @@ their write roots).
 - [ ] **M6.10 CLI as registry wrappers.** `detect`, `inspect` and `lint` become thin wrappers
   over `Registry::execute` with byte-identical output (ADR-0007 migration plan); `dashcraft run`
   gains `--save` for edit batches.
-- [ ] **M6.11 Registry fuzzing.** A fuzz or property target calls every command with
+- [x] **M6.11 Registry fuzzing.** A fuzz or property target calls every command with
   schema-derived and mutated parameters, and runs random edit, undo and redo sequences: no panic,
   undo of everything restores an equal document, saved output parses back to an equal model.
+  Done (acceptance 10): `crates/pbi-ops/tests/property.rs` calls all 71 commands with their
+  examples, schema-derived and mutated parameters (8,688 calls; no `internal` error, no call over
+  60 s), and runs seeded random edit, undo and redo steps over 17 edit kinds (including grouped
+  `doc.applyEdits`): 10,000 steps on Acme undo to an equal document, a refused or no-op step changes
+  nothing, and on loaded data the edited document saves as a new project that reopens with the
+  same model and visuals, then undoes to the same measure values. Debug runs take a quarter of the
+  steps; the nightly `fuzz.yml` job runs all of them in release with a new seed each night
+  ([ci.md](ci.md#registry-property-tests)). It found that renaming a field a visual uses and then
+  deleting it made the project unsaveable; the save now reads such renames from the report.
 
 **Progress (M6.2–M6.7 partial, not ticked).** The session owns a `pbi-model::History` per open
 document and publishes each edit, undo and redo into the opened document, the session model and

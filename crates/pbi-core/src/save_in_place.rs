@@ -11,7 +11,8 @@
 //!   not produce (`.pbi/` settings and caches, unknown files) are never
 //!   touched.
 //! - **Report references follow renames.** Net table, column and measure
-//!   renames (matched by object id) are applied to the PBIR files
+//!   renames (matched by object id; for objects deleted since, read from
+//!   the report fields that still name them) are applied to the PBIR files
 //!   (`report.json`, `page.json`, `visual.json` and other JSON files under
 //!   `definition/`, such as bookmarks), and moved or resized visuals get
 //!   their `position` patched. Report changes that cannot be written yet
@@ -42,7 +43,9 @@ use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
-use pbi_model::{Document, Model, ObjectId, Position, Rename, Report, SourceFormat, names_eq};
+use pbi_model::{
+    Document, FieldExpr, Model, ObjectId, Position, Rename, Report, SourceFormat, names_eq,
+};
 use pbi_pbir::{JsonStyle, PbirReport};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -301,7 +304,9 @@ pub fn edited_document(
     current: &Document,
 ) -> Result<OpenedDocument, CoreError> {
     let renames = match (&baseline.document.model, &current.model) {
-        (Some(old), Some(new)) => net_renames(old, new),
+        (Some(old), Some(new)) => {
+            net_renames(old, new, &baseline.document.reports, &current.reports)
+        }
         _ => Vec::new(),
     };
     let expected = expected_reports(&baseline.document, current, &renames);
@@ -753,10 +758,16 @@ fn refresh_sources(synced: &mut OpenedDocument, after: &PbipOutput) {
 // ---------------------------------------------------------------------------
 
 /// The renames from `old` to `new` (tables, columns and measures matched
-/// by id), as a sequence that turns `old` references into `new` ones when
-/// applied in order: every name goes through a unique placeholder first,
-/// so swaps and chains work.
-fn net_renames(old: &Model, new: &Model) -> Vec<Rename> {
+/// by id, plus the [renames of deleted objects](deleted_renames) read from
+/// the reports), as a sequence that turns `old` references into `new` ones
+/// when applied in order: every name goes through a unique placeholder
+/// first, so swaps and chains work.
+fn net_renames(
+    old: &Model,
+    new: &Model,
+    old_reports: &[Report],
+    new_reports: &[Report],
+) -> Vec<Rename> {
     let old_tables: HashMap<ObjectId, &pbi_model::Table> = old
         .tables
         .iter()
@@ -789,6 +800,14 @@ fn net_renames(old: &Model, new: &Model) -> Vec<Rename> {
             }
         }
     }
+    deleted_renames(
+        old,
+        new,
+        (old_reports, new_reports),
+        &mut tables,
+        &mut columns,
+        &mut measures,
+    );
     let mut n = 0usize;
     let mut placeholder = || {
         n += 1;
@@ -846,6 +865,116 @@ fn net_renames(old: &Model, new: &Model) -> Vec<Rename> {
         });
     }
     out
+}
+
+/// Renames of tables, columns and measures deleted since `old`, read from
+/// the report references. A rename rewrites the reports and a later delete
+/// leaves them pointing at the new name (as in Power BI Desktop), so the
+/// model no longer says what the object was renamed to. A report field that
+/// differs from its baseline only in the name of a deleted object is taken
+/// as that object's rename; [`check_reports`] still refuses the save unless
+/// the renames account for every report change.
+fn deleted_renames(
+    old: &Model,
+    new: &Model,
+    (old_reports, new_reports): (&[Report], &[Report]),
+    tables: &mut Vec<(String, String)>,
+    columns: &mut Vec<(String, String, String)>,
+    measures: &mut Vec<(String, String, String)>,
+) {
+    let survivors: HashMap<ObjectId, &pbi_model::Table> = new
+        .tables
+        .iter()
+        .filter(|t| t.id.is_assigned())
+        .map(|t| (t.id, t))
+        .collect();
+    let mut deleted_tables: Vec<&str> = Vec::new();
+    // (table name, field name, is a measure)
+    let mut deleted_fields: Vec<(&str, &str, bool)> = Vec::new();
+    for table in old.tables.iter().filter(|t| t.id.is_assigned()) {
+        let survivor = survivors.get(&table.id);
+        if survivor.is_none() {
+            deleted_tables.push(&table.name);
+        }
+        for c in table.columns.iter().filter(|c| c.id.is_assigned()) {
+            if survivor.is_none_or(|t| !t.columns.iter().any(|n| n.id == c.id)) {
+                deleted_fields.push((&table.name, &c.name, false));
+            }
+        }
+        for m in table.measures.iter().filter(|m| m.id.is_assigned()) {
+            if survivor.is_none_or(|t| !t.measures.iter().any(|n| n.id == m.id)) {
+                deleted_fields.push((&table.name, &m.name, true));
+            }
+        }
+    }
+    if deleted_tables.is_empty() && deleted_fields.is_empty() {
+        return;
+    }
+    let fields = |report: &Report| {
+        let mut out = Vec::new();
+        report.visit_fields(&mut |f| out.push(f.base().clone()));
+        out
+    };
+    for (old_report, new_report) in old_reports.iter().zip(new_reports) {
+        let (before, after) = (fields(old_report), fields(new_report));
+        if before.len() != after.len() {
+            continue;
+        }
+        for (b, a) in before.iter().zip(&after) {
+            let (Some(b_entity), Some(a_entity)) = (b.entity(), a.entity()) else {
+                continue;
+            };
+            if std::mem::discriminant(b) != std::mem::discriminant(a) {
+                continue;
+            }
+            if b_entity != a_entity
+                && let Some(table) = deleted_tables.iter().find(|t| names_eq(t, b_entity))
+                && !tables.iter().any(|(o, _)| names_eq(o, table))
+            {
+                tables.push(((*table).to_owned(), a_entity.to_owned()));
+            }
+            let ((
+                FieldExpr::Column {
+                    property: b_name, ..
+                },
+                FieldExpr::Column {
+                    property: a_name, ..
+                },
+            )
+            | (
+                FieldExpr::Measure {
+                    property: b_name, ..
+                },
+                FieldExpr::Measure {
+                    property: a_name, ..
+                },
+            )) = (b, a)
+            else {
+                continue;
+            };
+            let is_measure = matches!(b, FieldExpr::Measure { .. });
+            if b_name == a_name {
+                continue;
+            }
+            let Some(&(table, name, _)) = deleted_fields
+                .iter()
+                .find(|(t, n, m)| *m == is_measure && names_eq(t, b_entity) && names_eq(n, b_name))
+            else {
+                continue;
+            };
+            let list = if is_measure {
+                &mut *measures
+            } else {
+                &mut *columns
+            };
+            if !list
+                .iter()
+                .any(|(t, o, _)| names_eq(t, table) && names_eq(o, name))
+            {
+                list.push((table.to_owned(), name.to_owned(), a_name.clone()));
+            }
+        }
+    }
 }
 
 /// The baseline reports with the renames applied and the current visual
@@ -1185,7 +1314,7 @@ fn number(v: f64) -> Result<Number, CoreError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pbi_model::{IdGen, Measure, Table};
+    use pbi_model::{IdGen, Measure, Page, Projection, Table, Visual};
     use serde_json::json;
 
     fn measure_field(table: &str, name: &str) -> Value {
@@ -1219,7 +1348,7 @@ mod tests {
         table.measures.first_mut().unwrap().name = "B".into();
         table.measures.last_mut().unwrap().name = "A".into();
 
-        let renames = net_renames(&old, &new);
+        let renames = net_renames(&old, &new, &[], &[]);
         let mut value = json!({
             "projections": [measure_field("Sales", "A"), measure_field("Sales", "B")],
             "filterConfig": {"filters": [{
@@ -1238,7 +1367,58 @@ mod tests {
                 }]}
             })
         );
-        assert!(net_renames(&old, &old).is_empty());
+        assert!(net_renames(&old, &old, &[], &[]).is_empty());
+    }
+
+    #[test]
+    fn a_rename_chain_through_a_deleted_name_rewrites_report_json() {
+        // A renamed to C and deleted, then B renamed to A.
+        let mut ids = IdGen::new();
+        let measure = |ids: &mut IdGen, name: &str| Measure {
+            id: ids.next_id(),
+            name: name.into(),
+            ..Measure::default()
+        };
+        let old = Model {
+            tables: vec![Table {
+                id: ids.next_id(),
+                name: "Sales".into(),
+                measures: vec![measure(&mut ids, "A"), measure(&mut ids, "B")],
+                ..Table::default()
+            }],
+            ..Model::default()
+        };
+        let mut new = old.clone();
+        let table = new.tables.first_mut().unwrap();
+        table.measures.remove(0);
+        table.measures.first_mut().unwrap().name = "A".into();
+        let report = |names: [&str; 2]| Report {
+            pages: vec![Page {
+                visuals: vec![Visual {
+                    projections: names
+                        .iter()
+                        .map(|n| Projection {
+                            field: FieldExpr::measure("Sales", *n),
+                            query_ref: format!("Sales.{n}"),
+                            ..Projection::default()
+                        })
+                        .collect(),
+                    ..Visual::default()
+                }],
+                ..Page::default()
+            }],
+            ..Report::default()
+        };
+
+        let renames = net_renames(&old, &new, &[report(["A", "B"])], &[report(["C", "A"])]);
+        let mut value = json!({
+            "projections": [measure_field("Sales", "A"), measure_field("Sales", "B")]
+        });
+        assert!(rename_json(&mut value, &renames));
+        assert_eq!(
+            value,
+            json!({"projections": [measure_field("Sales", "C"), measure_field("Sales", "A")]})
+        );
     }
 
     #[test]
