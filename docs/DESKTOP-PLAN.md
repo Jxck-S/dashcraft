@@ -904,6 +904,14 @@ optional language server.
     29 new `m-functions` cases (268, all match but the by-design decimal case) and the
     argument-count errors of all 941 functions (suite `m-arity`); no false errors on the 44
     queries of Acme and the samples.
+  - [x] M7.3c (2026-11-07) M hover, signature help and completion: a tolerant scanner scopes
+    half-typed M as Desktop binds it (steps, parameters, `each`, record fields, sections, `@`);
+    `pbi_m::service::{hover, signature_help, complete}` and the `m.hover`, `m.signatureHelp` and
+    `m.complete` commands draw on the text, the model's queries, parameters, functions and
+    tables (`m_environment`, with their definitions and descriptions) and Desktop's library
+    catalog (signatures, unsupported names flagged). Checked on every M query of Acme and the
+    samples: all 418 free names resolve to a model or library name and complete first, all 285
+    library calls get their signature, and nothing fails at any cursor of the example.
 - [ ] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of
   properties and object references, formatting that matches the writer.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,

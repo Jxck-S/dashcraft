@@ -81,8 +81,8 @@ impl LibraryEntry {
     }
 }
 
-/// `name`, or `#"name"` when it is not a regular identifier.
-fn identifier(name: &str) -> String {
+/// `name`, or `#"name"` when it is not a regular identifier (as Desktop shows parameter names).
+pub(crate) fn identifier(name: &str) -> String {
     let regular = name
         .chars()
         .next()

@@ -69,7 +69,7 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
 | `crates/<crate>/` | Library crates above; `crates/pbi-dax/FUNCTIONS.md` (DAX coverage, checked by tests), `crates/pbi-core/src/lint/RULES.md` (18 lint rules), `crates/pbi-vertipaq/FORMAT-NOTES.md` and `REFERENCES.md` |
 | `app/` | Tauri 2 + Svelte 5 + TypeScript front end; [app/README.md](app/README.md), [app/docs/desktop-ui-reference.md](app/docs/desktop-ui-reference.md) (every Desktop element and what we do with it) |
 | `xtask/`, `perf/` | Repo automation; perf scenarios (`budgets.toml`), per-machine `baseline.json`, shared `harness.rs` |
-| `fuzz/` | Own Cargo workspace, 15 `cargo-fuzz` targets, seeds, dictionaries, `run.sh` |
+| `fuzz/` | Own Cargo workspace, 16 `cargo-fuzz` targets, seeds, dictionaries, `run.sh` |
 | `reference/` | Fixtures (`$DASHCRAFT_REFERENCE` overrides; §7): `examples/acme-outfitters/` (synthetic PBIP + CSV; its `blob-map.json` maps `AzureStorage.Blobs` URLs to the local CSVs), `samples/microsoft/` (MIT samples); `reference/README.md` says which test uses what |
 | `docs/` | `ARCHITECTURE`, `ROADMAP`, `GAPS`, `DEVLOG`, `CLI` (every flag and JSON schema), `COMMANDS` (generated), `USER-GUIDE`, `VISUALS` (per-visual support, render verification), `perf`, `ci` (CI, release, fuzzing), `packaging`, `MCP` (MCP server), `AI` (opt-in AI), `adr/`, `research/` (*Craft reviews) |
 | `FORMATS.md` | Format support matrix; update when a reader or data path changes |

@@ -146,6 +146,9 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`dax.references`](#daxreferences) | The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId. | A |
 | [`dax.format`](#daxformat) | Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded. | A |
 | [`m.diagnostics`](#mdiagnostics) | Syntax errors, unknown names, wrong argument counts and unsupported names in an M query or section, with Power BI Desktop's messages. | A |
+| [`m.hover`](#mhover) | Describes the M name at a cursor as Power BI Desktop binds it: step, parameter or field of the text, query, parameter or table of the model, library name or keyword. | A |
+| [`m.signatureHelp`](#msignaturehelp) | The M function call around a cursor: library function, #date-style constructor, function step or function query, its parameters and the one the cursor is in; works on unparsed text. | A |
+| [`m.complete`](#mcomplete) | The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -1234,6 +1237,89 @@ Examples:
 
 - A query against the model: `{"docId":"d1","text":"let Source = Table.RowCnt(Orders) in Source"}`
 - Without a document: `{"text":"let a = Text.Upper() in a"}`
+
+### `m.hover`
+
+**M hover.** Describes the M name at a cursor as Power BI Desktop binds it: step, parameter or field of the text, query, parameter or table of the model, library name or keyword.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` (optional) | string \| null | Describe this document's queries, parameters and tables (`d1`, …). Without it only the text's own names, the library and keywords are described. |
+| `text` | string | The M text: a query or a section document. |
+| `position` | TextPositionIn | The cursor. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `documentRevision`? | integer \| null | The document revision whose queries were used (with `docId`). |
+| `hover`? | MHoverInfo \| null | Absent when there is nothing to describe at the cursor. |
+
+Examples:
+
+- A query parameter of the model: `{"docId":"d1","text":"Web.Contents(StorageContainerUrl)","position":{"offset":15}}`
+- A library function, without a document: `{"text":"Table.RowCount(Source)","position":{"line":1,"column":3}}`
+
+### `m.signatureHelp`
+
+**M signature help.** The M function call around a cursor: library function, #date-style constructor, function step or function query, its parameters and the one the cursor is in; works on unparsed text.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` (optional) | string \| null | Resolve calls of this document's function queries (`d1`, …). |
+| `text` | string | The M text: a query or a section document. |
+| `position` | TextPositionIn | The cursor. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `documentRevision`? | integer \| null | The document revision whose queries were used (with `docId`). |
+| `signature`? | MSignatureOut \| null | Absent outside a call of a known function, or in a comment. |
+
+Examples:
+
+- The second argument of Table.AddColumn: `{"text":"Table.AddColumn(Source, ","position":{"offset":24}}`
+- A function query of the model: `{"docId":"d1","text":"fnCleanKey(","position":{"line":1,"column":12}}`
+
+### `m.complete`
+
+**M completion.** The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` (optional) | string \| null | Suggest this document's queries, parameters and tables (`d1`, …). Without it only the text's own names, the library and keywords are suggested. |
+| `text` | string | The M text: a query or a section document. |
+| `position` | TextPositionIn | The cursor. |
+| `maxItems` (optional) | integer | Most items returned, best first (default 100, at most 1000). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `documentRevision`? | integer \| null | The document revision whose queries were used (with `docId`). |
+| `start` | TextPositionOut | Start of the text a chosen item replaces (the name being typed, a whole `#"…"` inside one; the cursor when nothing is typed yet). |
+| `end` | TextPositionOut | End (exclusive) of the replaced text. |
+| `prefix` | string | The typed text the items match (`Sou`, `Changed` in `#"Changed`). |
+| `items` | MCompletionItemOut[] | Best match first: the same name, then names that start with the prefix, then a word that does, then names that contain it; among equals the text's names, then the model's, then keywords and the library. Empty in a comment, text or number, where a step or field name is written, and in `[…]` field access. |
+| `incomplete` | boolean | More items matched than `maxItems`. |
+
+Examples:
+
+- A query of the model: `{"docId":"d1","text":"let Source = Ord","position":{"offset":16}}`
+- Library functions, without a document: `{"text":"Table.Sel","position":{"line":1,"column":10},"maxItems":10}`
 
 ## Render
 

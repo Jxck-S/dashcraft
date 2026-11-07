@@ -119,6 +119,9 @@ pub fn catalog() -> Registry {
         .with::<dax::DaxFormat>()
         // m
         .with::<m::MDiagnostics>()
+        .with::<m::MHover>()
+        .with::<m::MSignatureHelp>()
+        .with::<m::MComplete>()
         // render
         .with::<render::RenderPage>()
         .with::<render::RenderVisual>()

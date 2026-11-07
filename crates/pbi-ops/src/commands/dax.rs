@@ -35,7 +35,7 @@ pub const MAX_COMPLETION_ITEMS: usize = 1000;
 /// Largest `maxWidth` of `dax.format`.
 pub const MAX_FORMAT_WIDTH: usize = 10_000;
 
-fn default_max_items() -> usize {
+pub(crate) fn default_max_items() -> usize {
     100
 }
 
@@ -597,7 +597,7 @@ pub struct TextPositionIn {
 
 impl TextPositionIn {
     /// The UTF-8 byte offset in `src`.
-    fn resolve(self, src: &str) -> Result<usize, OpError> {
+    pub(crate) fn resolve(self, src: &str) -> Result<usize, OpError> {
         let bad = |m: &str| Err(OpError::invalid_params(format!("position: {m}")));
         match (self.offset, self.utf16_offset, self.line, self.column) {
             (Some(offset), None, None, None) => {

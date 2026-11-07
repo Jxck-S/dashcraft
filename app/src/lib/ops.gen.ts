@@ -2543,6 +2543,61 @@ export interface LintSummaryOut {
   notes?: string[]
 }
 
+export interface MCompleteOut {
+  /** The document revision whose queries were used (with `docId`). */
+  documentRevision?: number | null
+  /**
+   * Start of the text a chosen item replaces (the name being typed, a whole `#"…"` inside
+   * one; the cursor when nothing is typed yet).
+   */
+  start: TextPositionOut
+  /** End (exclusive) of the replaced text. */
+  end: TextPositionOut
+  /** The typed text the items match (`Sou`, `Changed` in `#"Changed`). */
+  prefix: string
+  /**
+   * Best match first: the same name, then names that start with the prefix, then a word
+   * that does, then names that contain it; among equals the text's names, then the model's,
+   * then keywords and the library. Empty in a comment, text or number, where a step or field
+   * name is written, and in `[…]` field access.
+   */
+  items: MCompletionItemOut[]
+  /** More items matched than `maxItems`. */
+  incomplete: boolean
+}
+
+export interface MCompleteParams {
+  /**
+   * Suggest this document's queries, parameters and tables (`d1`, …). Without it only the
+   * text's own names, the library and keywords are suggested.
+   */
+  docId?: string | null
+  /** The M text: a query or a section document. */
+  text: string
+  /** The cursor. */
+  position: TextPositionIn
+  /** Most items returned, best first (default 100, at most 1000). */
+  maxItems?: number
+}
+
+/** One suggestion. */
+export interface MCompletionItemOut {
+  /** The name (`Changed Type`, `Table.AddColumn`, `#date`, `let`). */
+  label: string
+  kind: MNameKind
+  /** The text that replaces `start`..`end`: the name as M writes it (`#"Changed Type"`). */
+  insertText: string
+  /**
+   * A function's signature; otherwise `step`, `parameter (number)`, `query`,
+   * `query parameter (Text)`, `table`, `type (number)`, `constant (number)`, `keyword`.
+   */
+  detail: string
+  /** What a keyword or primitive type is, or the model's description. */
+  description?: string | null
+  /** Whether DashCraft evaluates the name. */
+  supported: boolean
+}
+
 /** One problem in the text. */
 export interface MDiagnosticOut {
   /**
@@ -2588,6 +2643,70 @@ export interface MDiagnosticsParams {
   text: string
 }
 
+/** The name under the cursor. */
+export interface MHoverInfo {
+  kind: MNameKind
+  /** The name as M writes it (`#"Changed Type"`). */
+  name: string
+  /** Start of the hovered name in the text. */
+  start: TextPositionOut
+  /** End (exclusive). */
+  end: TextPositionOut
+  /** Everything below as Markdown (code in `powerquery` fences). */
+  markdown: string
+  /** A function's signature. */
+  signature?: string | null
+  /** A parameter's type, a library type's or constant's kind, a query parameter's type. */
+  typeName?: string | null
+  /** An optional function parameter. */
+  optional?: boolean
+  /** A library constant's value as an M literal. */
+  value?: string | null
+  /** The M text of a step, field, member or query (shortened past 2000 bytes). */
+  expression?: string | null
+  /** What a keyword or primitive type is, or the model's description. */
+  description?: string | null
+  /** Whether DashCraft evaluates the name. */
+  supported: boolean
+  /** Why DashCraft cannot evaluate it. */
+  unsupported?: string | null
+}
+
+export interface MHoverOut {
+  /** The document revision whose queries were used (with `docId`). */
+  documentRevision?: number | null
+  /** Absent when there is nothing to describe at the cursor. */
+  hover?: MHoverInfo | null
+}
+
+export interface MHoverParams {
+  /**
+   * Describe this document's queries, parameters and tables (`d1`, …). Without it only the
+   * text's own names, the library and keywords are described.
+   */
+  docId?: string | null
+  /** The M text: a query or a section document. */
+  text: string
+  /** The cursor. */
+  position: TextPositionIn
+}
+
+/** What an M name is. */
+export type MNameKind = 'step' | 'parameter' | 'field' | 'member' | 'query' | 'queryParameter' | 'queryFunction' | 'table' | 'function' | 'type' | 'constant' | 'keyword'
+
+/** One parameter of an M signature. */
+export interface MParameterOut {
+  name: string
+  /** `nullable text`; `any` when the function does not say. */
+  type: string
+  /** May be left out. */
+  optional: boolean
+  /** Start of `name as type` in `label`, in UTF-16 code units. */
+  labelStart: number
+  /** End (exclusive), in UTF-16 code units. */
+  labelEnd: number
+}
+
 /** One M expression a query rename rewrites. */
 export interface MRewriteOut {
   /**
@@ -2600,6 +2719,48 @@ export interface MRewriteOut {
   property: string
   before: string
   after: string
+}
+
+export interface MSignatureHelpOut {
+  /** The document revision whose queries were used (with `docId`). */
+  documentRevision?: number | null
+  /** Absent outside a call of a known function, or in a comment. */
+  signature?: MSignatureOut | null
+}
+
+export interface MSignatureHelpParams {
+  /** Resolve calls of this document's function queries (`d1`, …). */
+  docId?: string | null
+  /** The M text: a query or a section document. */
+  text: string
+  /** The cursor. */
+  position: TextPositionIn
+}
+
+/** The function call around the cursor. */
+export interface MSignatureOut {
+  /** The called name as M writes it (`Table.AddColumn`, `#date`, `#"My Function"`). */
+  name: string
+  /**
+   * `function` for the library and `#date`-style constructors; `step`, `parameter`,
+   * `field`, `member` or `queryFunction` for functions of the text or model.
+   */
+  kind: MNameKind
+  /** `Text.Upper(text as nullable text, optional culture as nullable text) as nullable text`. */
+  label: string
+  /** The return type. */
+  returns: string
+  /** Whether DashCraft evaluates the function. */
+  supported: boolean
+  parameters: MParameterOut[]
+  /** 0-based index of the argument the cursor is in. */
+  argument: number
+  /** `argument` when the function has that many parameters; absent past the last one. */
+  activeParameter?: number | null
+  /** Start of the called name in the text. */
+  nameStart: TextPositionOut
+  /** End of the called name (exclusive). */
+  nameEnd: TextPositionOut
 }
 
 export interface MashupConnectionOut {
@@ -4388,6 +4549,12 @@ export interface OpsCommands {
   'dax.format': { params: DaxFormatParams; output: DaxFormatOut }
   /** Syntax errors, unknown names, wrong argument counts and unsupported names in an M query or section, with Power BI Desktop's messages. */
   'm.diagnostics': { params: MDiagnosticsParams; output: MDiagnosticsOut }
+  /** Describes the M name at a cursor as Power BI Desktop binds it: step, parameter or field of the text, query, parameter or table of the model, library name or keyword. */
+  'm.hover': { params: MHoverParams; output: MHoverOut }
+  /** The M function call around a cursor: library function, #date-style constructor, function step or function query, its parameters and the one the cursor is in; works on unparsed text. */
+  'm.signatureHelp': { params: MSignatureHelpParams; output: MSignatureHelpOut }
+  /** The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as. */
+  'm.complete': { params: MCompleteParams; output: MCompleteOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4514,6 +4681,9 @@ export const OPS_META = {
   'dax.references': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'dax.format': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'm.diagnostics': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'm.hover': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'm.signatureHelp': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'm.complete': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4677,6 +4847,12 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     daxFormat: (params: DaxFormatParams, options?: O) => run('dax.format', params, options),
     /** Syntax errors, unknown names, wrong argument counts and unsupported names in an M query or section, with Power BI Desktop's messages. */
     mDiagnostics: (params: MDiagnosticsParams, options?: O) => run('m.diagnostics', params, options),
+    /** Describes the M name at a cursor as Power BI Desktop binds it: step, parameter or field of the text, query, parameter or table of the model, library name or keyword. */
+    mHover: (params: MHoverParams, options?: O) => run('m.hover', params, options),
+    /** The M function call around a cursor: library function, #date-style constructor, function step or function query, its parameters and the one the cursor is in; works on unparsed text. */
+    mSignatureHelp: (params: MSignatureHelpParams, options?: O) => run('m.signatureHelp', params, options),
+    /** The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as. */
+    mComplete: (params: MCompleteParams, options?: O) => run('m.complete', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */

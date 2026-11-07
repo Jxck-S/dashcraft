@@ -7,6 +7,34 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.3c M hover, signature help and completion
+
+- **What:** `pbi-m` gains a tolerant lexer (`tokenize_tolerant`: an unterminated text, quoted
+  identifier or comment runs to the end of the text) and a scanner (`service/scan.rs`) that reads incomplete
+  text: the scopes visible at a cursor (let steps, record fields, function parameters, `each`'s
+  `_`, section members, `@` self-references; Desktop's scoping), the call and argument around it
+  and the kind of position (declaration, field name, type after `as`/`is`, field type of a record
+  or table type, expression). `service/help.rs` gives hover (steps, parameters, model names
+  with their kind, type and description, library functions with their signature, types, constants,
+  unsupported functions) and signature help (label, UTF-8 parameter ranges, active parameter);
+  `service/complete.rs` ranks steps and locals, model names, keywords and the library by match and
+  by kind, quotes names that need `#"…"`, completes inside `#"…` and after `@`, and offers
+  primitive types after `as` and any expression in a field type (`type table [X = Int64.Type]`).
+  `Environment` entries carry the kind, M text, type and description of each model name
+  (`pbi_session::m_environment`: queries, parameters with their type, functions, tables). New
+  registry commands `m.hover`, `m.signatureHelp` and `m.complete` (category `m`, UTF-8, UTF-16 or
+  line and column positions, with or without a document). New fuzz target `m_service`.
+- **Why:** M7.3c (DESKTOP-PLAN), GAPS §2 language service: the M editor needs help at the cursor.
+- **Numbers:** 81 → 84 registry commands; 15 → 16 fuzz targets. Over Acme and the four committed
+  samples, every one of 418 free names hovers to a model or library name and completes first at
+  its end, and signature help names each of 285 library calls (`crates/pbi-session/tests/m_service.rs`);
+  no panic at any cursor of the Acme queries. Unit tests: `scan.rs` 6, `help.rs` 4,
+  `complete.rs` 6, `names.rs` 3, `environment.rs` 1, `lexer.rs` +2; registry tests in
+  `crates/pbi-ops/tests/m_language.rs` 3 → 6. A mutation replay of the fuzz target found an
+  empty completion label for the valid step name `#""` (fixed, seed added). GAPS §2 language
+  service 2 → 3.
+- **Open:** M7.3d (`m.format`), semantic tokens and references for M.
+
 ### M7.3b M diagnostics and Desktop's name binding
 
 - **What:** `pbi-m` binds names when a query is compiled, as Power BI Desktop does: `refs.rs` scopes
