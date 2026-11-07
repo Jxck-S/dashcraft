@@ -497,8 +497,9 @@ their write roots).
   `model.hierarchy.create`/`delete` and `report.visual.move`/`resize` (a visual group takes the
   visuals in it along), each one undoable edit with an exact inverse; deletes list their
   dependents first (`model.dependencies`, `dryRun`). Saved edits checked in Power BI Desktop
-  (GT-6 s13 to s20 and s23). Not covered: deleting a data column (it needs an edit of its query's
-  M) and editing a hierarchy's levels, which come with the editors (M10).
+  (GT-6 s13 to s20 and s23). Moved on: deleting a data column needs an edit of its query's M and
+  comes with the Power Query editor (M14.7 Remove columns, M14.9 Close & Apply); editing a
+  hierarchy's levels comes with the hierarchy editor (M10.5).
 - [x] **M6.6 Save and Save As under the output contract.** `doc.save` writes a PBIP in place:
   only changed files, each atomically (temporary file and rename), Byte-stable and
   Preserved-from-input content untouched, new objects per ADR-0014 with the injectable identifier
@@ -763,8 +764,10 @@ from the model's previous names to its current ones (matched by `ObjectId`,
 `pbi_model::renames_between`) after a rename, its undo and its redo, so a cross-filter keeps
 filtering (`canvas_selections_follow_renames`). Renames rewrite KPI and detail-rows DAX, saved
 in Desktop's form; Desktop opens the renamed model with every KPI and detail rows valid and
-saves the same `Orders.tmdl` (GT-6 s25). Still open: data column delete (with M editing),
-hierarchy and level edits and the A6 screen-reader runs (acceptance 13).
+saves the same `Orders.tmdl` (GT-6 s25). M6 is complete apart from the screen-reader runs of
+acceptance 13 (A6), which need a person ([accessibility/m6-editing.md](accessibility/m6-editing.md#a6-task-for-each-screen-reader));
+data column delete moved to M14.7 and M14.9 (it edits the query's M) and hierarchy level edits to
+M10.5.
 
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,
 invalidation, recalculation), `pbi-core` (save in place, minimal-diff writes, identifier
