@@ -1132,6 +1132,50 @@ export interface DatasetReferenceOut {
   databaseName?: string | null
 }
 
+/** How a DAX text was checked. */
+export type DaxCheckedKind = 'expression' | 'query'
+
+/** One problem in the text. */
+export interface DaxDiagnosticOut {
+  /** `error` or `warning` (a function DashCraft cannot evaluate yet). */
+  severity: string
+  /**
+   * `syntax`, `unknownTable`, `unknownColumn`, `unknownMeasure` or
+   * `unsupportedFunction`.
+   */
+  code: string
+  message: string
+  /** Start of the text the problem covers. */
+  start: TextPositionOut
+  /** End (exclusive). */
+  end: TextPositionOut
+  /** A "did you mean …" correction. */
+  suggestion?: string | null
+}
+
+export interface DaxDiagnosticsOut {
+  /** The document revision whose model names were used (with `docId`). */
+  documentRevision?: number | null
+  /** How the text was checked. */
+  kind: DaxCheckedKind
+  /** No errors (warnings allowed). */
+  ok: boolean
+  /** In source order, at most 1000. */
+  diagnostics: DaxDiagnosticOut[]
+}
+
+export interface DaxDiagnosticsParams {
+  /**
+   * Check names against this document's model and report-level measures
+   * (`d1`, …). Without it only syntax and functions are checked.
+   */
+  docId?: string | null
+  /** The DAX text. */
+  text: string
+  /** `auto` (default), `expression` or `query`. */
+  kind?: DaxTextKind
+}
+
 export interface DaxQueryOut {
   /** Semantic document revision captured with the query engine snapshot. */
   documentRevision: number
@@ -1177,6 +1221,9 @@ export interface DaxTableOut {
   /** More rows than `maxRows`. */
   truncated: boolean
 }
+
+/** What a DAX text is. */
+export type DaxTextKind = 'auto' | 'expression' | 'query'
 
 export interface DeleteColumnParams {
   /** The document id from `doc.open` (`d1`, …). */
@@ -3525,6 +3572,18 @@ export interface TableUpdateOut {
   removedColumns?: string[]
 }
 
+/** A position in the checked text. */
+export interface TextPositionOut {
+  /** UTF-8 byte offset. */
+  offset: number
+  /** UTF-16 code-unit offset (JavaScript string index). */
+  utf16Offset: number
+  /** 1-based line (lines end at `\n`). */
+  line: number
+  /** 1-based column, in characters. */
+  column: number
+}
+
 /** One line of a data point tooltip. */
 export interface TooltipLineOut {
   label: string
@@ -3909,6 +3968,8 @@ export interface OpsCommands {
   'dax.evaluateMeasure': { params: EvaluateMeasureParams; output: EvaluateMeasureOut }
   /** Every measure's formatted value under optional report/page filters; failed measures show ⚠ and their DAX. */
   'measures.values': { params: MeasuresValuesParams; output: MeasuresValuesOut }
+  /** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. */
+  'dax.diagnostics': { params: DaxDiagnosticsParams; output: DaxDiagnosticsOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4027,6 +4088,7 @@ export const OPS_META = {
   'dax.query': { category: 'dax', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: false },
   'dax.evaluateMeasure': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'measures.values': { category: 'dax', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: false },
+  'dax.diagnostics': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4174,6 +4236,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     daxEvaluateMeasure: (params: EvaluateMeasureParams, options?: O) => run('dax.evaluateMeasure', params, options),
     /** Every measure's formatted value under optional report/page filters; failed measures show ⚠ and their DAX. */
     measuresValues: (params: MeasuresValuesParams, options?: O) => run('measures.values', params, options),
+    /** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. */
+    daxDiagnostics: (params: DaxDiagnosticsParams, options?: O) => run('dax.diagnostics', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
