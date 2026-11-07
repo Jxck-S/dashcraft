@@ -30,8 +30,8 @@ pub use eval::{
     Cancel, DaxError, Dependency, EVAL_STACK_SIZE, EvalContext, MAX_EVAL_DEPTH, RowContext,
     RowFrame, VColumn, VarScope, VarValue, VirtualTable, compute_calculated_column,
     compute_calculated_table, dependencies, dependencies_in, evaluate_measure, evaluate_query,
-    evaluate_scalar, evaluate_table, is_supported_function, supported_functions, to_record_batch,
-    transitive_dependencies,
+    evaluate_scalar, evaluate_table, is_supported_function, refers_to_table, supported_functions,
+    to_record_batch, transitive_dependencies,
 };
 pub use format::format_value;
 pub use rename::{NameChange, rename_references};

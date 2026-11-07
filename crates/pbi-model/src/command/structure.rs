@@ -8,13 +8,14 @@
 
 use super::edit::{changed, swap};
 use super::rename::{check_measure_name, validate_name};
+use super::snapshot::{ReplaceObjects, Snapshot};
 use super::{Applied, ChangeEvent, Command, CommandError, expect_kind, model, model_mut};
 use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
 use crate::names::{dax_column_ref, names_eq};
 use crate::semantic::{
     Cardinality, Column, ColumnKind, ColumnRef, CrossFilter, Hierarchy, Measure, Model,
-    Relationship, SecurityFilteringBehavior, Table, TableKind, TablePermission,
+    PartitionSource, Relationship, SecurityFilteringBehavior, Table, TableKind, TablePermission,
 };
 
 /// Adds a measure to a table. The measure's `id` is ignored: it gets a fresh
@@ -928,6 +929,164 @@ impl Command for CreateTable {
 
     fn label(&self) -> String {
         format!("Create table '{}'", self.table.name)
+    }
+}
+
+/// Changes a table's definition as one exactly reversible step: a
+/// calculated table's expression and the columns it returns, and any
+/// table's own properties (description, visibility, …).
+///
+/// `table` is the table as it should be, with the same ID and name (rename
+/// with [`super::RenameTable`], which also updates references), measures,
+/// hierarchies and calculation group, and the same partitions except for a
+/// calculated partition's expression. Only a calculated table's columns can
+/// change: a column with an assigned ID must be one of the table's and keep
+/// its name and kind; one with an unassigned ID is new, comes from the
+/// expression and gets the next ID in order; a column left out must come
+/// from the expression and must not be used by a relationship, a hierarchy
+/// level or another column's sort order (unless a column of the same name
+/// takes its place). Column names must be valid and unique among the
+/// table's columns and measures. The caller computes the columns from the
+/// expression (the session does).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SetTableDefinition {
+    pub table: Table,
+}
+
+impl Command for SetTableDefinition {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let id = self.table.id;
+        let ObjectPath::Table { table: t } = expect_kind(doc, id, ObjectKind::Table)? else {
+            return Err(CommandError::NotFound(id));
+        };
+        let model = model(doc)?;
+        let old = model.tables.get(t).ok_or(CommandError::NotFound(id))?;
+        let new = &self.table;
+        let rejected = |why: String| {
+            Err(CommandError::Rejected(format!(
+                "table '{}': {why}",
+                old.name
+            )))
+        };
+        if new.name != old.name {
+            return rejected("rename it with a rename, which also updates references".to_owned());
+        }
+        if new.measures != old.measures
+            || new.hierarchies != old.hierarchies
+            || new.calculation_group != old.calculation_group
+        {
+            return rejected(
+                "change its measures, hierarchies and calculation items with their own commands"
+                    .to_owned(),
+            );
+        }
+        let same_partitions = new.partitions.len() == old.partitions.len()
+            && new.partitions.iter().zip(&old.partitions).all(|(a, b)| {
+                let mut same_but_source = a.clone();
+                same_but_source.source = b.source.clone();
+                same_but_source == *b
+                    && (a.source == b.source
+                        || matches!(
+                            (&a.source, &b.source),
+                            (
+                                PartitionSource::Calculated { .. },
+                                PartitionSource::Calculated { .. }
+                            )
+                        ))
+            });
+        if !same_partitions {
+            return rejected(
+                "only a calculated partition's expression can change, not the partitions"
+                    .to_owned(),
+            );
+        }
+        if new.columns != old.columns {
+            if old.kind() != TableKind::CalculatedTable {
+                return rejected(
+                    "it is not a calculated table: change its columns with their own commands"
+                        .to_owned(),
+                );
+            }
+            if new.columns.is_empty() {
+                return rejected("a calculated table needs at least one column".to_owned());
+            }
+            for (i, column) in new.columns.iter().enumerate() {
+                validate_name(&column.name)?;
+                if column.id.is_assigned() {
+                    let Some(prior) = old.columns.iter().find(|c| c.id == column.id) else {
+                        return rejected(format!(
+                            "column ID {} is not one of its columns",
+                            column.id
+                        ));
+                    };
+                    if prior.name != column.name {
+                        return rejected(format!(
+                            "column [{}] cannot be renamed here: rename it with a rename",
+                            prior.name
+                        ));
+                    }
+                    if std::mem::discriminant(&prior.kind) != std::mem::discriminant(&column.kind) {
+                        return rejected(format!("column [{}] cannot change kind", prior.name));
+                    }
+                } else if !matches!(column.kind, ColumnKind::CalculatedTableColumn { .. }) {
+                    return rejected(format!(
+                        "new column [{}] must come from the expression; create calculated columns with their own command",
+                        column.name
+                    ));
+                }
+                if let Some(earlier) = new.columns.iter().take(i).find(|c| {
+                    names_eq(&c.name, &column.name)
+                        || (column.id.is_assigned() && c.id == column.id)
+                }) {
+                    return Err(CommandError::NameConflict {
+                        name: column.name.clone(),
+                        existing: format!("column '{}'[{}]", old.name, earlier.name),
+                    });
+                }
+                if let Some(other) = new.measure(&column.name) {
+                    return Err(CommandError::NameConflict {
+                        name: column.name.clone(),
+                        existing: format!("measure '{}'[{}]", old.name, other.name),
+                    });
+                }
+            }
+            for removed in old
+                .columns
+                .iter()
+                .filter(|c| !new.columns.iter().any(|n| n.id == c.id))
+            {
+                if !matches!(removed.kind, ColumnKind::CalculatedTableColumn { .. }) {
+                    return rejected(format!(
+                        "column [{}] does not come from the expression: delete it with its own command",
+                        removed.name
+                    ));
+                }
+                if new.column(&removed.name).is_some() {
+                    continue;
+                }
+                let uses = column_uses(model, new, removed);
+                if !uses.is_empty() {
+                    return rejected(format!(
+                        "the expression no longer returns [{}], which is used by {}; delete or change those first",
+                        removed.name,
+                        uses.join(", ")
+                    ));
+                }
+            }
+        }
+        let mut table = new.clone();
+        for column in table.columns.iter_mut().filter(|c| !c.id.is_assigned()) {
+            column.id = doc.ids.next_id();
+        }
+        ReplaceObjects {
+            label: self.label(),
+            items: vec![Snapshot::Table(table)],
+        }
+        .apply(doc)
+    }
+
+    fn label(&self) -> String {
+        format!("Change table '{}'", self.table.name)
     }
 }
 

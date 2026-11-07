@@ -1334,3 +1334,91 @@ async fn created_table_saves_and_reopens() {
         "undoing the create saves the original project"
     );
 }
+
+#[tokio::test]
+async fn updated_table_saves_and_reopens() {
+    const DEF: &str = "AcmeOutfitters.SemanticModel/definition";
+    const NEVER_SOLD: &str = "tables/Products Never Sold.tmdl";
+    const EXPRESSION: &str = "SELECTCOLUMNS(FILTER(ALL(Products), ISEMPTY(RELATEDTABLE(Orders))), \"Product ID\", Products[Product ID], \"Product\", Products[Product Name], \"Unit Cost\", Products[Unit Cost])";
+    let Some(acme) = fixture(ACME) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("update-table-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let before = files(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    r.run(
+        "model.table.update",
+        json!({"docId": doc, "table": "Products Never Sold", "expression": EXPRESSION}),
+    )
+    .await;
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(
+        sorted(&out["written"]),
+        [format!("{DEF}/{NEVER_SOLD}")],
+        "{out}"
+    );
+    // Kept columns stay as they are; the columns the expression no longer
+    // returns go, the new one comes with an inferred name and type, a
+    // lineage tag and sum, like a column of a created table.
+    let saved = fs::read_to_string(dir.path().join(DEF).join(NEVER_SOLD)).unwrap();
+    let tag = saved
+        .split("column 'Unit Cost'")
+        .nth(1)
+        .and_then(|rest| rest.split("lineageTag: ").nth(1))
+        .and_then(|rest| rest.lines().next())
+        .unwrap();
+    assert_eq!(tag.len(), 36, "{saved}");
+    let original = String::from_utf8(before[&format!("{DEF}/{NEVER_SOLD}")].clone())
+        .unwrap()
+        .replace("\r\n", "\n");
+    let (columns, partition) = (
+        original.find("\tcolumn Category\n").unwrap(),
+        original.find("\tpartition ").unwrap(),
+    );
+    assert!(original[partition..].starts_with("\tpartition 'Products Never Sold' = calculated\n"));
+    let edited = format!(
+        "{}\tcolumn 'Unit Cost'\n\
+         \t\tdataType: decimal\n\
+         \t\tisNameInferred\n\
+         \t\tisDataTypeInferred\n\
+         \t\tlineageTag: {tag}\n\
+         \t\tsummarizeBy: sum\n\
+         \t\tsourceColumn: [Unit Cost]\n\
+         \n\
+         \t\tannotation SummarizationSetBy = Automatic\n\
+         \n\
+         \tpartition 'Products Never Sold' = calculated\n\
+         \t\tmode: import\n\
+         \t\tsource = {EXPRESSION}\n",
+        &original[..columns]
+    );
+    assert_eq!(saved.replace("\r\n", "\n"), edited);
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(
+            json!({"path": pbip, "blobMap": dir.path().join("blob-map.json"),
+            "source": "query"}),
+        )
+        .await;
+    let q = fresh
+        .run(
+            "dax.query",
+            json!({"docId": reopened, "query": "EVALUATE ROW(\"a\", SUM('Products Never Sold'[Unit Cost]), \"b\", SUMX(FILTER(ALL(Products), ISEMPTY(RELATEDTABLE(Orders))), Products[Unit Cost]), \"c\", [Products Never Sold Count])"}),
+        )
+        .await;
+    let row = &q["tables"][0]["rows"][0];
+    assert!(row[2].as_i64().unwrap() > 0, "{q}");
+    assert_eq!(row[0], row[1], "{q}");
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.save", json!({"docId": doc})).await;
+    assert!(
+        files(dir.path()) == before,
+        "undoing the update saves the original project"
+    );
+}

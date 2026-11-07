@@ -278,6 +278,25 @@ and columns (the three new tables), and DashCraft's results on the edited exampl
 601 of 601 measures, 26 of 26 calculation-group and RLS cases, 11 of 11 tables and 5 of 5 metadata
 cases, with no ledger entry.
 
+**Calculated column and table updates, recalculated without a refresh.** In the same way (`s20`),
+on the example opened with its blob map run `model.column.update` of `Customers[Lifetime Sales]`
+(`CALCULATE(SUM(Orders[Line Amount]) - SUM(Orders[Line Cost]))`; `Value Tier` uses it) and of
+`Stores[Store Label]` (`LEN(Stores[Store Name])`, text to a number), and `model.table.update` of
+`'Products Never Sold'` (a new description and `SELECTCOLUMNS(FILTER(ALL(Products),
+ISEMPTY(RELATEDTABLE(Orders))), …)` returning `Product ID`, `Product` and `Unit Cost`, so
+`Category` and `List Price` go). Query the edited values in the same session, without a refresh,
+then `doc.save` and copy the three edited table files into the Desktop copy (keeping its
+`AcmeBlobs` source lines). Results with Desktop 2.159: Desktop opened and refreshed the project
+without an error and keeps the columns as written: `Store Label` Integer with Sum (the summarization
+followed the type), `Unit Cost` Currency with Sum after the kept `Product ID` and `Product`, the
+new description and expressions (`INFO.VIEW.COLUMNS`, `INFO.VIEW.TABLES`). The values DashCraft
+recomputed in the session before saving equal Desktop's after its refresh: the sum of
+`Lifetime Sales`, the four Value Tier groups with their counts and sums, the sum of `Store Label`,
+the six products never sold with their unit costs. Compared with the committed recordings, 38
+of Desktop's answers changed (33 measures by Value Tier, 2 metadata cases, 3 tables), and
+DashCraft's results on the edited example match all 643: 601 of 601 measures, 26 of 26
+calculation-group and RLS cases, 11 of 11 tables and 5 of 5 metadata cases, with no ledger entry.
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.

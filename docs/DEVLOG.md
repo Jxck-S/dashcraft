@@ -7,6 +7,28 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 calculated table updates (M6.4, part 2)
+
+- **What:** `model.table.update` and the `updateTable` edit operation (`pbi-ops`): a calculated
+  table's expression, or any table's description and visibility. The new expression's columns are
+  inferred over the loaded data (`Session::infer_changed_table_columns`) and merged at apply time
+  (`UpdateTable`, so earlier edits in a `doc.applyEdits` group are kept): columns with the same
+  source column, else name, keep their ids and properties; new ones are added like a created
+  table's; the rest are removed through `pbi-model`'s new `SetTableDefinition` (exact inverse).
+  Self-references are circular now: `pbi_dax::refers_to_table` (new) and the refresh plan keeps a
+  column's or table's edge to itself.
+- **Why:** completes M6.4 (DESKTOP-PLAN); GAPS "Editing commands" row ("calculated table expression
+  edits").
+- **Numbers:** registry 72 → 73 commands. New tests: `e2e`
+  `calculated_table_update_through_the_registry`, `save` `updated_table_saves_and_reopens`, model
+  unit `table_definitions_change_columns_with_exact_inverses`, plan unit
+  `objects_naming_themselves_are_circular`, `refers_to_table` asserts in `pbi-dax` `eval`, a
+  self-referencing column refusal and an `updateTable` property case. GT-6 s20 (Desktop 2.159):
+  two column updates and one table update; values recomputed in the session equal Desktop's after
+  its refresh; 38 recorded cases changed and all 643 match.
+- **Open:** changes to calculation items are not tracked; page queries still run again after any
+  model edit.
+
 ### M6 recalculation (M6.4, part 1)
 
 - **What:** `pbi-session::recalc` (new): after every edit, undo and redo the session compares the
@@ -28,6 +50,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   the property generator. On Acme a relationship change recomputes 7 calculated objects; a
   measure edit recomputes only the columns that use it, and `measures.values` after it emits no M
   progress event.
+- **Commit:** `3b6a017` (PR #36).
 - **Open:** `model.table.update` (calculated table expression edits) completes M6.4; changes to
   calculation items are not tracked; page queries still run again after any model edit.
 

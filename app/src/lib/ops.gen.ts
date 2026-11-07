@@ -938,16 +938,20 @@ export interface CreateTableParams {
   isHidden?: boolean
 }
 
-/** A column of a table created by `model.table.create`. */
+/**
+ * A column of a table created or changed by `model.table.create` or
+ * `model.table.update`.
+ */
 export interface CreatedTableColumnOut {
   columnId: number
   name: string
   /** `string`, `int64`, `double`, `decimal`, `dateTime` or `boolean`. */
   dataType: string
   /**
-   * Where the values come from in the expression's result, as Power BI
-   * Desktop writes it: `Web Sessions[Device]` (the table unquoted) or
-   * `[Total]`.
+   * Where the values come from: in a calculated table's expression
+   * result, as Power BI Desktop writes it, `Web Sessions[Device]` (the
+   * table unquoted) or `[Total]`; the query's column for a data column;
+   * empty for a calculated column.
    */
   sourceColumn: string
 }
@@ -1684,6 +1688,13 @@ export type EditOperation = {
   expression: string
   description?: string | null
   isHidden?: boolean
+} | {
+  type: 'updateTable'
+  tableId?: number | null
+  table?: string | null
+  expression?: string | null
+  description?: string | null
+  isHidden?: boolean | null
 } | {
   type: 'deleteTable'
   tableId?: number | null
@@ -3439,6 +3450,31 @@ export interface TableRefreshOut {
   columns: ColumnRefreshOut[]
 }
 
+/** Result of `model.table.update`. */
+export interface TableUpdateOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  /**
+   * The table and what depends on it, recomputed over the loaded data,
+   * in order (absent when none); a failed one has no values until an
+   * edit or a refresh computes it again.
+   */
+  recalculated?: RecalculatedOut[]
+  tableId: number
+  name: string
+  /** The columns after the edit, in order. */
+  columns: CreatedTableColumnOut[]
+  /** The columns the new expression added (absent when none). */
+  addedColumns?: string[]
+  /**
+   * The columns the new expression no longer returns, removed (absent
+   * when none).
+   */
+  removedColumns?: string[]
+}
+
 /** One line of a data point tooltip. */
 export interface TooltipLineOut {
   label: string
@@ -3527,6 +3563,26 @@ export interface UpdateRelationshipParams {
    * other one first (both in one `doc.applyEdits` for one undo step).
    */
   isActive?: boolean | null
+}
+
+export interface UpdateTableParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** The table's id (instead of `table`). */
+  tableId?: number | null
+  /** The table's name. */
+  table?: string | null
+  /**
+   * A calculated table's new DAX expression. A column its result still
+   * has (the same source column, else the same name) keeps its ID, name
+   * and properties; the result's other columns are added and the ones
+   * it no longer has are removed (refused while a relationship,
+   * hierarchy or sort order uses one).
+   */
+  expression?: string | null
+  /** The description; empty clears it. */
+  description?: string | null
+  isHidden?: boolean | null
 }
 
 /** Token counts reported by the provider. */
@@ -3747,6 +3803,8 @@ export interface OpsCommands {
   'model.column.delete': { params: DeleteColumnParams; output: ObjectDeleteOut }
   /** Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once. */
   'model.table.create': { params: CreateTableParams; output: TableCreateOut }
+  /** Changes a calculated table's DAX expression, its columns following the result, or a table's description or visibility; the table and what depends on it are recomputed. */
+  'model.table.update': { params: UpdateTableParams; output: TableUpdateOut }
   /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
   'model.table.delete': { params: DeleteTableParams; output: ObjectDeleteOut }
   /** Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. */
@@ -3888,6 +3946,7 @@ export const OPS_META = {
   'model.column.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.column.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.table.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'model.table.update': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.table.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.hierarchy.create': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'model.hierarchy.delete': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
@@ -4009,6 +4068,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     modelColumnDelete: (params: DeleteColumnParams, options?: O) => run('model.column.delete', params, options),
     /** Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once. */
     modelTableCreate: (params: CreateTableParams, options?: O) => run('model.table.create', params, options),
+    /** Changes a calculated table's DAX expression, its columns following the result, or a table's description or visibility; the table and what depends on it are recomputed. */
+    modelTableUpdate: (params: UpdateTableParams, options?: O) => run('model.table.update', params, options),
     /** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. */
     modelTableDelete: (params: DeleteTableParams, options?: O) => run('model.table.delete', params, options),
     /** Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. */

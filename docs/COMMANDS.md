@@ -113,6 +113,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.column.update`](#modelcolumnupdate) | Changes a calculated column's expression or data type, or a column's format, folder, description or visibility; what depends on it is recomputed over the loaded data. | M A |
 | [`model.column.delete`](#modelcolumndelete) | Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks. | M A |
 | [`model.table.create`](#modeltablecreate) | Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once. | M A |
+| [`model.table.update`](#modeltableupdate) | Changes a calculated table's DAX expression, its columns following the result, or a table's description or visibility; the table and what depends on it are recomputed. | M A |
 | [`model.table.delete`](#modeltabledelete) | Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them. | M A |
 | [`model.hierarchy.create`](#modelhierarchycreate) | Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named. | M A |
 | [`model.hierarchy.delete`](#modelhierarchydelete) | Deletes a user hierarchy with its levels as one undoable edit and lists the report fields that used it; dryRun only lists them. | M A |
@@ -2187,6 +2188,43 @@ Result:
 Examples:
 
 - Add a calculated table: `{"docId":"d1","name":"Regions","expression":"VALUES(Stores[Region])"}`
+
+### `model.table.update`
+
+**Update a table.** Changes a calculated table's DAX expression, its columns following the result, or a table's description or visibility; the table and what depends on it are recomputed.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `tableId` (optional) | integer \| null | The table's id (instead of `table`). |
+| `table` (optional) | string \| null | The table's name. |
+| `expression` (optional) | string \| null | A calculated table's new DAX expression. A column its result still has (the same source column, else the same name) keeps its ID, name and properties; the result's other columns are added and the ones it no longer has are removed (refused while a relationship, hierarchy or sort order uses one). |
+| `description` (optional) | string \| null | The description; empty clears it. |
+| `isHidden` (optional) | boolean \| null |  |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `recalculated`? | RecalculatedOut[] | The table and what depends on it, recomputed over the loaded data, in order (absent when none); a failed one has no values until an edit or a refresh computes it again. |
+| `tableId` | integer |  |
+| `name` | string |  |
+| `columns` | CreatedTableColumnOut[] | The columns after the edit, in order. |
+| `addedColumns`? | string[] | The columns the new expression added (absent when none). |
+| `removedColumns`? | string[] | The columns the new expression no longer returns, removed (absent when none). |
+
+Examples:
+
+- New expression: `{"docId":"d1","table":"Regions","expression":"DISTINCT(Stores[Region])"}`
+- Hide a table: `{"docId":"d1","tableId":42,"isHidden":true}`
 
 ### `model.table.delete`
 

@@ -121,7 +121,9 @@ use pbi_model::Model;
 
 pub use calc::{compute_calculated_column, compute_calculated_table};
 pub use context::{Cancel, EvalContext, RowContext, RowFrame, VarScope, VarValue};
-pub use deps::{Dependency, dependencies, dependencies_in, transitive_dependencies};
+pub use deps::{
+    Dependency, dependencies, dependencies_in, refers_to_table, transitive_dependencies,
+};
 pub use error::{DaxError, MAX_EVAL_DEPTH, Result};
 pub use functions::{is_supported_function, supported_functions};
 pub use query::evaluate_query;

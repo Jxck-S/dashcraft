@@ -4,7 +4,7 @@
 
 use pbi_engine::{EngineSnapshot, FilterContext};
 use pbi_model::names::{dax_column_ref, names_eq};
-use pbi_model::{Column, ColumnKind, CommandError, DataType, Model};
+use pbi_model::{Column, ColumnKind, CommandError, DataType, Model, TableKind};
 
 use crate::derived::data_type_of;
 use crate::session::Session;
@@ -148,42 +148,78 @@ impl Session {
                 existing: format!("table '{}'", other.name),
             });
         }
-        let table = pbi_dax::evaluate_table(&snapshot, &model, expression, &FilterContext::new())
-            .map_err(|e| {
-            CommandError::Rejected(format!("table '{name}' cannot be calculated: {e}"))
-        })?;
-        let batch = pbi_dax::to_record_batch(&table);
-        let mut out = Vec::with_capacity(table.columns().len());
-        for (column, array) in table.columns().iter().zip(batch.columns()) {
-            let from_values = (array.null_count() < array.len())
-                .then(|| data_type_of(array.data_type()))
-                .filter(|t| *t != DataType::Variant);
-            let from_model = || {
-                let lineage = column.lineage.as_ref()?;
-                let data_type = &model
-                    .table(&lineage.table)?
-                    .column(&lineage.column)?
-                    .data_type;
-                (!matches!(data_type, DataType::Variant | DataType::Automatic))
-                    .then(|| data_type.clone())
-            };
-            let Some(data_type) = from_values.or_else(from_model) else {
-                return Err(CommandError::Rejected(format!(
-                    "table '{name}': the type of column [{}] cannot be inferred: the expression returns no rows or only blanks (refresh the data first when it is not loaded)",
-                    column.name
-                )));
-            };
-            out.push(InferredColumn {
-                name: column.name.clone(),
-                // Desktop's form: the result's column name, the table unquoted
-                // (`Web Sessions[Device]`, `[Pages]`).
-                source_column: match &column.table {
-                    Some(t) => format!("{t}[{}]", column.name.replace(']', "]]")),
-                    None => format!("[{}]", column.name.replace(']', "]]")),
-                },
-                data_type,
-            });
-        }
-        Ok(out)
+        infer_columns(&snapshot, &model, name, expression)
     }
+
+    /// The columns the calculated table `table` would have with DAX
+    /// `expression` instead of its own, as [`Session::infer_table_columns`]
+    /// infers them. The expression runs on the current data, the table's
+    /// included: an expression that uses the table is refused by the edit
+    /// (a circular dependency).
+    ///
+    /// # Errors
+    /// [`CommandError::Rejected`] when the model has no calculated table
+    /// `table`, or as [`Session::infer_table_columns`].
+    pub fn infer_changed_table_columns(
+        &self,
+        table: &str,
+        expression: &str,
+    ) -> Result<Vec<InferredColumn>, CommandError> {
+        let (snapshot, model) = self.base_snapshot_and_model();
+        let Some(t) = model.table(table) else {
+            return Err(CommandError::Rejected(format!("no table '{table}'")));
+        };
+        if t.kind() != TableKind::CalculatedTable {
+            return Err(CommandError::Rejected(format!(
+                "'{}' is not a calculated table: its columns come from its query",
+                t.name
+            )));
+        }
+        infer_columns(&snapshot, &model, &t.name, expression)
+    }
+}
+
+/// The columns of a calculated table `name` with DAX `expression` (see
+/// [`Session::infer_table_columns`]).
+fn infer_columns(
+    snapshot: &EngineSnapshot,
+    model: &Model,
+    name: &str,
+    expression: &str,
+) -> Result<Vec<InferredColumn>, CommandError> {
+    let table = pbi_dax::evaluate_table(snapshot, model, expression, &FilterContext::new())
+        .map_err(|e| CommandError::Rejected(format!("table '{name}' cannot be calculated: {e}")))?;
+    let batch = pbi_dax::to_record_batch(&table);
+    let mut out = Vec::with_capacity(table.columns().len());
+    for (column, array) in table.columns().iter().zip(batch.columns()) {
+        let from_values = (array.null_count() < array.len())
+            .then(|| data_type_of(array.data_type()))
+            .filter(|t| *t != DataType::Variant);
+        let from_model = || {
+            let lineage = column.lineage.as_ref()?;
+            let data_type = &model
+                .table(&lineage.table)?
+                .column(&lineage.column)?
+                .data_type;
+            (!matches!(data_type, DataType::Variant | DataType::Automatic))
+                .then(|| data_type.clone())
+        };
+        let Some(data_type) = from_values.or_else(from_model) else {
+            return Err(CommandError::Rejected(format!(
+                "table '{name}': the type of column [{}] cannot be inferred: the expression returns no rows or only blanks (refresh the data first when it is not loaded)",
+                column.name
+            )));
+        };
+        out.push(InferredColumn {
+            name: column.name.clone(),
+            // Desktop's form: the result's column name, the table unquoted
+            // (`Web Sessions[Device]`, `[Pages]`).
+            source_column: match &column.table {
+                Some(t) => format!("{t}[{}]", column.name.replace(']', "]]")),
+                None => format!("[{}]", column.name.replace(']', "]]")),
+            },
+            data_type,
+        });
+    }
+    Ok(out)
 }
