@@ -16,11 +16,12 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
+use crate::ids::ObjectId;
 use crate::names::names_eq;
 use crate::props::{PropValue, PropertyBag};
 use crate::query::{Condition, FieldExpr, Filter};
 use crate::report::{ReportMeasure, Visual};
-use crate::semantic::{ColumnRef, Relationship};
+use crate::semantic::{ColumnRef, Model, Relationship, Table};
 
 /// A rename to propagate to references. Matching is case-insensitive.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,6 +76,100 @@ pub fn renamed_native_query_ref(
         new.to_owned()
     };
     (renamed != native).then_some(renamed)
+}
+
+/// The table, column and measure renames from `old` to `new`, matched by
+/// [`ObjectId`], as [`Rename`]s to apply in order. Every renamed name goes
+/// through a unique placeholder first, so swapped names (`A` ↔ `B`) and a
+/// table renamed together with its columns come out right. Empty when
+/// nothing was renamed.
+#[must_use]
+pub fn renames_between(old: &Model, new: &Model) -> Vec<Rename> {
+    struct Field<'a> {
+        measure: bool,
+        table: &'a str,
+        old: &'a str,
+        new: &'a str,
+    }
+    impl Field<'_> {
+        fn rename(&self, table: String, old: String, new: String) -> Rename {
+            if self.measure {
+                Rename::Measure { table, old, new }
+            } else {
+                Rename::Column { table, old, new }
+            }
+        }
+    }
+    let before: HashMap<ObjectId, &Table> = old
+        .tables
+        .iter()
+        .filter(|t| t.id.is_assigned())
+        .map(|t| (t.id, t))
+        .collect();
+    let mut tables: Vec<(&str, &str)> = Vec::new();
+    let mut fields: Vec<Field<'_>> = Vec::new();
+    for table in new.tables.iter().filter(|t| t.id.is_assigned()) {
+        let Some(prev) = before.get(&table.id) else {
+            continue;
+        };
+        if prev.name != table.name {
+            tables.push((&prev.name, &table.name));
+        }
+        let columns = table
+            .columns
+            .iter()
+            .filter(|c| c.id.is_assigned())
+            .filter_map(|c| {
+                let o = prev.columns.iter().find(|o| o.id == c.id)?;
+                Some((false, o.name.as_str(), c.name.as_str()))
+            });
+        let measures = table
+            .measures
+            .iter()
+            .filter(|m| m.id.is_assigned())
+            .filter_map(|m| {
+                let o = prev.measures.iter().find(|o| o.id == m.id)?;
+                Some((true, o.name.as_str(), m.name.as_str()))
+            });
+        for (measure, old, new) in columns.chain(measures) {
+            if old != new {
+                fields.push(Field {
+                    measure,
+                    table: &prev.name,
+                    old,
+                    new,
+                });
+            }
+        }
+    }
+    let slot = |n: usize| format!("\u{1}dashcraft-rename-{n}\u{1}");
+    let table_slot = |n: usize| slot(fields.len() + n);
+    let table_now = |name: &str| {
+        tables
+            .iter()
+            .position(|(old, _)| *old == name)
+            .map_or_else(|| name.to_owned(), table_slot)
+    };
+    let mut out = Vec::with_capacity(2 * (tables.len() + fields.len()));
+    for (i, f) in fields.iter().enumerate() {
+        out.push(f.rename(f.table.to_owned(), f.old.to_owned(), slot(i)));
+    }
+    for (i, (old, _)) in tables.iter().enumerate() {
+        out.push(Rename::Table {
+            old: (*old).to_owned(),
+            new: table_slot(i),
+        });
+    }
+    for (i, f) in fields.iter().enumerate() {
+        out.push(f.rename(table_now(f.table), slot(i), f.new.to_owned()));
+    }
+    for (i, (_, new)) in tables.iter().enumerate() {
+        out.push(Rename::Table {
+            old: table_slot(i),
+            new: (*new).to_owned(),
+        });
+    }
+    out
 }
 
 impl Rename {
@@ -413,6 +508,77 @@ mod tests {
             old: old.into(),
             new: new.into(),
         }
+    }
+
+    #[test]
+    fn renames_between_models_follow_ids_through_swaps() {
+        use crate::semantic::{Column, Measure};
+        let column = |id, name: &str| Column {
+            id: ObjectId(id),
+            name: name.into(),
+            ..Column::default()
+        };
+        let model = |sales: &str, a: &str, b: &str, total: &str| Model {
+            tables: vec![
+                Table {
+                    id: ObjectId(1),
+                    name: sales.into(),
+                    columns: vec![column(2, a), column(3, b), column(0, "Unassigned")],
+                    measures: vec![Measure {
+                        id: ObjectId(4),
+                        name: total.into(),
+                        ..Measure::default()
+                    }],
+                    ..Table::default()
+                },
+                Table {
+                    id: ObjectId(5),
+                    name: "Dates".into(),
+                    columns: vec![column(6, "Region")],
+                    ..Table::default()
+                },
+            ],
+            ..Model::default()
+        };
+        let old = model("Sales", "Region", "Amount", "Total");
+        assert!(renames_between(&old, &old).is_empty());
+        // The table is renamed, its two columns swap names, the measure is
+        // renamed (case only).
+        let new = model("Orders", "Amount", "Region", "TOTAL");
+        let renames = renames_between(&old, &new);
+        let follow = |mut f: FieldExpr| {
+            for r in &renames {
+                r.apply_to_field(&mut f);
+            }
+            (
+                f.entity().map(str::to_owned),
+                f.property().map(str::to_owned),
+            )
+        };
+        let names = |t: &str, p: &str| (Some(t.to_owned()), Some(p.to_owned()));
+        assert_eq!(
+            follow(FieldExpr::column("Sales", "Region")),
+            names("Orders", "Amount")
+        );
+        assert_eq!(
+            follow(FieldExpr::column("sales", "amount")),
+            names("Orders", "Region")
+        );
+        assert_eq!(
+            follow(FieldExpr::measure("Sales", "Total")),
+            names("Orders", "TOTAL")
+        );
+        assert_eq!(
+            follow(FieldExpr::column("Dates", "Region")),
+            names("Dates", "Region")
+        );
+        // And back (an undo).
+        let back = renames_between(&new, &old);
+        let mut f = FieldExpr::column("Orders", "Amount");
+        for r in &back {
+            r.apply_to_field(&mut f);
+        }
+        assert_eq!((f.entity(), f.property()), (Some("Sales"), Some("Region")));
     }
 
     #[test]

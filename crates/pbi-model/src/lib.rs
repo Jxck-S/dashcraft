@@ -72,7 +72,7 @@ pub use report::{
     PageRect, Position, Projection, Report, ReportMeasure, ResourceItem, ResourcePackage,
     ResourceRef, ThemeRef, Visual, VisualInteraction, VisualKind,
 };
-pub use rewrite::Rename;
+pub use rewrite::{Rename, renames_between};
 pub use semantic::{
     CalculationGroup, CalculationGroupExpression, CalculationItem, Cardinality, Column, ColumnKind,
     ColumnRef, CrossFilter, Culture, DataType, Database, ExpressionKind, FieldKind, Hierarchy,
