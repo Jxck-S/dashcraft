@@ -112,6 +112,7 @@ pub fn catalog() -> Registry {
         .with::<dax::DaxDiagnostics>()
         .with::<dax::DaxSignatureHelp>()
         .with::<dax::DaxHover>()
+        .with::<dax::DaxComplete>()
         // render
         .with::<render::RenderPage>()
         .with::<render::RenderVisual>()

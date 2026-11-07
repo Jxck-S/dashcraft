@@ -1,0 +1,1 @@
+$DEFINE MEASURE 'Sales'[New] = 1 EVALUATE ROW("x", [Ne

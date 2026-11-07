@@ -136,7 +136,7 @@ flag in [docs/CLI.md](docs/CLI.md).
 - **Built to edit:** lossless TMDL, TMSL and PBIR readers and writers and undoable document
   commands, the groundwork for Power BI Desktop-style editing.
 - **Untrusted input:** parsers never panic, `unsafe` is denied, archives are capped and guarded
-  against zip-slip, 14 fuzz targets run nightly, and embedded scripts and custom visuals are never
+  against zip-slip, 15 fuzz targets run nightly, and embedded scripts and custom visuals are never
   executed ([docs/SECURITY.md](docs/SECURITY.md)).
 - **Deterministic and fast:** bundled fonts only, the same bytes on every OS; performance budgets
   checked by `cargo xtask perf` ([docs/perf.md](docs/perf.md)).

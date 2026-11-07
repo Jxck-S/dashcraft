@@ -446,7 +446,7 @@ async fn positions_out_of_range_or_ambiguous_are_invalid_params() {
         json!({"offset": 0, "utf16Offset": 0}),
         json!({}),
     ] {
-        for id in ["dax.signatureHelp", "dax.hover"] {
+        for id in ["dax.signatureHelp", "dax.hover", "dax.complete"] {
             let err = r
                 .try_run(id, json!({"text": "SUM", "position": position}))
                 .await
@@ -591,4 +591,123 @@ async fn hover_describes_model_names_and_functions() {
         .await
         .unwrap_err();
     assert_eq!(err.code, pbi_ops::OpErrorCode::NoDocument, "{err:?}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn completion_suggests_model_names_variables_and_functions() {
+    let Some(path) = fixture(PBIP) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r.open(json!({"path": s(&path)})).await;
+    let at = |marked: &str| {
+        let offset = marked.find('¦').unwrap();
+        json!({"docId": doc, "text": marked.replace('¦', ""), "position": {"offset": offset}})
+    };
+
+    // A measure inside an unterminated bracket.
+    let out = r.run("dax.complete", at("[Total Sa¦")).await;
+    assert!(out["documentRevision"].is_u64(), "{out}");
+    assert_eq!(
+        (
+            &out["start"]["offset"],
+            &out["end"]["offset"],
+            &out["prefix"]
+        ),
+        (&json!(0), &json!(9), &json!("Total Sa"))
+    );
+    let first = &out["items"][0];
+    assert_eq!(
+        (
+            &first["label"],
+            &first["kind"],
+            &first["table"],
+            &first["insertText"]
+        ),
+        (
+            &json!("[Total Sales]"),
+            &json!("measure"),
+            &json!("Orders"),
+            &json!("[Total Sales]")
+        )
+    );
+
+    // A column of the qualifying table.
+    let out = r.run("dax.complete", at("Stores[Reg¦]")).await;
+    let first = &out["items"][0];
+    assert_eq!(
+        (&first["label"], &first["kind"], &first["detail"]),
+        (
+            &json!("[Region]"),
+            &json!("column"),
+            &json!("column (string)")
+        )
+    );
+    assert!(
+        out["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|i| i["table"] == "Stores"),
+        "{out}"
+    );
+
+    // Variables in scope first.
+    let out = r.run("dax.complete", at("VAR region = 1 RETURN re¦")).await;
+    assert_eq!(
+        (&out["items"][0]["label"], &out["items"][0]["kind"]),
+        (&json!("region"), &json!("variable"))
+    );
+
+    // A table parameter ranks tables first; 100 items by default.
+    let out = r.run("dax.complete", at("SUMX(¦")).await;
+    assert_eq!(out["items"][0]["kind"], "table", "{out}");
+    assert_eq!(out["items"].as_array().unwrap().len(), 100);
+    assert_eq!(out["incomplete"], true);
+
+    let out = r
+        .run(
+            "dax.complete",
+            json!({"docId": doc, "text": "SU", "position": {"offset": 2}, "maxItems": 3}),
+        )
+        .await;
+    assert_eq!(out["items"].as_array().unwrap().len(), 3);
+    assert_eq!(out["incomplete"], true);
+
+    // Without a document: functions, no model names.
+    let out = r
+        .run(
+            "dax.complete",
+            json!({"text": "[Total Sa", "position": {"offset": 9}}),
+        )
+        .await;
+    assert!(out.get("documentRevision").is_none(), "{out}");
+    assert_eq!(out["items"], json!([]));
+    let out = r
+        .run(
+            "dax.complete",
+            json!({"text": "sum", "position": {"line": 1, "column": 4}}),
+        )
+        .await;
+    assert_eq!(
+        out["items"][0],
+        json!({
+            "label": "SUM",
+            "kind": "function",
+            "insertText": "SUM(",
+            "detail": "SUM(column) → number",
+            "description": out["items"][0]["description"].clone(),
+        })
+    );
+
+    for max in [0, 1001] {
+        let err = r
+            .try_run(
+                "dax.complete",
+                json!({"text": "S", "position": {"offset": 1}, "maxItems": max}),
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, pbi_ops::OpErrorCode::InvalidParams, "{max}");
+    }
 }

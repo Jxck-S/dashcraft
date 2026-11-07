@@ -141,6 +141,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`dax.diagnostics`](#daxdiagnostics) | Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion), wrong argument counts and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. | A |
 | [`dax.signatureHelp`](#daxsignaturehelp) | The DAX function call around a cursor: its signature, parameters, return type, description and the parameter the cursor is in; works on text that does not parse yet. | A |
 | [`dax.hover`](#daxhover) | Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded. | A |
+| [`dax.complete`](#daxcomplete) | The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -1084,6 +1085,37 @@ Examples:
 
 - A measure of the model: `{"docId":"d1","text":"[Total Sales] * 2","position":{"offset":3}}`
 - A function, without a document: `{"text":"SUMX(Sales, 1)","position":{"line":1,"column":2}}`
+
+### `dax.complete`
+
+**DAX completion.** The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` (optional) | string \| null | Suggest the tables, columns and measures of this document's model and its report-level measures (`d1`, …). Without it only functions, keywords, variables and the query's own definitions are suggested. |
+| `text` | string | The DAX text. |
+| `position` | TextPositionIn | The cursor. |
+| `maxItems` (optional) | integer | Most items returned, best first (default 100, at most 1000). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `documentRevision`? | integer \| null | The document revision whose model was used (with `docId`). |
+| `start` | TextPositionOut | Start of the text a chosen item replaces (the name being typed; the cursor when nothing is typed yet). |
+| `end` | TextPositionOut | End (exclusive) of the replaced text. |
+| `prefix` | string | The typed text the items match (`Tot` in `[Tot`). |
+| `items` | DaxCompletionItemOut[] | Best match first: the same name, then names that start with the prefix, then a word that does, then names that contain it. Empty inside a comment, string or number, and after `VAR`. |
+| `incomplete` | boolean | More items matched than `maxItems`. |
+
+Examples:
+
+- A measure of the model, inside brackets: `{"docId":"d1","text":"[Tot","position":{"offset":4}}`
+- Functions, without a document: `{"text":"SUMX(Sales, SU","position":{"line":1,"column":15},"maxItems":10}`
 
 ## Render
 

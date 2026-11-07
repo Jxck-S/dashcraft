@@ -33,6 +33,9 @@ and accessibility rows (§10). Canvas selections now follow model renames (cross
 score unchanged). Renames rewrite KPI and detail-rows DAX, saved in Desktop's form (editing and
 TMDL rows, GT-6 s25; scores unchanged).
 
+Update **2026-11-07** (later): DAX completion (`dax.complete`, M7.1c) added evidence to the
+language-service row (§3; score unchanged) and P12 to §8 (4.7 → 4.8).
+
 Update **2026-11-07** (later): DAX signature help and hover, and argument-count diagnostics checked
 against Power BI Desktop (M7.1b), raised the language-service row 2 → 3 (§3; the §3 summary now
 counts that row).
@@ -69,7 +72,7 @@ edits moved to M14 and M10 (editing row, no score change).
 | 5 | [Visuals](#5-visuals) | 2.1 | 15 / 6 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
 | 6 | [Interactions](#6-interactions) | 1.6 | 7 / 2 / 10 | Highlighting, bookmarks, drillthrough, drill-down, synced slicers |
 | 7 | [Rendering fidelity](#7-rendering-fidelity) | 3.2 | 4 / 0 / 2 | No golden images (Power BI exports of the Acme Outfitters pages); DIN font |
-| 8 | [Performance](#8-performance) | 4.7 | 11 / 0 / 1 | No app-open or webview canvas-latency scenarios; P09–P11 not in the baseline yet |
+| 8 | [Performance](#8-performance) | 4.8 | 12 / 0 / 1 | No app-open or webview canvas-latency scenarios; P09–P12 not in the baseline yet |
 | 9 | [Command registry, MCP, AI](#9-command-registry-mcp-ai) | 3.4 | 8 / 3 / 1 | Broader editing commands |
 | 10 | [App UX vs Power BI Desktop](#10-app-ux-vs-power-bi-desktop) | 2.0 | 6 / 11 / 6 | Report editing, modeling editors (new objects, relationships), Power Query editing |
 | 11 | [Platform and packaging](#11-platform-and-packaging) | 2.7 | 7 / 2 / 4 | Signing and notarization, auto-update, ARM64 Windows/Linux |
@@ -155,7 +158,7 @@ Source: `crates/pbi-dax`, [FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md) (kept i
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
 | Lexer, parser, printer, `DEFINE`/`EVALUATE` | ✅ | 5 | `crates/pbi-dax/tests/{syntax,roundtrip}.rs`; fuzz `dax_parse` | — |
-| Language service (M7.1) | 🟡 | 3 | `dax.diagnostics`: syntax, unknown tables, columns and measures with "did you mean", argument counts (checked against Power BI Desktop: 929 probes, `dax-arity`), unsupported functions; `dax.signatureHelp` and `dax.hover` from a catalog of all 299 functions with DashCraft-written descriptions; UTF-8/UTF-16/line-column positions (`pbi_dax::service`, `crates/pbi-dax/tests/language_service.rs`); no false errors or warnings on the 136 expressions of Acme and the committed samples (`crates/pbi-ops/tests/dax_language.rs`) | Completion and P12 (M7.1c), semantic tokens and references (M7.1d), formatter (M7.2) |
+| Language service (M7.1) | 🟡 | 3 | `dax.diagnostics`: syntax, unknown tables, columns and measures with "did you mean", argument counts (checked against Power BI Desktop: 929 probes, `dax-arity`), unsupported functions; `dax.signatureHelp` and `dax.hover` from a catalog of all 299 functions with DashCraft-written descriptions; `dax.complete` by context (functions, model names, variables in scope, query `DEFINE`s, keywords; ranked by match and by the active parameter; P12 3.0 ms p95 over 2,000 measures); UTF-8/UTF-16/line-column positions (`pbi_dax::service`, `crates/pbi-dax/tests/language_service.rs`); no false errors or warnings on the 136 expressions of Acme and the committed samples (`crates/pbi-ops/tests/dax_language.rs`); fuzz `dax_service` | Semantic tokens and references (M7.1d), formatter (M7.2), the formula bar (M7.5) |
 | Function library breadth | 🟡 | 4 | 299 functions (table above); added `NAMEOF` (matched against Power BI Desktop), logarithms, trigonometry, distributions (~1e-13 relative error against SciPy references), financial functions (`PMT`, `PV`, `FV`, `NPER`; DAX payment-type rounding and period bounds, stable tiny rates, long-horizon discounting and small growth ratios), `GEOMEAN`, `MAXA`/`MINA`/`AVERAGEA`, `YEARFRAC`, `NETWORKDAYS` and more, with a 33,200-call random-argument sweep (`crates/pbi-dax/tests/functions_library.rs`) | Missing: remaining financial functions (`XIRR`, `XNPV`, …), `LINEST`, visual-calculation functions, `INFO.*` (FUNCTIONS.md "Not supported yet") |
 | Filter and row context, context transition, expanded tables, BLANK | ✅ | 4 | `crates/pbi-dax/tests/eval.rs`; the example's acceptance values | Context transition on duplicate rows of keyless tables |
 | `CALCULATE` modifiers, `ALLSELECTED`, `USERELATIONSHIP`/`CROSSFILTER` | 🟡 | 4 | `ALLSELECTED` shadow contexts per iteration and `SUMMARIZECOLUMNS` row, `KEEPFILTERS` iterators, `IGNORE` and `CROSSFILTER` validity equal to Desktop (ground-truth suite `dax-functions`); FUNCTIONS.md "Known semantic gaps" | Overrides for `RELATED` and `SUMMARIZE` |
@@ -287,6 +290,7 @@ scenarios recorded 2026-10-23 on an idle machine). Score: 5 ≤ half the target 
 | P09 `edit-measure-requery` (50 / 150; edit `Total Sales`, re-render the Executive Summary page, through `Registry::execute`) | ✅ | 4 | 43.6 on a Windows x86-64 desktop; 53 on the CI runner's quick run, over target (no baseline entry yet) | Record on the baseline machine |
 | P10 `save-pbip-acme` (100 / 300; one edit, `doc.save` of a copy of the example) | ✅ | 4 | 55 on the same desktop | Record on the baseline machine |
 | P11 `refresh-acme-end-to-end` (1000 / 3000; open, refresh 11 tables from the CSVs, first page, fresh process) | ✅ | 5 | 184 on the same desktop | Record on the baseline machine |
+| P12 `dax-complete` (p95; 20 / 50; DAX completion over 20 tables × 20 columns and 2,000 measures) | ✅ | 5 | 3.0 on the same desktop | Record on the baseline machine |
 | Scenarios for app open and canvas latency in the webview | ❌ | ? | none (P22 and P21 in [DESKTOP-PLAN.md](DESKTOP-PLAN.md)) | Add with the app milestones |
 
 ## 9. Command registry, MCP, AI
@@ -366,7 +370,7 @@ Source: [SECURITY.md](SECURITY.md), [docs/ci.md](ci.md#fuzz-targets).
 |---|---|---|---|---|
 | No `unsafe`; no `unwrap`/`expect` outside tests | ✅ | 5 | workspace lints; clippy `-D warnings` | — |
 | Untrusted-input hardening (caps, zip-slip, symlinks, DTDs refused) | ✅ | 5 | `crates/pbi-core/tests/containers.rs`; fuzzing found and fixed a drive-letter zip-slip | — |
-| Fuzzing: 14 `cargo-fuzz` targets, nightly | ✅ | 4 | `fuzz/fuzz_targets/`, `.github/workflows/fuzz.yml` | Dedicated targets for RDL, VPAX, legacy XML metadata (only via `open_bytes` today) |
+| Fuzzing: 15 `cargo-fuzz` targets, nightly | ✅ | 4 | `fuzz/fuzz_targets/`, `.github/workflows/fuzz.yml` | Dedicated targets for RDL, VPAX, legacy XML metadata (only via `open_bytes` today) |
 | Secret redaction in metadata and connection strings | ✅ | 4 | FORMATS.md; reader tests | — |
 | App hardening (CSP, minimal capabilities, sanitized SVG) | ✅ | 4 | app/README "Security" | — |
 | No script execution, no telemetry | ✅ | 5 | AGENTS.md rules 4–5 | — |

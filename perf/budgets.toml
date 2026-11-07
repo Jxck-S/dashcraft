@@ -189,3 +189,20 @@ warmup = 0
 iterations = 5
 quick_warmup = 0
 quick_iterations = 3
+
+[[scenario]]
+id = "P12"
+name = "dax-complete"
+description = """
+DAX completion on a synthetic model of 20 tables × 20 columns and 2 000 measures: one editor \
+request per iteration, Schema::from_model plus complete() at the end of one of six texts in \
+turn (a measure prefix, an empty table argument, variables, a qualified column, a column \
+argument, a query DEFINE), at most 100 items."""
+package = "pbi-dax"
+example = "perf_dax"
+metric = "p95"
+target_ms = 20
+max_ms = 50
+warmup = 6
+iterations = 60
+quick_iterations = 24

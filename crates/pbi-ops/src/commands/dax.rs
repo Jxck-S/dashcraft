@@ -1,10 +1,10 @@
 //! `dax.query`, `dax.evaluateMeasure`, `measures.values`, `dax.diagnostics`,
-//! `dax.signatureHelp`, `dax.hover`.
+//! `dax.signatureHelp`, `dax.hover`, `dax.complete`.
 
 use std::time::Instant;
 
 use pbi_model::Severity;
-use pbi_session::dax_service::{self, HoverKind, NameDetails, Schema, SourceKind};
+use pbi_session::dax_service::{self, CompletionKind, HoverKind, NameDetails, Schema, SourceKind};
 use pbi_session::{FilterSpec, filters_from_page, filters_from_report};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,13 @@ use crate::workspace::{DocEntry, Workspace};
 
 /// Largest `maxRows` of `dax.query`.
 pub const MAX_QUERY_ROWS: usize = 5000;
+
+/// Largest `maxItems` of `dax.complete`.
+pub const MAX_COMPLETION_ITEMS: usize = 1000;
+
+fn default_max_items() -> usize {
+    100
+}
 
 fn default_max_rows() -> usize {
     1000
@@ -883,6 +890,150 @@ impl Command for DaxHover {
         Ok(DaxHoverOut {
             document_revision,
             hover,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `dax.complete`.
+#[derive(Debug)]
+pub struct DaxComplete;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DaxCompleteParams {
+    /// Suggest the tables, columns and measures of this document's model and
+    /// its report-level measures (`d1`, …). Without it only functions,
+    /// keywords, variables and the query's own definitions are suggested.
+    #[serde(default)]
+    pub doc_id: Option<String>,
+    /// The DAX text.
+    pub text: String,
+    /// The cursor.
+    pub position: TextPositionIn,
+    /// Most items returned, best first (default 100, at most 1000).
+    #[serde(default = "default_max_items")]
+    pub max_items: usize,
+}
+
+/// What a completion item inserts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DaxCompletionKind {
+    Function,
+    /// A user-defined function of the model or query.
+    UserFunction,
+    Table,
+    Column,
+    Measure,
+    Variable,
+    Keyword,
+}
+
+/// One suggestion.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxCompletionItemOut {
+    /// What a list shows: `SUM`, `Sales`, `'Product Category'[Category]`,
+    /// `[Total Sales]`, a variable, `ORDER BY`.
+    pub label: String,
+    pub kind: DaxCompletionKind,
+    /// The text that replaces `start`..`end`: `SUM(`, `PI()`, `SUM` when a
+    /// `(` already follows, the label for anything else.
+    pub insert_text: String,
+    /// `SUM(column) → number`, `column (string)`, `measure`, `table`,
+    /// `variable`, `keyword`, `user-defined function`.
+    pub detail: String,
+    /// The home table of a column or measure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub table: Option<String>,
+    /// A function's or keyword's description, or the model description.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxCompleteOut {
+    /// The document revision whose model was used (with `docId`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub document_revision: Option<u64>,
+    /// Start of the text a chosen item replaces (the name being typed; the
+    /// cursor when nothing is typed yet).
+    pub start: TextPositionOut,
+    /// End (exclusive) of the replaced text.
+    pub end: TextPositionOut,
+    /// The typed text the items match (`Tot` in `[Tot`).
+    pub prefix: String,
+    /// Best match first: the same name, then names that start with the
+    /// prefix, then a word that does, then names that contain it. Empty
+    /// inside a comment, string or number, and after `VAR`.
+    pub items: Vec<DaxCompletionItemOut>,
+    /// More items matched than `maxItems`.
+    pub incomplete: bool,
+}
+
+impl Command for DaxComplete {
+    type Params = DaxCompleteParams;
+    type Output = DaxCompleteOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "dax.complete",
+            title: "DAX completion",
+            summary: "The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet.",
+            category: Category::Dax,
+            examples: &[
+                (
+                    "A measure of the model, inside brackets",
+                    r#"{"docId": "d1", "text": "[Tot", "position": {"offset": 4}}"#,
+                ),
+                (
+                    "Functions, without a document",
+                    r#"{"text": "SUMX(Sales, SU", "position": {"line": 1, "column": 15}, "maxItems": 10}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let max_items = bounded("maxItems", p.max_items, MAX_COMPLETION_ITEMS)?;
+        if max_items == 0 {
+            return Err(OpError::invalid_params("maxItems must be at least 1"));
+        }
+        let (document_revision, schema) = language_schema(ws, p.doc_id.as_deref())?;
+        let src = p.text.as_str();
+        let offset = p.position.resolve(src)?;
+        let c = dax_service::complete(src, offset, &schema, max_items);
+        let items = c
+            .items
+            .into_iter()
+            .map(|i| DaxCompletionItemOut {
+                label: i.label,
+                kind: match i.kind {
+                    CompletionKind::Function => DaxCompletionKind::Function,
+                    CompletionKind::UserFunction => DaxCompletionKind::UserFunction,
+                    CompletionKind::Table => DaxCompletionKind::Table,
+                    CompletionKind::Column => DaxCompletionKind::Column,
+                    CompletionKind::Measure => DaxCompletionKind::Measure,
+                    CompletionKind::Variable => DaxCompletionKind::Variable,
+                    CompletionKind::Keyword => DaxCompletionKind::Keyword,
+                },
+                insert_text: i.insert_text,
+                detail: i.detail,
+                table: i.table,
+                description: i.description,
+            })
+            .collect();
+        Ok(DaxCompleteOut {
+            document_revision,
+            start: TextPositionOut::at(src, c.span.start),
+            end: TextPositionOut::at(src, c.span.end),
+            prefix: c.prefix,
+            items,
+            incomplete: c.incomplete,
         })
     }
 }

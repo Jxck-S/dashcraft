@@ -3,8 +3,8 @@
 //! mean" suggestions, signature help and hover, on a synthetic model.
 
 use pbi_dax::service::{
-    Diagnostic, DiagnosticCode, Hover, HoverKind, MAX_DIAGNOSTICS, Schema, SourceKind, diagnostics,
-    hover, signature_help,
+    CompletionKind, Completions, Diagnostic, DiagnosticCode, Hover, HoverKind, MAX_DIAGNOSTICS,
+    Schema, SourceKind, complete, diagnostics, hover, signature_help,
 };
 use pbi_model::{Column, DataType, Measure, Model, PropValue, RawObject, Severity, Table};
 
@@ -525,6 +525,263 @@ fn hover_is_none_for_unknown_names_literals_and_comments() {
         assert_eq!(hover(&src, offset, &schema), None, "{marked}");
     }
     assert_eq!(hover("'Ünïcode'", 2, &schema), None);
+}
+
+fn comp(marked: &str) -> Completions {
+    let (src, offset) = cursor(marked);
+    complete(&src, offset, &Schema::from_model(&model()), 0)
+}
+
+fn labels(marked: &str) -> Vec<String> {
+    comp(marked).items.into_iter().map(|i| i.label).collect()
+}
+
+fn first(marked: &str) -> String {
+    labels(marked).into_iter().next().unwrap_or_default()
+}
+
+#[test]
+fn completion_matches_functions_names_and_keywords() {
+    let c = comp("SU¦");
+    assert_eq!((c.span.start, c.span.end, c.prefix.as_str()), (0, 2, "SU"));
+    let sum = c.items.iter().find(|i| i.label == "SUM").unwrap();
+    assert_eq!(sum.kind, CompletionKind::Function);
+    assert_eq!(sum.insert_text, "SUM(");
+    assert_eq!(sum.detail, "SUM(column) → number");
+    assert!(sum.description.is_some());
+    assert!(
+        c.items
+            .iter()
+            .all(|i| i.label.to_lowercase().contains("su"))
+    );
+    // An exact name first; any case.
+    assert_eq!(first("sum¦"), "SUM");
+    assert_eq!(first("var¦"), "VAR");
+    // A function without arguments gets its parentheses; a `(` that is
+    // already there is not doubled, and the whole name is replaced.
+    let pi = comp("PI¦")
+        .items
+        .into_iter()
+        .find(|i| i.label == "PI")
+        .unwrap();
+    assert_eq!(pi.insert_text, "PI()");
+    let c = comp("SU¦M(Sales[Amount])");
+    assert_eq!((c.span.start, c.span.end), (0, 3));
+    let sum = c.items.iter().find(|i| i.label == "SUM").unwrap();
+    assert_eq!(sum.insert_text, "SUM");
+    // Tables, then their columns (qualified), then measures (`Sal` starts a
+    // word of `Total Sales`).
+    assert_eq!(
+        labels("Sal¦"),
+        [
+            "Sales",
+            "Sales[Amount]",
+            "Sales[Margin]",
+            "Sales[Order Date]",
+            "[Total Sales]"
+        ]
+    );
+    let c = comp("Tot¦");
+    let m = c.items.iter().find(|i| i.label == "[Total Sales]").unwrap();
+    assert_eq!(
+        (m.kind, m.table.as_deref()),
+        (CompletionKind::Measure, Some("Sales"))
+    );
+    assert_eq!(m.insert_text, "[Total Sales]");
+    let twice = comp("Twi¦").items.into_iter().next().unwrap();
+    assert_eq!(
+        (twice.kind, twice.insert_text.as_str()),
+        (CompletionKind::UserFunction, "Twice(")
+    );
+    // A word of the name: `Cat` finds `'Product Category'` after the
+    // column whose name starts with it, and names that contain it last.
+    assert_eq!(
+        labels("Cat¦"),
+        [
+            "'Product Category'[Category]",
+            "'Product Category'",
+            "CONCATENATE",
+            "CONCATENATEX"
+        ]
+    );
+    let col = comp("Amo¦").items.into_iter().next().unwrap();
+    assert_eq!(
+        (col.label.as_str(), col.detail.as_str()),
+        ("Sales[Amount]", "column (double)")
+    );
+    // A qualifier: only tables.
+    assert_eq!(labels("SUM(Sal¦es[Amount])"), ["Sales"]);
+}
+
+#[test]
+fn completion_inside_brackets_and_quotes() {
+    let c = comp("[Tot¦");
+    assert_eq!((c.span.start, c.span.end, c.prefix.as_str()), (0, 4, "Tot"));
+    assert_eq!(labels("[Tot¦"), ["[Total Sales]"]);
+    // Measures first, then every column once.
+    assert_eq!(
+        labels("[¦]"),
+        [
+            "[Total Sales]",
+            "[Amount]",
+            "[Category]",
+            "[Margin]",
+            "[Order Date]"
+        ]
+    );
+    assert_eq!((comp("[¦]").span.start, comp("[¦]").span.end), (0, 2));
+    // Qualified: that table's columns and measures.
+    assert_eq!(
+        labels("Sales[¦"),
+        ["[Total Sales]", "[Amount]", "[Margin]", "[Order Date]"]
+    );
+    let c = comp("'Product Category'[C¦]");
+    assert_eq!((c.span.start, c.span.end), (18, 21));
+    assert_eq!(labels("'Product Category'[C¦]"), ["[Category]"]);
+    assert_eq!(
+        labels("'Prod¦"),
+        ["'Product Category'", "'Product Category'[Category]"]
+    );
+    // Right after a quoted table name.
+    let c = comp("'Product Category'¦");
+    assert_eq!((c.span.start, c.span.end), (18, 18));
+    assert_eq!(labels("'Product Category'¦"), ["[Category]"]);
+    assert!(labels("Nope[¦").is_empty());
+}
+
+#[test]
+fn completion_offers_the_variables_in_scope() {
+    let c = comp("VAR total = 1 VAR half = total / 2 RETURN t¦");
+    let v = c.items.first().unwrap();
+    assert_eq!(
+        (v.label.as_str(), v.kind),
+        ("total", CompletionKind::Variable)
+    );
+    // Not inside its own definition.
+    assert!(!labels("VAR total = to¦").contains(&"total".to_string()));
+    // Out of scope after the argument that declared it.
+    let vars = |marked: &str| -> Vec<String> {
+        comp(marked)
+            .items
+            .into_iter()
+            .filter(|i| i.kind == CompletionKind::Variable)
+            .map(|i| i.label)
+            .collect()
+    };
+    assert!(vars("SUMX(Sales, VAR x = 1 RETURN x) + ¦").is_empty());
+    assert_eq!(
+        vars("VAR a = 1 RETURN SUMX(Sales, VAR b = 2 RETURN a + ¦"),
+        ["a", "b"]
+    );
+    // Declaring a name: nothing to suggest.
+    assert!(labels("VAR na¦").is_empty());
+    assert!(labels("VAR x ¦").is_empty());
+}
+
+#[test]
+fn completion_after_operands_and_in_queries() {
+    assert_eq!(labels("[Total Sales] ¦"), ["IN", "RETURN", "VAR"]);
+    assert_eq!(labels("[Total Sales] i¦"), ["IN"]);
+    let (src, _) = cursor("¦");
+    let c = complete(&src, 0, &Schema::from_model(&model()), 10);
+    assert_eq!(c.items.len(), 10);
+    assert!(c.incomplete);
+    let all = labels("¦");
+    assert!(all.contains(&"EVALUATE".to_string()) && all.contains(&"DEFINE".to_string()));
+    assert!(!labels("SUM(¦").contains(&"EVALUATE".to_string()));
+    assert_eq!(labels("EVALUATE Sales ORDER ¦"), ["BY"]);
+    assert!(labels("EVALUATE Sales ¦").contains(&"ORDER BY".to_string()));
+    assert_eq!(
+        labels("DEFINE ¦"),
+        ["COLUMN", "FUNCTION", "MEASURE", "TABLE", "VAR"]
+    );
+    assert_eq!(labels("DEFINE MEASURE ¦"), ["'Product Category'", "Sales"]);
+    // DEFINE entries count while the query does not parse yet.
+    assert_eq!(
+        labels("DEFINE MEASURE Sales[Profit] = [Total Sales] * 0.2 EVALUATE ROW(\"p\", [Pro¦"),
+        ["[Profit]"]
+    );
+    let c = comp("DEFINE TABLE Top = TOPN(1, Sales) EVALUATE To¦");
+    assert!(
+        c.items
+            .iter()
+            .any(|i| i.label == "Top" && i.kind == CompletionKind::Table)
+    );
+}
+
+#[test]
+fn completion_ranks_what_the_active_parameter_takes_first() {
+    let kind = |marked: &str| comp(marked).items.first().map(|i| i.kind);
+    assert_eq!(kind("SUMX(¦"), Some(CompletionKind::Table));
+    assert_eq!(kind("COUNTROWS(FILTER(¦"), Some(CompletionKind::Table));
+    assert_eq!(kind("SUM(¦"), Some(CompletionKind::Column));
+    assert_eq!(kind("CALCULATE(¦"), Some(CompletionKind::Function));
+}
+
+#[test]
+fn completion_is_empty_in_comments_literals_and_without_a_model() {
+    for marked in [
+        "-- SU¦",
+        "1 + /* SU¦ */",
+        "\"te¦xt\"",
+        "\"abc¦",
+        "12¦3",
+        "1¦",
+        "@par¦",
+    ] {
+        assert!(labels(marked).is_empty(), "{marked}");
+    }
+    // Without a model: functions, variables and keywords only.
+    let (src, offset) = cursor("VAR s = 1 RETURN S¦");
+    let c = complete(&src, offset, &Schema::unknown(), 0);
+    assert!(!c.items.is_empty());
+    assert!(c.items.iter().all(|i| matches!(
+        i.kind,
+        CompletionKind::Function | CompletionKind::Variable | CompletionKind::Keyword
+    )));
+    assert_eq!(c.items.first().map(|i| i.label.as_str()), Some("s"));
+}
+
+/// Every service answers at every offset of awkward text without panicking,
+/// with spans inside the text on character boundaries.
+#[test]
+fn language_services_survive_every_offset() {
+    let schema = Schema::from_model(&model());
+    let texts = [
+        "",
+        "[",
+        "'",
+        "\"",
+        "/*",
+        "--",
+        "SUM(",
+        "VAR",
+        "VAR x = ",
+        "DEFINE MEASURE",
+        "DEFINE MEASURE 'Prödüct'[Tötäl] = 1 EVALUATE {[Tötäl]}",
+        "'Prödüct'[Ü] + [Tötä",
+        "\"Ünï\" & 'Ä''b'[c]]d] /* ü */ -- é\n+ SUMX(FILTER(Sales, Sales[Amount] > 1), [x",
+        "VAR a = (VAR b = 1 RETURN b) RETURN a, b)}) ((",
+        "EVALUATE ORDER BY START AT ,,, @p dt\"2024",
+        "|| | # ` 1e 1.2.3 .5 =>",
+    ];
+    for src in texts {
+        let kind = SourceKind::detect(src);
+        let _ = diagnostics(src, kind, &schema);
+        for offset in 0..=src.len() + 2 {
+            let _ = signature_help(src, offset);
+            if let Some(h) = hover(src, offset, &schema) {
+                assert!(h.span.end <= src.len(), "{src:?} @ {offset}");
+            }
+            let c = complete(src, offset, &schema, 50);
+            assert!(
+                c.span.start <= c.span.end && c.span.end <= src.len(),
+                "{src:?} @ {offset}"
+            );
+            assert!(src.is_char_boundary(c.span.start) && src.is_char_boundary(c.span.end));
+            assert!(c.items.len() <= 50);
+        }
+    }
 }
 
 fn reference_root() -> std::path::PathBuf {

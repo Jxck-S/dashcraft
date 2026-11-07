@@ -1,0 +1,2 @@
+-"Ünï" & 'Ä''b'[c]]d] /* ü */ -- é
++ SUMX(FILTER(Sales, Sales[Amount] > 1), [x

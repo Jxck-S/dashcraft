@@ -117,7 +117,7 @@ the ADRs to write first and what is blocked on a human. M27 to M30 are optional 
 for 1.0.
 
 - [x] [M6](DESKTOP-PLAN.md#m6-editable-document-state-and-save): editable document state and save (one revisioned state, atomic undoable edits through the registry and MCP, Save/Save As PBIP). Complete apart from the screen-reader runs (A6), which need a person (see *Open items* below).
-- [ ] [M7](DESKTOP-PLAN.md#m7-language-foundation): language foundation (DAX, M and TMDL language services and formatters, formula bar IntelliSense). In progress: DAX diagnostics, signature help and hover (`dax.diagnostics`, `dax.signatureHelp`, `dax.hover`, M7.1).
+- [ ] [M7](DESKTOP-PLAN.md#m7-language-foundation): language foundation (DAX, M and TMDL language services and formatters, formula bar IntelliSense). In progress: DAX diagnostics, signature help, hover and completion (`dax.diagnostics`, `dax.signatureHelp`, `dax.hover`, `dax.complete`, M7.1).
 - [ ] [M8](DESKTOP-PLAN.md#m8-recovery-external-changes-and-semantic-diff): recovery, external changes and semantic diff.
 - [ ] [M9](DESKTOP-PLAN.md#m9-reading-view-parity): reading view parity (highlight, drill, drillthrough, bookmarks, tooltip pages, synced slicers, header menus, images).
 - [ ] [M10](DESKTOP-PLAN.md#m10-modeling-core): modeling core (tables, columns, measures, Enter data, hierarchies, relationships, Model and Table view editing).
@@ -175,7 +175,7 @@ The items below predate the plan; each is annotated with the plan step that now 
 | 3 | `render --png` within SSIM tolerance of Power BI exports; card values match the expected values | Card values met: all 39 card values of the example's `expected.json` are asserted on the rendered pages. SSIM not verified yet: the per-region comparison (threshold 0.85, no exceptions) runs only against optional local golden images, and none are committed; render snapshots of every example page catch regressions ([details](VISUALS.md#render-verification)) |
 | 4 | TMDL and PBIR round-trips, XPress9 known-good blob, one test per DAX function | Met |
 | 5 | CI matrix with fmt, clippy `-D warnings`, tests; signed release artifacts | CI met ([docs/ci.md](ci.md)); release artifacts are unsigned until signing certificates exist |
-| 6 | No script execution, untrusted-input hardening, fuzzing, no telemetry | Met (14 `cargo-fuzz` targets, nightly) |
+| 6 | No script execution, untrusted-input hardening, fuzzing, no telemetry | Met (15 `cargo-fuzz` targets, nightly) |
 
 ## Acceptance values
 
