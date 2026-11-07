@@ -48,7 +48,7 @@ and the crates that depend on it (`dashcraft-cli`, `dashcraft-app`).
 
 | Layer | Crates | Owns |
 |---|---|---|
-| L6 front ends | `dashcraft-cli` (binary `dashcraft`: `inspect`, `detect`, `open`, `convert`, `lint`, `refresh`, `measures`, `export`, `render`, `commands`, `run`, `serve`, `mcp`, `ai`), `dashcraft-app` (`app/src-tauri`, binary `dashcraft-app`; workspace member, not a default member) | Adapters only: argument parsing, IPC (`ops_execute` → the registry, app-only views), UI |
+| L6 front ends | `dashcraft-cli` (binary `dashcraft`: `inspect`, `detect`, `open`, `convert`, `lint`, `refresh`, `measures`, `export`, `render`, `commands`, `run`, `serve`, `mcp`, `lsp`, `ai`), `dashcraft-app` (`app/src-tauri`, binary `dashcraft-app`; workspace member, not a default member) | Adapters only: argument parsing, IPC (`ops_execute` → the registry, app-only views), UI |
 | L5 operations | `pbi-ops` (command registry, MCP server; ADR-0007), `pbi-ai` (opt-in AI layer, `ai.*` commands; ADR-0008) | Every capability as a typed command; workspace of open documents; path policy; JSON-lines RPC; MCP |
 | L4 render | `pbi-render` | Theme, layout, text, semantic query → DataView, visuals → scene graph → SVG/PNG, golden-image comparison |
 | L3 session | `pbi-session` | Open → refresh (M / VertiPaq / `.pbi/cache.abf` → calculated columns → calculated tables → derived columns), CSV loading, query façade, exports. Breaks the dax ↔ engine cycle |

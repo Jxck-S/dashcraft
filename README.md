@@ -120,6 +120,9 @@ dashcraft commands --json --schemas
 
 # Let an AI agent use DashCraft over MCP, confined to read and write roots
 dashcraft mcp --read-root ./reports
+
+# DAX, M and TMDL help in your editor (Language Server Protocol)
+dashcraft lsp --model model.pbip
 ```
 
 AI features are opt-in and off by default: with AI off, DashCraft makes no network requests at all

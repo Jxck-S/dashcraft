@@ -7,7 +7,7 @@
 //! commands that load data through `pbi-session`, in [`data`]); the stable
 //! `inspect --json` schema lives in [`inspect_model`]. `detect`, `inspect`,
 //! `lint` and `run` run registry commands through [`ops`] and only format
-//! their results.
+//! their results; `lsp` serves the language commands to editors ([`lsp`]).
 //!
 //! Exit codes: 0 success (warnings allowed), 1 fatal error (unreadable,
 //! refused or unsupported input, usage errors, I/O failures), 2 the input
@@ -21,6 +21,7 @@ mod cmd;
 mod common;
 mod data;
 mod inspect_model;
+mod lsp;
 mod ops;
 
 use std::io::IsTerminal;

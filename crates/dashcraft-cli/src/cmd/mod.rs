@@ -21,6 +21,7 @@ pub mod detect;
 pub mod export;
 pub mod inspect;
 pub mod lint;
+pub mod lsp;
 pub mod mcp;
 pub mod measures;
 pub mod open;
@@ -72,6 +73,9 @@ pub enum Command {
     /// Serve the agent-safe commands as Model Context Protocol (MCP) tools
     /// on stdin/stdout, confined to read/write roots.
     Mcp(mcp::McpArgs),
+    /// Serve a Language Server Protocol server for .dax, .m and .tmdl files on
+    /// stdin/stdout: diagnostics, completion, hover, signature help, formatting.
+    Lsp(lsp::LspArgs),
     /// Store or delete an AI provider's API key in the OS keychain
     /// (`ai login`, `ai logout`); the `ai.*` commands run through `run`.
     Ai(ai::AiArgs),
@@ -84,6 +88,7 @@ impl Command {
             Command::Run(_) => anyhow::bail!("internal error: `run` is dispatched by main"),
             Command::Serve(args) => serve::run(args, ctx),
             Command::Mcp(args) => mcp::run(args, ctx),
+            Command::Lsp(args) => lsp::run(args, ctx),
             Command::Ai(args) => ai::run(args, ctx),
             Command::Inspect(args) => inspect::run(args, ctx),
             Command::Detect(args) => detect::run(args, ctx),
