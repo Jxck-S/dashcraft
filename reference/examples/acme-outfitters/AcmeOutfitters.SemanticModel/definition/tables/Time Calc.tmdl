@@ -24,6 +24,7 @@ table 'Time Calc'
 				RETURN
 				    DIVIDE(CurrentValue - PriorValue, PriorValue)
 			ordinal: 3
+
 			formatStringDefinition = "+0.0%;-0.0%;0.0%"
 
 	column 'Time Calculation'

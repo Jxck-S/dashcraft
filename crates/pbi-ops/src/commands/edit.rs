@@ -1333,6 +1333,7 @@ fn create_column(session: &Session, new: NewColumn) -> Result<(CreateColumn, boo
     column.display_folder = new.display_folder.filter(|s| !s.is_empty());
     column.description = new.description.filter(|s| !s.is_empty());
     column.is_hidden = new.is_hidden;
+    column.is_data_type_inferred = was_inferred;
     column.lineage_tag = session.new_lineage_tag();
     column.summarize_by = Some(if numeric {
         SummarizeBy::Sum

@@ -22,9 +22,9 @@ relationship 976ded3b-d763-50ba-be93-faf5d31cd63c
 
 relationship 561c8d0e-e2ca-5ea0-b1cc-2954869daedc
 	crossFilteringBehavior: bothDirections
+	securityFilteringBehavior: bothDirections
 	fromCardinality: one
 	toCardinality: one
-	securityFilteringBehavior: bothDirections
 	fromColumn: Returns.'Order ID'
 	toColumn: Orders.'Order ID'
 

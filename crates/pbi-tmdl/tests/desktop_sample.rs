@@ -278,7 +278,7 @@ fn spans_point_at_source_positions() {
     assert_eq!(ytd.name().as_deref(), Some("YTD"));
     assert_eq!(
         (ytd.line_number(), ytd.column(), ytd.last_line_number()),
-        (12, 2, 18)
+        (12, 2, 19)
     );
     assert_eq!(ytd.leading.len(), 3);
     assert_eq!(name_key(ytd.keyword()), "measure");

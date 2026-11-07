@@ -1,0 +1,51 @@
+{
+  "about": "Accepted differences between Power BI Desktop's TMDL and DashCraft's after the same edits (ADR-0014). Each entry replaces the `desktop` lines of a session's Desktop-saved file with the `dashcraft` lines before the byte comparison of crates/pbi-ops/tests/save.rs (edits_save_like_power_bi_desktop). New identifiers read `<new id>`. An entry that no longer applies fails the test: delete it. An entry is approved by the review of the pull request that adds it. At most 20 entries; the list only shrinks, except for reviewed changes of a new Desktop version.",
+  "deviations": [
+    {
+      "session": "s24",
+      "desktopVersion": "2.159",
+      "format": "tmdl",
+      "category": "canonical",
+      "field": "column.dataType, column.isDataTypeInferred",
+      "file": "tables/Orders.tmdl",
+      "desktop": [
+        "\tcolumn 'GT4 Margin' = Orders[Line Amount] - Orders[Line Cost]",
+        "\t\tlineageTag: <new id>",
+        "\t\tsummarizeBy: sum"
+      ],
+      "dashcraft": [
+        "\tcolumn 'GT4 Margin' = Orders[Line Amount] - Orders[Line Cost]",
+        "\t\tdataType: double",
+        "\t\tlineageTag: <new id>",
+        "\t\tsummarizeBy: sum",
+        "\t\tisDataTypeInferred"
+      ],
+      "reason": "Desktop leaves out the data type it infers for a calculated column; DashCraft writes it with isDataTypeInferred so a reopened project has the column's type before a refresh."
+    },
+    {
+      "session": "s24",
+      "desktopVersion": "2.159",
+      "format": "tmdl",
+      "category": "canonical",
+      "field": "column.dataType, column.isDataTypeInferred",
+      "file": "tables/GT4 Regions.tmdl",
+      "desktop": [
+        "\tcolumn Region",
+        "\t\tlineageTag: <new id>",
+        "\t\tsummarizeBy: none",
+        "\t\tisNameInferred",
+        "\t\tsourceColumn: Stores[Region]"
+      ],
+      "dashcraft": [
+        "\tcolumn Region",
+        "\t\tdataType: string",
+        "\t\tlineageTag: <new id>",
+        "\t\tsummarizeBy: none",
+        "\t\tisNameInferred",
+        "\t\tisDataTypeInferred",
+        "\t\tsourceColumn: Stores[Region]"
+      ],
+      "reason": "The same for the inferred type of a calculated table's column."
+    }
+  ]
+}

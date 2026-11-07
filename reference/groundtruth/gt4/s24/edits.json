@@ -1,0 +1,11 @@
+[
+ {"id":"model.measure.create","params":{"table":"Orders","name":"GT4 Simple","expression":"[Total Sales] - [Total Cost]"}},
+ {"id":"model.measure.create","params":{"table":"Orders","name":"GT4 Share","expression":"DIVIDE([Gross Margin], [Total Sales])","formatString":"0.0%","displayFolder":"GT4","description":"Margin share for GT-4.","isHidden":true}},
+ {"id":"model.measure.create","params":{"table":"Orders","name":"GT4 Var","expression":"VAR s = [Total Sales]\nRETURN\n    s * 2"}},
+ {"id":"model.measure.create","params":{"table":"Orders","name":"GT4 Owner's Sales","expression":"[Total Sales]"}},
+ {"id":"model.column.create","params":{"table":"Orders","name":"GT4 Margin","expression":"Orders[Line Amount] - Orders[Line Cost]"}},
+ {"id":"model.table.create","params":{"name":"GT4 Regions","expression":"DISTINCT(Stores[Region])"}},
+ {"id":"model.hierarchy.create","params":{"table":"Stores","name":"GT4 Channel Region","levels":[{"column":"Channel"},{"column":"Region"}]}},
+ {"id":"model.relationship.create","params":{"from":{"table":"Stores","column":"Region"},"to":{"table":"GT4 Regions","column":"Region"}}},
+ {"id":"doc.save","params":{}}
+]

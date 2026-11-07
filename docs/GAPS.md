@@ -31,6 +31,10 @@ Update **2026-11-07**: editing in the app (M6.8: Save, Save as, Undo and Redo, t
 formula bar and Properties fields, the unsaved-changes prompt) re-scored the modeling, Save, undo
 and accessibility rows (§10).
 
+Update **2026-11-07** (later): the TMDL DashCraft saves after edits now equals Power BI Desktop's
+for the same edits, byte for byte apart from new identifiers and two listed deviations (GT-4 s24,
+M6 acceptance 14); new evidence in the TMDL, calculation-group and Save rows, no score change.
+
 ## How to read it
 
 - **Status**: ✅ done (behaves like Power BI for this capability, within the documented limits) ·
@@ -73,7 +77,7 @@ Source: [FORMATS.md](../FORMATS.md), `crates/pbi-core/src/reader/`.
 |---|---|---|---|---|
 | Content-based detection, safe containers (caps, zip-slip, no symlinks) | ✅ | 5 | `crates/pbi-core/tests/{detect,containers}.rs`; fuzz `detect`, `zip_container` | — |
 | PBIP project (several models and reports) | 🟡 | 4 | `pbi-core::reader::project`; `crates/dashcraft-cli/tests/snapshots/cli__inspect_pbip.snap` | The app shows only the first model (`extraModels`) |
-| TMDL read + write | ✅ | 5 | byte-identical round-trip of every fixture file (`crates/pbi-tmdl/tests/fixtures.rs`, `desktop_sample.rs`) | Compare the writer with Desktop-saved TMDL (blocked: Windows) |
+| TMDL read + write | ✅ | 5 | byte-identical round-trip of every fixture file (`crates/pbi-tmdl/tests/fixtures.rs`, `desktop_sample.rs`); after the same edits (four measures, a calculated column and table, a hierarchy, a relationship) the saved TMDL equals Power BI Desktop's byte for byte apart from new identifiers and the two entries of `reference/groundtruth/gt4/deviations.json`: Desktop's property order, CRLF line ends and blank last line (GT-4 s24, `crates/pbi-ops/tests/save.rs::edits_save_like_power_bi_desktop`) | Desktop's form of the constructs no edit creates yet (roles, partitions, calculation items, perspectives, translations; M26.1) |
 | TMSL `model.bim` / PBIT `DataModelSchema` read + write | ✅ | 5 | `crates/pbi-tmsl/tests/tmsl.rs` (layout-preserving, UTF-16LE) | — |
 | PBIR read + write | ✅ | 5 | every fixture file re-written byte-for-byte (`crates/pbi-pbir/tests/roundtrip.rs`) | — |
 | PBIR-Legacy `report.json` / PBIX `Report/Layout` read + write | 🟡 | 3 | `pbi-pbir::legacy`, synthetic `crates/pbi-pbir/tests/legacy.rs`; legacy `Layout` reports in `reference/samples/microsoft/` | Themes of legacy reports in the CLI and `render.*` |
@@ -146,7 +150,7 @@ Source: `crates/pbi-dax`, [FUNCTIONS.md](../crates/pbi-dax/FUNCTIONS.md) (kept i
 | `SUMMARIZECOLUMNS` auto-exist, rollups | 🟡 | 3 | approximated (cross product + empty-row removal) | Exact auto-exist |
 | `FORMAT` and format strings | 🟡 | 4 | `format_value`; dynamic format strings per cell (`EvalContext::evaluate_measure_format_strings`, used by visuals); 747 `FORMAT` cases equal to Desktop's (ground-truth suite `format`); en-US only | Other cultures |
 | User-defined functions, `DEFINE COLUMN` | 🟡 | 2 | `EXPR` parameters and `DEFINE COLUMN` missing | — |
-| Calculation groups (`SELECTEDMEASURE` & co.) | ✅ | 4 | typed `CalculationGroup`/`CalculationItem`, lossless TMDL and TMSL (`crates/pbi-tmdl/tests/calc_groups.rs`); precedence, selection expressions, sideways recursion, dynamic format strings (`crates/pbi-dax/tests/model_features.rs`, `crates/pbi-session/tests/security.rs`); per-cell format strings in visuals (`crates/pbi-render/tests/conditional_format.rs`) | Hide subtotals of `nonvisual` items; differential tests (blocked: Windows) |
+| Calculation groups (`SELECTEDMEASURE` & co.) | ✅ | 4 | typed `CalculationGroup`/`CalculationItem`, lossless TMDL and TMSL (`crates/pbi-tmdl/tests/calc_groups.rs`); precedence, selection expressions, sideways recursion, dynamic format strings (`crates/pbi-dax/tests/model_features.rs`, `crates/pbi-session/tests/security.rs`); per-cell format strings in visuals (`crates/pbi-render/tests/conditional_format.rs`); items without an `ordinal` (as Desktop saves them) numbered by position, as Desktop answers (GT-4 s24) | Hide subtotals of `nonvisual` items; differential tests (blocked: Windows) |
 | Differential testing against Analysis Services | ✅ | 4 | 2,242 queries recorded from Power BI Desktop 2.159's engine (Acme measures per page and filter, tables, metadata, calculation groups and RLS, `FORMAT`, every `functions.rs` case, three MIT samples) and compared value by value; 1 ledger entry (float summation order, by design) (`crates/pbi-session/tests/groundtruth.rs`, [reference/groundtruth](../reference/groundtruth/README.md), ADR-0011) | The queries Desktop's visuals send (Performance analyzer, manual) |
 | Performance (P04: 5 measures over 1M rows) | ✅ | 5 | 26 ms vs 100 ms target (`perf/baseline.json`): `SUMX`/`AVERAGEX`/`MINX`/`MAXX`/`COUNTX`/`COUNTAX` compile simple column arithmetic to columnar loops (was 114 ms) | — |
 
@@ -307,7 +311,7 @@ Source: [app/README.md](../app/README.md), [desktop-ui-reference.md](../app/docs
 | DAX query view | 🟡 | 3 | editor, run/cancel, results ≤ 1000 rows | IntelliSense, formatter, find/replace |
 | TMDL view | 🟡 | 2 | read-only | Apply |
 | Power Query editor (Transform data) | 🟡 | 1 | read-only queries, parameters, blob map, Load CSV; a PBIT refreshes on open with its saved parameter values (Desktop's "Enter parameters" prompt is missing) | Applied-steps UI, data preview, parameter editing |
-| Save / Save as (PBIP) | ✅ | 4 | `doc.save` (in-place PBIP save, conflicts, `overwrite`) and `doc.saveAs` (a new PBIP project from PBIX, PBIT, `model.bim` or PBIP; later saves go there) registry commands (`crates/pbi-ops/tests/save.rs`); Desktop opens a saved, edited Acme copy and computes the same values (GT-6, `reference/groundtruth/README.md`); the app's Save (Quick Access Toolbar, File, Ctrl+S), Save as (Ctrl+Shift+S), `*` unsaved marker, conflict question and *Unsaved changes* prompt on close, open and window close (M6.8; `scripts/app-checks/editing-smoke.mjs`: a saved formula edit changes one line) | Recovery files (M8); the prompt on macOS Cmd+Q once Tauri can intercept it |
+| Save / Save as (PBIP) | ✅ | 4 | `doc.save` (in-place PBIP save, conflicts, `overwrite`) and `doc.saveAs` (a new PBIP project from PBIX, PBIT, `model.bim` or PBIP; later saves go there) registry commands (`crates/pbi-ops/tests/save.rs`); Desktop opens a saved, edited Acme copy and computes the same values (GT-6, `reference/groundtruth/README.md`); saved TMDL equals Desktop's after the same edits (GT-4 s24; Desktop's line ends and blank last line kept); the app's Save (Quick Access Toolbar, File, Ctrl+S), Save as (Ctrl+Shift+S), `*` unsaved marker, conflict question and *Unsaved changes* prompt on close, open and window close (M6.8; `scripts/app-checks/editing-smoke.mjs`: a saved formula edit changes one line) | Recovery files (M8); the prompt on macOS Cmd+Q once Tauri can intercept it |
 | Undo / redo | ✅ | 4 | `doc.undo`/`doc.redo` per document (`pbi-model::History`, one step per `doc.applyEdits`); the Quick Access Toolbar's Undo and Redo name the step, Ctrl+Z / Ctrl+Y (text fields keep their own undo) (M6.8) | Undo of report-authoring edits as they land (M9, M18) |
 | Several documents, several models per project | ❌ | 1 | one document; first model only | — |
 | Export from the app (data, PDF, PowerPoint) | 🟡 | 1 | File → Export writes a PBIP project or PBIT template (`convert.pbip`/`convert.pbit`); table data, PDF and PowerPoint: CLI or not at all | `export.table` from the Table view; PDF |

@@ -816,9 +816,9 @@ fn bad_dax_references_and_syntax_errors() {
         Some("did you mean `[Total Sales]`?")
     );
 
-    // Line 94 in the example, + 2 for the multi-line measure above it.
+    // Line 95 in the example, + 2 for the multi-line measure above it.
     let f = find("unknown column `Orders[Order Dat]`");
-    assert_eq!(origin_of(f).2, Some(96));
+    assert_eq!(origin_of(f).2, Some(97));
     assert_eq!(
         f.suggestion.as_deref(),
         Some("did you mean `Orders[Order Date]`?")
@@ -827,7 +827,7 @@ fn bad_dax_references_and_syntax_errors() {
     // `ORDER` is a DAX keyword, so the table name is quoted.
     let f = find("unknown table `'Order'`");
     assert!(f.message.contains("line 1, column 13"), "{}", f.message);
-    assert_eq!(origin_of(f).2, Some(66));
+    assert_eq!(origin_of(f).2, Some(67));
     assert_eq!(
         f.suggestion.as_deref(),
         Some("did you mean table `Orders`?")
@@ -854,7 +854,7 @@ fn bad_dax_references_and_syntax_errors() {
             .message
             .contains("DAX syntax error at line 1, column")
     );
-    assert_eq!(origin_of(syntax[0]), (orders, None, Some(38)));
+    assert_eq!(origin_of(syntax[0]), (orders, None, Some(39)));
 }
 
 #[test]
@@ -928,7 +928,7 @@ fn broken_model_structure() {
         case.suggestion.as_deref(),
         Some("use `StorageContainerUrl`")
     );
-    assert_eq!(origin_of(case), (orders.clone(), None, Some(259)));
+    assert_eq!(origin_of(case), (orders.clone(), None, Some(260)));
     let step = m
         .iter()
         .find(|f| f.message.contains("`Source CVS`"))

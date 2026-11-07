@@ -839,9 +839,11 @@ fn calculation_group_batch(table: &pbi_model::Table) -> Result<RecordBatch, Stri
                 .map(|i| Value::string(i.name.as_str()))
                 .collect()
         } else if pbi_model::names_eq(source, "Ordinal") {
-            items
-                .iter()
-                .map(|i| Value::Integer(i.ordinal.unwrap_or(-1)))
+            // Power BI Desktop's TMDL leaves `ordinal` out and numbers the
+            // items by their position.
+            (0_i64..)
+                .zip(items)
+                .map(|(at, i)| Value::Integer(i.ordinal.unwrap_or(at)))
                 .collect()
         } else {
             vec![Value::Blank; items.len()]
@@ -993,6 +995,36 @@ mod tests {
             m_status(&unsupported),
             TableStatus::Error { unsupported: true, hint: Some(h), .. } if h == LOAD_MANUALLY_HINT
         ));
+    }
+
+    #[test]
+    fn calculation_items_without_an_ordinal_are_numbered_by_position() {
+        let mut t = pbi_model::Table::new("Time Calc");
+        let mut name = pbi_model::Column::data("Time Calculation", pbi_model::DataType::String);
+        name.kind = pbi_model::ColumnKind::Data {
+            source_column: "Name".into(),
+        };
+        t.columns = vec![
+            name,
+            pbi_model::Column::data("Ordinal", pbi_model::DataType::Int64),
+        ];
+        let mut explicit = pbi_model::CalculationItem::new("PY", "SELECTEDMEASURE()");
+        explicit.ordinal = Some(7);
+        t.calculation_group = Some(Box::new(pbi_model::CalculationGroup {
+            calculation_items: vec![
+                pbi_model::CalculationItem::new("Current", "SELECTEDMEASURE()"),
+                pbi_model::CalculationItem::new("YTD", "SELECTEDMEASURE()"),
+                explicit,
+            ],
+            ..pbi_model::CalculationGroup::default()
+        }));
+        let batch = calculation_group_batch(&t).unwrap();
+        let ordinals = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<arrow::array::Int64Array>()
+            .unwrap();
+        assert_eq!(ordinals.values().to_vec(), [0, 1, 7]);
     }
 
     #[test]
