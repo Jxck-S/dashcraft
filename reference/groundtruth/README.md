@@ -311,6 +311,23 @@ Results with Desktop 2.159: both write the same position in all five files: the 
 Desktop opened DashCraft's saved project and shows the group and the four cards at those page
 positions, within a pixel. Nothing is recorded: the check changes no value.
 
+**KPI and detail rows follow renames.** On a Desktop variant of Acme
+(`scripts/groundtruth/make_desktop_variant.py`, `s25`), give `Orders` a
+`defaultDetailRowsDefinition` (`SELECTCOLUMNS` of the order id and `Orders[Line Amount]`),
+`Total Sales` a `detailRowsDefinition` and a new measure `'GT6 Sales KPI' = [Total Sales]` a `kpi`
+(target `[Total Sales] * 1.1`, a two-line status expression over the measure, `Total Sales` and
+`SUM(Orders[Line Amount])`, a trend over `Total Sales`). Run `model.object.rename` of
+`Total Sales` → `GT6 Revenue` and of `Orders[Line Amount]` → `GT6 Amount` (`dryRun` first), then
+`doc.save`. Results with Desktop 2.159: Desktop opened and refreshed the project without an error;
+every measure, KPI and detail rows definition is valid (state 1 in `INFO.MEASURES`, `INFO.KPIS`,
+`INFO.DETAILROWSDEFINITIONS`) with the rewritten expressions; `[GT6 Revenue]` is 894300.5 as in
+`expected.json`, and `DETAILROWS` returns the 3,900 order lines summing to it through the
+measure's definition and through the table default (for `[Order Count]`). Desktop's own save of
+the model equals DashCraft's saved `Orders.tmdl` apart from line ends and the blank last line the
+source file did not have: KPI, detail rows and dynamic format string each after a blank line, KPI
+properties in TOM's order, a multi-line KPI expression one level below its property. Nothing is
+recorded: the check changes no value.
+
 ## Writer form (GT-4): DashCraft saves what Desktop saves
 
 ```sh
@@ -348,7 +365,8 @@ Desktop does, and DashCraft now does too:
   `lineageTag`, `sourceLineageTag`, `dataCategory`, `summarizeBy`, `isNameInferred`,
   `isDataTypeInferred`, `sourceColumn`, `sortByColumn`, then a blank line before annotations.
   Measure: `formatString`, `isHidden`, `displayFolder`, `lineageTag`, `dataCategory`, then a blank
-  line before `formatStringDefinition` and annotations. Relationship: `isActive`,
+  line before each of `kpi`, `detailRowsDefinition`, `formatStringDefinition` and annotations (the
+  first two seen in GT-6 s25). Relationship: `isActive`,
   `crossFilteringBehavior`, `joinOnDateBehavior`, `relyOnReferentialIntegrity`,
   `securityFilteringBehavior`, `fromCardinality`, `toCardinality`, `fromColumn`, `toColumn`.
 - New measures and columns go after the table's last measure or column.

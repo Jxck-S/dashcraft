@@ -1649,6 +1649,100 @@ async fn renamed_queries_save_and_reopen() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn renames_rewrite_kpi_and_detail_rows_and_save_them() {
+    let dir = tmp_dir("save-kpi-");
+    let pbip = mini_pbip(dir.path());
+    let path = dir.path().join(SALES_TMDL);
+    let tmdl = fs::read_to_string(&path).unwrap();
+    // In the form Power BI Desktop saves (GT-6 s25), which the rewritten
+    // measures and table keep.
+    let tmdl = tmdl
+        .replacen(
+            "table Sales\n",
+            "table Sales\n\
+             \n\
+             \tdefaultDetailRowsDefinition = SELECTCOLUMNS(Sales, \"Item\", Sales[Item], \"Amount\", Sales[Amount])\n",
+            1,
+        )
+        .replacen(
+            "\t\tformatString: 0\n\n",
+            "\t\tformatString: 0\n\
+             \n\
+             \t\tdetailRowsDefinition = SELECTCOLUMNS(Sales, \"Amount\", Sales[Amount])\n\
+             \n\
+             \tmeasure Share = DIVIDE([Total], 2000)\n\
+             \n\
+             \t\tkpi\n\
+             \t\t\ttargetExpression = [Total] / 1830\n\
+             \t\t\tstatusGraphic: Traffic Light - Single\n\
+             \t\t\tstatusExpression =\n\
+             \t\t\t\tIF([Share] >= 1, 1,\n\
+             \t\t\t\t    IF(SUM(Sales[Amount]) > 900, 0, -1))\n\
+             \n",
+            1,
+        );
+    fs::write(&path, &tmdl).unwrap();
+    let original = files(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+
+    let preview = r
+        .run(
+            "model.object.rename",
+            json!({"docId": doc, "table": "Sales", "column": "Amount", "newName": "Revenue", "dryRun": true}),
+        )
+        .await;
+    let mut properties: Vec<String> = preview["rewrites"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|w| {
+            format!(
+                "{} | {}",
+                w["location"].as_str().unwrap(),
+                w["property"].as_str().unwrap()
+            )
+        })
+        .collect();
+    properties.sort();
+    assert_eq!(
+        properties,
+        [
+            "measure 'Sales'[Share] | kpi.statusExpression",
+            "measure 'Sales'[Total] | detailRowsDefinition",
+            "measure 'Sales'[Total] | expression",
+            "table 'Sales' | defaultDetailRowsDefinition",
+        ],
+        "{preview}"
+    );
+
+    for mut params in [
+        json!({"table": "Sales", "measure": "Total", "newName": "Grand Total"}),
+        json!({"table": "Sales", "column": "Amount", "newName": "Revenue"}),
+    ] {
+        params["docId"] = json!(doc);
+        r.run("model.object.rename", params).await;
+    }
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert!(strings(&out["written"]).contains(&SALES_TMDL), "{out}");
+    let saved = String::from_utf8(files(dir.path())[SALES_TMDL].clone()).unwrap();
+    let expected = tmdl
+        .replace("measure Total =", "measure 'Grand Total' =")
+        .replace("[Total]", "[Grand Total]")
+        .replace("Sales[Amount]", "Sales[Revenue]")
+        .replace("column Amount\n", "column Revenue\n");
+    assert_eq!(saved, expected);
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.save", json!({"docId": doc})).await;
+    assert!(
+        files(dir.path()) == original,
+        "undoing the renames saves the original project"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn renames_rewrite_report_level_measures_and_save_them() {
     const EXT: &str = "Mini.Report/definition/reportExtensions.json";
     const DOUBLE_CARD: &str = "Mini.Report/definition/pages/overview/visuals/double/visual.json";

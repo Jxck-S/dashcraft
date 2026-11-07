@@ -511,16 +511,18 @@ their write roots).
   and says that imported data is not carried over. Saving a PBIT file stays `convert.pbit`
   (File → Export).
 - [x] **M6.7 DAX- and M-aware rename.** Renames rewrite DAX text references (measures, calculated
-  columns and tables, calculation items, format string expressions, RLS filters, report-level
-  measures) at token level, keeping formatting and comments; renaming a query or parameter rewrites
+  columns and tables, calculation items, format string expressions, detail rows, KPI expressions,
+  RLS filters, report-level measures) at token level, keeping formatting and comments; renaming a query or parameter rewrites
   M identifier references; a preview lists every affected object.
   Done: DAX at token level in all of these and in session-derived columns; the report-level
   measures of PBIR reports are in the report AST (`Report::measures`), so a table rename moves
   them, their DAX and `references` follow every rename, `model.dependencies` and deletes list
   them, a rename onto one of their names is refused, and `doc.save` writes them back into
   `reportExtensions.json` (only the changed strings); M at token level for queries, parameters and
-  functions (`pbi_m::rename_query`); `dryRun` lists every rewrite. Checked in Power BI Desktop
-  (GT-6 s21 for M, s22 for report-level measures). Not covered: report-level measures of
+  functions (`pbi_m::rename_query`); a measure's detail rows and KPI target, status and trend
+  expressions and a table's default detail rows, saved in Desktop's form; `dryRun` lists every
+  rewrite. Checked in Power BI Desktop (GT-6 s21 for M, s22 for report-level measures, s25 for
+  KPI and detail rows). Not covered: report-level measures of
   PBIR-Legacy and PBIX layouts (`modelExtensions` in the report `config`), which are not read yet.
 - [x] **M6.8 App wiring.** Quick Access Toolbar Save, Undo and Redo with labels from the history;
   Ctrl+S, Ctrl+Z, Ctrl+Y; unsaved marker in the title; prompt on close and quit; the formula bar
@@ -759,9 +761,10 @@ Desktop opened that save without a dialog and, after a refresh, computes the sam
 s24). Canvas view state follows renames: selected data points and slicer conditions are rewritten
 from the model's previous names to its current ones (matched by `ObjectId`,
 `pbi_model::renames_between`) after a rename, its undo and its redo, so a cross-filter keeps
-filtering (`canvas_selections_follow_renames`). Still open: data column delete (with M
-editing), hierarchy and level edits, KPI and detail-rows expressions and the A6
-screen-reader runs (acceptance 13).
+filtering (`canvas_selections_follow_renames`). Renames rewrite KPI and detail-rows DAX, saved
+in Desktop's form; Desktop opens the renamed model with every KPI and detail rows valid and
+saves the same `Orders.tmdl` (GT-6 s25). Still open: data column delete (with M editing),
+hierarchy and level edits and the A6 screen-reader runs (acceptance 13).
 
 **Crates and layers.** `pbi-model` (commands, revisions), `pbi-session` (state derivation,
 invalidation, recalculation), `pbi-core` (save in place, minimal-diff writes, identifier

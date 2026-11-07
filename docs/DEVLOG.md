@@ -7,6 +7,35 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M6 renames rewrite KPI and detail-rows DAX (M6.7, GT-6 s25)
+
+- **What:** `pbi-session`'s rename plan rewrites, besides a measure's expression and format
+  string, its `detailRowsDefinition` and the target, status and trend expressions of its `kpi`
+  (TMDL objects, VertiPaq metadata and TMSL JSON, line arrays included), and a table's
+  `defaultDetailRowsDefinition`; `dryRun` lists them (`kpi.statusExpression`, …), and
+  `model.dependencies` and deletes list a measure whose KPI or detail rows use the object (a
+  measure's own KPI is not its dependent). `pbi-tmdl`'s writer emits them in Desktop's form: after
+  the scalars, each after a blank line, in the order KPI, detail rows, dynamic format string, then
+  annotations; KPI properties in TOM's order with a multi-line expression one level below its
+  property; a table's default detail rows after its scalars. TMSL `{"expression": …}` and KPI
+  objects are converted to that form instead of being written as JSON text.
+- **Why:** M6 open item "KPI and detail-rows expressions" (DESKTOP-PLAN M6 progress): a rename left
+  them on the old name, which Desktop reports as an error in the KPI or the detail rows.
+- **Numbers:** new tests `renames_rewrite_kpi_and_detail_rows_expressions` (pbi-session),
+  `renames_rewrite_kpi_and_detail_rows_and_save_them` (pbi-ops save, fails without the fix; undo
+  saves the original bytes) and `kpi_and_detail_rows_are_written_in_desktop_form` (pbi-tmdl:
+  Desktop's text round-trips byte for byte, a scrambled file and TMSL JSON are written in it).
+  GT-6 s25 in Power BI Desktop 2.159: a Desktop variant of the example with a table default detail
+  rows, a measure's detail rows and a KPI measure (multi-line status expression), renamed by
+  DashCraft (`Total Sales` → `GT6 Revenue`, `Orders[Line Amount]` → `GT6 Amount`) and saved, opens
+  without errors: every measure, KPI and detail rows in state 1 (`INFO.KPIS`,
+  `INFO.DETAILROWSDEFINITIONS`), the revenue 894300.5 as in `expected.json`, and
+  `DETAILROWS` returns the 3,900 order lines through the measure's definition and the table
+  default. Desktop's own save of that model equals DashCraft's `Orders.tmdl` byte for byte apart
+  from line ends and the blank last line the source file did not have.
+- **Open:** report-level measures of PBIR-Legacy and PBIX layouts (not read yet); KPI settings
+  editors (M10.4).
+
 ### M6 canvas selections follow renames
 
 - **What:** `pbi_model::renames_between(old, new)` lists the table, column and measure renames
@@ -24,6 +53,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   `renames_between_models_follow_ids_through_swaps`; the integration test fails without the fix,
   and with either the click remap or `follow_renames` turned off. View state is not saved, so
   there is no Desktop ground-truth comparison.
+- **Commit:** `4bd8669` (PR #45).
 
 ### M6 saves in Power BI Desktop's TMDL form (GT-4 s24, acceptance 14)
 
