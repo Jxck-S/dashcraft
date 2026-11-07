@@ -5,7 +5,9 @@
 //! with a clap `Args` struct and a `run` function), registered in the
 //! [`cmd::Command`] enum. Shared helpers live in [`common`] (and, for the
 //! commands that load data through `pbi-session`, in [`data`]); the stable
-//! `inspect --json` schema lives in [`inspect_model`].
+//! `inspect --json` schema lives in [`inspect_model`]. `detect`, `inspect`,
+//! `lint` and `run` run registry commands through [`ops`] and only format
+//! their results.
 //!
 //! Exit codes: 0 success (warnings allowed), 1 fatal error (unreadable,
 //! refused or unsupported input, usage errors, I/O failures), 2 the input
@@ -19,6 +21,7 @@ mod cmd;
 mod common;
 mod data;
 mod inspect_model;
+mod ops;
 
 use std::io::IsTerminal;
 use std::process::ExitCode;

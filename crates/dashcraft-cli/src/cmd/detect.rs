@@ -1,15 +1,15 @@
 //! `dashcraft detect`: content-based format detection only (the input is not
-//! fully read).
+//! fully read); the `doc.detect` command.
 
 use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
-use pbi_core::container::Limits;
-use pbi_core::detect::{self, DetectedFormat};
-use pbi_ops::detect_model::{DetectOut, detect_out};
+use pbi_ops::detect_model::DetectOut;
+use serde_json::json;
 
-use crate::common::{Context, Status, open_error, print_json, with_stdout};
+use crate::common::{Context, Status, print_json, with_stdout};
+use crate::ops::{Ops, path_param, typed};
 
 #[derive(Debug, clap::Args)]
 pub struct DetectArgs {
@@ -25,17 +25,16 @@ pub struct DetectArgs {
 
 pub fn run(args: &DetectArgs, _ctx: &Context) -> anyhow::Result<Status> {
     tracing::info!(path = %args.path.display(), "detecting");
-    let detection = detect::detect_path(&args.path, &Limits::default())
-        .map_err(|e| open_error(&args.path, e.into()))?;
-    let shown = args.path.to_string_lossy().into_owned();
-    let out = detect_out(&shown, &detection);
+    let ops = Ops::new()?;
+    let value = ops.execute("doc.detect", json!({ "path": path_param(&args.path)? }))?;
+    let out: DetectOut = typed(&value)?;
     if args.json || args.pretty {
-        print_json(&out, args.pretty)?;
+        print_json(&value, args.pretty)?;
     } else {
         with_stdout(|w| write_text(w, &out))?;
     }
-    if detection.format == DetectedFormat::Unknown {
-        return Err(anyhow!("{shown}: not a recognised Power BI format"));
+    if out.detection.format == "unknown" {
+        return Err(anyhow!("{}: not a recognised Power BI format", out.path));
     }
     Ok(Status::Ok)
 }

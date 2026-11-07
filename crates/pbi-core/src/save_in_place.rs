@@ -158,7 +158,7 @@ impl ProjectFingerprint {
     }
 
     fn record(&mut self, path: &str, bytes: &[u8]) {
-        if let Ok(stamp) = stamp(bytes) {
+        if let Ok(stamp) = stamp(bytes, &mut [0u8; 8 * 1024]) {
             self.files.insert(key(path), (path.to_owned(), stamp));
         }
     }
@@ -176,12 +176,11 @@ fn key(path: &str) -> String {
     }
 }
 
-fn stamp(mut reader: impl Read) -> io::Result<FileStamp> {
+fn stamp(mut reader: impl Read, buf: &mut [u8]) -> io::Result<FileStamp> {
     let mut hasher = DefaultHasher::new();
-    let mut buf = vec![0u8; 64 * 1024];
     let mut len = 0u64;
     loop {
-        let n = reader.read(&mut buf)?;
+        let n = reader.read(buf)?;
         if n == 0 {
             break;
         }
@@ -193,6 +192,42 @@ fn stamp(mut reader: impl Read) -> io::Result<FileStamp> {
     Ok(FileStamp {
         len,
         hash: hasher.finish(),
+    })
+}
+
+/// Stamps `files` (absolute path, relative path), in order. Opening files
+/// dominates (an antivirus scans each one on Windows), so larger projects
+/// are read on a few threads.
+fn stamp_files(files: &[(PathBuf, String)]) -> Result<Vec<FileStamp>, CoreError> {
+    const MIN_FILES_PER_THREAD: usize = 16;
+    fn stamp_all(files: &[(PathBuf, String)]) -> Result<Vec<FileStamp>, CoreError> {
+        let mut buf = vec![0u8; 64 * 1024];
+        files
+            .iter()
+            .map(|(abs, _)| {
+                let file = File::open(abs).map_err(|e| CoreError::io(abs, e))?;
+                stamp(file, &mut buf).map_err(|e| CoreError::io(abs, e))
+            })
+            .collect()
+    }
+    let threads = std::thread::available_parallelism().map_or(1, |n| n.get().min(8));
+    let per_thread = files.len().div_ceil(threads).max(MIN_FILES_PER_THREAD);
+    if files.len() <= per_thread {
+        return stamp_all(files);
+    }
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = files
+            .chunks(per_thread)
+            .map(|chunk| scope.spawn(move || stamp_all(chunk)))
+            .collect();
+        let mut out = Vec::with_capacity(files.len());
+        for handle in handles {
+            let stamps = handle
+                .join()
+                .map_err(|_| CoreError::Save("the project scan stopped unexpectedly".into()))??;
+            out.extend(stamps);
+        }
+        Ok(out)
     })
 }
 
@@ -483,26 +518,24 @@ impl Project {
     }
 
     fn scan(&self) -> Result<ProjectFingerprint, CoreError> {
-        let mut out = ProjectFingerprint::default();
-        let mut total = 0u64;
-        let mut add = |abs: &Path, out: &mut ProjectFingerprint| -> Result<(), CoreError> {
-            let Some(rel) = relative(&self.root, abs) else {
+        // List first, refusing oversized projects before reading anything,
+        // then read and hash.
+        let mut found: Vec<(PathBuf, String)> = Vec::new();
+        let mut listed = 0u64;
+        let mut add = |abs: PathBuf, len: u64, found: &mut Vec<(PathBuf, String)>| {
+            let Some(rel) = relative(&self.root, &abs) else {
                 return Ok(());
             };
-            if out.files.len() >= MAX_FILES {
+            if found.len() >= MAX_FILES {
                 return Err(CoreError::Save(format!(
                     "the project has more than {MAX_FILES} files to track"
                 )));
             }
-            let file = File::open(abs).map_err(|e| CoreError::io(abs, e))?;
-            let stamp = stamp(file).map_err(|e| CoreError::io(abs, e))?;
-            total = total.saturating_add(stamp.len);
-            if total > MAX_BYTES {
-                return Err(CoreError::Save(format!(
-                    "the project has more than {MAX_BYTES} bytes to track"
-                )));
+            listed = listed.saturating_add(len);
+            if listed > MAX_BYTES {
+                return Err(too_many_bytes());
             }
-            out.files.insert(key(&rel), (rel, stamp));
+            found.push((abs, rel));
             Ok(())
         };
         for scope in &self.scopes {
@@ -513,7 +546,7 @@ impl Project {
                 Err(e) => return Err(CoreError::io(&start, e)),
             };
             if meta.is_file() {
-                add(&start, &mut out)?;
+                add(start, meta.len(), &mut found)?;
                 continue;
             }
             if !meta.is_dir() {
@@ -534,9 +567,21 @@ impl Project {
                     CoreError::Save(format!("cannot scan {}: {e}", start.display()))
                 })?;
                 if entry.file_type().is_file() {
-                    add(entry.path(), &mut out)?;
+                    let len = entry.metadata().map_or(0, |m| m.len());
+                    add(entry.into_path(), len, &mut found)?;
                 }
             }
+        }
+        let stamps = stamp_files(&found)?;
+        let mut out = ProjectFingerprint::default();
+        let mut total = 0u64;
+        for ((_, rel), stamp) in found.into_iter().zip(stamps) {
+            // Files may have grown since they were listed.
+            total = total.saturating_add(stamp.len);
+            if total > MAX_BYTES {
+                return Err(too_many_bytes());
+            }
+            out.files.insert(key(&rel), (rel, stamp));
         }
         Ok(out)
     }
@@ -585,6 +630,12 @@ fn safe_path(root: &Path, rel: &str) -> Result<PathBuf, (String, String)> {
         }
     }
     Ok(abs)
+}
+
+fn too_many_bytes() -> CoreError {
+    CoreError::Save(format!(
+        "the project has more than {MAX_BYTES} bytes to track"
+    ))
 }
 
 /// `abs` relative to `root`, `/`-separated (`None` outside `root` or for

@@ -495,9 +495,16 @@ their write roots).
   limited to `--allow edit --allow workspace` edits and saves a project under its write root, while
   saving a project that is only under a read root fails with `pathDenied` and writes nothing
   (`agents_edit_and_save_only_inside_write_roots`).
-- [ ] **M6.10 CLI as registry wrappers.** `detect`, `inspect` and `lint` become thin wrappers
+- [x] **M6.10 CLI as registry wrappers.** `detect`, `inspect` and `lint` become thin wrappers
   over `Registry::execute` with byte-identical output (ADR-0007 migration plan); `dashcraft run`
   gains `--save` for edit batches.
+  Done: the three subcommands run `doc.detect`, `doc.open` + `doc.inspect` and `doc.lint`
+  (`crates/dashcraft-cli/src/ops.rs`); 374 runs (17 inputs × 22 flag sets: Acme in five shapes,
+  the four Microsoft samples, RDL, dataflow and Power Query files, broken, unreadable, junk, empty
+  and missing inputs) print the same stdout, stderr and exit code as before. `doc.lint` findings
+  gained the `object` id the CLI already printed, and a
+  missing input is named once by `doc.open`/`doc.detect`. `run --save` saves the document after a
+  successful command or batch (`run_save_writes_only_the_edited_file`).
 - [x] **M6.11 Registry fuzzing.** A fuzz or property target calls every command with
   schema-derived and mutated parameters, and runs random edit, undo and redo sequences: no panic,
   undo of everything restores an equal document, saved output parses back to an equal model.

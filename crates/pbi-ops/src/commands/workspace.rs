@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use pbi_core::OpenOptions;
 use pbi_core::container::Limits;
 use pbi_model::Severity;
-use pbi_session::{Clock, FixedClock, RefreshSource, Session, SessionOptions};
+use pbi_session::{Clock, FixedClock, RefreshSource, Session, SessionError, SessionOptions};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -15,7 +15,7 @@ use super::{BASE, doc};
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
 use crate::detect_model::{DetectOut, detect_out};
-use crate::error::OpError;
+use crate::error::{OpError, open_error};
 use crate::inspect_model::detection_out;
 use crate::workspace::{DocEntry, DocOptions, Workspace};
 
@@ -88,11 +88,12 @@ impl Command for DocDetect {
     async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
         let path = ws.policy().check_read(&p.path)?;
         let shown = p.path.to_string_lossy().into_owned();
+        let read = path.clone();
         let detection = tokio::task::spawn_blocking(move || {
-            pbi_core::detect::detect_path(&path, &Limits::default())
+            pbi_core::detect::detect_path(&read, &Limits::default())
         })
         .await?
-        .map_err(|e| OpError::from(pbi_core::CoreError::from(e)))?;
+        .map_err(|e| open_error(&p.path, &path, e.into()))?;
         Ok(detect_out(&shown, &detection))
     }
 }
@@ -190,7 +191,9 @@ pub struct DocSummary {
 pub async fn summary(entry: &DocEntry) -> DocSummary {
     let session = entry.session();
     let doc = session.document();
-    let model = session.base_model();
+    let opened = session.opened();
+    let empty = pbi_model::Model::default();
+    let model = opened.document.model.as_ref().unwrap_or(&empty);
     let mut diagnostics = DiagnosticCounts::default();
     for d in &doc.diagnostics {
         match d.severity {
@@ -296,8 +299,9 @@ impl Command for DocOpen {
         let session =
             tokio::task::spawn_blocking(move || Session::open(&open_path, session_options))
                 .await?
-                .map_err(|e| {
-                    OpError::from(e).context(format!("cannot open {}", p.path.display()))
+                .map_err(|e| match e {
+                    SessionError::Open(e) => open_error(&p.path, &path, e),
+                    e => OpError::from(e).context(format!("cannot open {}", p.path.display())),
                 })?;
         let entry = ws.insert(
             session,

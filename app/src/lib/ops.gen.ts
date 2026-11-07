@@ -1905,6 +1905,11 @@ export interface FindingOut {
   message: string
   /** Source file (container-relative) plus JSON pointer or line. */
   origin?: OriginOut | null
+  /**
+   * The offending object's id (visual, measure, relationship, …), as in
+   * `model.dependencies` and the edit commands.
+   */
+  object?: number | null
   /** A fix hint. */
   suggestion?: string | null
 }

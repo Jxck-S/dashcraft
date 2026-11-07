@@ -1,18 +1,20 @@
 //! `dashcraft inspect`: the model, reports and diagnostics of an input, as a
 //! human-readable tree or as the stable JSON schema of
-//! [`inspect_model`](crate::inspect_model).
+//! [`inspect_model`](crate::inspect_model); the `doc.open` and `doc.inspect`
+//! commands.
 
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-use crate::common::{
-    Context, ReadArgs, Status, first_line, one_line, open_document, print_json, with_stdout,
-};
+use serde_json::{Value, json};
+
+use crate::common::{Context, ReadArgs, Status, first_line, one_line, print_json, with_stdout};
 use crate::inspect_model::{
-    self, BuildOptions, ColumnOut, ConnectorOut, CustomVisualOut, DiagnosticOut, FilterOut,
-    Inspect, MashupOut, ModelOut, PageOut, PaginatedReportOut, RdlItemOut, ReportOut, TableOut,
-    VisualOut, VpaxStatsOut,
+    ColumnOut, ConnectorOut, CustomVisualOut, DiagnosticOut, FilterOut, Inspect, MashupOut,
+    ModelOut, PageOut, PaginatedReportOut, RdlItemOut, ReportOut, TableOut, VisualOut,
+    VpaxStatsOut,
 };
+use crate::ops::{Ops, typed};
 
 /// Longest DAX/M snippet shown in the tree.
 const EXPR_WIDTH: usize = 100;
@@ -39,29 +41,37 @@ pub struct InspectArgs {
 }
 
 pub fn run(args: &InspectArgs, ctx: &Context) -> anyhow::Result<Status> {
-    let opened = open_document(&args.path, &args.read.open_options())?;
-    let shown = args.path.to_string_lossy();
-    let out = inspect_model::build(
-        &shown,
-        &opened,
-        BuildOptions {
-            expressions: !args.no_expressions,
-        },
-    );
+    let ops = Ops::new()?;
+    let doc = ops.open(&args.path, &args.read)?;
+    let value = ops.execute(
+        "doc.inspect",
+        json!({ "docId": doc.doc_id, "includeExpressions": !args.no_expressions }),
+    )?;
     let json = args.json || args.pretty;
     if json {
-        print_json(&out, args.pretty)?;
+        print_json(&value, args.pretty)?;
     } else {
+        let out: Inspect = typed(&value)?;
         with_stdout(|w| write_tree(w, &out))?;
     }
-    let status = Status::of(&opened.document);
-    if json && status == Status::ErrorDiagnostics {
+    if doc.diagnostics.errors == 0 {
+        return Ok(Status::Ok);
+    }
+    if json {
+        let count = |key: &str| {
+            value
+                .pointer(&format!("/counts/{key}"))
+                .and_then(Value::as_u64)
+                .unwrap_or_default()
+        };
         ctx.note(format!(
-            "{shown}: {} error diagnostic(s), {} warning(s)",
-            out.counts.errors, out.counts.warnings
+            "{}: {} error diagnostic(s), {} warning(s)",
+            doc.path,
+            count("errors"),
+            count("warnings")
         ));
     }
-    Ok(status)
+    Ok(Status::ErrorDiagnostics)
 }
 
 // ---------------------------------------------------------------------------

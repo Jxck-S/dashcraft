@@ -3050,3 +3050,50 @@ async fn calculated_table_create_through_the_registry() {
         all
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn open_and_detect_name_a_missing_input_once() {
+    let runner = Runner::new();
+    for id in ["doc.open", "doc.detect"] {
+        let e = runner
+            .try_run(id, json!({"path": "no/such.pbip"}))
+            .await
+            .unwrap_err();
+        assert_eq!(e.code, OpErrorCode::NotFound, "{id}");
+        assert_eq!(
+            e.message, "cannot open no/such.pbip: no such file or directory",
+            "{id}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn lint_findings_carry_the_object_id() {
+    let dir = tmp_dir("lint-object");
+    let pbip = common::mini_pbip(dir.path());
+    let runner = Runner::new();
+    let doc = runner
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    runner
+        .run(
+            "model.measure.create",
+            json!({"docId": doc, "table": "Sales", "name": "Broken", "expression": "SUM(Sales[Nope])"}),
+        )
+        .await;
+    let measures = runner.run("model.measures", json!({"docId": doc})).await;
+    let id = &measures["measures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["name"] == "Broken")
+        .unwrap()["id"];
+    let lint = runner.run("doc.lint", json!({"docId": doc})).await;
+    let finding = lint["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["message"].as_str().unwrap_or_default().contains("Nope"))
+        .unwrap_or_else(|| panic!("no finding for Sales[Nope]: {lint}"));
+    assert_eq!(&finding["object"], id, "{finding}");
+}
