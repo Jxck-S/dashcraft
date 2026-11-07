@@ -7,6 +7,24 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 registry fuzzing (M6.11)
+
+- **What:** `crates/pbi-ops/tests/property.rs`: every catalog command called through
+  `Registry::execute` with its examples, with parameters derived from its JSON Schema and with
+  40 random mutations each (no `internal` error, no hang); seeded random edit, undo and redo
+  sequences on Acme (refused and no-op steps change nothing, `undo` back to a document equal to
+  the original) and on loaded data (save as PBIP, reopen with the same shape, undo all, same
+  measure values). `DASHCRAFT_PROPERTY_STEPS` / `DASHCRAFT_PROPERTY_SEED` set length and seed;
+  a nightly `property` job in `fuzz.yml` runs 10,000 steps with the run number as seed
+  ([docs/ci.md](ci.md#registry-property-tests)). Fix found by it: `pbi-core` save refused a
+  report whose field was renamed and then deleted (`net_renames` only followed surviving
+  objects); `deleted_renames` now infers those renames from the report fields, chains and swaps
+  included, and `check_reports` still verifies the result. GAPS §9 2.9 → 3.2, §12 3.1 → 3.3.
+- **Why:** M6.11 and M6 acceptance 10; GAPS §9 and §12 "parameter fuzzing".
+- **Numbers:** parameter test 8,688 calls over 71 commands; random edits 10,000 steps (5,118
+  committed, 182 no-ops, 4,700 refused) in 85.7 s release, 231.5 s debug; loaded data 1,000
+  steps per seed, seeds 3 to 7 all green in 10–14 s release (debug default 250 steps, about 9 s).
+  2 new save tests in `pbi-core` (unit and integration).
 ### M6 agent editing over MCP (M6.9)
 
 - **What:** `crates/pbi-ops/tests/mcp.rs::agents_edit_and_save_only_inside_write_roots`: an MCP

@@ -20,8 +20,6 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  # cargo-fuzz needs nightly (-Zsanitizer); overrides rust-toolchain.toml.
-  RUSTUP_TOOLCHAIN: nightly
   FUZZ_SECONDS: ${{ inputs.seconds || '60' }}
 
 jobs:
@@ -29,6 +27,9 @@ jobs:
     name: cargo-fuzz
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    env:
+      # cargo-fuzz needs nightly (-Zsanitizer); overrides rust-toolchain.toml.
+      RUSTUP_TOOLCHAIN: nightly
     steps:
       - uses: actions/checkout@v7
 
@@ -97,3 +98,31 @@ jobs:
           name: fuzz-artifacts
           path: fuzz/artifacts
           if-no-files-found: ignore
+
+  # M6.11: random edit, undo, redo and save sequences through the command
+  # registry (crates/pbi-ops/tests/property.rs), 10,000 steps in release
+  # with a seed that changes every night (reproduce with the same
+  # DASHCRAFT_PROPERTY_SEED, printed in the log).
+  property:
+    name: registry property tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DASHCRAFT_PROPERTY_STEPS: 10000
+      DASHCRAFT_PROPERTY_SEED: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        shell: bash
+        run: |
+          rustup set profile minimal
+          rustup toolchain install || rustup show
+          rustc --version && cargo --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: property
+
+      - name: cargo test --release -p pbi-ops --test property
+        run: cargo test --release --locked -p pbi-ops --test property -- --nocapture
