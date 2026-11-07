@@ -318,6 +318,11 @@ export interface CanvasPageOut {
   /** Render number of this page (increasing): drop older responses. */
   generation: number
   /**
+   * The semantic document revision the report, the page and its data
+   * were read at (one revision, even while edits commit).
+   */
+  documentRevision: number
+  /**
    * The page as a standalone SVG document (deterministic; `data-hit`
    * attributes on interactive groups).
    */

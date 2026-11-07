@@ -49,6 +49,10 @@ struct ModelEdit {
     removed: RemovedData,
     /// The calculated tables and columns the edit recomputed.
     recalculated: Vec<Recalculated>,
+    /// The active "View as" rebuilt for the edited engine and model,
+    /// published with them so no query reads the new model over the
+    /// previous restricted engine.
+    view: Option<ActiveView>,
 }
 
 /// Mutable state: the published engine, the session model, the derived
@@ -105,6 +109,33 @@ struct SavedState {
 struct OpenedState {
     opened: Arc<OpenedDocument>,
     document: Arc<Document>,
+}
+
+/// What a query reads, captured at one semantic revision
+/// ([`Session::revision_snapshot`]).
+#[derive(Debug, Clone)]
+pub struct RevisionSnapshot {
+    /// The semantic document revision.
+    pub revision: u64,
+    /// The document (model, reports) of `revision`.
+    pub document: Arc<Document>,
+    /// The session model of `revision`: the document model plus the active
+    /// derived columns.
+    pub model: Arc<Model>,
+    /// The engine snapshot queries read ("View as" applied).
+    pub snapshot: Arc<EngineSnapshot>,
+}
+
+impl RevisionSnapshot {
+    /// The model culture (`en-US` when unset).
+    #[must_use]
+    pub fn culture(&self) -> String {
+        self.model
+            .culture
+            .clone()
+            .filter(|c| !c.trim().is_empty())
+            .unwrap_or_else(|| "en-US".to_owned())
+    }
 }
 
 /// An opened Power BI document with its data engine: the façade used by
@@ -314,6 +345,28 @@ impl Session {
     #[must_use]
     pub fn model(&self) -> Arc<Model> {
         Arc::clone(&self.read().model)
+    }
+
+    /// The document, the session model and the engine snapshot queries read,
+    /// all of one revision (ADR-0012): read a page's report and query its
+    /// data from one capture, so an edit committing meanwhile cannot mix
+    /// two revisions.
+    #[must_use]
+    pub fn revision_snapshot(&self) -> RevisionSnapshot {
+        // Edits publish with `opened` locked, then `state`: take them in
+        // the same order.
+        let opened = self
+            .inner
+            .opened
+            .read()
+            .unwrap_or_else(PoisonError::into_inner);
+        let state = self.read();
+        RevisionSnapshot {
+            revision: state.document_revision,
+            document: Arc::clone(&opened.document),
+            model: Arc::clone(&state.model),
+            snapshot: state.query_engine().snapshot(),
+        }
     }
 
     /// The semantic model as read from the document (empty if it has none),
@@ -618,6 +671,8 @@ impl Session {
             (!changes.is_empty()).then(|| state.engine.clone())
         };
         let mut derived = state.derived.clone();
+        let view = state.view.as_ref().map(|v| v.view.clone());
+        let base = state.engine.clone();
         drop(state);
         renames.apply_to_derived(&mut derived, new);
         let mut model = new.clone();
@@ -635,6 +690,8 @@ impl Session {
                 engine = None;
             }
         }
+        let view =
+            view.map(|v| ActiveView::build_or_deny(engine.as_ref().unwrap_or(&base), &model, v));
         Ok(PreparedEdit {
             model: Some(ModelEdit {
                 engine,
@@ -643,13 +700,15 @@ impl Session {
                 tables,
                 removed,
                 recalculated,
+                view,
             }),
         })
     }
 
-    /// Publishes a prepared edit. Returns whether the active view must be
-    /// rebuilt even if the engine did not change (the model did: role
-    /// filters may use any of it).
+    /// Publishes a prepared edit with its active view. Returns whether the
+    /// active view must still be rebuilt even if the engine did not change
+    /// (the model did and the view changed meanwhile: role filters may use
+    /// any of the model).
     fn publish_edit(
         &self,
         opened: &mut Arc<OpenedState>,
@@ -662,7 +721,7 @@ impl Session {
         let next_opened = Arc::new(next_opened);
         let document = Arc::new(next_opened.document.clone());
         let mut state = self.write();
-        let model_changed = prepared.model.is_some();
+        let mut rebuild = false;
         state.recalculated = (revision, Vec::new());
         if let Some(edit) = prepared.model {
             state.recalculated.1 = edit.recalculated;
@@ -673,13 +732,22 @@ impl Session {
             state.derived = edit.derived;
             state.tables = edit.tables;
             state.removed = edit.removed;
+            match edit.view {
+                Some(view)
+                    if view.base_generation == state.engine.generation()
+                        && state.view.as_ref().is_some_and(|v| v.view == view.view) =>
+                {
+                    state.view = Some(view);
+                }
+                _ => rebuild = true,
+            }
         }
         state.document_revision = revision;
         *opened = Arc::new(OpenedState {
             opened: next_opened,
             document,
         });
-        model_changed
+        rebuild
     }
 
     /// The calculated tables and columns the edit that produced `revision`

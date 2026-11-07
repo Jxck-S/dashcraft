@@ -141,7 +141,7 @@ use std::sync::Arc;
 use pbi_dax::{DaxError, EvalContext};
 use pbi_engine::{CancellationToken, EngineSnapshot, FilterContext, Value};
 use pbi_model::{Model, Page, Report, Visual};
-use pbi_session::Session;
+use pbi_session::{RevisionSnapshot, Session};
 use serde::Serialize;
 
 pub use crate::dataview::{DataView, QueryWarning, WarningScope};
@@ -297,9 +297,21 @@ impl QueryEnv {
         }
     }
 
-    /// The session's current snapshot, model and culture.
+    /// The session's current snapshot, model and culture, all of one
+    /// revision (see [`from_revision`](Self::from_revision)).
     pub fn from_session(session: &Session) -> Self {
-        Self::new(session.snapshot(), session.model(), session.culture())
+        Self::from_revision(&session.revision_snapshot())
+    }
+
+    /// The snapshot, model and culture of a captured revision: query its
+    /// data and read the report from `revision.document`, so an edit
+    /// committing meanwhile cannot mix two revisions.
+    pub fn from_revision(revision: &RevisionSnapshot) -> Self {
+        Self::new(
+            Arc::clone(&revision.snapshot),
+            Arc::clone(&revision.model),
+            revision.culture(),
+        )
     }
 
     /// A [`FilterBuilder`] on this model and snapshot.

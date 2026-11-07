@@ -7,6 +7,27 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 queries capture one revision, also with "View as" (M6.2, acceptance 8)
+
+- **What:** `pbi-session` gains `Session::revision_snapshot` (`RevisionSnapshot`: revision,
+  document, session model and query snapshot under one lock). Edits, undo and redo build the
+  "View as" engine for the edited engine and model before publishing and install it in the same
+  write lock as the model and revision. `pbi-render`'s `QueryEnv::from_revision`; the canvas
+  (`canvas.*`) and `render.page` take the report, the page and the data from one capture, and
+  canvas results gain `documentRevision`. Tests: `queries_return_the_revision_they_started_at`
+  (queries polled once to capture their revision, edits committed while they are pending; values
+  from the edited column and measure prove which revision was read; with and without "View as")
+  and `concurrent_queries_never_mix_revisions` (three reader tasks against 60 seeded edit, undo
+  and redo steps: no value, document, model or engine snapshot of two revisions) in
+  `crates/pbi-session/tests/robustness.rs`; `canvas_renders_carry_their_revision_under_view_as`
+  in `crates/pbi-ops/tests/security.rs`.
+- **Why:** M6 acceptance 8 and the last open part of M6.2 (DESKTOP-PLAN).
+- **Numbers:** the threaded test failed on every run before the fix (East view, revision 1:
+  engine rows of revision 0); it passes on every run after it. The new session tests take about
+  10 s in debug. M6.2 ticked.
+- **Open:** derived-column changes (not revisioned) still rebuild the "View as" engine after
+  publishing.
+
 ### M6 report-level measures follow renames (M6.7, part 3)
 
 - **What:** `pbi-pbir` types `reportExtensions.json` (entities and measures, unknown keys kept);

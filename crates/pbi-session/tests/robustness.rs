@@ -3,15 +3,19 @@
 //! cancellation, unsupported M / DAX, failed dependencies, and the query
 //! API on small in-memory models. Uses only committed fixtures.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::future::Future;
 use std::path::PathBuf;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::task::Poll;
 use std::time::{Duration, Instant};
 
 use arrow::array::AsArray;
 use arrow::datatypes::Int64Type;
 use chrono::TimeZone;
-use pbi_model::{DeleteColumn, DeleteTable, ObjectId, SetMeasureExpression};
+use pbi_model::{DeleteColumn, DeleteTable, ObjectId, SetColumnProperties, SetMeasureExpression};
 use pbi_session::{
     CancellationToken, ColumnFilterSpec, CsvExportOptions, CsvOptions, DerivedColumn, DerivedKind,
     FilterSpec, FixedClock, ModelDocOptions, OFFLINE_HINT, PageRequest, RefreshEvent, RefreshKind,
@@ -1153,4 +1157,315 @@ async fn documents_without_a_cache() {
         .await
         .unwrap();
     assert_eq!(report.table("Sales").map(|t| t.kind), Some(RefreshKind::M));
+}
+
+// ---------------------------------------------------------------------------
+// Revisions and concurrency (M6 acceptance 8)
+// ---------------------------------------------------------------------------
+
+/// Rows `1..=REV_ROWS` of `Sales[N]`; every third row is in the East role.
+const REV_ROWS: i64 = 30_000;
+
+/// `Sales[Scaled] = Sales[N] * k` and `Total = SUM(Sales[Scaled]) * m`:
+/// each revision's `(k, m)` decides every value a query may return.
+fn revision_session() -> Session {
+    let tables = format!(
+        r#"[{{"name": "Sales",
+  "columns": [
+    {{"name": "N", "dataType": "int64", "sourceColumn": "N"}},
+    {{"name": "Region", "dataType": "string", "sourceColumn": "Region"}},
+    {{"type": "calculated", "name": "Scaled", "dataType": "int64", "expression": "Sales[N] * 1"}}],
+  "partitions": [{{"name": "Sales", "mode": "import", "source": {{"type": "m",
+    "expression": "let N = {{1..{REV_ROWS}}} in Table.FromColumns({{N, List.Transform(N, each if Number.Mod(_, 3) = 0 then \"East\" else \"West\")}}, type table [N = Int64.Type, Region = text])"}}}}],
+  "measures": [{{"name": "Total", "expression": "SUM(Sales[Scaled]) * 1"}}]}}]"#
+    );
+    let roles = r#"[{"name": "East", "modelPermission": "read",
+  "tablePermissions": [{"name": "Sales", "filterExpression": "Sales[Region] = \"East\""}]}]"#;
+    bim_session_with_roles(&tables, roles)
+}
+
+fn column_text(k: i64) -> String {
+    format!("Sales[N] * {k}")
+}
+
+fn measure_text(m: i64) -> String {
+    format!("SUM(Sales[Scaled]) * {m}")
+}
+
+fn expected_total(east: bool, (k, m): (i64, i64)) -> i64 {
+    (1..=REV_ROWS).filter(|n| !east || n % 3 == 0).sum::<i64>() * k * m
+}
+
+fn integer(value: &pbi_session::MeasureValue) -> i64 {
+    match value.value {
+        Some(Value::Integer(i)) => i,
+        Some(Value::Double(d)) if d.fract() == 0.0 => d as i64,
+        Some(Value::Decimal(d)) if d % 10_000 == 0 => (d / 10_000) as i64,
+        ref other => panic!("Total is {other:?} ({:?})", value.error),
+    }
+}
+
+/// xorshift64*: deterministic and dependency-free.
+struct Rng(u64);
+
+impl Rng {
+    fn below(&mut self, n: u64) -> u64 {
+        self.0 ^= self.0 >> 12;
+        self.0 ^= self.0 << 25;
+        self.0 ^= self.0 >> 27;
+        self.0.wrapping_mul(0x2545_F491_4F6C_DD1D) % n.max(1)
+    }
+}
+
+/// The document state per revision, and the edits that produce it.
+struct Revisions {
+    session: Arc<Session>,
+    measure: ObjectId,
+    column: ObjectId,
+    current: (i64, i64),
+    undo: Vec<(i64, i64)>,
+    redo: Vec<(i64, i64)>,
+    states: HashMap<u64, (i64, i64)>,
+}
+
+impl Revisions {
+    async fn new(east: bool) -> Self {
+        let session = revision_session();
+        let report = session.refresh(RefreshOptions::all()).await.unwrap();
+        for t in &report.tables {
+            assert_eq!(t.status, TableStatus::Ok, "{}: {:?}", t.name, t.status);
+        }
+        if east {
+            session.set_effective_roles(&["East"], None).await.unwrap();
+        }
+        let model = session.base_model();
+        let measure = model.measure("Sales", "Total").unwrap().id;
+        let column = model.column("Sales", "Scaled").unwrap().id;
+        let revision = session.document_revision();
+        Self {
+            session: Arc::new(session),
+            measure,
+            column,
+            current: (1, 1),
+            undo: Vec::new(),
+            redo: Vec::new(),
+            states: HashMap::from([(revision, (1, 1))]),
+        }
+    }
+
+    /// One random step: a column or measure edit (a no-op when the factor
+    /// is unchanged), an undo or a redo.
+    async fn step(&mut self, rng: &mut Rng) {
+        let factor = 1 + rng.below(4) as i64;
+        let (k, m) = self.current;
+        let (result, next) = match rng.below(4) {
+            0 => {
+                let result = self
+                    .session
+                    .execute_document_command(SetColumnProperties {
+                        column: self.column,
+                        expression: Some(column_text(factor)),
+                        ..SetColumnProperties::default()
+                    })
+                    .await
+                    .unwrap();
+                (result, Some((factor, m)))
+            }
+            1 => {
+                let result = self
+                    .session
+                    .execute_document_command(SetMeasureExpression {
+                        measure: self.measure,
+                        expression: measure_text(factor),
+                    })
+                    .await
+                    .unwrap();
+                (result, Some((k, factor)))
+            }
+            2 => {
+                let Some(previous) = self.undo.pop() else {
+                    return;
+                };
+                self.redo.push(self.current);
+                self.current = previous;
+                (self.session.undo_document_command().await.unwrap(), None)
+            }
+            _ => {
+                let Some(next) = self.redo.pop() else {
+                    return;
+                };
+                self.undo.push(self.current);
+                self.current = next;
+                (self.session.redo_document_command().await.unwrap(), None)
+            }
+        };
+        if let Some(next) = next {
+            assert_eq!(result.changed, next != self.current, "{result:?}");
+            if !result.changed {
+                return;
+            }
+            self.undo.push(self.current);
+            self.redo.clear();
+            self.current = next;
+        }
+        assert!(
+            self.states.insert(result.revision, self.current).is_none(),
+            "revision {} reused",
+            result.revision
+        );
+    }
+}
+
+/// A seeded schedule interleaves edits, undo and redo with queries that
+/// start (capture their revision) before some steps commit and finish after
+/// them: every query reports the revision current when it started and
+/// returns that revision's value, with and without "View as".
+#[tokio::test(flavor = "multi_thread")]
+async fn queries_return_the_revision_they_started_at() {
+    type Query<'a> = Pin<
+        Box<
+            dyn Future<Output = Result<(u64, pbi_session::MeasureValue), SessionError>> + Send + 'a,
+        >,
+    >;
+    for east in [false, true] {
+        let mut revisions = Revisions::new(east).await;
+        let session = Arc::clone(&revisions.session);
+        let filter = FilterSpec::new();
+        let mut rng = Rng(0x0005_eed0_8000_0001 ^ u64::from(east));
+        let mut checked = 0;
+        let mut overlapped = 0;
+        for _ in 0..40 {
+            // (revision at the start, an edit committed meanwhile, query)
+            let mut pending: Vec<(u64, bool, Query<'_>)> = Vec::new();
+            let mut done = Vec::new();
+            for _ in 0..12 {
+                if rng.below(2) == 0 {
+                    let started = session.document_revision();
+                    let mut query: Query<'_> = Box::pin(session.evaluate_measure_with_revision(
+                        "Total",
+                        &filter,
+                        CancellationToken::new(),
+                    ));
+                    // The first poll captures the revision.
+                    match std::future::poll_fn(|cx| Poll::Ready(query.as_mut().poll(cx))).await {
+                        Poll::Ready(result) => done.push((started, result, false)),
+                        Poll::Pending => pending.push((started, false, query)),
+                    }
+                } else {
+                    let before = revisions.states.len();
+                    revisions.step(&mut rng).await;
+                    if revisions.states.len() > before {
+                        for (_, overlapped, _) in &mut pending {
+                            *overlapped = true;
+                        }
+                    }
+                    if rng.below(3) == 0 {
+                        for (started, overlapped, query) in pending.drain(..) {
+                            done.push((started, query.await, overlapped));
+                        }
+                    }
+                }
+            }
+            for (started, overlapped, query) in pending {
+                done.push((started, query.await, overlapped));
+            }
+            for (started, result, overlapped_an_edit) in done {
+                let (revision, value) = result.unwrap();
+                assert_eq!(revision, started);
+                let state = revisions.states[&revision];
+                assert_eq!(integer(&value), expected_total(east, state), "{state:?}");
+                checked += 1;
+                overlapped += usize::from(overlapped_an_edit);
+            }
+        }
+        assert!(revisions.states.len() > 20, "{}", revisions.states.len());
+        assert!(overlapped > 0 && checked > 100, "{overlapped} of {checked}");
+    }
+}
+
+/// Queries and revision snapshots on other threads while edits, undo and
+/// redo commit: every result belongs to one revision (value, document,
+/// session model and engine data alike), with and without "View as".
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_queries_never_mix_revisions() {
+    for east in [false, true] {
+        let mut revisions = Revisions::new(east).await;
+        let stop = Arc::new(AtomicBool::new(false));
+        let readers: Vec<_> = (0..3)
+            .map(|reader| {
+                let session = Arc::clone(&revisions.session);
+                let stop = Arc::clone(&stop);
+                tokio::spawn(async move {
+                    let mut values = Vec::new();
+                    let mut snapshots = Vec::new();
+                    while !stop.load(Ordering::Relaxed) {
+                        if reader == 0 {
+                            let snap = session.revision_snapshot();
+                            let doc_model = snap.document.model.as_ref().unwrap();
+                            let column = |model: &pbi_model::Model| {
+                                model
+                                    .column("Sales", "Scaled")
+                                    .and_then(|c| c.expression())
+                                    .unwrap()
+                                    .to_owned()
+                            };
+                            let measure = |model: &pbi_model::Model| {
+                                model.measure("Sales", "Total").unwrap().expression.clone()
+                            };
+                            let n = snap.snapshot.column("Sales", "N").unwrap();
+                            let scaled = snap.snapshot.column("Sales", "Scaled").unwrap();
+                            let n = n.as_primitive::<Int64Type>().value(0);
+                            let scaled = scaled.as_primitive::<Int64Type>().value(0);
+                            snapshots.push((
+                                snap.revision,
+                                [column(doc_model), measure(doc_model)],
+                                [column(&snap.model), measure(&snap.model)],
+                                scaled / n,
+                            ));
+                            tokio::task::yield_now().await;
+                        } else {
+                            let (revision, value) = session
+                                .evaluate_measure_with_revision(
+                                    "Total",
+                                    &FilterSpec::new(),
+                                    CancellationToken::new(),
+                                )
+                                .await
+                                .unwrap();
+                            values.push((revision, integer(&value)));
+                        }
+                    }
+                    (values, snapshots)
+                })
+            })
+            .collect();
+        let mut rng = Rng(0x0005_eed0_8000_0002 ^ u64::from(east));
+        for _ in 0..60 {
+            revisions.step(&mut rng).await;
+            tokio::time::sleep(Duration::from_millis(2)).await;
+        }
+        stop.store(true, Ordering::Relaxed);
+        let mut seen = std::collections::HashSet::new();
+        for reader in readers {
+            let (values, snapshots) = reader.await.unwrap();
+            for (revision, value) in values {
+                let state = revisions.states[&revision];
+                assert_eq!(
+                    value,
+                    expected_total(east, state),
+                    "east {east}, revision {revision}: {state:?}"
+                );
+                seen.insert(revision);
+            }
+            for (revision, document, model, factor) in snapshots {
+                let (k, m) = revisions.states[&revision];
+                let texts = [column_text(k), measure_text(m)];
+                assert_eq!(document, texts, "east {east}, revision {revision}");
+                assert_eq!(model, texts, "east {east}, revision {revision}");
+                assert_eq!(factor, k, "east {east}, revision {revision}");
+                seen.insert(revision);
+            }
+        }
+        assert!(seen.len() > 5, "{} revisions observed", seen.len());
+    }
 }
