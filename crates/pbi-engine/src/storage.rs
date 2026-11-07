@@ -680,6 +680,15 @@ impl Storage {
         }
     }
 
+    /// Replaces `table`'s data by an empty model-schema table (not loaded),
+    /// keeping its position.
+    pub(crate) fn unload_model_table(&mut self, table: &pbi_model::Table) {
+        self.tables.insert(
+            name_key(&table.name),
+            Arc::new(TableData::from_model_table(table)),
+        );
+    }
+
     /// Loads (or reloads) a table. A table that already exists keeps its
     /// stored name spelling. The batch is stored as-is; its schema becomes
     /// the table's schema.

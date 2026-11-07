@@ -10,9 +10,9 @@ use pbi_model::{
     CreateColumn, CreateHierarchy, CreateMeasure, CreateRelationship, CreateTable, CrossFilter,
     DataType, DeleteColumn, DeleteHierarchy, DeleteMeasure, DeleteRelationship, DeleteTable,
     Hierarchy, HistoryResult, Level, Measure, ObjectId, ObjectPath, Partition, PartitionMode,
-    PartitionSource, Position, Relationship, SecurityFilteringBehavior, SetDescription,
-    SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties, SetVisualPosition,
-    SummarizeBy, Table, Visual, names_eq,
+    PartitionSource, Position, Relationship, SecurityFilteringBehavior, SetColumnProperties,
+    SetDescription, SetMeasureExpression, SetMeasureProperties, SetRelationshipProperties,
+    SetVisualPosition, SummarizeBy, Table, Visual, names_eq,
 };
 use pbi_session::{
     RenameKind, RenameObject, RenamePreview, Session, dax_syntax_error, preview_rename,
@@ -24,6 +24,7 @@ use serde_json::json;
 use super::{BASE, doc, loaded_doc};
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::{Ctx, DocChangedEvent, ObjectChange, ObjectChangeKind};
+use crate::dto::RecalculatedOut;
 use crate::error::OpError;
 use crate::inspect_model::PositionOut;
 use crate::resolve;
@@ -52,6 +53,11 @@ pub struct DocumentEditOut {
     pub revision: u64,
     pub dirty: bool,
     pub changed_object_ids: Vec<u64>,
+    /// The calculated tables and columns the edit recomputed over the
+    /// loaded data, in order (absent when none); a failed one has no values
+    /// until an edit or a refresh computes it again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recalculated: Vec<RecalculatedOut>,
 }
 
 impl DocumentEditOut {
@@ -59,11 +65,18 @@ impl DocumentEditOut {
     /// `ctx` when the edit committed one (ADR-0012: failed and no-op edits
     /// report nothing).
     fn committed(ctx: &Ctx, entry: &DocEntry, result: &HistoryResult) -> Self {
+        let session = entry.session();
+        let recalculated = if result.changed {
+            session.recalculated(result.revision)
+        } else {
+            Vec::new()
+        };
         let out = Self {
             changed: result.changed,
             revision: result.revision,
-            dirty: entry.session().is_document_dirty(),
+            dirty: session.is_document_dirty(),
             changed_object_ids: result.events.iter().map(|event| event.id().get()).collect(),
+            recalculated: recalculated.iter().map(RecalculatedOut::of).collect(),
         };
         if result.changed {
             ctx.doc_changed(DocChangedEvent {
@@ -236,6 +249,11 @@ pub struct RenameObjectOut {
     pub revision: u64,
     pub dirty: bool,
     pub changed_object_ids: Vec<u64>,
+    /// The calculated tables and columns the edit recomputed over the
+    /// loaded data, in order (absent when none); a failed one has no values
+    /// until an edit or a refresh computes it again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recalculated: Vec<RecalculatedOut>,
     /// The renamed object's id.
     pub object_id: u64,
     /// `table`, `column` or `measure`.
@@ -268,6 +286,7 @@ fn rename_out(
         revision: edit.revision,
         dirty: edit.dirty,
         changed_object_ids: edit.changed_object_ids,
+        recalculated: edit.recalculated,
         object_id: object.get(),
         kind: kind.to_owned(),
         table: preview.table,
@@ -332,6 +351,7 @@ impl Command for ModelObjectRename {
                 revision: history.revision,
                 dirty: history.dirty,
                 changed_object_ids: Vec::new(),
+                recalculated: Vec::new(),
             };
             return Ok(rename_out(object, preview, unchanged, true));
         }
@@ -783,6 +803,11 @@ pub struct MeasureEditOut {
     pub revision: u64,
     pub dirty: bool,
     pub changed_object_ids: Vec<u64>,
+    /// The calculated tables and columns the edit recomputed over the
+    /// loaded data, in order (absent when none); a failed one has no values
+    /// until an edit or a refresh computes it again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recalculated: Vec<RecalculatedOut>,
     pub measure_id: u64,
     /// The measure's table.
     pub table: String,
@@ -823,6 +848,7 @@ impl MeasureEditOut {
             revision: edit.revision,
             dirty: edit.dirty,
             changed_object_ids: edit.changed_object_ids,
+            recalculated: edit.recalculated,
             measure_id: measure.get(),
             table,
             name,
@@ -1083,6 +1109,7 @@ impl Command for ModelMeasureDelete {
                 revision: history.revision,
                 dirty: history.dirty,
                 changed_object_ids: Vec::new(),
+                recalculated: Vec::new(),
             }
         } else {
             let result = session
@@ -1202,6 +1229,11 @@ pub struct ColumnCreateOut {
     pub revision: u64,
     pub dirty: bool,
     pub changed_object_ids: Vec<u64>,
+    /// The calculated tables and columns the edit recomputed over the
+    /// loaded data, in order (absent when none); a failed one has no values
+    /// until an edit or a refresh computes it again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recalculated: Vec<RecalculatedOut>,
     pub column_id: u64,
     pub table: String,
     pub name: String,
@@ -1311,11 +1343,278 @@ impl Command for ModelColumnCreate {
             revision: edit.revision,
             dirty: edit.dirty,
             changed_object_ids: edit.changed_object_ids,
+            recalculated: edit.recalculated,
             column_id: id.get(),
             table,
             name,
             data_type,
             data_type_inferred,
+        })
+    }
+}
+
+/// Changes to a column: `expression` and `dataType` apply to calculated
+/// columns only; `None` leaves a property as it is and an empty text clears
+/// it.
+#[derive(Debug, Clone, Default)]
+struct ColumnChanges {
+    expression: Option<String>,
+    data_type: Option<DataTypeParam>,
+    format_string: Option<String>,
+    display_folder: Option<String>,
+    description: Option<String>,
+    is_hidden: Option<bool>,
+}
+
+impl ColumnChanges {
+    /// Whether the data type is inferred from the values (it needs them
+    /// loaded).
+    fn infers_type(&self) -> bool {
+        self.expression.is_some() && self.data_type.is_none()
+    }
+}
+
+/// The command that applies `changes` to column `id`, and whether its data
+/// type was inferred. Like Power BI Desktop, a new expression without
+/// `dataType` gets its data type from the values (the current one is kept
+/// when it cannot be inferred), and a column summarized automatically then
+/// sums when numeric and does not summarize otherwise.
+fn update_column(
+    session: &Session,
+    id: ObjectId,
+    changes: ColumnChanges,
+) -> Result<(SetColumnProperties, bool), OpError> {
+    let missing = || OpError::not_found(format!("no column with id {}", id.get()));
+    let (table, name, calculated, current_type, automatic_summary) = {
+        let document = session.document();
+        let Some(ObjectPath::Column { table, column }) = document.locate(id) else {
+            return Err(missing());
+        };
+        let t = document
+            .model
+            .as_ref()
+            .and_then(|m| m.tables.get(table))
+            .ok_or_else(missing)?;
+        let c = t.columns.get(column).ok_or_else(missing)?;
+        (
+            t.name.clone(),
+            c.name.clone(),
+            c.is_calculated(),
+            c.data_type.clone(),
+            pbi_model::props::find_annotation(&c.annotations, "SummarizationSetBy")
+                .is_some_and(|v| v.eq_ignore_ascii_case("Automatic")),
+        )
+    };
+    if (changes.expression.is_some() || changes.data_type.is_some()) && !calculated {
+        return Err(OpError::invalid_params(format!(
+            "{} is not a calculated column: its values and data type come from its query",
+            pbi_model::names::dax_column_ref(&table, &name)
+        )));
+    }
+    if let Some(expression) = &changes.expression {
+        if expression.trim().is_empty() {
+            return Err(OpError::invalid_params("the column expression is empty"));
+        }
+        if let Some(err) = dax_syntax_error(expression) {
+            return Err(OpError::invalid_params(format!(
+                "the expression does not parse: {err}"
+            )));
+        }
+    }
+    let (data_type, inferred) = match (changes.data_type, &changes.expression) {
+        (Some(t), _) => (Some(DataType::from(t)), false),
+        (None, Some(expression)) => {
+            match session.infer_changed_column_type(&table, &name, expression)? {
+                Some(t) => (Some(t), true),
+                None => (None, false),
+            }
+        }
+        (None, None) => (None, false),
+    };
+    let summarize_by = data_type
+        .as_ref()
+        .filter(|t| automatic_summary && t.is_numeric() != current_type.is_numeric())
+        .map(|t| {
+            Some(if t.is_numeric() {
+                SummarizeBy::Sum
+            } else {
+                SummarizeBy::None
+            })
+        });
+    let command = SetColumnProperties {
+        column: id,
+        expression: changes.expression,
+        data_type,
+        summarize_by,
+        format_string: clearable(changes.format_string),
+        display_folder: clearable(changes.display_folder),
+        description: clearable(changes.description),
+        is_hidden: changes.is_hidden,
+    };
+    if command
+        == (SetColumnProperties {
+            column: id,
+            ..SetColumnProperties::default()
+        })
+    {
+        return Err(OpError::invalid_params(
+            "give at least one of expression, dataType, formatString, displayFolder, description, isHidden",
+        ));
+    }
+    Ok((command, inferred))
+}
+
+/// Result of `model.column.update`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ColumnUpdateOut {
+    pub changed: bool,
+    pub revision: u64,
+    pub dirty: bool,
+    pub changed_object_ids: Vec<u64>,
+    pub column_id: u64,
+    pub table: String,
+    pub name: String,
+    /// The data type after the edit: `string`, `int64`, `double`,
+    /// `decimal`, `dateTime` or `boolean`.
+    pub data_type: String,
+    /// Whether the data type was inferred from the values of the new
+    /// expression (no `dataType` given).
+    pub data_type_inferred: bool,
+    /// The column and what depends on it, recomputed over the loaded data,
+    /// in order (absent when none); a failed one has no values until an
+    /// edit or a refresh computes it again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recalculated: Vec<RecalculatedOut>,
+}
+
+/// `model.column.update`.
+#[derive(Debug)]
+pub struct ModelColumnUpdate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpdateColumnParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// The column's id (instead of `table` and `column`).
+    #[serde(default)]
+    pub column_id: Option<u64>,
+    /// The column's table.
+    #[serde(default)]
+    pub table: Option<String>,
+    /// The column's name.
+    #[serde(default)]
+    pub column: Option<String>,
+    /// A calculated column's new DAX expression. Without `dataType` the data
+    /// type is inferred again from its values (after the automatic first
+    /// load; kept when the table has no rows loaded or every value is
+    /// blank).
+    #[serde(default)]
+    pub expression: Option<String>,
+    /// A calculated column's data type.
+    #[serde(default)]
+    pub data_type: Option<DataTypeParam>,
+    /// The format string; empty clears it.
+    #[serde(default)]
+    pub format_string: Option<String>,
+    /// The display folder; empty clears it.
+    #[serde(default)]
+    pub display_folder: Option<String>,
+    /// The description; empty clears it.
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub is_hidden: Option<bool>,
+}
+
+impl UpdateColumnParams {
+    fn changes(&self) -> ColumnChanges {
+        ColumnChanges {
+            expression: self.expression.clone(),
+            data_type: self.data_type,
+            format_string: self.format_string.clone(),
+            display_folder: self.display_folder.clone(),
+            description: self.description.clone(),
+            is_hidden: self.is_hidden,
+        }
+    }
+}
+
+impl Command for ModelColumnUpdate {
+    type Params = UpdateColumnParams;
+    type Output = ColumnUpdateOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "model.column.update",
+            title: "Update a column",
+            summary: "Changes a calculated column's expression or data type, or a column's format, folder, description or visibility; what depends on it is recomputed over the loaded data.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[
+                (
+                    "New expression",
+                    r##"{"docId": "d1", "table": "Orders", "column": "Line Cost", "expression": "Orders[Quantity] * RELATED(Products[Unit Cost]) * 1.1"}"##,
+                ),
+                (
+                    "Format a column",
+                    r##"{"docId": "d1", "columnId": 42, "formatString": "#,0.00"}"##,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let changes = params.changes();
+        // Inferring the type needs the data: the automatic first load.
+        let entry = if changes.infers_type() {
+            loaded_doc(ws, &params.doc_id, ctx).await?
+        } else {
+            doc(ws, &params.doc_id)?
+        };
+        resolve::require_model(&entry)?;
+        let session = entry.session();
+        let id = column_target(
+            session,
+            params.column_id,
+            params.table.as_deref(),
+            params.column.as_deref(),
+        )?;
+        let (command, data_type_inferred) = update_column(session, id, changes)?;
+        let result = session.execute_document_command(command).await?;
+        let (table, name, data_type) = {
+            let document = session.document();
+            match document.locate(id) {
+                Some(ObjectPath::Column { table, column }) => document
+                    .model
+                    .as_ref()
+                    .and_then(|m| m.tables.get(table))
+                    .and_then(|t| {
+                        let c = t.columns.get(column)?;
+                        Some((
+                            t.name.clone(),
+                            c.name.clone(),
+                            c.data_type.as_str().to_owned(),
+                        ))
+                    })
+                    .unwrap_or_default(),
+                _ => Default::default(),
+            }
+        };
+        let edit = DocumentEditOut::committed(ctx, &entry, &result);
+        Ok(ColumnUpdateOut {
+            changed: edit.changed,
+            revision: edit.revision,
+            dirty: edit.dirty,
+            changed_object_ids: edit.changed_object_ids,
+            column_id: id.get(),
+            table,
+            name,
+            data_type,
+            data_type_inferred,
+            recalculated: edit.recalculated,
         })
     }
 }
@@ -1400,6 +1699,11 @@ pub struct TableCreateOut {
     pub revision: u64,
     pub dirty: bool,
     pub changed_object_ids: Vec<u64>,
+    /// The calculated tables and columns the edit recomputed over the
+    /// loaded data, in order (absent when none); a failed one has no values
+    /// until an edit or a refresh computes it again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recalculated: Vec<RecalculatedOut>,
     pub table_id: u64,
     pub name: String,
     /// The columns, in order, with the data types inferred from the values.
@@ -1497,6 +1801,7 @@ impl Command for ModelTableCreate {
             revision: edit.revision,
             dirty: edit.dirty,
             changed_object_ids: edit.changed_object_ids,
+            recalculated: edit.recalculated,
             table_id: id.get(),
             name,
             columns,
@@ -1513,6 +1818,11 @@ pub struct ObjectDeleteOut {
     pub revision: u64,
     pub dirty: bool,
     pub changed_object_ids: Vec<u64>,
+    /// The calculated tables and columns the edit recomputed over the
+    /// loaded data, in order (absent when none); a failed one has no values
+    /// until an edit or a refresh computes it again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recalculated: Vec<RecalculatedOut>,
     pub object_id: u64,
     /// `column`, `table` or `hierarchy`.
     pub kind: String,
@@ -1617,6 +1927,7 @@ async fn delete_object(
             revision: history.revision,
             dirty: history.dirty,
             changed_object_ids: Vec::new(),
+            recalculated: Vec::new(),
         }
     } else {
         let result = session.execute_document_command(command).await?;
@@ -1627,6 +1938,7 @@ async fn delete_object(
         revision: edit.revision,
         dirty: edit.dirty,
         changed_object_ids: edit.changed_object_ids,
+        recalculated: edit.recalculated,
         object_id: id.get(),
         kind: kind.to_owned(),
         table,
@@ -2379,6 +2691,11 @@ pub struct RelationshipEditOut {
     pub revision: u64,
     pub dirty: bool,
     pub changed_object_ids: Vec<u64>,
+    /// The calculated tables and columns the edit recomputed over the
+    /// loaded data, in order (absent when none); a failed one has no values
+    /// until an edit or a refresh computes it again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recalculated: Vec<RecalculatedOut>,
     pub relationship_id: u64,
     /// The relationship's name (a GUID unless one was given).
     pub name: String,
@@ -2419,6 +2736,7 @@ impl RelationshipEditOut {
             revision: edit.revision,
             dirty: edit.dirty,
             changed_object_ids: edit.changed_object_ids,
+            recalculated: edit.recalculated,
             relationship_id: r.id.get(),
             name: r.name.clone(),
             from: end(&r.from),
@@ -2649,6 +2967,7 @@ impl Command for ModelRelationshipDelete {
                 revision: history.revision,
                 dirty: history.dirty,
                 changed_object_ids: Vec::new(),
+                recalculated: Vec::new(),
             }
         } else {
             let result = session
@@ -2903,6 +3222,28 @@ pub enum EditOperation {
         #[serde(default)]
         is_hidden: bool,
     },
+    /// Like `model.column.update`. Without `dataType` a new expression's
+    /// type is inferred against the document before the group.
+    UpdateColumn {
+        #[serde(default)]
+        column_id: Option<u64>,
+        #[serde(default)]
+        table: Option<String>,
+        #[serde(default)]
+        column: Option<String>,
+        #[serde(default)]
+        expression: Option<String>,
+        #[serde(default)]
+        data_type: Option<DataTypeParam>,
+        #[serde(default)]
+        format_string: Option<String>,
+        #[serde(default)]
+        display_folder: Option<String>,
+        #[serde(default)]
+        description: Option<String>,
+        #[serde(default)]
+        is_hidden: Option<bool>,
+    },
     /// Like `model.column.delete` (without `dryRun`).
     DeleteColumn {
         #[serde(default)]
@@ -2992,6 +3333,10 @@ impl Command for DocumentApplyEdits {
             matches!(
                 e,
                 EditOperation::CreateColumn {
+                    data_type: None,
+                    ..
+                } | EditOperation::UpdateColumn {
+                    expression: Some(_),
                     data_type: None,
                     ..
                 } | EditOperation::CreateTable { .. }
@@ -3165,6 +3510,29 @@ impl Command for DocumentApplyEdits {
                         is_hidden,
                     };
                     group.with(create_column(session, new)?.0)
+                }
+                EditOperation::UpdateColumn {
+                    column_id,
+                    table,
+                    column,
+                    expression,
+                    data_type,
+                    format_string,
+                    display_folder,
+                    description,
+                    is_hidden,
+                } => {
+                    let id =
+                        column_target(session, column_id, table.as_deref(), column.as_deref())?;
+                    let changes = ColumnChanges {
+                        expression,
+                        data_type,
+                        format_string,
+                        display_folder,
+                        description,
+                        is_hidden,
+                    };
+                    group.with(update_column(session, id, changes)?.0)
                 }
                 EditOperation::DeleteColumn {
                     column_id,

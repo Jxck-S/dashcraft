@@ -9,12 +9,13 @@
 mod common;
 
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use common::{
     ACME, BLOB_MAP, MS_PBIX, ORDERS_CSV, PBIP, Runner, copy_dir, expected, fixture, ms_expected,
     reference_root, tmp_dir,
 };
-use pbi_ops::OpErrorCode;
+use pbi_ops::{CallerKind, Ctx, OpErrorCode};
 use serde_json::{Value, json};
 
 fn measure<'a>(out: &'a Value, name: &str) -> &'a Value {
@@ -2734,6 +2735,300 @@ async fn calculated_column_create_through_the_registry() {
         )
         .await
     );
+}
+
+/// `table[column] state` of each calculated table or column an edit
+/// recomputed, in order.
+fn recalculated(out: &Value) -> Vec<String> {
+    out["recalculated"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|x| {
+            let column = x["column"]
+                .as_str()
+                .map(|c| format!("[{c}]"))
+                .unwrap_or_default();
+            format!(
+                "{}{column} {}",
+                x["table"].as_str().unwrap(),
+                x["status"]["state"].as_str().unwrap()
+            )
+        })
+        .collect()
+}
+
+/// M6.4: edits recompute the calculated tables and columns they reach, in
+/// dependency order, without an M refresh (acceptance criterion 3); one
+/// that can no longer be calculated loses its values, and undo computes
+/// them again.
+#[tokio::test]
+async fn edits_recalculate_dependants_without_a_refresh() {
+    let (Some(pbip), Some(map)) = (fixture(PBIP), fixture(BLOB_MAP)) else {
+        eprintln!("SKIP: {PBIP} missing");
+        return;
+    };
+    let events = Arc::new(Mutex::new(Vec::<String>::new()));
+    let sink = Arc::clone(&events);
+    let r = Runner {
+        ctx: Ctx::new(CallerKind::Cli).with_progress(move |e| sink.lock().unwrap().push(e.message)),
+        ..Runner::new()
+    };
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    assert!(
+        !events.lock().unwrap().is_empty(),
+        "a refresh reports progress"
+    );
+    events.lock().unwrap().clear();
+    let number = |v: Value| v.as_f64().unwrap_or_else(|| panic!("not a number: {v}"));
+    let close = |a: f64, b: f64| (a - b).abs() <= b.abs().max(1.0) * 1e-9;
+    let fails = |dax: &str| {
+        let query = format!("EVALUATE ROW(\"n\", {dax})");
+        r.try_run("dax.query", json!({"docId": doc, "query": query}))
+    };
+    let undo = || r.run("doc.undo", json!({"docId": doc}));
+    let sales = number(scalar(&r, &doc, "[Total Sales]").await);
+
+    // A calculated column's new expression recomputes it and then the
+    // column that uses it; its type is inferred again. Undo recomputes both.
+    let lifetime = "SUM(Customers[Lifetime Sales])";
+    let lifetime_before = number(scalar(&r, &doc, lifetime).await);
+    let high = "CALCULATE(COUNTROWS(Customers), Customers[Value Tier] = \"High\") + 0";
+    let high_before = scalar(&r, &doc, high).await;
+    let doubled = r
+        .run(
+            "model.column.update",
+            json!({"docId": doc, "table": "customers", "column": "lifetime sales",
+                "expression": "CALCULATE(SUM(Orders[Line Amount])) * 2"}),
+        )
+        .await;
+    assert_eq!(
+        (
+            &doubled["changed"],
+            &doubled["table"],
+            &doubled["name"],
+            &doubled["dataType"],
+            &doubled["dataTypeInferred"]
+        ),
+        (
+            &json!(true),
+            &json!("Customers"),
+            &json!("Lifetime Sales"),
+            &json!("double"),
+            &json!(true)
+        )
+    );
+    assert_eq!(
+        recalculated(&doubled),
+        ["Customers[Lifetime Sales] ok", "Customers[Value Tier] ok"]
+    );
+    assert!(close(
+        number(scalar(&r, &doc, lifetime).await),
+        2.0 * lifetime_before
+    ));
+    assert_eq!(
+        scalar(&r, &doc, high).await,
+        scalar(
+            &r,
+            &doc,
+            "COUNTROWS(FILTER(Customers, Customers[Lifetime Sales] >= 3000)) + 0"
+        )
+        .await
+    );
+    let undone = undo().await;
+    assert_eq!(recalculated(&undone), recalculated(&doubled), "{undone}");
+    assert!(close(
+        number(scalar(&r, &doc, lifetime).await),
+        lifetime_before
+    ));
+    assert_eq!(scalar(&r, &doc, high).await, high_before);
+
+    // Refused: a circular dependency, DAX that fails, an expression or type
+    // on a data column, nothing to change. Nothing is committed.
+    let revision = r.run("doc.history", json!({"docId": doc})).await["revision"].clone();
+    for params in [
+        json!({"table": "Customers", "column": "Lifetime Sales", "expression": "LEN(Customers[Value Tier])"}),
+        json!({"table": "Customers", "column": "Lifetime Sales", "expression": "Customers[Nope] + 1"}),
+        json!({"table": "Customers", "column": "Lifetime Sales", "expression": "1 +"}),
+        json!({"table": "Customers", "column": "Lifetime Sales", "expression": " "}),
+        json!({"table": "Customers", "column": "Customer ID", "expression": "1"}),
+        json!({"table": "Customers", "column": "Customer ID", "dataType": "string"}),
+        json!({"table": "Customers", "column": "Lifetime Sales"}),
+    ] {
+        let mut params = params;
+        params["docId"] = json!(doc);
+        assert_eq!(
+            error_code(r.try_run("model.column.update", params.clone()).await),
+            OpErrorCode::InvalidParams,
+            "{params}"
+        );
+    }
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(history["revision"], revision);
+    assert!(close(
+        number(scalar(&r, &doc, lifetime).await),
+        lifetime_before
+    ));
+    // Properties of a data column can change; nothing is recalculated.
+    let formatted = r
+        .run(
+            "model.column.update",
+            json!({"docId": doc, "table": "Customers", "column": "Customer ID", "description": "Key"}),
+        )
+        .await;
+    assert_eq!(
+        (&formatted["changed"], &formatted["dataTypeInferred"]),
+        (&json!(true), &json!(false))
+    );
+    assert_eq!(recalculated(&formatted), Vec::<String>::new());
+    undo().await;
+
+    // A measure edit recomputes the columns that use the measure; the new
+    // values need no M refresh (acceptance criterion 3).
+    let spend = r
+        .run(
+            "model.column.create",
+            json!({"docId": doc, "table": "Customers", "name": "Spend", "expression": "[Total Sales]"}),
+        )
+        .await;
+    assert_eq!(recalculated(&spend), ["Customers[Spend] ok"]);
+    let spend_sum = "SUM(Customers[Spend])";
+    let spend_before = number(scalar(&r, &doc, spend_sum).await);
+    let twice = r
+        .run(
+            "model.measure.update",
+            json!({"docId": doc, "table": "Orders", "measure": "Total Sales",
+                "expression": "SUM(Orders[Line Amount]) * 2"}),
+        )
+        .await;
+    assert_eq!(recalculated(&twice), ["Customers[Spend] ok"]);
+    assert!(close(
+        number(scalar(&r, &doc, spend_sum).await),
+        2.0 * spend_before
+    ));
+    let values = r.run("measures.values", json!({"docId": doc})).await;
+    assert!(close(
+        number(measure(&values, "Total Sales")["value"].clone()),
+        2.0 * sales
+    ));
+    assert_eq!(*events.lock().unwrap(), Vec::<String>::new());
+    // A format change recomputes nothing.
+    let format = r
+        .run(
+            "model.measure.update",
+            json!({"docId": doc, "table": "Orders", "measure": "Total Sales", "formatString": "0"}),
+        )
+        .await;
+    assert_eq!(recalculated(&format), Vec::<String>::new());
+    undo().await;
+    undo().await;
+    assert!(close(
+        number(scalar(&r, &doc, spend_sum).await),
+        spend_before
+    ));
+    undo().await;
+    assert!(fails(spend_sum).await.is_err());
+
+    // A relationship change recomputes every calculated table and column
+    // that reads another table, in dependency order.
+    let everything = |states: [&str; 7]| {
+        [
+            "Customers[Lifetime Sales]",
+            "Customers[Value Tier]",
+            "Orders[Line Cost]",
+            "Orders[Is Returned]",
+            "Customers[Has Orders]",
+            "Products[Units Sold (All Time)]",
+            "Products Never Sold",
+        ]
+        .iter()
+        .zip(states)
+        .map(|(node, state)| format!("{node} {state}"))
+        .collect::<Vec<_>>()
+    };
+    let all_ok = everything(["ok"; 7]);
+    // Deactivating Orders → Customers: a customer's lifetime sales are all
+    // sales. Undo recomputes them.
+    let all = r.run("model.relationships", json!({"docId": doc})).await;
+    let customers = relationship(
+        &all,
+        ("Orders", "Customer ID"),
+        ("Customers", "Customer ID"),
+    )["relationshipId"]
+        .as_u64()
+        .unwrap();
+    let products =
+        relationship(&all, ("Orders", "Product ID"), ("Products", "Product ID"))["relationshipId"]
+            .as_u64()
+            .unwrap();
+    let min_lifetime = "MIN(Customers[Lifetime Sales])";
+    let min_before = number(scalar(&r, &doc, min_lifetime).await);
+    let off = r
+        .run(
+            "model.relationship.update",
+            json!({"docId": doc, "relationshipId": customers, "isActive": false}),
+        )
+        .await;
+    assert_eq!(recalculated(&off), all_ok);
+    assert!(close(number(scalar(&r, &doc, min_lifetime).await), sales));
+    let on = undo().await;
+    assert_eq!(recalculated(&on), all_ok);
+    assert!(close(
+        number(scalar(&r, &doc, min_lifetime).await),
+        min_before
+    ));
+
+    // Deactivating Orders → Products: RELATED fails, so Line Cost loses its
+    // values (and Total Cost errors), as do the objects that read the whole
+    // Orders table, until undo computes them again.
+    let cost = number(scalar(&r, &doc, "[Total Cost]").await);
+    let off = r
+        .run(
+            "model.relationship.update",
+            json!({"docId": doc, "relationshipId": products, "isActive": false}),
+        )
+        .await;
+    let lost = ["ok", "ok", "error", "ok", "skipped", "skipped", "skipped"];
+    assert_eq!(recalculated(&off), everything(lost));
+    assert!(fails("[Total Cost]").await.is_err());
+    assert!(fails("SUM(Products[Units Sold (All Time)])").await.is_err());
+    let on = undo().await;
+    assert_eq!(recalculated(&on), all_ok);
+    assert!(close(number(scalar(&r, &doc, "[Total Cost]").await), cost));
+
+    // Deleting a table a calculated column uses: that column errors, with
+    // what reads all of Orders (its relationship goes too); undo brings the
+    // table's data back and recomputes them.
+    let returned = "CALCULATE(COUNTROWS(Orders), Orders[Is Returned] = \"Yes\") + 0";
+    let returned_before = scalar(&r, &doc, returned).await;
+    let deleted = r
+        .run(
+            "model.table.delete",
+            json!({"docId": doc, "table": "Returns"}),
+        )
+        .await;
+    assert_eq!(
+        recalculated(&deleted),
+        [
+            "Orders[Is Returned] error",
+            "Customers[Lifetime Sales] ok",
+            "Customers[Value Tier] ok",
+            "Orders[Line Cost] ok",
+            "Customers[Has Orders] skipped",
+            "Products[Units Sold (All Time)] skipped",
+            "Products Never Sold skipped",
+        ]
+    );
+    assert!(fails(returned).await.is_err());
+    assert_eq!(recalculated(&undo().await), all_ok);
+    assert_eq!(scalar(&r, &doc, returned).await, returned_before);
+
+    // None of it re-evaluated an M partition.
+    assert_eq!(*events.lock().unwrap(), Vec::<String>::new());
 }
 
 #[tokio::test]

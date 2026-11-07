@@ -625,6 +625,11 @@ impl ModelRenames {
         out
     }
 
+    /// `true` when nothing was renamed.
+    pub fn is_empty(&self) -> bool {
+        self.tables.is_empty() && self.columns.is_empty() && self.measures.is_empty()
+    }
+
     /// The renames of stored tables and columns.
     pub fn storage(&self) -> Vec<StorageRename> {
         let tables = self.tables.iter().map(|(old, new)| StorageRename::Table {
@@ -709,7 +714,7 @@ impl ModelRenames {
 
     /// Rewrites the references in `dax`, evaluated on `table`, to every
     /// rename; `true` if it changed.
-    fn rewrite_dax(&self, dax: &mut String, table: &str, model: &Model) -> bool {
+    pub fn rewrite_dax(&self, dax: &mut String, table: &str, model: &Model) -> bool {
         let mut changed = false;
         let mut apply = |change: NameChange<'_>| {
             if let Ok(Some(text)) = rename_references(dax, &change) {

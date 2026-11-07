@@ -175,6 +175,34 @@ impl Engine {
         Ok(())
     }
 
+    /// Removes a stored column (e.g. a calculated column whose values are no
+    /// longer valid); returns `false` if it was not stored.
+    ///
+    /// # Errors
+    /// Never in practice (an inconsistent column index).
+    pub fn remove_column(&mut self, table: &str, column: &str) -> Result<bool> {
+        let mut storage = self.current.storage.clone();
+        let removed = storage
+            .detach(&StoredObject::Column {
+                table: table.to_owned(),
+                column: column.to_owned(),
+            })?
+            .is_some();
+        if removed {
+            self.commit(storage, &[table]);
+        }
+        Ok(removed)
+    }
+
+    /// Replaces a table's data by an empty, not-loaded table with the model
+    /// schema of `table` (e.g. a calculated table whose values are no longer
+    /// valid), keeping its position.
+    pub fn unload_table(&mut self, table: &pbi_model::Table) {
+        let mut storage = self.current.storage.clone();
+        storage.unload_model_table(table);
+        self.commit(storage, &[table.name.as_str()]);
+    }
+
     /// Removes a table; returns `false` if it did not exist.
     pub fn remove_table(&mut self, name: &str) -> bool {
         let mut storage = self.current.storage.clone();

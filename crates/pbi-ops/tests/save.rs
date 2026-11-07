@@ -1035,6 +1035,112 @@ async fn created_column_saves_and_reopens() {
 }
 
 #[tokio::test]
+async fn updated_columns_save_and_reopen() {
+    const DEF: &str = "AcmeOutfitters.SemanticModel/definition";
+    const CUSTOMERS: &str = "tables/Customers.tmdl";
+    let Some(acme) = fixture(ACME) else {
+        eprintln!("SKIP: {ACME} missing");
+        return;
+    };
+    let dir = tmp_dir("update-column-");
+    copy_dir(&acme, dir.path());
+    let pbip = dir.path().join("AcmeOutfitters.pbip");
+    let before = files(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    let out = r
+        .run(
+            "doc.applyEdits",
+            json!({"docId": doc, "edits": [
+                {"type": "updateColumn", "table": "Customers", "column": "Lifetime Sales",
+                    "expression": "FORMAT(CALCULATE(SUM(Orders[Line Amount])), \"0\")",
+                    "dataType": "string", "formatString": ""},
+                {"type": "updateColumn", "table": "Customers", "column": "Customer ID",
+                    "isHidden": true},
+            ]}),
+        )
+        .await;
+    assert_eq!(out["changed"], true, "{out}");
+
+    let out = r.run("doc.save", json!({"docId": doc})).await;
+    assert_eq!(
+        sorted(&out["written"]),
+        [format!("{DEF}/{CUSTOMERS}")],
+        "{out}"
+    );
+    // The expression and type change in place; an automatic summarization
+    // follows the type, like in Power BI Desktop.
+    let original = String::from_utf8(before[&format!("{DEF}/{CUSTOMERS}")].clone()).unwrap();
+    let edited = [
+        (
+            "\tcolumn 'Lifetime Sales' = CALCULATE(SUM(Orders[Line Amount]))\n\
+             \t\tdataType: double\n\
+             \t\tformatString: \\$#,0\n",
+            "\tcolumn 'Lifetime Sales' = FORMAT(CALCULATE(SUM(Orders[Line Amount])), \"0\")\n\
+             \t\tdataType: string\n",
+        ),
+        (
+            "\t\tlineageTag: d5939a53-f184-57f2-9044-f1673e1ec8fa\n\
+             \t\tsummarizeBy: sum\n",
+            "\t\tlineageTag: d5939a53-f184-57f2-9044-f1673e1ec8fa\n\
+             \t\tsummarizeBy: none\n",
+        ),
+        (
+            "\tcolumn 'Customer ID'\n\
+             \t\tdataType: string\n",
+            "\tcolumn 'Customer ID'\n\
+             \t\tdataType: string\n\
+             \t\tisHidden\n",
+        ),
+    ]
+    .iter()
+    .fold(original.replace("\r\n", "\n"), |text, (from, to)| {
+        assert_eq!(text.matches(from).count(), 1, "{from}");
+        text.replace(from, to)
+    });
+    let saved = fs::read_to_string(dir.path().join(DEF).join(CUSTOMERS)).unwrap();
+    assert_eq!(saved.replace("\r\n", "\n"), edited);
+
+    let fresh = Runner::new();
+    let reopened = fresh
+        .open(json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    let tables = fresh.run("model.tables", json!({"docId": reopened})).await;
+    let column = |name: &str| {
+        tables["tables"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|t| t["name"] == "Customers")
+            .and_then(|t| t["columns"].as_array())
+            .and_then(|c| c.iter().find(|c| c["name"] == name))
+            .cloned()
+            .unwrap()
+    };
+    let lifetime = column("Lifetime Sales");
+    assert_eq!(
+        (
+            &lifetime["expression"],
+            &lifetime["dataType"],
+            &lifetime["summarizeBy"]
+        ),
+        (
+            &json!("FORMAT(CALCULATE(SUM(Orders[Line Amount])), \"0\")"),
+            &json!("string"),
+            &json!("none")
+        )
+    );
+    assert_eq!(column("Customer ID")["isHidden"], true);
+
+    r.run("doc.undo", json!({"docId": doc})).await;
+    r.run("doc.save", json!({"docId": doc})).await;
+    assert!(
+        files(dir.path()) == before,
+        "undoing the update saves the original project"
+    );
+}
+
+#[tokio::test]
 async fn created_and_deleted_hierarchies_save_and_reopen() {
     const DEF: &str = "AcmeOutfitters.SemanticModel/definition";
     let Some(acme) = fixture(ACME) else {

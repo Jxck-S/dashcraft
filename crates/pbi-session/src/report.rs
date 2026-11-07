@@ -148,6 +148,25 @@ impl TableRefresh {
     }
 }
 
+/// A calculated table or column a model edit recomputed over the loaded
+/// data ([`Session::recalculated`](crate::Session::recalculated)).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Recalculated {
+    /// Table name (model spelling).
+    pub table: String,
+    /// Column name; `None` for a calculated table.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub column: Option<String>,
+    /// The table's or column's object id.
+    pub id: pbi_model::ObjectId,
+    /// Time spent, in milliseconds.
+    pub duration_ms: u64,
+    /// Outcome. On an error the values are dropped (they no longer match
+    /// the model) until an edit or a refresh computes them again.
+    pub status: TableStatus,
+}
+
 /// Progress of a refresh, in order. Table events of M partitions may
 /// interleave (they are evaluated concurrently).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

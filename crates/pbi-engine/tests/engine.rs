@@ -885,6 +885,41 @@ fn snapshots_are_isolated_from_later_loads() {
 }
 
 #[test]
+fn stale_columns_and_tables_can_be_dropped() {
+    let mut e = engine();
+    let codes = strings(&[Some("a"), Some("b"), Some("c"), Some("d"), Some("e")]);
+    e.add_column("Stores", "Code", codes).unwrap();
+    let before = e.snapshot();
+    assert!(e.remove_column("stores", "code").unwrap());
+    assert!(!e.table("Stores").unwrap().has_column("Code"));
+    assert!(!e.remove_column("Stores", "Code").unwrap());
+    assert!(!e.remove_column("Nope", "Code").unwrap());
+    assert!(before.table("Stores").unwrap().has_column("Code"));
+    assert_eq!(
+        rows(&e.visible_rows(&central(), "Orders").unwrap()),
+        [0, 1, 2]
+    );
+
+    // An unloaded table keeps its place and model schema, without rows,
+    // until it is loaded again.
+    let names = e.table_names();
+    let model = model(CrossFilter::BothDirections);
+    let table = model.tables.iter().find(|t| t.name == "Stores").unwrap();
+    e.unload_table(table);
+    assert_eq!(e.table_names(), names);
+    let unloaded = e.table("Stores").unwrap();
+    assert!(!unloaded.is_loaded());
+    assert_eq!(e.row_count("Stores").unwrap(), 0);
+    assert!(unloaded.has_column("Region"));
+    assert_eq!(before.row_count("Stores").unwrap(), 5);
+    e.load_table("Stores", stores()).unwrap();
+    assert_eq!(
+        rows(&e.visible_rows(&central(), "Orders").unwrap()),
+        [0, 1, 2]
+    );
+}
+
+#[test]
 fn column_stats_summarise_a_column() {
     let e = engine();
     let stats = e.column_stats("Stores", "Region").unwrap();

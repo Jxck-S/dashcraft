@@ -434,7 +434,7 @@ fn table_expression(t: &Targets, rng: &mut Rng) -> String {
 /// parameters without `docId`.
 fn random_edit(t: &Targets, rng: &mut Rng) -> (&'static str, Value) {
     let filters = ["oneDirection", "bothDirections", "automatic", "sideways"];
-    match rng.below(17) {
+    match rng.below(18) {
         0 => {
             let mut p = json!({"table": t.table(rng), "name": new_name(rng),
                 "expression": measure_expression(t, rng)});
@@ -564,6 +564,23 @@ fn random_edit(t: &Targets, rng: &mut Rng) -> (&'static str, Value) {
                 ("report.visual.resize", p)
             }
         }
+        16 => {
+            let (id, table, _) = t.column(rng, None);
+            let mut p = json!({"columnId": id});
+            match rng.below(6) {
+                0 | 1 => p["expression"] = json!(column_expression(t, rng, &table)),
+                2 => {
+                    let types = [
+                        "string", "int64", "double", "boolean", "dateTime", "decimal",
+                    ];
+                    p["dataType"] = json!(rng.pick(&types).unwrap_or_default());
+                }
+                3 => p["formatString"] = json!("0.0"),
+                4 => p["isHidden"] = json!(rng.chance(50)),
+                _ => p["description"] = json!(new_name(rng)),
+            }
+            ("model.column.update", p)
+        }
         _ => {
             let edits: Vec<Value> = (0..2 + rng.below(2))
                 .map(|_| {
@@ -590,6 +607,7 @@ fn edit_type(command: &str) -> &'static str {
         "model.relationship.update" => "updateRelationship",
         "model.relationship.delete" => "deleteRelationship",
         "model.column.create" => "createColumn",
+        "model.column.update" => "updateColumn",
         "model.column.delete" => "deleteColumn",
         "model.table.create" => "createTable",
         "model.table.delete" => "deleteTable",

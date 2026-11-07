@@ -7,6 +7,30 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-06
 
+### M6 recalculation (M6.4, part 1)
+
+- **What:** `pbi-session::recalc` (new): after every edit, undo and redo the session compares the
+  old and new model and recomputes, in the same publication and in dependency order, the
+  calculated tables and columns the change reaches (created or changed expressions and types,
+  users of a measure whose expression changed, readers of other tables when relationships
+  change, references that resolve differently after a create or delete, then everything
+  downstream and the derived columns). A failure of the edited object refuses the edit; any other
+  failure drops the stale values (`Engine::remove_column`, `Engine::unload_table`, new) and
+  reports the error. `pbi-model`: `SetColumnProperties`. `pbi-ops`: `model.column.update` and the
+  `updateColumn` edit operation; edit outputs carry `recalculated`. `created.rs` lost its own
+  compute path to `recalc.rs`.
+- **Why:** M6.4 and DESKTOP-PLAN acceptance criterion 3 (a measure edit is visible without a
+  refresh); GAPS "Model editing" row.
+- **Numbers:** registry 71 → 72 commands. 4 new tests (`e2e`
+  `edits_recalculate_dependants_without_a_refresh`, `save` `updated_columns_save_and_reopen`,
+  engine `stale_columns_and_tables_can_be_dropped`, model unit
+  `set_column_properties_patches_calculated_columns_only`) and a `model.column.update` case in
+  the property generator. On Acme a relationship change recomputes 7 calculated objects; a
+  measure edit recomputes only the columns that use it, and `measures.values` after it emits no M
+  progress event.
+- **Open:** `model.table.update` (calculated table expression edits) completes M6.4; changes to
+  calculation items are not tracked; page queries still run again after any model edit.
+
 ### M6 CLI as registry wrappers (M6.10)
 
 - **What:** `dashcraft detect`, `inspect` and `lint` run `doc.detect`, `doc.open` + `doc.inspect`

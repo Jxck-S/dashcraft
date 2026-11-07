@@ -129,6 +129,7 @@ mod filters;
 mod identifiers;
 mod options;
 mod query;
+mod recalc;
 pub mod refresh;
 mod removed;
 mod report;
@@ -164,8 +165,8 @@ pub use pbi_engine::{CancellationToken, ColumnStats, PageRequest, SortSpec, Valu
 pub use pbi_m::{Clock, FixedClock, SystemClock};
 pub use query::{MeasureValue, value_to_json};
 pub use report::{
-    ColumnRefresh, LOAD_MANUALLY_HINT, OFFLINE_HINT, RefreshEvent, RefreshKind, RefreshReport,
-    TableRefresh, TableStatus,
+    ColumnRefresh, LOAD_MANUALLY_HINT, OFFLINE_HINT, Recalculated, RefreshEvent, RefreshKind,
+    RefreshReport, TableRefresh, TableStatus,
 };
 pub use security::{VIEW_AS_FAILED, ViewAs};
 pub use session::{DocumentHistory, SaveAsReport, SaveReport, Session, TableInfo};

@@ -78,6 +78,7 @@ pub fn catalog() -> Registry {
         .with::<edit::ModelRelationshipUpdate>()
         .with::<edit::ModelRelationshipDelete>()
         .with::<edit::ModelColumnCreate>()
+        .with::<edit::ModelColumnUpdate>()
         .with::<edit::ModelColumnDelete>()
         .with::<edit::ModelTableCreate>()
         .with::<edit::ModelTableDelete>()
