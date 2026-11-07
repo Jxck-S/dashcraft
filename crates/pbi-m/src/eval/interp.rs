@@ -44,6 +44,8 @@ pub(crate) struct Interp {
     /// `DateTimeZone.UtcNow()` / `FixedUtcNow()` for this evaluation.
     pub(crate) now: DateTime<Utc>,
     pub(crate) local_offset: FixedOffset,
+    /// State of the `Text.NewGuid` generator, seeded from `now` so a fixed clock reproduces.
+    guid_state: Cell<u64>,
 }
 
 pub(crate) struct DepthGuard<'a>(&'a Interp);
@@ -141,7 +143,22 @@ impl Interp {
             library: stdlib::library(),
             now,
             local_offset,
+            guid_state: Cell::new(
+                (now.timestamp() as u64)
+                    .wrapping_mul(1_000_000_000)
+                    .wrapping_add(u64::from(now.timestamp_subsec_nanos())),
+            ),
         }
+    }
+
+    /// The next 64 pseudo-random bits for `Text.NewGuid` (SplitMix64).
+    pub(crate) fn next_random(&self) -> u64 {
+        let state = self.guid_state.get().wrapping_add(0x9e37_79b9_7f4a_7c15);
+        self.guid_state.set(state);
+        let mut z = state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        z ^ (z >> 31)
     }
 
     // -----------------------------------------------------------------------------------------

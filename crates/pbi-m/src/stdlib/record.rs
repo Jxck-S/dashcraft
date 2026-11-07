@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use super::args::{arg, items, names_arg, req_list, req_record, req_text};
+use super::args::{arg, catch, items, names_arg, req_list, req_record, req_text};
 use super::{Builder, MissingField};
 use crate::eval::interp::{Interp, convert_error};
 use crate::merror::MError;
@@ -38,6 +38,16 @@ pub(super) fn register(b: &mut Builder) {
         "Record.RenameFields",
         &["record", "renames", "?missingField"],
         rename_fields,
+    );
+    b.func(
+        "Record.TransformFields",
+        &["record", "transformOperations", "?missingField"],
+        transform_fields,
+    );
+    b.func(
+        "Record.ReorderFields",
+        &["record", "fieldOrder", "?missingField"],
+        reorder_fields,
     );
     b.func("Record.Combine", &["records"], combine);
     b.func("Record.ToTable", &["record"], to_table);
@@ -184,6 +194,103 @@ fn rename_fields(it: &Interp, args: &[Value]) -> Result<Value, MError> {
         }
     }
     rebuild(pairs)
+}
+
+/// `{name, transform}` or a list of them.
+fn transform_operations(it: &Interp, v: &Value) -> Result<Vec<(Arc<str>, Value)>, MError> {
+    let list = match v {
+        Value::List(l) => items(it, l)?,
+        other => return Err(convert_error(other, "List")),
+    };
+    let ops: Vec<Value> = if list.first().is_some_and(|x| !matches!(x, Value::List(_))) {
+        vec![Value::List(ListValue::from_values(list))]
+    } else {
+        list
+    };
+    ops.iter()
+        .map(|op| {
+            let pair = match op {
+                Value::List(l) => items(it, l)?,
+                other => return Err(convert_error(other, "List")),
+            };
+            match pair.as_slice() {
+                [Value::Text(name), f @ Value::Function(_)] => Ok((name.clone(), f.clone())),
+                _ => Err(MError::expression(
+                    "Record.TransformFields expects {name, transform} pairs.",
+                )),
+            }
+        })
+        .collect()
+}
+
+fn transform_fields(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let r = req_record(args, 0)?;
+    let ops = transform_operations(it, arg(args, 1))?;
+    let mode = missing_mode(args, 2)?;
+    let mut pairs = pairs_of(r);
+    let mut done: Vec<Arc<str>> = Vec::with_capacity(ops.len());
+    for (name, f) in ops {
+        if done.contains(&name) {
+            return Err(MError::expression(format!(
+                "The field '{name}' already exists in the record."
+            )));
+        }
+        done.push(name.clone());
+        let Value::Function(f) = f else {
+            continue;
+        };
+        match r.keys().position(&name) {
+            Some(i) => {
+                if let Some(p) = pairs.get_mut(i) {
+                    let value = p.1.force(it).and_then(|v| it.call(&f, &[v]));
+                    p.1 = catch(value)?;
+                }
+            }
+            None => match mode {
+                MissingField::Error => return Err(missing_field(&name)),
+                MissingField::Ignore => {}
+                MissingField::UseNull => pairs.push((name, Lazy::Value(Value::Null))),
+            },
+        }
+    }
+    rebuild(pairs)
+}
+
+fn reorder_fields(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let r = req_record(args, 0)?;
+    let order = names_arg(it, arg(args, 1))?;
+    let mode = missing_mode(args, 2)?;
+    let mut pairs = pairs_of(r);
+    let mut listed: Vec<Arc<str>> = Vec::with_capacity(order.len());
+    for n in order {
+        if r.get(&n).is_none() {
+            match mode {
+                MissingField::Error => return Err(missing_field(&n)),
+                MissingField::Ignore => continue,
+                MissingField::UseNull => {
+                    if !pairs.iter().any(|(p, _)| p.as_ref() == n.as_str()) {
+                        pairs.push((Arc::from(n.as_str()), Lazy::Value(Value::Null)));
+                    }
+                }
+            }
+        }
+        listed.push(Arc::from(n));
+    }
+    // Listed fields take the positions of the listed fields, in the given order.
+    let mut queue = listed
+        .iter()
+        .filter_map(|n| pairs.iter().find(|(p, _)| p == n).cloned());
+    let reordered: Vec<(Arc<str>, Lazy)> = pairs
+        .iter()
+        .map(|p| {
+            if listed.contains(&p.0) {
+                queue.next().unwrap_or_else(|| p.clone())
+            } else {
+                p.clone()
+            }
+        })
+        .collect();
+    rebuild(reordered)
 }
 
 fn combine(it: &Interp, args: &[Value]) -> Result<Value, MError> {

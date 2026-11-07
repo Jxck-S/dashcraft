@@ -866,6 +866,64 @@ fn value_and_type_functions() {
 }
 
 #[test]
+fn new_guid_is_v4_and_seeded_by_the_clock() {
+    let src = "{Text.NewGuid(), Text.NewGuid()}";
+    let (a, b) = (eval(src), eval(src));
+    assert!(a == b, "same clock, same guids: {a} vs {b}");
+    check(
+        "let g = {Text.NewGuid(), Text.NewGuid()} in g{0} <> g{1}",
+        "true",
+    );
+    check(
+        r#"let g = Text.NewGuid() in {Text.Length(g), Text.At(g, 14), Text.Lower(g) = g, List.Contains({"8", "9", "a", "b"}, Text.At(g, 19))}"#,
+        "{36, \"4\", true, true}",
+    );
+}
+
+#[test]
+fn date_results_stay_within_desktop_range() {
+    for src in [
+        "Date.AddDays(#date(9999, 12, 31), 1)",
+        "Date.AddWeeks(#date(9999, 12, 30), 1)",
+        "Date.StartOfWeek(#date(1, 1, 1))",
+        "Date.AddMonths(#datetime(1, 1, 1, 0, 0, 0), -1)",
+        "Date.EndOfWeek(#date(9999, 12, 27))",
+    ] {
+        fails(src, "outside the range of allowed values");
+    }
+    check(
+        "{Date.EndOfWeek(#date(9999, 12, 24)), Date.EndOfWeek(#date(9999, 12, 27), Day.Saturday), Date.StartOfWeek(#date(1, 1, 2), Day.Monday), Date.EndOfQuarter(#date(9999, 11, 1))}",
+        "{#date(9999, 12, 25), #date(9999, 12, 31), #date(1, 1, 1), #date(9999, 12, 31)}",
+    );
+}
+
+#[test]
+fn json_from_value_escapes_like_desktop() {
+    check(
+        r#"Text.FromBinary(Json.FromValue([a = "é/""", b = #duration(1, 2, 3, 4), c = {0 / 0, 1.5}]))"#,
+        r#""{""a"":""\u00e9\/\"""",""b"":""P1DT2H3M4S"",""c"":[null,1.5]}""#,
+    );
+    fails(
+        "Json.FromValue(type text)",
+        "can't convert values of this type to JSON",
+    );
+}
+
+#[test]
+fn binary_text_encodings_are_strict() {
+    check(
+        r#"Binary.ToText(Binary.FromText("0aFF", BinaryEncoding.Hex), BinaryEncoding.Hex)"#,
+        r#""0aff""#,
+    );
+    check(r#"Binary.ToList(Binary.FromText("AQ I=#(lf)"))"#, "{1, 2}");
+    fails(r#"Binary.FromText("AQI")"#, "Invalid binary encoding");
+    fails(
+        r#"Binary.FromText("abc", BinaryEncoding.Hex)"#,
+        "even number of characters",
+    );
+}
+
+#[test]
 fn library_lists_spec_functions() {
     let names = pbi_m::library_names();
     for required in [

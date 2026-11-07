@@ -104,6 +104,102 @@ pub(super) fn register(b: &mut Builder) {
         &["list", "?default"],
         single_or_default,
     );
+    b.func("List.Median", &["list", "?comparisonCriteria"], median);
+    b.func("List.Mode", &["list", "?equationCriteria"], mode);
+    b.func("List.Modes", &["list", "?equationCriteria"], modes);
+    b.func(
+        "List.StandardDeviation",
+        &["numbersList"],
+        standard_deviation,
+    );
+    b.func(
+        "List.Covariance",
+        &["numberList1", "numberList2"],
+        covariance,
+    );
+    b.func("List.Product", &["numbersList", "?precision"], product);
+    b.func(
+        "List.Percentile",
+        &["list", "percentiles", "?options"],
+        percentile,
+    );
+    b.func("List.Split", &["list", "pageSize"], split);
+    b.func(
+        "List.Alternate",
+        &["list", "count", "?repeatInterval", "?offset"],
+        alternate,
+    );
+    b.func(
+        "List.InsertRange",
+        &["list", "index", "values"],
+        insert_range,
+    );
+    b.func(
+        "List.ReplaceRange",
+        &["list", "index", "count", "replaceWith"],
+        replace_range,
+    );
+    b.func(
+        "List.RemoveRange",
+        &["list", "index", "?count"],
+        remove_range,
+    );
+    b.func(
+        "List.ReplaceValue",
+        &["list", "oldValue", "newValue", "replacer"],
+        replace_value,
+    );
+    b.func("List.Positions", &["list"], positions);
+    b.func(
+        "List.IsDistinct",
+        &["list", "?equationCriteria"],
+        is_distinct,
+    );
+    b.func(
+        "List.MaxN",
+        &[
+            "list",
+            "countOrCondition",
+            "?comparisonCriteria",
+            "?includeNulls",
+        ],
+        max_n,
+    );
+    b.func(
+        "List.MinN",
+        &[
+            "list",
+            "countOrCondition",
+            "?comparisonCriteria",
+            "?includeNulls",
+        ],
+        min_n,
+    );
+    b.func(
+        "List.RemoveLastN",
+        &["list", "?countOrCondition"],
+        remove_last_n,
+    );
+    b.func(
+        "List.RemoveMatchingItems",
+        &["list1", "list2", "?equationCriteria"],
+        remove_matching_items,
+    );
+    b.func(
+        "List.ReplaceMatchingItems",
+        &["list", "replacements", "?equationCriteria"],
+        replace_matching_items,
+    );
+    b.func(
+        "List.TransformMany",
+        &["list", "collectionTransform", "resultTransform"],
+        transform_many,
+    );
+    b.func(
+        "List.PositionOfAny",
+        &["list", "values", "?occurrence", "?equationCriteria"],
+        position_of_any,
+    );
 }
 
 fn identity(_: &Interp, args: &[Value]) -> Result<Value, MError> {
@@ -505,8 +601,17 @@ fn reverse(_: &Interp, args: &[Value]) -> Result<Value, MError> {
 }
 
 fn sort(it: &Interp, args: &[Value]) -> Result<Value, MError> {
-    let mut values = items(it, req_list(args, 0)?)?;
-    let criteria = arg(args, 1);
+    let values = items(it, req_list(args, 0)?)?;
+    Ok(list_of(sort_values(it, values, arg(args, 1))?))
+}
+
+/// Sorts `values` by a comparison criteria: `null`, an `Order` number, a key function, a
+/// two-argument comparer or `{key, order}`.
+fn sort_values(
+    it: &Interp,
+    mut values: Vec<Value>,
+    criteria: &Value,
+) -> Result<Vec<Value>, MError> {
     let (key, descending) = match criteria.plain() {
         Value::Null => (None, false),
         Value::Number(n) => (None, *n == 1.0),
@@ -529,7 +634,7 @@ fn sort(it: &Interp, args: &[Value]) -> Result<Value, MError> {
             if let Some(e) = error.into_inner() {
                 return Err(e);
             }
-            return Ok(list_of(values));
+            return Ok(values);
         }
         Value::Function(f) => (Some(f.clone()), false),
         Value::List(l) => {
@@ -551,7 +656,7 @@ fn sort(it: &Interp, args: &[Value]) -> Result<Value, MError> {
         let o = sort_compare(&a.0, &b.0);
         if descending { o.reverse() } else { o }
     });
-    Ok(list_of(keyed.into_iter().map(|(_, v)| v).collect()))
+    Ok(keyed.into_iter().map(|(_, v)| v).collect())
 }
 
 fn logicals(it: &Interp, args: &[Value]) -> Result<Vec<bool>, MError> {
@@ -723,4 +828,460 @@ fn single_or_default(it: &Interp, args: &[Value]) -> Result<Value, MError> {
             "There were too many elements in the enumeration to complete the operation.",
         )),
     }
+}
+
+fn not_enough_elements() -> MError {
+    MError::expression(
+        "There weren't enough elements in the enumeration to complete the operation.",
+    )
+}
+
+/// The distinct values of `values` (in first-appearance order) with their counts.
+fn value_counts(
+    it: &Interp,
+    values: Vec<Value>,
+    ignore_case: bool,
+) -> Result<Vec<(Value, usize)>, MError> {
+    let mut buckets: HashMap<u64, Vec<usize>> = HashMap::new();
+    let mut out: Vec<(Value, usize)> = Vec::new();
+    for v in values {
+        it.tick()?;
+        let mut h = DefaultHasher::new();
+        hash_value(&v, ignore_case, &mut h);
+        let bucket = buckets.entry(h.finish()).or_default();
+        let mut found = None;
+        for &i in bucket.iter() {
+            if equals_with(it, &out[i].0, &v, ignore_case)? {
+                found = Some(i);
+                break;
+            }
+        }
+        match found {
+            Some(i) => out[i].1 += 1,
+            None => {
+                bucket.push(out.len());
+                out.push((v, 1));
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn non_null_items(it: &Interp, args: &[Value]) -> Result<Vec<Value>, MError> {
+    Ok(items(it, req_list(args, 0)?)?
+        .into_iter()
+        .filter(|v| !v.is_null())
+        .collect())
+}
+
+fn numbers_of(values: Vec<Value>) -> Result<Vec<f64>, MError> {
+    values
+        .into_iter()
+        .filter(|v| !v.is_null())
+        .map(|v| v.as_number().ok_or_else(|| convert_error(&v, "Number")))
+        .collect()
+}
+
+fn median(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let values = sort_values(it, non_null_items(it, args)?, arg(args, 1))?;
+    let n = values.len();
+    if n == 0 {
+        return Ok(Value::Null);
+    }
+    let lower = &values[(n - 1) / 2];
+    if n % 2 == 1 {
+        return Ok(lower.clone());
+    }
+    match (lower, &values[n / 2]) {
+        (Value::Number(a), Value::Number(b)) => Ok(Value::Number((a + b) / 2.0)),
+        _ => Ok(lower.clone()),
+    }
+}
+
+fn mode_counts(it: &Interp, args: &[Value]) -> Result<(Vec<(Value, usize)>, usize), MError> {
+    let counts = value_counts(
+        it,
+        items(it, req_list(args, 0)?)?,
+        is_ignore_case(arg(args, 1)),
+    )?;
+    let max = counts.iter().map(|(_, c)| *c).max().unwrap_or(0);
+    Ok((counts, max))
+}
+
+fn mode(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let (counts, max) = mode_counts(it, args)?;
+    // Among the most frequent values, the one that first appears last.
+    Ok(counts
+        .into_iter()
+        .rev()
+        .find(|(_, c)| *c == max)
+        .map_or(Value::Null, |(v, _)| v))
+}
+
+fn modes(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let (counts, max) = mode_counts(it, args)?;
+    Ok(list_of(
+        counts
+            .into_iter()
+            .filter(|(_, c)| *c == max)
+            .map(|(v, _)| v)
+            .collect(),
+    ))
+}
+
+fn standard_deviation(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let xs = numbers_of(items(it, req_list(args, 0)?)?)?;
+    if xs.is_empty() {
+        return Ok(Value::Null);
+    }
+    // Welford's running variance.
+    let (mut mean, mut m2) = (0.0, 0.0);
+    for (i, x) in xs.iter().enumerate() {
+        let delta = x - mean;
+        mean += delta / (i + 1) as f64;
+        m2 += delta * (x - mean);
+    }
+    Ok(Value::Number(if xs.len() == 1 {
+        0.0
+    } else {
+        (m2 / (xs.len() - 1) as f64).sqrt()
+    }))
+}
+
+fn covariance(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let xs = numbers_of(items(it, req_list(args, 0)?)?)?;
+    let ys = numbers_of(items(it, req_list(args, 1)?)?)?;
+    if xs.len() != ys.len() {
+        return Err(MError::expression(
+            "The lists must have the same number of items.",
+        ));
+    }
+    if xs.is_empty() {
+        return Ok(Value::Null);
+    }
+    let (mut mx, mut my, mut mxy) = (0.0, 0.0, 0.0);
+    for (i, (x, y)) in xs.iter().zip(&ys).enumerate() {
+        let n = (i + 1) as f64;
+        mx += (x - mx) / n;
+        my += (y - my) / n;
+        mxy += (x * y - mxy) / n;
+    }
+    Ok(Value::Number(mxy - mx * my))
+}
+
+fn product(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let xs = numbers_of(items(it, req_list(args, 0)?)?)?;
+    Ok(xs
+        .into_iter()
+        .reduce(|a, b| a * b)
+        .map_or(Value::Null, Value::Number))
+}
+
+/// The type name of a `List.Percentile` value, or `None` if it can't be interpolated.
+fn percentile_kind(v: &Value) -> Option<&'static str> {
+    match v {
+        Value::Number(_) => Some("number"),
+        Value::Date(_) => Some("date"),
+        Value::DateTime(_) => Some("datetime"),
+        Value::DateTimeZone(_) => Some("datetimezone"),
+        Value::Duration(_) => Some("duration"),
+        Value::Time(_) => Some("time"),
+        _ => None,
+    }
+}
+
+/// `lo + (hi - lo) * frac` in the values' own type.
+fn interpolate(lo: &Value, hi: &Value, frac: f64) -> Result<Value, MError> {
+    if frac == 0.0 {
+        return Ok(lo.clone());
+    }
+    if let (Value::Number(a), Value::Number(b)) = (lo, hi) {
+        return Ok(Value::Number(a + frac * (b - a)));
+    }
+    let delta = arithmetic(BinaryOp::Subtract, hi, lo)?;
+    let step = arithmetic(BinaryOp::Multiply, &delta, &Value::Number(frac))?;
+    arithmetic(BinaryOp::Add, lo, &step)
+}
+
+fn percentile(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let values = non_null_items(it, args)?;
+    if let Some(first) = values.first() {
+        if values
+            .iter()
+            .any(|v| std::mem::discriminant(v) != std::mem::discriminant(first))
+        {
+            return Err(MError::expression(
+                "List.Percentile requires a list where all the values have the same type or are null.",
+            ));
+        }
+        if percentile_kind(first).is_none() {
+            return Err(MError::expression(
+                "List.Percentile requires a list of dates, datetimes, datetimezones, durations, numbers or times.",
+            ));
+        }
+    }
+    let options = super::args::record_arg(args, 2)?;
+    let mode = match super::args::option(it, options, "PercentileMode")? {
+        None => 1.0,
+        Some(v) => v.as_number().ok_or_else(|| convert_error(&v, "Number"))?,
+    };
+    let sorted = sort_values(it, values, &Value::Null)?;
+    let one = |p: &Value| -> Result<Value, MError> {
+        let p = p.as_number().ok_or_else(|| convert_error(p, "Number"))?;
+        if !(0.0..=1.0).contains(&p) {
+            return Err(MError::expression(
+                "Percentile values must be between 0.0 and 1.0, inclusive.",
+            ));
+        }
+        let n = sorted.len();
+        if n == 0 {
+            return Ok(Value::Null);
+        }
+        let at = |rank: f64, offset: usize| -> Result<Value, MError> {
+            let lo = rank.floor() as usize;
+            let frac = rank - rank.floor();
+            let (Some(a), Some(b)) = (
+                sorted.get(lo - offset),
+                sorted.get((lo + 1 - offset).min(n - 1)),
+            ) else {
+                return Ok(Value::Null);
+            };
+            interpolate(a, b, frac)
+        };
+        match mode {
+            2.0 => {
+                let rank = (n + 1) as f64 * p;
+                if rank < 1.0 || rank > n as f64 {
+                    Ok(Value::Null)
+                } else {
+                    at(rank, 1)
+                }
+            }
+            3.0 => {
+                let i = ((p * n as f64).ceil() as usize)
+                    .saturating_sub(1)
+                    .min(n - 1);
+                Ok(sorted[i].clone())
+            }
+            _ => at((n - 1) as f64 * p, 0),
+        }
+    };
+    match arg(args, 1).plain() {
+        Value::List(l) => Ok(list_of(
+            items(it, l)?.iter().map(one).collect::<Result<_, _>>()?,
+        )),
+        p => one(p),
+    }
+}
+
+fn split(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let l = req_list(args, 0)?;
+    let size = match super::args::int_arg(args, 1)? {
+        Some(n) if n > 0 => usize::try_from(n).unwrap_or(usize::MAX),
+        _ => {
+            return Err(MError::expression(
+                "The 'pageSize' argument is out of range.",
+            ));
+        }
+    };
+    it.check_rows(l.len() / size + 1)?;
+    Ok(list_of(
+        l.items()
+            .chunks(size)
+            .map(|c| Value::List(ListValue::new(c.to_vec())))
+            .collect(),
+    ))
+}
+
+fn alternate(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let l = req_list(args, 0)?;
+    let skip = count_arg(args, 1)?.unwrap_or(0);
+    let take = count_arg(args, 2)?;
+    let offset = count_arg(args, 3)?.unwrap_or(0);
+    let keep = |i: usize| {
+        if i < offset {
+            return true;
+        }
+        let j = i - offset;
+        match take {
+            None => j >= skip,
+            Some(take) => {
+                let period = skip.saturating_add(take);
+                period == 0 || j % period >= skip
+            }
+        }
+    };
+    Ok(Value::List(ListValue::new(
+        l.items()
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| keep(*i))
+            .map(|(_, v)| v.clone())
+            .collect(),
+    )))
+}
+
+fn splice(l: &ListValue, index: usize, remove: usize, insert: &[Lazy]) -> Result<Value, MError> {
+    let items = l.items();
+    let end = index.checked_add(remove).ok_or_else(not_enough_elements)?;
+    if end > items.len() {
+        return Err(not_enough_elements());
+    }
+    let mut out = Vec::with_capacity(items.len() - remove + insert.len());
+    out.extend_from_slice(&items[..index]);
+    out.extend_from_slice(insert);
+    out.extend_from_slice(&items[end..]);
+    Ok(Value::List(ListValue::new(out)))
+}
+
+fn insert_range(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let l = req_list(args, 0)?;
+    let index = count_arg(args, 1)?.unwrap_or(0);
+    let values = req_list(args, 2)?;
+    it.check_rows(l.len().saturating_add(values.len()))?;
+    splice(l, index, 0, values.items())
+}
+
+fn replace_range(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let l = req_list(args, 0)?;
+    let index = count_arg(args, 1)?.unwrap_or(0);
+    let count = count_arg(args, 2)?.unwrap_or(0);
+    let values = req_list(args, 3)?;
+    it.check_rows(l.len().saturating_add(values.len()))?;
+    splice(l, index, count, values.items())
+}
+
+fn remove_range(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let l = req_list(args, 0)?;
+    let index = count_arg(args, 1)?.unwrap_or(0);
+    let count = count_arg(args, 2)?.unwrap_or(1);
+    splice(l, index, count, &[])
+}
+
+fn replace_value(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let f = req_func(args, 3)?;
+    let (old, new) = (arg(args, 1), arg(args, 2));
+    let mut out = Vec::new();
+    for v in items(it, req_list(args, 0)?)? {
+        out.push(it.call(f, &[v, old.clone(), new.clone()])?);
+    }
+    Ok(list_of(out))
+}
+
+fn positions(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let n = req_list(args, 0)?.len();
+    Ok(list_of((0..n).map(|i| Value::Number(i as f64)).collect()))
+}
+
+fn is_distinct(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let values = items(it, req_list(args, 0)?)?;
+    let n = values.len();
+    Ok(Value::Logical(
+        dedup(it, values, is_ignore_case(arg(args, 1)))?.len() == n,
+    ))
+}
+
+/// `List.MaxN` / `List.MinN`: the list sorted (largest first for `MaxN`), then the first
+/// `count` items or the leading items matching the condition.
+fn extreme_n(it: &Interp, args: &[Value], largest: bool) -> Result<Value, MError> {
+    let include_nulls = super::args::bool_arg(args, 3)?.unwrap_or(false);
+    let values: Vec<Value> = items(it, req_list(args, 0)?)?
+        .into_iter()
+        .filter(|v| include_nulls || !v.is_null())
+        .collect();
+    let mut sorted = sort_values(it, values, arg(args, 2))?;
+    if largest {
+        sorted.reverse();
+    }
+    let sorted = ListValue::from_values(sorted);
+    let n = leading(it, &sorted, arg(args, 1), 0, false)?.min(sorted.len());
+    Ok(slice(&sorted, 0, n))
+}
+
+fn max_n(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    extreme_n(it, args, true)
+}
+
+fn min_n(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    extreme_n(it, args, false)
+}
+
+fn remove_last_n(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let l = req_list(args, 0)?;
+    let n = leading(it, l, arg(args, 1), 1, true)?.min(l.len());
+    Ok(slice(l, 0, l.len() - n))
+}
+
+fn remove_matching_items(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let remove = items(it, req_list(args, 1)?)?;
+    let ic = is_ignore_case(arg(args, 2));
+    let mut out = Vec::new();
+    for v in items(it, req_list(args, 0)?)? {
+        if index_of(it, &remove, &v, ic)?.is_none() {
+            out.push(v);
+        }
+    }
+    Ok(list_of(out))
+}
+
+fn replace_matching_items(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let mut pairs = Vec::new();
+    for r in items(it, req_list(args, 1)?)? {
+        let Value::List(pair) = &r else {
+            return Err(convert_error(&r, "List"));
+        };
+        let pair = items(it, pair)?;
+        if pair.len() != 2 {
+            return Err(MError::expression(
+                "A replacement must be a list of an old and a new value.",
+            ));
+        }
+        pairs.push((pair[0].clone(), pair[1].clone()));
+    }
+    let ic = is_ignore_case(arg(args, 2));
+    let mut out = Vec::new();
+    'items: for v in items(it, req_list(args, 0)?)? {
+        for (old, new) in &pairs {
+            if equals_with(it, &v, old, ic)? {
+                out.push(new.clone());
+                continue 'items;
+            }
+        }
+        out.push(v);
+    }
+    Ok(list_of(out))
+}
+
+fn transform_many(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let collection = req_func(args, 1)?;
+    let result = req_func(args, 2)?;
+    let mut out = Vec::new();
+    for x in items(it, req_list(args, 0)?)? {
+        let ys = it.call(collection, std::slice::from_ref(&x))?;
+        let Value::List(ys) = ys.plain() else {
+            return Err(convert_error(&ys, "List"));
+        };
+        for y in items(it, ys)? {
+            out.push(it.call(result, &[x.clone(), y])?);
+            it.check_rows(out.len())?;
+        }
+    }
+    Ok(list_of(out))
+}
+
+fn position_of_any(it: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let list = items(it, req_list(args, 0)?)?;
+    let wanted = items(it, req_list(args, 1)?)?;
+    let ic = is_ignore_case(arg(args, 3));
+    let mut positions = Vec::new();
+    for (i, x) in list.iter().enumerate() {
+        if index_of(it, &wanted, x, ic)?.is_some() {
+            positions.push(i as f64);
+        }
+    }
+    Ok(match num_arg(args, 2)? {
+        Some(1.0) => Value::Number(positions.last().copied().unwrap_or(-1.0)),
+        Some(2.0) => list_of(positions.into_iter().map(Value::Number).collect()),
+        _ => Value::Number(positions.first().copied().unwrap_or(-1.0)),
+    })
 }
