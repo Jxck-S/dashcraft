@@ -1,8 +1,9 @@
 //! What refers to a table, column, measure, hierarchy or relationship.
 //!
 //! [`object_dependents`] lists the places that would break if the object
-//! were deleted: DAX expressions (measures, dynamic format strings,
-//! calculated columns and tables, calculation items, role filters), model
+//! were deleted: DAX expressions (measures, dynamic format strings, detail
+//! rows, KPI expressions, calculated columns and tables, calculation items,
+//! role filters; not a measure's own format string, detail rows or KPI), model
 //! structure (relationship ends, hierarchy levels, sort-by columns, role
 //! table permissions) and report fields (visual projections, sorts, filters
 //! and formatting, page and report filters) and report-level measures

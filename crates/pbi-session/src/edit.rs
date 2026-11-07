@@ -4,9 +4,10 @@
 //! like the `pbi-model` rename commands (structured references in
 //! relationships, roles, hierarchies, sort-by columns, report fields,
 //! report-level measures and the query order follow) and also rewrites the
-//! DAX that refers to it: measures, dynamic format strings, calculated
-//! columns, calculated tables, calculation items, role filters and
-//! report-level measures (PBIR `reportExtensions.json`). Renaming a query (a table with an M
+//! DAX that refers to it: measures, their dynamic format strings, detail
+//! rows and KPI expressions (target, status, trend), tables' default detail
+//! rows, calculated columns, calculated tables, calculation items, role
+//! filters and report-level measures (PBIR `reportExtensions.json`). Renaming a query (a table with an M
 //! partition, or a shared expression: query, parameter or function) also
 //! rewrites the M that names it in partitions and shared expressions
 //! ([`pbi_m::rename_query`]); a rename the M could not follow (the new name
@@ -498,13 +499,26 @@ impl Plan {
         for m in &mut t.measures {
             let location = format!("measure '{name}'[{}]", m.name);
             changed |= self.text(&mut m.expression, owner, &location, "expression", out);
-            if let Some(text) = m
-                .extra
-                .get_mut("formatStringDefinition")
-                .and_then(prop_text_mut)
-            {
-                changed |= self.text(text, owner, &location, "formatStringDefinition", out);
+            // A measure's own format string, detail rows and KPI go with
+            // it: they are not its dependents.
+            if self.probe && m.id == self.object {
+                continue;
             }
+            for (key, member) in MEASURE_DAX {
+                let Some(value) = m.extra.get_mut(key) else {
+                    continue;
+                };
+                let property = member.map_or_else(|| key.to_owned(), |m| format!("{key}.{m}"));
+                changed |= rewrite_prop(value, member, &mut |text| {
+                    self.text(text, owner, &location, &property, out)
+                });
+            }
+        }
+        if let Some(value) = t.extra.get_mut("defaultDetailRowsDefinition") {
+            let location = format!("table '{name}'");
+            changed |= rewrite_prop(value, None, &mut |text| {
+                self.text(text, owner, &location, "defaultDetailRowsDefinition", out)
+            });
         }
         for c in &mut t.columns {
             if let ColumnKind::Calculated { expression } = &mut c.kind {
@@ -721,18 +735,66 @@ struct Rewritten {
     unparsed: Vec<DaxText>,
 }
 
-/// The text of a DAX expression kept in an untyped property.
-fn prop_text_mut(value: &mut PropValue) -> Option<&mut String> {
-    match value {
-        PropValue::Expression(s) | PropValue::Text(s) => Some(s),
-        PropValue::Object(o) => o.expression.as_mut(),
-        PropValue::Json(serde_json::Value::String(s)) => Some(s),
-        PropValue::Json(serde_json::Value::Object(map)) => match map.get_mut("expression") {
-            Some(serde_json::Value::String(s)) => Some(s),
-            _ => None,
-        },
-        PropValue::List(items) => items.first_mut().and_then(prop_text_mut),
-        PropValue::Json(_) | PropValue::Bool(_) => None,
+/// The DAX a measure keeps in untyped properties: the key and, for an
+/// object holding several expressions (a KPI), the member.
+const MEASURE_DAX: [(&str, Option<&str>); 5] = [
+    ("formatStringDefinition", None),
+    ("detailRowsDefinition", None),
+    ("kpi", Some("targetExpression")),
+    ("kpi", Some("statusExpression")),
+    ("kpi", Some("trendExpression")),
+];
+
+/// Rewrites with `f` the DAX kept in untyped property `value` (its
+/// `member` when given): an expression, an object with an `expression`, or
+/// TMSL's list of lines; `true` if it changed.
+fn rewrite_prop(
+    value: &mut PropValue,
+    member: Option<&str>,
+    f: &mut dyn FnMut(&mut String) -> bool,
+) -> bool {
+    match (value, member) {
+        (PropValue::Expression(s) | PropValue::Text(s), None) => f(s),
+        (PropValue::Object(o), None) => o.expression.as_mut().is_some_and(&mut *f),
+        (PropValue::Object(o), Some(member)) => o
+            .properties
+            .get_mut(member)
+            .is_some_and(|v| rewrite_prop(v, None, f)),
+        (PropValue::Json(v), member) => rewrite_json(v, member, f),
+        (PropValue::List(items), member) => items
+            .first_mut()
+            .is_some_and(|v| rewrite_prop(v, member, f)),
+        _ => false,
+    }
+}
+
+/// [`rewrite_prop`] on a JSON value (TMSL).
+fn rewrite_json(
+    value: &mut serde_json::Value,
+    member: Option<&str>,
+    f: &mut dyn FnMut(&mut String) -> bool,
+) -> bool {
+    use serde_json::Value;
+    match (value, member) {
+        (Value::Object(map), Some(member)) => map
+            .get_mut(member)
+            .is_some_and(|v| !v.is_object() && rewrite_json(v, None, f)),
+        (Value::Object(map), None) => map
+            .get_mut("expression")
+            .is_some_and(|v| !v.is_object() && rewrite_json(v, None, f)),
+        (Value::String(s), None) => f(s),
+        (Value::Array(lines), None) => {
+            let Some(parts) = lines.iter().map(Value::as_str).collect::<Option<Vec<_>>>() else {
+                return false;
+            };
+            let mut text = parts.join("\n");
+            if !f(&mut text) {
+                return false;
+            }
+            *lines = text.split('\n').map(|l| Value::String(l.into())).collect();
+            true
+        }
+        _ => false,
     }
 }
 
@@ -1092,6 +1154,114 @@ mod tests {
         assert!(
             matches!(ratio, ColumnKind::Calculated { expression } if expression == "[Line Amount] / [Revenue]")
         );
+    }
+
+    #[test]
+    fn renames_rewrite_kpi_and_detail_rows_expressions() {
+        use pbi_model::props::RawObject;
+        let mut d = doc();
+        let model = d.model.as_mut().unwrap();
+        let orders = &mut model.tables[0];
+        // TMDL and PBIX: a `kpi` object with expression properties.
+        let mut kpi = RawObject::default();
+        for (key, text) in [
+            ("targetExpression", "1000"),
+            ("statusExpression", "IF([Total Sales] >= 1000, 1, -1)"),
+            ("trendExpression", "SIGN([Total Sales] - [Twice])"),
+        ] {
+            kpi.properties
+                .insert(key.into(), PropValue::Expression(text.into()));
+        }
+        kpi.properties
+            .insert("statusGraphic".into(), "Traffic Light - Single".into());
+        let total = &mut orders.measures[0];
+        total
+            .extra
+            .insert("kpi".into(), PropValue::Object(kpi.into()));
+        total.extra.insert(
+            "detailRowsDefinition".into(),
+            PropValue::Expression("SELECTCOLUMNS(Orders, \"Amount\", Orders[Line Amount])".into()),
+        );
+        // TMSL: JSON, with multi-line expressions as lists of lines.
+        orders.measures[1].extra.insert(
+            "kpi".into(),
+            PropValue::Json(serde_json::json!({
+                "targetExpression": ["[Total Sales]", "  * 1.1"],
+                "statusGraphic": "Shapes"
+            })),
+        );
+        orders.extra.insert(
+            "defaultDetailRowsDefinition".into(),
+            PropValue::Json(serde_json::json!({"expression": "Orders[Line Amount]"})),
+        );
+        let original = d.clone();
+
+        let measure = id(&d, |m| m.measure("Orders", "Total Sales").map(|x| x.id));
+        let preview = preview_rename(&d, measure, "Revenue").unwrap();
+        let properties: Vec<_> = preview
+            .rewrites
+            .iter()
+            .map(|r| format!("{} {}", r.location, r.property))
+            .collect();
+        assert_eq!(
+            properties,
+            [
+                "measure 'Orders'[Revenue] kpi.statusExpression",
+                "measure 'Orders'[Revenue] kpi.trendExpression",
+                "measure 'Orders'[Twice] expression",
+                "measure 'Orders'[Twice] kpi.targetExpression",
+                "column 'Returns'[Ratio] expression",
+            ]
+        );
+        // Its own KPI goes with the measure; another measure's KPI is a dependent.
+        let found = crate::dependents::object_dependents(&d, measure).unwrap();
+        let found: Vec<_> = found
+            .dependents
+            .iter()
+            .map(|r| format!("{} {}", r.location, r.property))
+            .collect();
+        assert!(
+            found.contains(&"measure 'Orders'[Twice] kpi.targetExpression".to_owned())
+                && !found.iter().any(|f| f.contains("[Total Sales] kpi")),
+            "{found:?}"
+        );
+
+        let applied = RenameObject {
+            object: measure,
+            new_name: "Revenue".into(),
+        }
+        .apply(&mut d)
+        .unwrap();
+        let column = id(&d, |m| m.column("Orders", "Line Amount").map(|c| c.id));
+        let renamed = RenameObject {
+            object: column,
+            new_name: "Net".into(),
+        }
+        .apply(&mut d)
+        .unwrap();
+        let orders = d.model.as_ref().unwrap().table("Orders").unwrap();
+        let kpi = orders.measures[0].extra["kpi"].to_json();
+        assert_eq!(kpi["statusExpression"], "IF([Revenue] >= 1000, 1, -1)");
+        assert_eq!(kpi["trendExpression"], "SIGN([Revenue] - [Twice])");
+        assert_eq!(kpi["targetExpression"], "1000");
+        assert_eq!(
+            orders.measures[0].extra["detailRowsDefinition"],
+            PropValue::Expression("SELECTCOLUMNS(Orders, \"Amount\", Orders[Net])".into())
+        );
+        assert_eq!(
+            orders.measures[1].extra["kpi"],
+            PropValue::Json(serde_json::json!({
+                "targetExpression": ["[Revenue]", "  * 1.1"],
+                "statusGraphic": "Shapes"
+            }))
+        );
+        assert_eq!(
+            orders.extra["defaultDetailRowsDefinition"],
+            PropValue::Json(serde_json::json!({"expression": "Orders[Net]"}))
+        );
+        renamed.inverse.apply(&mut d).unwrap();
+        applied.inverse.apply(&mut d).unwrap();
+        assert_eq!(d, original);
     }
 
     #[test]

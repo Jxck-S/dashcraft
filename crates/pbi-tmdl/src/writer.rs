@@ -25,6 +25,24 @@ use crate::load::{COLON_VALUE_KEY, Fragment, fragment};
 
 const JOIN_ON_DATE: &str = "joinOnDateBehavior";
 const FORMAT_STRING_DEFINITION: &str = "formatStringDefinition";
+const DETAIL_ROWS_DEFINITION: &str = "detailRowsDefinition";
+const DEFAULT_DETAIL_ROWS_DEFINITION: &str = "defaultDetailRowsDefinition";
+const KPI: &str = "kpi";
+/// A measure's definition objects in the order Desktop writes them, each
+/// after a blank line.
+const MEASURE_DEFINITIONS: [&str; 3] = [KPI, DETAIL_ROWS_DEFINITION, FORMAT_STRING_DEFINITION];
+/// A KPI's properties in the order Desktop writes them.
+const KPI_PROPERTIES: [&str; 9] = [
+    "targetDescription",
+    "targetExpression",
+    "targetFormatString",
+    "statusGraphic",
+    "statusDescription",
+    "statusExpression",
+    "trendGraphic",
+    "trendDescription",
+    "trendExpression",
+];
 
 /// Writer options.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -619,11 +637,23 @@ impl Out {
 
     /// `head = expr` with single-line, indented-block or fenced form.
     fn expr(&mut self, level: usize, head: &str, expr: &str, empty_needs_block: bool) {
+        self.expr_at(level, head, expr, empty_needs_block, level + 2);
+    }
+
+    /// [`Self::expr`] with the block lines at level `body`.
+    fn expr_at(
+        &mut self,
+        level: usize,
+        head: &str,
+        expr: &str,
+        empty_needs_block: bool,
+        body: usize,
+    ) {
         let block_line = |out: &mut Out, l: &str| {
             if l.is_empty() {
                 out.blank();
             } else {
-                out.line(level + 2, l);
+                out.line(body, l);
             }
         };
         match encode_expression(expr, empty_needs_block) {
@@ -640,7 +670,7 @@ impl Out {
                 for l in &lines {
                     block_line(self, l);
                 }
-                self.line(level + 2, "```");
+                self.line(body, "```");
             }
         }
     }
@@ -731,6 +761,32 @@ impl Out {
             (None, None) => self.line(level, &head),
         }
         self.bag_in_order(level + 1, &o.properties, depth + 1);
+    }
+
+    /// A KPI: its properties in Desktop's order, then any others; Desktop
+    /// indents a multi-line expression one level below its property.
+    fn kpi(&mut self, level: usize, o: &RawObject) {
+        self.description(level, o.description.as_deref());
+        self.line(level, KPI);
+        let known = KPI_PROPERTIES
+            .iter()
+            .filter_map(|k| o.properties.get_key_value(*k));
+        let rest = o.properties.iter().filter(|(k, _)| {
+            k.as_str() != COLON_VALUE_KEY && !KPI_PROPERTIES.contains(&k.as_str())
+        });
+        for (k, v) in known.chain(rest) {
+            match v {
+                PropValue::Expression(e) => {
+                    self.expr_at(level + 1, &tmdl_key(k), e, false, level + 2);
+                }
+                _ => {
+                    if is_child_object(v) {
+                        self.blank();
+                    }
+                    self.prop(level + 1, k, v, 1);
+                }
+            }
+        }
     }
 
     /// Writes a bag in insertion order (used inside raw objects).
@@ -938,7 +994,20 @@ impl Out {
         self.text(1, "lineageTag", t.lineage_tag.as_deref());
         self.text(1, "sourceLineageTag", t.source_lineage_tag.as_deref());
         self.text(1, "dataCategory", t.data_category.as_deref());
-        self.extras_scalars(1, &t.extra, &["calculationGroup"]);
+        let extra = tmdl_definitions(&t.extra, &[DEFAULT_DETAIL_ROWS_DEFINITION]);
+        let detail_rows = definition(&extra, DEFAULT_DETAIL_ROWS_DEFINITION);
+        let skip: &[&str] = if detail_rows.is_some() {
+            &["calculationGroup", DEFAULT_DETAIL_ROWS_DEFINITION]
+        } else {
+            &["calculationGroup"]
+        };
+        self.extras_scalars(1, &extra, skip);
+        // Desktop writes the default detail rows as a child object, after a
+        // blank line.
+        if let Some(v) = detail_rows {
+            self.blank();
+            self.prop(1, DEFAULT_DETAIL_ROWS_DEFINITION, v, 0);
+        }
         if let Some(group) = &t.calculation_group {
             self.blank();
             self.calculation_group(group);
@@ -964,7 +1033,7 @@ impl Out {
             self.blank();
             self.partition(p);
         }
-        self.extras_objects(1, &t.extra, &["calculationGroup"]);
+        self.extras_objects(1, &extra, skip);
         self.annotations(1, &t.annotations);
     }
 
@@ -1033,23 +1102,29 @@ impl Out {
         self.text(2, "displayFolder", m.display_folder.as_deref());
         self.text(2, "lineageTag", m.lineage_tag.as_deref());
         self.text(2, "dataCategory", m.data_category.as_deref());
-        let extra = tmdl_format_string_definition(&m.extra);
-        // Desktop writes the dynamic format string as a child object, after a
-        // blank line.
-        let definition = extra
-            .get(FORMAT_STRING_DEFINITION)
-            .filter(|v| matches!(v, PropValue::Expression(_)));
-        let skip: &[&str] = if definition.is_some() {
-            &[FORMAT_STRING_DEFINITION]
-        } else {
-            &[]
-        };
-        self.extras_scalars(2, &extra, skip);
-        if let Some(v) = definition {
+        let extra = tmdl_definitions(&m.extra, &MEASURE_DEFINITIONS);
+        let definitions: Vec<(&str, &PropValue)> = MEASURE_DEFINITIONS
+            .iter()
+            .filter_map(|k| definition(&extra, k).map(|v| (*k, v)))
+            .collect();
+        let skip: Vec<&str> = definitions.iter().map(|(k, _)| *k).collect();
+        self.extras_scalars(2, &extra, &skip);
+        // Desktop writes the KPI, detail rows and dynamic format string as
+        // child objects, after a blank line.
+        for (key, value) in definitions {
             self.blank();
-            self.prop(2, FORMAT_STRING_DEFINITION, v, 0);
+            match value {
+                PropValue::Object(o)
+                    if key == KPI
+                        && o.expression.is_none()
+                        && !o.properties.contains_key(COLON_VALUE_KEY) =>
+                {
+                    self.kpi(2, o)
+                }
+                _ => self.prop(2, key, value, 0),
+            }
         }
-        self.extras_objects(2, &extra, skip);
+        self.extras_objects(2, &extra, &skip);
         self.annotations(2, &m.annotations);
     }
 
@@ -1289,32 +1364,74 @@ fn tmdl_related_column_details(c: &Column) -> Cow<'_, PropertyBag> {
     Cow::Owned(bag)
 }
 
-/// TOM JSON (TMSL) keeps a measure's dynamic format string as
-/// `{"expression": …}`; TMDL writes it as `formatStringDefinition = …`.
-fn tmdl_format_string_definition(extra: &PropertyBag) -> Cow<'_, PropertyBag> {
-    let Some(PropValue::Json(value)) = extra.get("formatStringDefinition") else {
-        return Cow::Borrowed(extra);
-    };
-    let Some(map) = value.as_object().filter(|m| m.len() == 1) else {
-        return Cow::Borrowed(extra);
-    };
-    let text = match map.get("expression") {
-        Some(e) if e.is_string() => e.as_str().map(str::to_owned),
-        Some(e) => e.as_array().and_then(|lines| {
-            lines
-                .iter()
-                .map(|l| l.as_str())
-                .collect::<Option<Vec<_>>>()
-                .map(|l| l.join("\n"))
-        }),
-        None => None,
-    };
-    let Some(text) = text else {
-        return Cow::Borrowed(extra);
-    };
-    let mut bag = extra.clone();
-    bag.insert("formatStringDefinition".into(), PropValue::Expression(text));
-    Cow::Owned(bag)
+/// The definition object `key` of a bag, written after a blank line: an
+/// expression or an unnamed object.
+fn definition<'a>(bag: &'a PropertyBag, key: &str) -> Option<&'a PropValue> {
+    bag.get(key).filter(|v| match v {
+        PropValue::Expression(_) => true,
+        PropValue::Object(o) => o.name.is_none(),
+        _ => false,
+    })
+}
+
+/// TOM JSON (TMSL) keeps a dynamic format string or detail rows as
+/// `{"expression": …}` and a KPI as an object of strings; TMDL writes them
+/// as `key = …` and a `kpi` object with `targetExpression = …` and the
+/// like. Other JSON is written as it was.
+fn tmdl_definitions<'a>(extra: &'a PropertyBag, keys: &[&str]) -> Cow<'a, PropertyBag> {
+    let mut out = Cow::Borrowed(extra);
+    for key in keys {
+        let Some(PropValue::Json(value)) = extra.get(*key) else {
+            continue;
+        };
+        let Some(map) = value.as_object() else {
+            continue;
+        };
+        let converted = if *key == KPI {
+            kpi_from_json(map).map(|o| PropValue::Object(Box::new(o)))
+        } else if map.len() == 1 {
+            map.get("expression")
+                .and_then(json_text)
+                .map(PropValue::Expression)
+        } else {
+            None
+        };
+        if let Some(v) = converted {
+            out.to_mut().insert((*key).to_owned(), v);
+        }
+    }
+    out
+}
+
+/// A TMSL KPI as the object the TMDL reader makes of a `kpi` block; `None`
+/// when a member is neither text nor an expression.
+fn kpi_from_json(map: &serde_json::Map<String, serde_json::Value>) -> Option<RawObject> {
+    let mut o = RawObject::default();
+    for (k, v) in map {
+        if k == "description" {
+            o.description = Some(json_text(v)?);
+        } else if k.ends_with("Expression") {
+            o.properties
+                .insert(k.clone(), PropValue::Expression(json_text(v)?));
+        } else {
+            o.properties
+                .insert(k.clone(), PropValue::Text(quote_text(v.as_str()?)));
+        }
+    }
+    Some(o)
+}
+
+/// A TMSL string, or a list of lines joined with line feeds.
+fn json_text(v: &serde_json::Value) -> Option<String> {
+    match v {
+        serde_json::Value::String(s) => Some(s.clone()),
+        serde_json::Value::Array(lines) => lines
+            .iter()
+            .map(serde_json::Value::as_str)
+            .collect::<Option<Vec<_>>>()
+            .map(|l| l.join("\n")),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -1426,6 +1543,72 @@ mod tests {
         assert_eq!(edited("\n"), expected);
         // A CRLF file stays CRLF, written lines included.
         assert_eq!(edited("\r\n"), expected.replace('\n', "\r\n"));
+    }
+
+    #[test]
+    fn kpi_and_detail_rows_are_written_in_desktop_form() {
+        // As Power BI Desktop saves them: after a blank line, KPI properties
+        // in TOM order, a KPI expression's block one level below it.
+        const DESKTOP: &str = "table Sales\n\tlineageTag: t\n\n\tdefaultDetailRowsDefinition = SELECTCOLUMNS(Sales, \"Amount\", Sales[Amount])\n\n\tmeasure Total = SUM(Sales[Amount])\n\t\tlineageTag: m\n\n\t\tdetailRowsDefinition = SELECTCOLUMNS(Sales, \"Amount\", Sales[Amount])\n\n\t\tformatStringDefinition = \"0.00\"\n\n\tmeasure Goal = [Total]\n\t\tlineageTag: g\n\n\t\tkpi\n\t\t\ttargetExpression = [Total] * 1.1\n\t\t\tstatusGraphic: Traffic Light - Single\n\t\t\tstatusExpression =\n\t\t\t\tIF([Goal] >= [Total] * 1.1, 1,\n\t\t\t\t    IF([Total] > 0, 0, -1))\n\t\t\ttrendGraphic: Standard Arrow\n\t\t\ttrendExpression = SIGN([Total])\n\n\t\tannotation Note = x\n\n\tcolumn Amount\n\t\tdataType: double\n\t\tlineageTag: c\n\t\tsummarizeBy: sum\n\t\tsourceColumn: Amount\n";
+        let scrambled = DESKTOP
+            .replace("\tlineageTag: t\n\n\tdefault", "\tlineageTag: t\n\tdefault")
+            .replace(
+                "\t\tlineageTag: m\n\n\t\tdetailRowsDefinition = SELECTCOLUMNS(Sales, \"Amount\", Sales[Amount])\n\n\t\tformatStringDefinition = \"0.00\"\n",
+                "\t\tformatStringDefinition = \"0.00\"\n\t\tdetailRowsDefinition = SELECTCOLUMNS(Sales, \"Amount\", Sales[Amount])\n\t\tlineageTag: m\n",
+            )
+            .replace(
+                "\t\tlineageTag: g\n\n\t\tkpi\n\t\t\ttargetExpression = [Total] * 1.1\n\t\t\tstatusGraphic: Traffic Light - Single\n\t\t\tstatusExpression =\n\t\t\t\tIF([Goal] >= [Total] * 1.1, 1,\n\t\t\t\t    IF([Total] > 0, 0, -1))\n\t\t\ttrendGraphic: Standard Arrow\n\t\t\ttrendExpression = SIGN([Total])\n",
+                "\t\tkpi\n\t\t\ttrendExpression = SIGN([Total])\n\t\t\ttrendGraphic: Standard Arrow\n\t\t\tstatusExpression =\n\t\t\t\t\tIF([Goal] >= [Total] * 1.1, 1,\n\t\t\t\t\t    IF([Total] > 0, 0, -1))\n\t\t\tstatusGraphic: Traffic Light - Single\n\t\t\ttargetExpression = [Total] * 1.1\n\t\tlineageTag: g\n",
+            );
+        assert_ne!(scrambled, DESKTOP);
+        let written = |table: &str| {
+            let files = [
+                ("definition/model.tmdl", "model Model\n"),
+                ("definition/tables/Sales.tmdl", table),
+            ]
+            .map(|(p, t)| (p.to_owned(), t.to_owned()));
+            let loaded = crate::load_model(&files).unwrap_or_else(|e| panic!("{e}"));
+            let text = |model: &Model| {
+                write_model(model, None)
+                    .into_iter()
+                    .find(|(p, _)| p == "tables/Sales.tmdl")
+                    .map(|(_, t)| t)
+                    .unwrap_or_default()
+            };
+            (text(&loaded.model), loaded.model, text)
+        };
+        let (desktop, model, text) = written(DESKTOP);
+        pretty_assertions::assert_eq!(desktop, DESKTOP);
+        pretty_assertions::assert_eq!(written(&scrambled).0, DESKTOP);
+        // TOM JSON (TMSL) keeps them as objects of strings and line lists.
+        let mut tmsl = model;
+        let Some(sales) = tmsl.tables.first_mut() else {
+            panic!("no table");
+        };
+        let detail_rows = serde_json::json!({
+            "expression": "SELECTCOLUMNS(Sales, \"Amount\", Sales[Amount])"
+        });
+        sales.extra.insert(
+            DEFAULT_DETAIL_ROWS_DEFINITION.into(),
+            PropValue::Json(detail_rows.clone()),
+        );
+        sales.measures[0]
+            .extra
+            .insert(DETAIL_ROWS_DEFINITION.into(), PropValue::Json(detail_rows));
+        sales.measures[1].extra.insert(
+            KPI.into(),
+            PropValue::Json(serde_json::json!({
+                "trendExpression": "SIGN([Total])",
+                "statusExpression": [
+                    "IF([Goal] >= [Total] * 1.1, 1,",
+                    "    IF([Total] > 0, 0, -1))"
+                ],
+                "trendGraphic": "Standard Arrow",
+                "statusGraphic": "Traffic Light - Single",
+                "targetExpression": "[Total] * 1.1"
+            })),
+        );
+        pretty_assertions::assert_eq!(text(&tmsl), DESKTOP);
     }
 
     #[test]
