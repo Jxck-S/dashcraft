@@ -888,6 +888,13 @@ optional language server.
     `Json.FromValue`) and the enum constants and `*.Type` values: 461 library names, 335 of
     Desktop's 941 functions; `m-functions` 202 expressions, 191 match Desktop, 10 table functions
     ledgered for part 2.
+  - [x] M7.3 library growth, part 2 (2026-11-07): 49 table functions (`Table.Join`, `NestedJoin`,
+    `AddJoinColumn`, `Group`, `Pivot`, `Unpivot`, `UnpivotOtherColumns`, the expansions,
+    `SplitColumn`, `CombineColumns`, `Transpose`, `Max`/`Min`/`MaxN`/`MinN`, `AddRankColumn`,
+    `Schema`, `Partition`, row lookups, insertion and replacement, …): 514 library names, 384 of
+    Desktop's 941 functions; `m-functions` 239 expressions, all match Desktop but the by-design
+    decimal case. The 20 `Table.*` functions left out are fuzzy matching, keys, partition keys,
+    `Table.View`, `Table.Profile` and connector internals.
 - [ ] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of
   properties and object references, formatting that matches the writer.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,

@@ -1273,6 +1273,39 @@
       "value": {"#table":{"columns":["a","b"],"rows":[[1,"x"],[2,"y"]]}}
     },
     {
+      "id": "Table.FromRecords/missing",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], rw = (x) => let c = Table.ColumnNames(x) in List.Buffer(List.Transform({0..Table.RowCount(x) - 1}, (i) => List.Transform(c, (k) => e(try Record.Field(x{i}, k))))) in {e(try rw(Table.FromRecords({[a = 1, b = 2], [a = 3]}))), e(try rw(Table.FromRecords({[a = 1, b = 2], [a = 3]}, null, MissingField.UseNull))), e(try rw(Table.FromRecords({[a = 1], [a = 3, b = 4]}))), e(try rw(Table.FromRecords({[a = 1, b = 2]}, {\"b\", \"z\"}))), e(try rw(Table.FromRecords({[a = 1, b = 2]}, {\"b\", \"z\"}, MissingField.Ignore)))}",
+      "value": [
+        [[1,2],["Expression.Error: The field 'b' of the record wasn't found.","Expression.Error: The field 'b' of the record wasn't found."]],
+        [[1,2],[3,null]],
+        [[1],[3]],
+        [["Expression.Error: The field 'z' of the record wasn't found.","Expression.Error: The field 'z' of the record wasn't found."]],
+        "Expression.Error: The 'missingField' argument must be either MissingField.Error or MissingField.UseNull."
+      ]
+    },
+    {
+      "id": "Table.RowCount/convert",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {e(try Table.RowCount(1)), e(try Table.RowCount(\"x\")), e(try Table.RowCount(() => 1)), e(try Table.RowCount({1})), e(try Table.RowCount([a = 1])), e(try Table.RowCount(type table)), e(try Table.RowCount(#binary({1}))), e(try List.Count(#table({}, {}))), e(try Record.FieldNames({1})), e(try Number.Abs([a = 1])), e(try Text.Length({1})), e(try Text.Length(() => 1)), e(try Text.Length(type text)), e(try Number.Abs(type number)), e(try List.Count(type list)), e(try Record.FieldNames(type record))}",
+      "value": [
+        "Expression.Error: We cannot convert the value 1 to type Table.",
+        "Expression.Error: We cannot convert the value \"x\" to type Table.",
+        "Expression.Error: We cannot convert a value of type Function to type Table.",
+        "Expression.Error: We cannot convert a value of type List to type Table.",
+        "Expression.Error: We cannot convert a value of type Record to type Table.",
+        "Expression.Error: We cannot convert Type to Table type.",
+        "Expression.Error: We cannot convert a value of type Binary to type Table.",
+        "Expression.Error: We cannot convert a value of type Table to type List.",
+        "Expression.Error: We cannot convert a value of type List to type Record.",
+        "Expression.Error: We cannot convert a value of type Record to type Number.",
+        "Expression.Error: We cannot convert a value of type List to type Text.",
+        "Expression.Error: We cannot convert a value of type Function to type Text.",
+        "Expression.Error: We cannot convert Type to Text type.",
+        "Expression.Error: We cannot convert Type to Number type.",
+        "Expression.Error: We cannot convert Type to List type.",
+        "Expression.Error: We cannot convert Type to Record type."
+      ]
+    },
+    {
       "id": "Table.SelectRows/basic",
       "query": "Table.SelectRows(Table.FromRecords({[a = 1], [a = 2], [a = 3]}), each [a] > 1)",
       "value": {"#table":{"columns":["a"],"rows":[[2],[3]]}}
@@ -1406,6 +1439,414 @@
       "id": "Table.SelectRows/missing-column",
       "query": "Table.SelectRows(#table({\"a\"}, {{1}}), each [missing36] = 1)",
       "error": "Expression.Error: The field 'missing36' of the record wasn't found."
+    },
+    {
+      "id": "Table.Join/kinds",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], a = #table({\"k\", \"x\"}, {{1, \"a\"}, {2, \"b\"}, {3, \"c\"}}), b = #table({\"k2\", \"y\"}, {{2, \"p\"}, {3, \"q\"}, {3, \"r\"}, {4, \"s\"}}), j = (kind) => Table.Sort(Table.Join(a, \"k\", b, \"k2\", kind), {\"k\", \"k2\", \"y\"}) in {j(JoinKind.Inner), j(JoinKind.LeftOuter), j(JoinKind.RightOuter), j(JoinKind.FullOuter), e(try j(JoinKind.LeftAnti)), e(try j(JoinKind.RightAnti)), e(try j(JoinKind.LeftSemi)), e(try j(JoinKind.RightSemi))}",
+      "value": [
+        {"#table":{"columns":["k","x","k2","y"],"rows":[[2,"b",2,"p"],[3,"c",3,"q"],[3,"c",3,"r"]]}},
+        {"#table":{"columns":["k","x","k2","y"],"rows":[[1,"a",null,null],[2,"b",2,"p"],[3,"c",3,"q"],[3,"c",3,"r"]]}},
+        {"#table":{"columns":["k","x","k2","y"],"rows":[[null,null,4,"s"],[2,"b",2,"p"],[3,"c",3,"q"],[3,"c",3,"r"]]}},
+        {"#table":{"columns":["k","x","k2","y"],"rows":[[null,null,4,"s"],[1,"a",null,null],[2,"b",2,"p"],[3,"c",3,"q"],[3,"c",3,"r"]]}},
+        {"#table":{"columns":["k","x","k2","y"],"rows":[[1,"a",null,null]]}},
+        {"#table":{"columns":["k","x","k2","y"],"rows":[[null,null,4,"s"]]}},
+        {"#table":{"columns":["k","x","k2","y"],"rows":[[2,"b",null,null],[3,"c",null,null]]}},
+        {"#table":{"columns":["k","x","k2","y"],"rows":[[null,null,2,"p"],[null,null,3,"q"],[null,null,3,"r"]]}}
+      ]
+    },
+    {
+      "id": "Table.Join/keys",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {Table.Join(#table({\"k\", \"m\", \"x\"}, {{1, \"a\", 1}, {1, \"b\", 2}}), {\"k\", \"m\"}, #table({\"k2\", \"m2\"}, {{1, \"b\"}}), {\"k2\", \"m2\"}), Table.Join(#table({\"k\", \"v1\"}, {{1, 2}}), \"k\", #table({\"k\", \"w1\"}, {{1, 3}}), \"k\"), e(try Table.RowCount(Table.Join(#table({\"k\"}, {{1}}), \"k\", () => #table({\"j\"}, {{1}}), \"j\"))), e(try Table.RowCount(Table.NestedJoin(#table({\"k\"}, {{1}}), \"k\", () => #table({\"j\"}, {{1}}), \"j\", \"n\"))), e(try Table.RowCount(Table.Join(#table({\"k1\", \"v2\"}, {{1, 2}}), \"k1\", #table({\"k1\", \"w2\"}, {{1, 3}}), \"k1\", JoinKind.LeftOuter))), e(try Table.RowCount(Table.Join(#table({\"k4\", \"v4\"}, {{1, 2}}), \"k4\", #table({\"j4\", \"v4\"}, {{1, 3}}), \"j4\"))), e(try Table.RowCount(Table.Join(#table({\"k3\"}, {{1}}), \"k3\", #table({\"j3\"}, {{1}}), \"j3\", JoinKind.Inner, null, {Comparer.OrdinalIgnoreCase}))), e(try Table.RowCount(Table.Join(#table({\"k5\"}, {{1}}), \"k5\", #table({\"j5\"}, {{1}}), \"missing5\")))}",
+      "value": [
+        {"#table":{"columns":["k","m","x","k2","m2"],"rows":[[1,"b",2,1,"b"]]}},
+        {"#table":{"columns":["k","v1","w1"],"rows":[[1,2,3]]}},
+        "Expression.Error: We cannot convert a value of type Function to type Table.",
+        1,
+        "Expression.Error: A join operation cannot result in a table with duplicate column names (\"k1\").",
+        "Expression.Error: A join operation cannot result in a table with duplicate column names (\"v4\").",
+        "Expression.Error: Local evaluation of Table.Join or Table.NestedJoin with key equality comparers is not supported.",
+        "Expression.Error: The column 'missing5' of the table wasn't found."
+      ]
+    },
+    {
+      "id": "Table.NestedJoin/kinds",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], a = #table({\"k\", \"x\"}, {{1, \"a\"}, {2, \"b\"}}), b = #table({\"k2\", \"y\"}, {{2, \"p\"}, {3, \"q\"}}), n = (kind) => Table.ToRows(Table.TransformColumns(Table.NestedJoin(a, \"k\", b, \"k2\", \"j\", kind), {\"j\", Table.ToRows})) in {n(JoinKind.Inner), n(JoinKind.LeftOuter), n(JoinKind.LeftAnti), e(try n(JoinKind.LeftSemi)), Table.ToRows(Table.TransformColumns(Table.NestedJoin(a, \"k\", b, \"k2\", \"j\"), {\"j\", Table.ToRows})), e(try Table.NestedJoin(a, \"k\", b, \"k2\", \"x\", JoinKind.Inner))}",
+      "value": [
+        [[2,"b",[[2,"p"]]]],
+        [[1,"a",[]],[2,"b",[[2,"p"]]]],
+        [[1,"a",[[null,null]]]],
+        [[2,"b",[[null,null]]]],
+        [[1,"a",[]],[2,"b",[[2,"p"]]]],
+        "Expression.Error: The column 'x' already exists in the table."
+      ]
+    },
+    {
+      "id": "Table.NestedJoin/right",
+      "query": "let a = #table({\"k\", \"x\"}, {{1, \"a\"}, {2, \"b\"}}), b = #table({\"k2\", \"y\"}, {{2, \"p\"}, {3, \"q\"}}), n = (kind) => List.Sort(Table.ToRows(Table.ExpandTableColumn(Table.NestedJoin(a, \"k\", b, \"k2\", \"j\", kind), \"j\", {\"k2\", \"y\"})), (p, q) => Value.Compare(Text.From(p{3}) & Text.From(p{0}), Text.From(q{3}) & Text.From(q{0}))) in {n(JoinKind.RightOuter), n(JoinKind.FullOuter), n(JoinKind.RightAnti)}",
+      "value": [
+        [[null,null,3,"q"],[2,"b",2,"p"]],
+        [[null,null,3,"q"],[1,"a",null,null],[2,"b",2,"p"]],
+        [[null,null,3,"q"]]
+      ]
+    },
+    {
+      "id": "Table.AddJoinColumn/basic",
+      "query": "Table.ToRows(Table.TransformColumns(Table.AddJoinColumn(#table({\"k\"}, {{1}, {2}}), \"k\", #table({\"k2\", \"v\"}, {{1, \"a\"}, {1, \"b\"}}), \"k2\", \"j\"), {\"j\", Table.ToRows}))",
+      "value": [
+        [1,[[1,"a"],[1,"b"]]],
+        [2,[]]
+      ]
+    },
+    {
+      "id": "Table.Group/options",
+      "query": "let t = #table({\"g\", \"v\"}, {{\"a\", 1}, {\"A\", 2}, {\"b\", 3}, {\"a\", 4}}) in {Table.Group(t, \"g\", {\"n\", each Table.RowCount(_)}), Table.Group(t, \"g\", {\"n\", each Table.RowCount(_)}, GroupKind.Local), Table.Group(t, \"g\", {\"s\", each List.Sum([v])}, GroupKind.Global, Comparer.OrdinalIgnoreCase), Table.Group(t, {\"g\"}, {{\"s\", each List.Sum([v]), type number}, {\"m\", each List.Max([v])}}), Table.Group(t, {}, {\"n\", each Table.RowCount(_)}), Table.Group(t, \"g\", {})}",
+      "value": [
+        {"#table":{"columns":["g","n"],"rows":[["a",2],["A",1],["b",1]]}},
+        {"#table":{"columns":["g","n"],"rows":[["a",1],["A",1],["b",1],["a",1]]}},
+        {"#table":{"columns":["g","s"],"rows":[["a",7],["b",3]]}},
+        {"#table":{"columns":["g","s","m"],"rows":[["a",5,4],["A",2,2],["b",3,3]]}},
+        {"#table":{"columns":["n"],"rows":[[4]]}},
+        {"#table":{"columns":["g"],"rows":[["a"],["A"],["b"]]}}
+      ]
+    },
+    {
+      "id": "Table.Group/custom-comparer",
+      "query": "{Table.Group(#table({\"v\"}, {{1}, {2}, {5}, {6}, {9}}), \"v\", {\"n\", each Table.RowCount(_)}, GroupKind.Local, (a, b) => Number.From(b[v] - a[v] > 1)), Table.Group(#table({\"v\"}, {{1}, {2}, {1}}), \"v\", {\"n\", each Table.RowCount(_)}, GroupKind.Global, (a, b) => 0)}",
+      "error": "Expression.Error: We cannot apply field access to the type Number."
+    },
+    {
+      "id": "Table.Group/types",
+      "query": "let s = (t) => Table.ToRows(Table.SelectColumns(Table.Schema(t), {\"Name\", \"TypeName\", \"IsNullable\"})), t = #table(type table [g = text, v = number], {{\"a\", 1}}) in s(Table.Group(t, \"g\", {{\"n\", each Table.RowCount(_)}, {\"s\", each List.Sum([v])}, {\"t\", each _}, {\"x\", each 1, Int64.Type}, {\"c\", Table.RowCount}, {\"z\", each Text.Combine([g])}}))",
+      "value": [
+        ["g","Text.Type",false],
+        ["n","Any.Type",true],
+        ["s","Any.Type",true],
+        ["t","Any.Type",true],
+        ["x","Int64.Type",false],
+        ["c","Number.Type",false],
+        ["z","Any.Type",true]
+      ]
+    },
+    {
+      "id": "Table.Pivot/options",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], t = #table({\"r\", \"attr\", \"val\"}, {{1, \"x\", 10}, {1, \"y\", 20}, {2, \"x\", 30}, {2, \"x\", 31}, {2, \"z\", 40}, {3, null, 50}}) in {Table.Pivot(t, {\"x\", \"y\"}, \"attr\", \"val\", List.Sum), Table.Pivot(Table.FirstN(t, 3), {\"x\", \"y\", \"w\"}, \"attr\", \"val\"), e(try Table.Pivot(t, {\"x\", \"y\"}, \"attr\", \"val\"){1}[x]), e(try Table.Pivot(#table({\"a\", \"v\"}, {{1, 2}}), {1}, \"a\", \"v\")), e(try Table.Pivot(t, {\"x\", \"x\"}, \"attr\", \"val\"))}",
+      "value": [
+        {"#table":{"columns":["r","x","y"],"rows":[[1,10,20],[2,61,null],[3,null,null]]}},
+        {"#table":{"columns":["r","x","y","w"],"rows":[[1,10,20,null],[2,30,null,null]]}},
+        "Expression.Error: There were too many elements in the enumeration to complete the operation.",
+        "Expression.Error: We cannot convert the value 1 to type Text.",
+        "Expression.Error: The field 'x' already exists in the record."
+      ]
+    },
+    {
+      "id": "Table.Pivot/types",
+      "query": "let s = (t) => Table.ToRows(Table.SelectColumns(Table.Schema(t), {\"Name\", \"TypeName\", \"IsNullable\"})), t = #table(type table [r = number, a = text, v = Int64.Type], {{1, \"x\", 2}}) in {s(Table.Pivot(t, {\"x\"}, \"a\", \"v\")), s(Table.Pivot(t, {\"x\"}, \"a\", \"v\", List.Sum))}",
+      "value": [
+        [["r","Number.Type",false],["x","Int64.Type",true]],
+        [["r","Number.Type",false],["x","Int64.Type",true]]
+      ]
+    },
+    {
+      "id": "Table.Unpivot/options",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], s = (t) => Table.ToRows(Table.SelectColumns(Table.Schema(t), {\"Name\", \"TypeName\", \"IsNullable\"})), t = #table(type table [id = number, a = number, b = nullable number, c = text], {{1, 2, null, \"p\"}, {2, 3, 4, \"q\"}}) in {Table.Unpivot(t, {\"b\", \"a\"}, \"Attribute\", \"Value\"), s(Table.Unpivot(t, {\"a\", \"b\"}, \"Attribute\", \"Value\")), s(Table.Unpivot(t, {\"a\", \"c\"}, \"Attribute\", \"Value\")), Table.UnpivotOtherColumns(t, {\"id\", \"c\"}, \"k\", \"v\"), e(try Table.UnpivotOtherColumns(t, {\"id\", \"zz6\"}, \"k\", \"v\")), e(try Table.Unpivot(t, {\"a\", \"zz7\"}, \"k\", \"v\")), e(try Table.Unpivot(t, {\"a\"}, \"id\", \"v\"))}",
+      "value": [
+        {"#table":{"columns":["id","c","Attribute","Value"],"rows":[[1,"p","a",2],[2,"q","a",3],[2,"q","b",4]]}},
+        [["id","Number.Type",false],["c","Text.Type",false],["Attribute","Text.Type",false],["Value","Number.Type",false]],
+        [["id","Number.Type",false],["b","Number.Type",true],["Attribute","Text.Type",false],["Value","Any.Type",true]],
+        {"#table":{"columns":["id","c","k","v"],"rows":[[1,"p","a",2],[2,"q","a",3],[2,"q","b",4]]}},
+        "Expression.Error: The column 'zz6' of the table wasn't found.",
+        "Expression.Error: The column 'zz7' of the table wasn't found.",
+        "Expression.Error: The field 'id' already exists in the record."
+      ]
+    },
+    {
+      "id": "Table.ExpandTableColumn/options",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], s = (t) => Table.ToRows(Table.SelectColumns(Table.Schema(t), {\"Name\", \"TypeName\", \"IsNullable\"})), t = #table({\"k\", \"n\"}, {{1, #table(type table [a = number, b = text], {{1, \"p\"}, {3, \"q\"}})}, {2, #table({\"a\", \"b\"}, {})}, {3, null}}), u = #table(type table [k = number, n = table [a = number, b = text]], {}) in {Table.ExpandTableColumn(t, \"n\", {\"a\"}), Table.ExpandTableColumn(t, \"n\", {\"a\", \"b\"}, {\"x\", \"y\"}), s(Table.ExpandTableColumn(u, \"n\", {\"a\", \"b\"})), e(try Table.ExpandTableColumn(t, \"n\", {\"a\"}, {\"k\"})), e(try Table.ExpandTableColumn(t, \"n\", {\"a\", \"q8\"}))}",
+      "value": [
+        {"#table":{"columns":["k","a"],"rows":[[1,1],[1,3],[2,null],[3,null]]}},
+        {"#table":{"columns":["k","x","y"],"rows":[[1,1,"p"],[1,3,"q"],[2,null,null],[3,null,null]]}},
+        [["k","Number.Type",false],["a","Number.Type",true],["b","Text.Type",true]],
+        "Expression.Error: The field 'k' already exists in the record.",
+        {"#table":{"columns":["k","a","q8"],"rows":[[1,1,null],[1,3,null],[2,null,null],[3,null,null]]}}
+      ]
+    },
+    {
+      "id": "Table.ExpandRecordColumn/basic",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], s = (t) => Table.ToRows(Table.SelectColumns(Table.Schema(t), {\"Name\", \"TypeName\", \"IsNullable\"})) in {Table.ExpandRecordColumn(#table({\"k\", \"r\"}, {{1, [a = 1, b = 2]}, {2, [a = 3]}, {3, null}}), \"r\", {\"a\", \"b\"}), Table.ExpandRecordColumn(#table({\"r\"}, {{[a = 1]}}), \"r\", {\"a\"}, {\"z\"}), s(Table.ExpandRecordColumn(#table(type table [r = [a = number, b = text]], {}), \"r\", {\"a\", \"b\"})), e(try Table.ExpandRecordColumn(#table({\"r\", \"a\"}, {}), \"r\", {\"a\"}))}",
+      "value": [
+        {"#table":{"columns":["k","a","b"],"rows":[[1,1,2],[2,3,null],[3,null,null]]}},
+        {"#table":{"columns":["z"],"rows":[[1]]}},
+        [["a","Number.Type",false],["b","Text.Type",false]],
+        "Expression.Error: The field 'a' already exists in the record."
+      ]
+    },
+    {
+      "id": "Table.ExpandListColumn/basic",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {Table.ExpandListColumn(#table({\"k\", \"l\"}, {{1, {1, 2}}, {2, {}}, {3, null}}), \"l\"), e(try Table.ExpandListColumn(#table({\"l\"}, {{1}}), \"l\"){0}[l])}",
+      "value": [
+        {"#table":{"columns":["k","l"],"rows":[[1,1],[1,2],[2,null],[3,null]]}},
+        "Expression.Error: We cannot convert the value 1 to type Table."
+      ]
+    },
+    {
+      "id": "Table.AggregateTableColumn/basic",
+      "query": "let s = (t) => Table.ToRows(Table.SelectColumns(Table.Schema(t), {\"Name\", \"TypeName\", \"IsNullable\"})), t = #table({\"k\", \"n\"}, {{1, #table({\"v\"}, {{1}, {2}})}, {2, #table({\"v\"}, {})}}) in {Table.AggregateTableColumn(t, \"n\", {{\"v\", List.Sum, \"sum\"}, {\"v\", List.Count, \"count\"}}), s(Table.AggregateTableColumn(t, \"n\", {{\"v\", List.Sum, \"sum\"}}))}",
+      "value": [
+        {"#table":{"columns":["k","sum","count"],"rows":[[1,3,2],[2,null,1]]}},
+        [["k","Any.Type",true],["sum","Any.Type",true]]
+      ]
+    },
+    {
+      "id": "Table.Transpose/options",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {Table.Transpose(#table({\"a\", \"b\"}, {{1, 2}, {3, 4}, {5, 6}}), {\"x\", \"y\", \"z\"}), Table.Transpose(#table({\"a\", \"b\"}, {{1, 2}})), Table.Transpose(#table({\"a\"}, {})), e(try Table.Transpose(#table({\"a\"}, {{1}, {2}}), {\"x7\"}))}",
+      "value": [
+        {"#table":{"columns":["x","y","z"],"rows":[[1,3,5],[2,4,6]]}},
+        {"#table":{"columns":["Column1"],"rows":[[1],[2]]}},
+        {"#table":{"columns":[],"rows":[]}},
+        "Expression.Error: The count of 'columns' (2) doesn't match that of 'columnNames' (1)."
+      ]
+    },
+    {
+      "id": "Table.SplitColumn/options",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], s = (t) => Table.ToRows(Table.SelectColumns(Table.Schema(t), {\"Name\", \"TypeName\", \"IsNullable\"})), t = #table({\"s\", \"k\"}, {{\"a,b,c\", 1}, {\"d\", 2}, {null, 3}}), d = Splitter.SplitTextByDelimiter(\",\") in {Table.SplitColumn(t, \"s\", d), Table.SplitColumn(t, \"s\", d, 2), Table.SplitColumn(t, \"s\", d, {\"x\", \"y\"}, \"-\"), Table.SplitColumn(t, \"s\", d, 2, null, ExtraValues.List), e(try Record.Field(Table.SplitColumn(t, \"s\", d, 2, null, ExtraValues.Error){0}, \"s.2\")), e(try Record.Field(Table.SplitColumn(t, \"s\", d, 2, null, ExtraValues.Error){0}, \"s.1\")), s(Table.SplitColumn(t, \"s\", d, 2))}",
+      "value": [
+        {"#table":{"columns":["s.1","s.2","s.3","k"],"rows":[["a","b","c",1],["d",null,null,2],[null,null,null,3]]}},
+        {"#table":{"columns":["s.1","s.2","k"],"rows":[["a","b",1],["d",null,2],[null,null,3]]}},
+        {"#table":{"columns":["x","y","k"],"rows":[["a","b",1],["d","-",2],["-","-",3]]}},
+        {"#table":{"columns":["s.1","s.2","k"],"rows":[["a",["b","c"],1],["d",[],2],[null,[],3]]}},
+        "DataFormat.Error: There were more columns in the result than expected.",
+        "DataFormat.Error: There were more columns in the result than expected.",
+        [["s.1","Text.Type",true],["s.2","Text.Type",true],["k","Any.Type",true]]
+      ]
+    },
+    {
+      "id": "Table.CombineColumns/basic",
+      "query": "{Table.CombineColumns(#table({\"a\", \"b\", \"c\"}, {{\"x\", \"y\", 1}, {null, \"z\", 2}}), {\"a\", \"b\"}, Combiner.CombineTextByDelimiter(\"-\"), \"ab\"), Table.CombineColumnsToRecord(#table({\"a\", \"b\", \"c\"}, {{1, 2, 3}}), \"r\", {\"a\", \"c\"}), Table.CombineColumnsToRecord(#table({\"a\", \"b\", \"c\"}, {{1, 2, 3}}), \"r\", {\"b\", \"a\"}), Table.CombineColumnsToRecord(#table({\"a\", \"b\", \"c\"}, {{1, 2, 3}}), \"r\", {\"c\"}), Table.CombineColumnsToRecord(#table({\"a\", \"b\", \"c\", \"d\"}, {{1, 2, 3, 4}}), \"r\", {\"c\", \"a\"}), Table.CombineColumns(#table({\"a\", \"b\", \"c\", \"d\"}, {{\"1\", \"2\", \"3\", \"4\"}}), {\"c\", \"a\"}, Combiner.CombineTextByDelimiter(\"+\"), \"ca\"), Table.CombineColumns(#table({\"a\", \"b\", \"c\", \"d\"}, {{\"1\", \"2\", \"3\", \"4\"}}), {\"a\", \"c\"}, Combiner.CombineTextByDelimiter(\"+\"), \"ac\"), Table.CombineColumnsToRecord(#table({\"a\", \"b\", \"c\", \"d\"}, {{1, 2, 3, 4}}), \"r\", {\"b\", \"d\", \"a\"})}",
+      "value": [
+        {"#table":{"columns":["ab","c"],"rows":[["x-y",1],["-z",2]]}},
+        {"#table":{"columns":["b","r"],"rows":[[2,{"a":1,"c":3}]]}},
+        {"#table":{"columns":["r","c"],"rows":[[{"b":2,"a":1},3]]}},
+        {"#table":{"columns":["a","b","r"],"rows":[[1,2,{"c":3}]]}},
+        {"#table":{"columns":["r","b","d"],"rows":[[{"c":3,"a":1},2,4]]}},
+        {"#table":{"columns":["ca","b","d"],"rows":[["3+1","2","4"]]}},
+        {"#table":{"columns":["b","ac","d"],"rows":[["2","1+3","4"]]}},
+        {"#table":{"columns":["r","c"],"rows":[[{"b":2,"d":4,"a":1},3]]}}
+      ]
+    },
+    {
+      "id": "Table.Max/options",
+      "query": "let t = #table({\"a\", \"b\"}, {{1, \"x\"}, {3, \"y\"}, {3, \"z\"}, {2, \"w\"}}) in {Table.Max(t, \"a\"), Table.Min(t, \"a\"), Table.Min(#table({\"a\", \"b\"}, {{1, \"x\"}, {1, \"y\"}}), \"a\"), Table.Max(#table({\"a\"}, {}), \"a\", 0), Table.MaxN(t, \"a\", 2), Table.MinN(t, \"a\", 2), Table.MaxN(t, \"a\", each [a] > 2), Table.Min(t, {\"a\", Order.Descending})}",
+      "value": [
+        {"a":3,"b":"z"},
+        {"a":1,"b":"x"},
+        {"a":1,"b":"y"},
+        0,
+        {"#table":{"columns":["a","b"],"rows":[[3,"y"],[3,"z"]]}},
+        {"#table":{"columns":["a","b"],"rows":[[1,"x"],[2,"w"]]}},
+        {"#table":{"columns":["a","b"],"rows":[[3,"y"],[3,"z"]]}},
+        {"a":3,"b":"z"}
+      ]
+    },
+    {
+      "id": "Table.AddRankColumn/kinds",
+      "query": "let s = (t) => Table.ToRows(Table.SelectColumns(Table.Schema(t), {\"Name\", \"TypeName\", \"IsNullable\"})), t = #table({\"n\", \"v\"}, {{\"a\", 3}, {\"b\", 1}, {\"c\", 3}, {\"d\", 2}}) in {Table.AddRankColumn(t, \"r\", {\"v\", Order.Descending}), Table.AddRankColumn(t, \"r\", {\"v\", Order.Descending}, [RankKind = RankKind.Dense]), Table.AddRankColumn(t, \"r\", \"v\", [RankKind = RankKind.Ordinal]), s(Table.AddRankColumn(t, \"r\", \"v\"))}",
+      "value": [
+        {"#table":{"columns":["n","v","r"],"rows":[["a",3,1],["c",3,1],["d",2,3],["b",1,4]]}},
+        {"#table":{"columns":["n","v","r"],"rows":[["a",3,1],["c",3,1],["d",2,2],["b",1,3]]}},
+        {"#table":{"columns":["n","v","r"],"rows":[["b",1,1],["d",2,2],["a",3,3],["c",3,4]]}},
+        [["n","Any.Type",true],["v","Any.Type",true],["r","Int64.Type",true]]
+      ]
+    },
+    {
+      "id": "Table.Schema/types",
+      "query": "Table.Schema(#table(type table [a = Int64.Type, b = nullable text, c = any, d = date, e = table, f = list, g = Currency.Type, h = record], {}))",
+      "value": {"#table":{"columns":["Name","Position","TypeName","Kind","IsNullable","NumericPrecisionBase","NumericPrecision","NumericScale","IsSigned","DateTimePrecision","IsUtc","MaxLength","IsVariableLength","NativeTypeName","NativeDefaultExpression","NativeExpression","Description","IsWritable","FieldCaption"],"rows":[["a",0,"Int64.Type","number",false,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["b",1,"Text.Type","text",true,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["c",2,"Any.Type","any",true,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["d",3,"Date.Type","date",false,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["e",4,"Table.Type","table",false,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["f",5,"List.Type","list",false,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["g",6,"Currency.Type","number",false,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["h",7,"Record.Type","record",false,null,null,null,null,null,null,null,null,null,null,null,null,null,null]]}}
+    },
+    {
+      "id": "Table.ColumnsOfType/basic",
+      "query": "let t = #table(type table [a = number, b = nullable number, c = text, d = Int64.Type, e = any], {}) in {Table.ColumnsOfType(t, {type number}), Table.ColumnsOfType(t, {type nullable number}), Table.ColumnsOfType(t, {type text, Int64.Type}), Table.ColumnsOfType(t, {type any})}",
+      "value": [
+        ["a","d"],
+        ["a","b","d"],
+        ["a","c","d"],
+        ["a","b","c","d","e"]
+      ]
+    },
+    {
+      "id": "Table.ToList/basic",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value] in {Table.ApproximateRowCount(#table({\"a\"}, {{1}, {2}})), Table.ToList(#table({\"a\", \"b\"}, {{\"x\", \"y\"}, {\"p\", null}})), Table.ToList(#table({\"a\", \"b\"}, {{1, 2}}), each List.Sum(_)), e(try Table.ToList(#table({\"a\", \"b\"}, {{18, 2}})){0}), Table.FirstValue(#table({\"a\", \"b\"}, {{1, 2}})), Table.FirstValue(#table({\"a\"}, {}), \"d\"), Table.PrefixColumns(#table({\"a\", \"b\"}, {{1, 2}}), \"p\")}",
+      "value": [
+        2,
+        ["x,y","p,"],
+        [3],
+        "Expression.Error: We cannot convert the value 18 to type Text.",
+        1,
+        "d",
+        {"#table":{"columns":["p.a","p.b"],"rows":[[1,2]]}}
+      ]
+    },
+    {
+      "id": "Table.FromValue/kinds",
+      "query": "{Table.FromValue([a = 1, b = \"x\"]), Table.FromValue({1, 2}), Table.FromValue(5), Table.FromValue(#table({\"q\"}, {{1}})), Table.FromValue({1}, [DefaultColumnName = \"c\"]), Table.FromValue([a = 1], [DefaultColumnName = \"c\"])}",
+      "value": [
+        {"#table":{"columns":["Name","Value"],"rows":[["a",1],["b","x"]]}},
+        {"#table":{"columns":["Value"],"rows":[[1],[2]]}},
+        {"#table":{"columns":["Value"],"rows":[[5]]}},
+        {"#table":{"columns":["q"],"rows":[[1]]}},
+        {"#table":{"columns":["c"],"rows":[[1]]}},
+        {"#table":{"columns":["Name","Value"],"rows":[["a",1]]}}
+      ]
+    },
+    {
+      "id": "Table.Rows/reorganize",
+      "query": "let t = #table({\"a\"}, {{1}, {2}, {3}, {4}, {5}}) in {Table.ReverseRows(t), Table.Repeat(#table({\"a\"}, {{1}, {2}}), 2), Table.Repeat(t, 0), Table.AlternateRows(t, 1, 1, 2), Table.AlternateRows(t, 0, 2, 1), Table.RemoveLastN(t, 2), Table.RemoveLastN(t, each [a] > 3), Table.SingleRow(#table({\"a\"}, {{7}})), List.Transform(Table.Split(t, 2), Table.ToRows), List.Transform(Table.SplitAt(t, 2), Table.ToRows)}",
+      "value": [
+        {"#table":{"columns":["a"],"rows":[[5],[4],[3],[2],[1]]}},
+        {"#table":{"columns":["a"],"rows":[[1],[2],[1],[2]]}},
+        {"#table":{"columns":[],"rows":[]}},
+        {"#table":{"columns":["a"],"rows":[[1],[3],[4]]}},
+        {"#table":{"columns":["a"],"rows":[[3]]}},
+        {"#table":{"columns":["a"],"rows":[[1],[2],[3]]}},
+        {"#table":{"columns":["a"],"rows":[[1],[2],[3]]}},
+        {"a":7},
+        [[[1],[2]],[[3],[4]],[[5]]],
+        [[[1],[2]],[[3],[4],[5]]]
+      ]
+    },
+    {
+      "id": "Table.Partition/basic",
+      "query": "List.Transform(Table.Partition(#table({\"a\"}, {{1}, {2}, {3}, {4}, {5}, {-1}, {2.5}}), \"a\", 2, each _), Table.ToRows)",
+      "value": [
+        [[2],[4]],
+        [[1],[3],[5]]
+      ]
+    },
+    {
+      "id": "Table.Rows/errors",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], t = #table({\"a\"}, {{1}, {2}}) in {e(try Table.Split(t, 0)), e(try Table.SingleRow(t)), e(try Table.SingleRow(#table({\"a\"}, {}))), e(try Table.Repeat(t, -1)), e(try Table.AlternateRows(t, -1, 1, 1)), e(try Table.Partition(t, \"a\", 0, each _))}",
+      "value": [
+        "Expression.Error: The 'pageSize' argument is out of range.",
+        "Expression.Error: There were too many elements in the enumeration to complete the operation.",
+        "Expression.Error: There weren't enough elements in the enumeration to complete the operation.",
+        "Expression.Error: The 'count' argument is out of range.",
+        "Expression.Error: The 'offset' argument is out of range.",
+        []
+      ]
+    },
+    {
+      "id": "Table.InsertRows/edges",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], rw = (x) => let c = Table.ColumnNames(x) in List.Buffer(List.Transform({0..Table.RowCount(x) - 1}, (i) => List.Transform(c, (k) => e(try Record.Field(x{i}, k))))), t = #table({\"a\", \"b\"}, {{1, 2}, {3, 4}}) in {e(try rw(Table.InsertRows(t, 1, {[a = 9, b = 8]}))), e(try rw(Table.InsertRows(t, 2, {[b = 7, a = 6]}))), e(try rw(Table.InsertRows(t, 1, {[b = 7, a = 6, c = 5]}))), e(try rw(Table.InsertRows(t, 3, {[a = 1, b = 1]}))), e(try rw(Table.InsertRows(t, 0, {[a = 10]}))), e(try rw(Table.RemoveRows(t, 0))), e(try rw(Table.RemoveRows(t, 1, 1))), e(try rw(Table.RemoveRows(t, 1, 5))), e(try rw(Table.RemoveRows(t, 2))), e(try rw(Table.RemoveRows(t, 2, 0))), e(try rw(Table.ReplaceRows(t, 0, 1, {[a = 0, b = 0]}))), e(try rw(Table.ReplaceRows(t, 1, 2, {}))), e(try rw(Table.ReplaceRows(t, 2, 0, {[a = 5, b = 5]})))}",
+      "value": [
+        [[1,2],[9,8],[3,4]],
+        [[1,2],[3,4],[6,7]],
+        [[1,2],[6,7],[3,4]],
+        "Expression.Error: There weren't enough elements in the enumeration to complete the operation.",
+        [["Expression.Error: The field 'b' of the record wasn't found.","Expression.Error: The field 'b' of the record wasn't found."],[1,2],[3,4]],
+        [[3,4]],
+        [[1,2]],
+        "Expression.Error: There weren't enough elements in the enumeration to complete the operation.",
+        "Expression.Error: There weren't enough elements in the enumeration to complete the operation.",
+        [[1,2],[3,4]],
+        [[0,0],[3,4]],
+        "Expression.Error: There weren't enough elements in the enumeration to complete the operation.",
+        [[1,2],[3,4],[5,5]]
+      ]
+    },
+    {
+      "id": "Table.MatchingRows/basic",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], rw = (x) => let c = Table.ColumnNames(x) in List.Buffer(List.Transform({0..Table.RowCount(x) - 1}, (i) => List.Transform(c, (k) => e(try Record.Field(x{i}, k))))), t = #table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"Y\"}, {1, \"x\"}}) in {e(try rw(Table.RemoveMatchingRows(t, {[a = 1, b = \"x\"]}))), e(try rw(Table.RemoveMatchingRows(t, {[a = 1]}))), e(try rw(Table.RemoveMatchingRows(t, {[a = 1]}, \"a\"))), e(try rw(Table.RemoveMatchingRows(t, {[b = \"y\"]}, {\"b\", Comparer.OrdinalIgnoreCase}))), e(try rw(Table.ReplaceMatchingRows(t, {[a = 1, b = \"x\"], [a = 5, b = \"z\"]}))), e(try rw(Table.ReplaceMatchingRows(t, {{[a = 2], [a = 6]}}, \"a\"))), e(try rw(Table.ReplaceMatchingRows(t, {{[a = 2, b = \"Y\"], [b = \"q\"]}}))), e(try rw(Table.ReplaceMatchingRows(t, {{[a = 2], [a = 6, b = \"w\"]}}, \"a\"))), e(try rw(Table.ReplaceMatchingRows(t, {{[a = 2], [b = \"w\", a = 6, c = 0]}}, \"a\"))), e(try rw(Table.ReplaceMatchingRows(t, {{[a = 2, b = \"Y\"], [a = 7, b = \"v\"]}})))}",
+      "value": [
+        [[2,"Y"]],
+        [[1,"x"],[2,"Y"],[1,"x"]],
+        [[2,"Y"]],
+        [[1,"x"],[1,"x"]],
+        [[5,"z"],[2,"Y"],[5,"z"]],
+        [[1,"x"],["Expression.Error: The field 'b' of the record wasn't found.","Expression.Error: The field 'b' of the record wasn't found."],[1,"x"]],
+        [[1,"x"],["Expression.Error: The field 'a' of the record wasn't found.","Expression.Error: The field 'a' of the record wasn't found."],[1,"x"]],
+        [[1,"x"],[6,"w"],[1,"x"]],
+        [[1,"x"],[6,"w"],[1,"x"]],
+        [[1,"x"],[7,"v"],[1,"x"]]
+      ]
+    },
+    {
+      "id": "Table.Contains/basic",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], t = #table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"Y\"}, {1, \"z\"}}) in {Table.Contains(t, [a = 1]), Table.Contains(t, [a = 1, b = \"y\"]), Table.Contains(t, [b = \"y\"], {\"b\", Comparer.OrdinalIgnoreCase}), Table.Contains(t, [c = 1]), Table.Contains(t, [a = 2, c = 1], \"a\"), e(try Table.Contains(t, [a = 2], \"zz9\")), e(try Table.Contains(t, [a = 2], \"b\")), e(try Table.Contains(t, [zz = 1], \"zz\")), e(try Table.Contains(t, [a = 1, b = \"x\"], {\"a\", \"zz2\"})), Table.ContainsAll(t, {[a = 1], [a = 2]}), Table.ContainsAll(t, {[a = 1], [a = 3]}), Table.ContainsAny(t, {[a = 3], [b = \"z\"]}), Table.ContainsAny(t, {}), Table.ContainsAll(t, {})}",
+      "value": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        "Expression.Error: The field 'zz9' of the record wasn't found.",
+        "Expression.Error: The field 'b' of the record wasn't found.",
+        "Expression.Error: The field 'zz' of the record wasn't found.",
+        "Expression.Error: The field 'zz2' of the record wasn't found.",
+        true,
+        false,
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "id": "Table.PositionOf/basic",
+      "query": "let t = #table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"Y\"}, {1, \"z\"}}) in {Table.PositionOf(t, [a = 1]), Table.PositionOf(t, [a = 1], Occurrence.Last), Table.PositionOf(t, [a = 1], Occurrence.All), Table.PositionOf(t, [a = 9]), Table.PositionOf(t, [b = \"y\"], Occurrence.First, {\"b\", Comparer.OrdinalIgnoreCase}), Table.PositionOfAny(t, {[a = 2], [b = \"z\"]}), Table.PositionOfAny(t, {[a = 2], [b = \"z\"]}, Occurrence.All), Table.PositionOf(t, [a = 1, b = \"z\"], Occurrence.First, \"a\")}",
+      "value": [
+        -1,
+        -1,
+        [],
+        -1,
+        1,
+        -1,
+        [],
+        0
+      ]
+    },
+    {
+      "id": "Table.FindText/kinds",
+      "query": "Table.ToRows(Table.FindText(#table({\"i\", \"v\"}, {{0, \"x1\"}, {1, 1}, {2, {\"1\"}}, {3, {{\"1\"}}}, {4, [f = \"1\"]}, {5, #table({\"q\"}, {{\"1\"}})}, {6, Text.ToBinary(\"1\")}, {7, #date(2001, 1, 1)}, {8, \"1\" meta [m = 1]}, {9, {2, \"a1b\"}}}), \"1\"))",
+      "value": [
+        [0,"x1"],
+        [2,["1"]],
+        [3,[["1"]]],
+        [4,{"f":"1"}],
+        [8,"1"],
+        [9,[2,"a1b"]]
+      ]
+    },
+    {
+      "id": "Table.TransformColumnTypes/structured",
+      "query": "let e = (r) => if r[HasError] then r[Error][Reason] & \": \" & r[Error][Message] else r[Value], t = #table({\"n\"}, {{1}}) in {e(try Table.RowCount(Table.TransformColumnTypes(t, {\"n\", type table [a = number]}))), e(try Table.TransformColumnTypes(t, {\"n\", type list}){0}[n]), e(try Table.TransformColumnTypes(t, {\"n\", type any}){0}[n]), e(try Table.TransformColumnTypes(t, {\"n\", type record}){0}[n]), e(try Table.TransformColumnTypes(t, {\"n\", type function}){0}[n])}",
+      "value": [
+        "Expression.Error: The type specified wasn't recognized.",
+        "Expression.Error: The type specified wasn't recognized.",
+        1,
+        "Expression.Error: The type specified wasn't recognized.",
+        "Expression.Error: The type specified wasn't recognized."
+      ]
+    },
+    {
+      "id": "Table.Partition/hash",
+      "query": "List.Transform(Table.Partition(#table({\"a\"}, {{\"b\"}, {\"cc\"}, {\"d\"}}), \"a\", 3, Text.Length), Table.ToRows)",
+      "value": [
+        [],
+        [["b"],["d"]],
+        [["cc"]]
+      ]
+    },
+    {
+      "id": "Table.IsDistinct/basic",
+      "query": "let t = #table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"Y\"}, {1, \"y\"}}) in {Table.IsDistinct(t), Table.IsDistinct(t, \"a\"), Table.IsDistinct(t, {\"b\", Comparer.OrdinalIgnoreCase}), Table.MatchesAllRows(t, each [a] > 0), Table.MatchesAnyRows(t, each [a] > 1), Table.MatchesAllRows(#table({\"a\"}, {}), each false), Table.FindText(#table({\"a\", \"b\"}, {{1, \"abc\"}, {12, \"x\"}, {null, #date(2024, 1, 2)}, {true, {\"1\"}}}), \"1\"), Table.FindText(t, \"Y\")}",
+      "value": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        {"#table":{"columns":["a","b"],"rows":[[true,["1"]]]}},
+        {"#table":{"columns":["a","b"],"rows":[[2,"Y"]]}}
+      ]
     },
     {
       "id": "Value/basic",

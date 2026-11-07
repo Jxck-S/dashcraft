@@ -7,6 +7,36 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.3 M library growth, part 2
+
+- **What:** `pbi-m` gains 49 `Table.*` functions in two new modules. `stdlib/table_ops.rs` has the
+  reshaping functions (joins with every `JoinKind`, `NestedJoin`, `AddJoinColumn`, `Group` with
+  `GroupKind.Local` and comparers, `Pivot`, `Unpivot`, `UnpivotOtherColumns`, the three expansions,
+  `AggregateTableColumn`, `SplitColumn`, `CombineColumns`, `CombineColumnsToRecord`,
+  `Transpose`); `stdlib/table_rows.rs` has the row functions (`Max`/`Min`/`MaxN`/`MinN`,
+  `AddRankColumn`, `Schema`, `ColumnsOfType`, `FromValue`, `ToList`, `Partition`, `Split`,
+  `Repeat`, `AlternateRows`, row insertion, removal and replacement, `Contains*`, `PositionOf*`,
+  `*MatchingRows`, `FindText`, …). `table.rs` shares its helpers and sorts with a panic-free stable
+  merge sort (an inconsistent comparer cannot panic it). Conversion errors take Desktop's wording
+  for structured values ("a value of type List", "We cannot convert Type to Table type").
+- **Why:** M7.3 (DESKTOP-PLAN), GAPS §2 "Standard library": the 10 table functions ledgered in
+  part 1 and the rest of the commonly generated table steps.
+- **Desktop check:** 37 new `m-functions` cases, recorded in several rounds against Power BI Desktop
+  2.159, settled the edge cases: column placement after unpivot and combine (the last listed
+  column's place), pivot types (the value column's, nullable), `ExtraValues.List`, the ordering of
+  `AddRankColumn` and of ties in `Max`/`Min`, `Number.Mod` semantics in `Partition` hashes,
+  `Contains` (record fields only) versus `PositionOf` (whole row), out-of-range argument messages,
+  and `Table.FindText` looking into lists and records. A record missing a column makes its row an
+  error rather than the table (`InsertRows`, `ReplaceMatchingRows`, `FromRecords`); such errors
+  escaped `try` in Desktop until the corpus read every cell through `x{i}` inside its own `try`.
+  Desktop's join row order is not specified; the corpus sorts join results.
+- **Numbers:** library 461 → 514 names (335 → 384 functions, 49 → 50 types, 77 → 80 constants;
+  `Table.*` functions 45 → 94 of Desktop's 114); `m-functions` 202 → 239 expressions, 238 match,
+  1 by design; ledger 12 → 2 entries (one M, one DAX format); 6 new tests in `stdlib.rs`.
+- **Open:** the 20 `Table.*` functions left out (fuzzy matching, keys, partition keys,
+  `Table.View`, `Table.Profile`, connector internals); M7.3b–d (M diagnostics, hover, completion,
+  formatting).
+
 ### M7.3 M library growth, part 1
 
 - **What:** `pbi-m`'s library gains 69 functions, the missing enum constants and 18 enum `*.Type`

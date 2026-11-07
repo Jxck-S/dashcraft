@@ -16,6 +16,8 @@ mod list;
 mod number;
 mod record;
 pub(crate) mod table;
+mod table_ops;
+mod table_rows;
 mod text;
 pub(crate) mod value_fns;
 
@@ -93,6 +95,8 @@ pub(crate) fn library() -> &'static Library {
     LIB.get_or_init(|| {
         let mut b = Builder::default();
         table::register(&mut b);
+        table_ops::register(&mut b);
+        table_rows::register(&mut b);
         text::register(&mut b);
         list::register(&mut b);
         record::register(&mut b);

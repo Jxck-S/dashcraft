@@ -608,18 +608,18 @@ fn sample_documents_evaluate_lazily() {
     };
     // Only `Records` and `Source` are needed; the other bindings are never evaluated.
     assert_eq!(eval(&read("grammar_tour.m")), n(1.0));
-    // `Final = try Grouped otherwise ...`: the function expression is evaluated before its
-    // arguments, and `try` does not hide unsupported functions.
+    // `Final = try Grouped otherwise ...`: `try` does not hide unsupported functions, so the
+    // chain of steps reaches the data access of `Source`.
     let src = read("desktop_generated.m");
     let line = src
         .lines()
-        .position(|l| l.contains("Table.Group("))
+        .position(|l| l.contains("Excel.Workbook("))
         .map(|i| i + 1);
     match Engine::default().evaluate(&src) {
         Err(MError::Unsupported {
             function, location, ..
         }) => {
-            assert_eq!(function, "Table.Group");
+            assert_eq!(function, "Excel.Workbook");
             assert_eq!(location.map(|l| l.line), line);
         }
         other => panic!("{other:?}"),
