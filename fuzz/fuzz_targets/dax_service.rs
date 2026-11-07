@@ -1,6 +1,7 @@
 //! DAX language service (`pbi_dax::service`): diagnostics, signature help,
-//! hover and completion, as `dax.diagnostics`, `dax.signatureHelp`,
-//! `dax.hover` and `dax.complete` run them on every keystroke.
+//! hover, completion, semantic tokens and references, as `dax.diagnostics`,
+//! `dax.signatureHelp`, `dax.hover`, `dax.complete`, `dax.tokens` and
+//! `dax.references` run them on every keystroke.
 //!
 //! The first byte picks the completion item limit; the rest is the text.
 //! Diagnostics run for both source kinds against a small model and an
@@ -9,7 +10,9 @@
 //!
 //! Invariants: never panics; every span lies inside the text on character
 //! boundaries; at most `MAX_DIAGNOSTICS` diagnostics; at most the requested
-//! number of completion items, none with an empty label or insert text.
+//! number of completion items, none with an empty label or insert text;
+//! tokens in order without overlap; the references contain the name at the
+//! cursor and their definition is one of them.
 #![no_main]
 
 use std::sync::OnceLock;
@@ -17,7 +20,7 @@ use std::sync::OnceLock;
 use libfuzzer_sys::fuzz_target;
 use pbi_dax::service::{
     MAX_DIAGNOSTICS, NameDetails, Schema, SourceKind, Span, complete, diagnostics, hover,
-    signature_help,
+    references, semantic_tokens, signature_help,
 };
 
 const EVERY_OFFSET_UP_TO: usize = 256;
@@ -91,6 +94,36 @@ fn check_cursor(src: &str, offset: usize, schema: &Schema, max_items: usize) {
             "empty completion {item:?} in {src:?} @ {offset}"
         );
     }
+    if let Some(r) = references(src, offset, schema) {
+        check_span(src, r.span, "reference");
+        assert!(
+            r.sites.iter().any(|site| site.span == r.span),
+            "the name at the cursor is not a reference in {src:?} @ {offset}"
+        );
+        for site in &r.sites {
+            check_span(src, site.span, "reference site");
+        }
+        if let Some(d) = r.definition {
+            assert!(
+                r.sites
+                    .iter()
+                    .any(|site| site.declaration && site.span == d),
+                "definition {d:?} is not a declaring site in {src:?} @ {offset}"
+            );
+        }
+    }
+}
+
+fn check_tokens(src: &str, schema: &Schema) {
+    let mut end = 0;
+    for t in semantic_tokens(src, schema) {
+        check_span(src, t.span, "token");
+        assert!(
+            t.span.start >= end && t.span.start < t.span.end,
+            "token {t:?} overlaps or is empty in {src:?}"
+        );
+        end = t.span.end;
+    }
 }
 
 fuzz_target!(|data: &[u8]| {
@@ -111,6 +144,7 @@ fuzz_target!(|data: &[u8]| {
                 let _ = d.range(src);
             }
         }
+        check_tokens(src, s);
     }
     let len = src.len();
     if len <= EVERY_OFFSET_UP_TO {

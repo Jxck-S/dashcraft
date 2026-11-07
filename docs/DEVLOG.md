@@ -7,6 +7,29 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.1d DAX semantic tokens and references
+
+- **What:** `pbi_dax::service::{semantic_tokens, references}` (`symbols.rs`) over a scope analysis
+  shared with completion (`scope.rs`: `VAR`/`RETURN` scopes, function parameters, query
+  `DEFINE`s). Tokens carry 14 kinds, a declaration flag and an unresolved flag (never without a
+  model); references find the symbol at a cursor (variable, parameter, query definition, table,
+  column, measure, function) and every occurrence, named as the model spells it. The registry
+  gains `dax.tokens` and `dax.references` (positions as UTF-8, UTF-16 and line/column through an
+  incremental mapper; the model object's `objectId`). The `dax_service` fuzz target also runs
+  both (tokens ordered and disjoint, the cursor's name among the references, the definition a
+  declaring site).
+- **Why:** M7.1d (DESKTOP-PLAN), the highlighting, go to definition and find references the
+  formula bar (M7.5) and `dashcraft lsp` (M7.6) need.
+- **Desktop check:** a new test runs `dax.diagnostics` and `dax.tokens` on every query of the
+  ground-truth corpora that Power BI Desktop ran without error, against its fixture model: 2,507
+  queries. It found 32 cases: `INFO.*` functions and `NAMEOF` components shown as unknown, and a
+  false `unknownMeasure` error on `FILTER(INFO.VIEW.COLUMNS(), [Type] <> ...)`. Fixed: `INFO.*`
+  names are functions, `NAMEOF`'s component is a keyword, and a bare `[name]` is not flagged once
+  the text calls an `INFO` or user-defined function (whose columns are unknown). Now 0 of 2,507.
+- **Numbers:** tests `language_service.rs` 25 → 28 (pbi-dax), `dax_language.rs` 7 → 9 and one
+  unit test (pbi-ops). 77 → 79 registry commands.
+- **Open:** M7.2 (formatter), M7.3 (M language service).
+
 ### M7.1c DAX completion
 
 - **What:** `pbi_dax::service::complete` (`complete.rs`): completion at a cursor from the tokens
@@ -29,6 +52,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   stable-toolchain harness without a finding (nightly runs it under libFuzzer). Tests:
   `language_service.rs` 18 → 25 (pbi-dax; one runs every service at every offset of awkward
   texts), `dax_language.rs` 6 → 7 (pbi-ops). 76 → 77 registry commands; 14 → 15 fuzz targets.
+  Commit `1b77856` (PR #50).
 - **Open:** M7.1d (semantic tokens, go to definition, find references), M7.2 (formatter).
 
 ### M7.1b DAX function catalog, argument counts, signature help and hover

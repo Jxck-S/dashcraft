@@ -148,6 +148,16 @@ pub fn function(name: &str) -> Option<&'static FunctionInfo> {
         .and_then(|&i| c.functions.get(i))
 }
 
+/// Power BI's model metadata functions (`INFO.TABLES`, `INFO.VIEW.COLUMNS`,
+/// …): DAX functions the catalog does not list, returning tables whose
+/// columns it does not know.
+pub(super) fn is_info_function(name: &str) -> bool {
+    name.len() > 5
+        && name
+            .get(..5)
+            .is_some_and(|p| p.eq_ignore_ascii_case("INFO."))
+}
+
 /// Lines of `catalog.txt` that do not parse (empty in a correct build; a
 /// test checks it).
 #[doc(hidden)]
