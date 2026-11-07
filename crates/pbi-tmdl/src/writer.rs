@@ -996,12 +996,19 @@ impl Out {
         self.text(1, "dataCategory", t.data_category.as_deref());
         let extra = tmdl_definitions(&t.extra, &[DEFAULT_DETAIL_ROWS_DEFINITION]);
         let detail_rows = definition(&extra, DEFAULT_DETAIL_ROWS_DEFINITION);
-        let skip: &[&str] = if detail_rows.is_some() {
-            &["calculationGroup", DEFAULT_DETAIL_ROWS_DEFINITION]
-        } else {
-            &["calculationGroup"]
-        };
-        self.extras_scalars(1, &extra, skip);
+        // Keywords are case-insensitive: every spelling of `calculationGroup`
+        // left in `extra` goes after the typed group, which the reader takes
+        // from the first one.
+        let groups: Vec<Entry<'_>> = extra
+            .iter()
+            .filter(|(k, _)| k.eq_ignore_ascii_case("calculationGroup"))
+            .map(|(k, v)| (k.as_str(), v))
+            .collect();
+        let mut skip: Vec<&str> = groups.iter().map(|(k, _)| *k).collect();
+        if detail_rows.is_some() {
+            skip.push(DEFAULT_DETAIL_ROWS_DEFINITION);
+        }
+        self.extras_scalars(1, &extra, &skip);
         // Desktop writes the default detail rows as a child object, after a
         // blank line.
         if let Some(v) = detail_rows {
@@ -1012,9 +1019,9 @@ impl Out {
             self.blank();
             self.calculation_group(group);
         }
-        if let Some(group) = t.extra.get("calculationGroup") {
+        for (key, group) in &groups {
             self.blank();
-            self.prop(1, "calculationGroup", group, 0);
+            self.prop(1, key, group, 0);
         }
         let calculated = t.kind() == TableKind::CalculatedTable;
         for m in &t.measures {
@@ -1033,7 +1040,7 @@ impl Out {
             self.blank();
             self.partition(p);
         }
-        self.extras_objects(1, &extra, skip);
+        self.extras_objects(1, &extra, &skip);
         self.annotations(1, &t.annotations);
     }
 

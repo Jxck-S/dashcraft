@@ -483,3 +483,35 @@ fn mutated_fixtures_never_panic_and_round_trip() {
         "the formatter declined {unstable} of {ok} files"
     );
 }
+
+/// Inputs the `tmdl` fuzz target found (`fuzz/seeds/tmdl/regression-*`): the
+/// same invariants as the target.
+#[test]
+fn fuzz_findings_round_trip() {
+    let cases: &[(&str, &str)] = &[(
+        // A second `calculationGroup` spelled in another case stays an
+        // untyped property and must be written after the typed group.
+        "regression-calc-group-keyword-case.tmdl",
+        "table T\n\tcalculationGroup\n\t\tprecedence: 1\n\n\tcalculationgroup\n\t\tprecedence: 2\n",
+    )];
+    for (name, text) in cases {
+        let files = vec![("f0.tmdl".to_owned(), (*text).to_owned())];
+        let file = parse_file("f0.tmdl", text).unwrap();
+        assert_eq!(&file.to_string(), text, "{name}");
+        let loaded = load_model(&files).unwrap();
+        let model = normalized(loaded.model.clone());
+        let written = write_model(&loaded.model, loaded.database.as_ref());
+        pretty_assertions::assert_eq!(
+            &model,
+            &normalized(load_model(&written).unwrap().model),
+            "{name}: model changed through the writer; written: {written:#?}"
+        );
+        let preserved =
+            write_model_preserving(&loaded.model, loaded.database.as_ref(), &loaded.files);
+        pretty_assertions::assert_eq!(
+            &model,
+            &normalized(load_model(&preserved).unwrap().model),
+            "{name}: preserving writer changed the model; written: {preserved:#?}"
+        );
+    }
+}
