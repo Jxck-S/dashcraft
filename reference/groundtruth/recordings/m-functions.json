@@ -2075,6 +2075,154 @@
       "id": "language/as-error",
       "query": "\"a40\" as number",
       "error": "Expression.Error: We cannot convert the value \"a40\" to type Number."
+    },
+    {
+      "id": "names/unknown",
+      "query": "Undefined1",
+      "error": "Expression.Error: [1,1-1,11] The name 'Undefined1' doesn't exist in the current context."
+    },
+    {
+      "id": "names/unknown-unused-step",
+      "query": "let a = Undefined2 in 2",
+      "error": "Expression.Error: [1,9-1,19] The name 'Undefined2' doesn't exist in the current context."
+    },
+    {
+      "id": "names/unknown-in-try",
+      "query": "try Undefined3 otherwise 3",
+      "error": "Expression.Error: [1,5-1,15] The name 'Undefined3' doesn't exist in the current context."
+    },
+    {
+      "id": "names/unknown-in-untaken-branch",
+      "query": "if true then 4 else Undefined4",
+      "error": "Expression.Error: [1,21-1,31] The name 'Undefined4' doesn't exist in the current context."
+    },
+    {
+      "id": "names/unknown-in-function-body",
+      "query": "let f = (x) => Undefined5 + x in 5",
+      "error": "Expression.Error: [1,16-1,26] The name 'Undefined5' doesn't exist in the current context."
+    },
+    {
+      "id": "names/unknown-in-each",
+      "query": "let f = each Undefined6 in 6",
+      "error": "Expression.Error: [1,14-1,24] The name 'Undefined6' doesn't exist in the current context."
+    },
+    {
+      "id": "names/unknown-in-catch",
+      "query": "try Undefined7 catch (e) => e[Message]",
+      "error": "Expression.Error: [1,5-1,15] The name 'Undefined7' doesn't exist in the current context."
+    },
+    {
+      "id": "names/unknown-in-type",
+      "query": "type table [a = Undefined8]",
+      "error": "Expression.Error: [1,17-1,27] The name 'Undefined8' doesn't exist in the current context."
+    },
+    {
+      "id": "names/unknown-library-member",
+      "query": "Table.RowCnt",
+      "error": "Expression.Error: [1,1-1,13] The name 'Table.RowCnt' doesn't exist in the current context."
+    },
+    {
+      "id": "names/case-sensitive",
+      "query": "text.upper(\"a\")",
+      "error": "Expression.Error: [1,1-1,11] The name 'text.upper' doesn't exist in the current context."
+    },
+    {
+      "id": "names/sibling-fields",
+      "query": "[a = 1, b = a + 1][b]",
+      "value": 2
+    },
+    {
+      "id": "names/exclusive-let",
+      "query": "let a = 1, r = let a = a + 1 in a in r",
+      "value": 2
+    },
+    {
+      "id": "names/exclusive-record",
+      "query": "let a = 1 in [a = a + 1][a]",
+      "value": 2
+    },
+    {
+      "id": "names/self-reference",
+      "query": "let x9 = x9 in x9",
+      "error": "Expression.Error: [1,10-1,12] The name 'x9' doesn't exist in the current context."
+    },
+    {
+      "id": "names/self-reference-unused",
+      "query": "let x10 = x10 in 10",
+      "error": "Expression.Error: [1,11-1,14] The name 'x10' doesn't exist in the current context."
+    },
+    {
+      "id": "names/recursion-without-at",
+      "query": "let f11 = (n) => if n = 0 then 1 else n * f11(n - 1) in f11(3)",
+      "error": "Expression.Error: [1,43-1,46] The name 'f11' doesn't exist in the current context."
+    },
+    {
+      "id": "names/inclusive-cycle",
+      "query": "let x12 = @x12 + 1 in x12",
+      "error": "Expression.Error: A cyclic reference was encountered during evaluation."
+    },
+    {
+      "id": "names/let-cycle",
+      "query": "let a13 = b13, b13 = a13 in a13",
+      "error": "Expression.Error: A cyclic reference was encountered during evaluation."
+    },
+    {
+      "id": "names/let-cycle-unused",
+      "query": "let a14 = b14, b14 = a14 in 14",
+      "value": 14
+    },
+    {
+      "id": "names/step-shadows-library",
+      "query": "let Text.Upper = (x) => x & \"!\" in Text.Upper(\"a\", \"b\", \"c\")",
+      "error": "Expression.Error: 3 arguments were passed to a function which expects 1."
+    },
+    {
+      "id": "names/parameter-shadows-library",
+      "query": "((List.Sum) => List.Sum)(15)",
+      "value": 15
+    },
+    {
+      "id": "names/each-underscore",
+      "query": "List.Transform({1, 2}, each _ + 1)",
+      "value": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": "arity/too-few",
+      "query": "Text.Upper()",
+      "error": "Expression.Error: 0 arguments were passed to a function which expects between 1 and 2."
+    },
+    {
+      "id": "arity/too-many",
+      "query": "Text.Upper(\"a\", \"en-US\", 3)",
+      "error": "Expression.Error: 3 arguments were passed to a function which expects between 1 and 2."
+    },
+    {
+      "id": "arity/unused",
+      "query": "let f = () => Text.Upper() in 16",
+      "value": 16
+    },
+    {
+      "id": "arity/in-try",
+      "query": "try Text.Lower(\"a\", \"b\", \"c\") otherwise 17",
+      "value": 17
+    },
+    {
+      "id": "arity/exact",
+      "query": "Number.Round(1.25, 1, RoundingMode.Up)",
+      "value": 1.30
+    },
+    {
+      "id": "arity/local-function",
+      "query": "let f = (a, optional b) => a in f(1, 2, 3, 4)",
+      "error": "Expression.Error: 4 arguments were passed to a function which expects between 1 and 2."
+    },
+    {
+      "id": "arity/each",
+      "query": "(each _)(1, 2)",
+      "error": "Expression.Error: 2 arguments were passed to a function which expects 1."
     }
   ]
 }

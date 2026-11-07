@@ -9,6 +9,7 @@ pub mod edit;
 pub mod export;
 pub mod inspect;
 pub mod lint;
+pub mod m;
 pub mod meta;
 pub mod render;
 pub mod security;
@@ -116,6 +117,8 @@ pub fn catalog() -> Registry {
         .with::<dax::DaxTokens>()
         .with::<dax::DaxReferences>()
         .with::<dax::DaxFormat>()
+        // m
+        .with::<m::MDiagnostics>()
         // render
         .with::<render::RenderPage>()
         .with::<render::RenderVisual>()

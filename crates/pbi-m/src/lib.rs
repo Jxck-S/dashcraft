@@ -75,6 +75,7 @@
 //! ```
 
 pub mod ast;
+mod binding;
 pub mod connectors;
 pub mod error;
 pub mod eval;
@@ -96,7 +97,7 @@ pub use parser::{
     parse_expression,
 };
 pub use printer::{print_document, print_expr, print_type};
-pub use refs::{FreeNames, RenameError, free_names, rename_query};
+pub use refs::{FreeCall, FreeNames, RenameError, free_names, rename_query, section_free_names};
 pub use span::{Span, line_col};
 
 pub use connectors::{BlobEntry, BlobResolver, MapBlobResolver, NoBlobResolver};

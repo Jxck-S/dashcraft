@@ -403,7 +403,7 @@ pub struct TextPositionOut {
 }
 
 impl TextPositionOut {
-    fn at(src: &str, offset: usize) -> Self {
+    pub(crate) fn at(src: &str, offset: usize) -> Self {
         let (line, column) = dax_service::line_col(src, offset);
         let mut offset = offset.min(src.len());
         while !src.is_char_boundary(offset) {

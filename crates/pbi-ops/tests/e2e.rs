@@ -1695,12 +1695,14 @@ async fn query_renames_rewrite_m_and_keep_the_expected_values() {
         ["Storage URL", "Clean Key", "fnParseNames"]
     );
 
-    // Every query has a step named Source: the new name would capture the
-    // reference. A table rename names the query as well.
+    // The queries read the URL in `Source = AzureStorage.Blobs(...)`, next to a
+    // step named "Source CSV": that name would capture the reference (a step's
+    // own name would not: its initializer does not see it). A table rename
+    // names the query as well.
     let capture = r
         .try_run(
             "model.object.rename",
-            json!({"docId": doc, "expression": "Storage URL", "newName": "Source"}),
+            json!({"docId": doc, "expression": "Storage URL", "newName": "Source CSV"}),
         )
         .await
         .expect_err("refused");
@@ -1708,7 +1710,7 @@ async fn query_renames_rewrite_m_and_keep_the_expected_values() {
     assert!(
         capture
             .message
-            .contains("where 'Source' is one of its own steps"),
+            .contains("where 'Source CSV' is one of its own steps"),
         "{}",
         capture.message
     );

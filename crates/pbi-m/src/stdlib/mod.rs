@@ -189,7 +189,7 @@ pub(crate) fn unknown_name(name: &str) -> MError {
     }
     MError::Evaluation {
         reason: "Expression.Error".into(),
-        message: format!("The name '{name}' wasn't recognized. Make sure it's spelled correctly."),
+        message: crate::binding::unrecognized_message(name),
         detail: None,
         location: None,
         fields: None,

@@ -38,6 +38,8 @@ pub enum Category {
     Data,
     /// DAX queries and measure values.
     Dax,
+    /// The M (Power Query) language service.
+    M,
     /// Report pages to SVG / PNG.
     Render,
     /// The interactive canvas (slicers, cross-filters, scrolling).
@@ -57,13 +59,14 @@ pub enum Category {
 
 impl Category {
     /// Every category, in catalog order.
-    pub const ALL: [Category; 13] = [
+    pub const ALL: [Category; 14] = [
         Category::Meta,
         Category::Workspace,
         Category::Inspect,
         Category::Lint,
         Category::Data,
         Category::Dax,
+        Category::M,
         Category::Render,
         Category::Canvas,
         Category::Export,
@@ -83,6 +86,7 @@ impl Category {
             Category::Lint => "lint",
             Category::Data => "data",
             Category::Dax => "dax",
+            Category::M => "m",
             Category::Render => "render",
             Category::Canvas => "canvas",
             Category::Export => "export",

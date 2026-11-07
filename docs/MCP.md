@@ -17,7 +17,7 @@ dashcraft mcp --read-root . --allow inspect --allow dax --allow workspace   # a 
 | `--read-root DIR` (repeatable) | Agents may read files inside `DIR`. Relative paths resolve against the first root. **Default: the current folder** (a one-line notice is printed on stderr), except the filesystem root, which is refused: clients often start servers in `/`, so always pass `--read-root` in client configurations. |
 | `--write-root DIR` (repeatable) | Agents may write files inside `DIR` (also readable). **Without it every write is refused** (`pathDenied`); inline results (SVG, PNG, JSON) still work. |
 | `--blob-map FILE` | Default blob map of `doc_open` (offline `AzureStorage.Blobs` URLs → local CSVs). The map and every file it maps must be inside the read roots. |
-| `--allow CATEGORY\|ID` (repeatable) | Only expose these tools: a category (`workspace`, `inspect`, `edit`, `lint`, `data`, `dax`, `render`, `canvas`, `export`, `convert`, `transform`, `meta`), a command id (`doc.open`) or a tool name (`doc_open`). |
+| `--allow CATEGORY\|ID` (repeatable) | Only expose these tools: a category (`workspace`, `inspect`, `edit`, `lint`, `data`, `dax`, `m`, `render`, `canvas`, `export`, `convert`, `transform`, `meta`), a command id (`doc.open`) or a tool name (`doc_open`). |
 | `--deny CATEGORY\|ID` (repeatable) | Never expose these (applied after `--allow`). An entry that matches nothing is an error, so typos don't silently widen the set. |
 | `--tool-names underscore\|dotted` | Tool names `doc_open` (default) or `doc.open`. |
 | `--max-concurrent N` | Tool calls running at the same time (default: CPU count, 2 to 8). |

@@ -7,6 +7,7 @@ use std::sync::{Arc, Weak};
 use chrono::{DateTime, FixedOffset, Utc};
 
 use crate::ast::{self, BinaryOp, Intrinsic, NullablePrimitiveType, PrimitiveType};
+use crate::binding;
 use crate::eval::EvalOptions;
 use crate::eval::env::{Env, Frame, Lookup};
 use crate::eval::ir::{
@@ -318,6 +319,14 @@ impl Interp {
                         column,
                     }
                 })?;
+                let (names, _) = self.root_env().frame().entries();
+                if let Some(n) = binding::first_unbound(
+                    &crate::refs::free_names(&expr),
+                    |n| names.iter().any(|k| &**k == n),
+                    true,
+                ) {
+                    return Err(binding::unrecognized(n, Some(name), &source));
+                }
                 let src = Arc::new(SourceText {
                     name: Some(name),
                     text: source,
@@ -326,6 +335,47 @@ impl Interp {
                 self.eval(&node, &self.root_env())
             }
         }
+    }
+
+    /// `Expression.Evaluate(document, environment)`: evaluates the expression document `text`
+    /// with exactly the fields of `environment` in scope (no library unless it is passed, e.g.
+    /// as `#shared`). Syntax errors and names outside the environment are catchable
+    /// `Expression.Error`s prefixed with the range, as in Desktop.
+    pub(crate) fn evaluate_document(
+        &self,
+        text: &str,
+        environment: Option<&RecordValue>,
+    ) -> Result<Value, MError> {
+        let expr = crate::parse_expression(text).map_err(|e| {
+            MError::expression(format!(
+                "{} {}",
+                binding::range_prefix(text, e.span),
+                e.message
+            ))
+        })?;
+        let names: Arc<[Arc<str>]> = environment
+            .map(|r| Arc::from(r.names()))
+            .unwrap_or_else(|| Arc::from(Vec::new()));
+        let scope: std::collections::HashSet<&str> = names.iter().map(|n| &**n).collect();
+        if let Some(n) = binding::first_unbound(
+            &crate::refs::free_names(&expr),
+            |n| scope.contains(n),
+            false,
+        ) {
+            return Err(MError::expression(format!(
+                "{} The name '{}' doesn't exist in the current context.",
+                binding::range_prefix(text, n.span),
+                n.text
+            )));
+        }
+        let values = environment.map(|r| r.values().to_vec()).unwrap_or_default();
+        let env = Env::new(Frame::new(names, values, None));
+        let src = Arc::new(SourceText {
+            name: None,
+            text: Arc::from(text),
+        });
+        let node = Compiler::new(src).expr(&expr);
+        self.eval(&node, &env)
     }
 
     /// Evaluates a section document: returns the record of its members.
@@ -494,15 +544,11 @@ impl Interp {
     }
 
     fn lookup(&self, name: &str, inclusive: bool, env: &Env) -> Result<Lazy, MError> {
-        let found = env.lookup(name, inclusive);
-        if let Lookup::Found(v) = found {
+        if let Lookup::Found(v) = env.lookup(name, inclusive) {
             return Ok(v);
         }
         if let Some(v) = self.library.get(name) {
             return Ok(Lazy::Value(v.clone()));
-        }
-        if let Lookup::SelfOnly(v) = found {
-            return Ok(v);
         }
         Err(stdlib::unknown_name(name))
     }
@@ -523,9 +569,19 @@ impl Interp {
             Intrinsic::Shared => {
                 let (names, values) = self.root_env().frame().entries();
                 let mut pairs: Vec<(Arc<str>, Lazy)> = names.iter().cloned().zip(values).collect();
+                let mut seen: std::collections::HashSet<Arc<str>> = names.iter().cloned().collect();
                 for (n, v) in self.library.entries() {
-                    if !n.starts_with('#') && !pairs.iter().any(|(p, _)| &**p == n) {
+                    if !n.starts_with('#') && seen.insert(Arc::from(n)) {
                         pairs.push((Arc::from(n), Lazy::Value(v.clone())));
+                    }
+                }
+                // The rest of Desktop's library: present, unsupported where evaluated.
+                for e in crate::service::catalog() {
+                    if seen.insert(Arc::from(e.name)) {
+                        pairs.push((
+                            Arc::from(e.name),
+                            Lazy::Error(Arc::new(stdlib::unknown_name(e.name))),
+                        ));
                     }
                 }
                 Ok(Value::Record(RecordValue::from_lazy_pairs(pairs)?))
@@ -1007,9 +1063,8 @@ impl Interp {
             } else {
                 format!("between {min} and {max}")
             };
-            let name = f.name().map(|n| format!(" ({n})")).unwrap_or_default();
             return Err(MError::expression(format!(
-                "{} arguments were passed to a function{name} which expects {expects}.",
+                "{} arguments were passed to a function which expects {expects}.",
                 args.len()
             )));
         }

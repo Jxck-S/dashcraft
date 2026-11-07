@@ -6,9 +6,15 @@
 //! members it uses. [`rename_query`] rewrites the references to one query
 //! at token level, keeping everything else (formatting, comments, other
 //! names) byte for byte.
+//!
+//! Scoping follows the M language: a let step or record field is not in
+//! scope inside its own initializer (`let a = a + 1 in a` refers to an outer
+//! `a`), except through an inclusive reference `@a`; siblings and nested
+//! scopes see it.
 
 use crate::ast::{
-    Expr, ExprKind, ListItem, Name, RecordType, TableRowType, TryHandler, TypeExpr, TypeKind,
+    Expr, ExprKind, ListItem, Name, RecordType, Section, TableRowType, TryHandler, TypeExpr,
+    TypeKind,
 };
 use crate::error::ParseError;
 use crate::parser::parse_expression;
@@ -29,12 +35,44 @@ pub struct FreeNames<'e> {
     /// Every name bound inside the expression (let steps, parameters,
     /// record fields, `_`), e.g. for suggestions.
     pub locals: Vec<&'e str>,
+    /// Invocations whose callee is a free identifier (`Text.Upper(x)`), in
+    /// source order, e.g. to check argument counts of library functions.
+    pub calls: Vec<FreeCall<'e>>,
+}
+
+/// An invocation of a free identifier.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FreeCall<'e> {
+    /// The callee.
+    pub name: &'e Name,
+    /// The number of arguments passed.
+    pub args: usize,
+    /// The whole invocation, callee to closing parenthesis.
+    pub span: Span,
 }
 
 /// The free identifiers of `expr`.
 pub fn free_names(expr: &Expr) -> FreeNames<'_> {
     let mut w = Walker::new(None);
     w.expr(expr);
+    w.found
+}
+
+/// The free identifiers of the members of a section document: every member
+/// is in scope in every member (references between queries; a member that
+/// refers to itself is a cycle, not an unknown name).
+pub fn section_free_names(section: &Section) -> FreeNames<'_> {
+    let mut w = Walker::new(None);
+    let names = section
+        .members
+        .iter()
+        .map(|m| m.name.text.as_str())
+        .collect();
+    w.scoped(names, |w| {
+        for m in &section.members {
+            w.expr(&m.value);
+        }
+    });
     w.found
 }
 
@@ -117,9 +155,17 @@ pub fn identifier(name: &str) -> String {
     print_expr(&expr)
 }
 
+/// The names one let, record, function, `each` or `catch` binds.
+struct Scope<'e> {
+    names: Vec<&'e str>,
+    /// The let step or record field whose initializer is being walked: not
+    /// in scope for references other than `@name`.
+    excluded: Option<&'e str>,
+}
+
 /// Free-identifier collector with lexical scopes.
 struct Walker<'e, 'r> {
-    scopes: Vec<Vec<&'e str>>,
+    scopes: Vec<Scope<'e>>,
     found: FreeNames<'e>,
     depth: usize,
     /// `(old, new)`: report references to `old` where `new` is bound.
@@ -138,15 +184,31 @@ impl<'e, 'r> Walker<'e, 'r> {
         }
     }
 
-    fn bound(&self, name: &str) -> bool {
-        self.scopes.iter().any(|s| s.contains(&name))
+    fn bound(&self, name: &str, inclusive: bool) -> bool {
+        self.scopes
+            .iter()
+            .any(|s| s.names.contains(&name) && (inclusive || s.excluded != Some(name)))
     }
 
     fn scoped(&mut self, names: Vec<&'e str>, f: impl FnOnce(&mut Self)) {
         self.found.locals.extend(names.iter().copied());
-        self.scopes.push(names);
+        self.scopes.push(Scope {
+            names,
+            excluded: None,
+        });
         f(self);
         self.scopes.pop();
+    }
+
+    /// Walks the initializer of the innermost scope's member `name`.
+    fn initializer(&mut self, name: &'e str, value: &'e Expr) {
+        if let Some(s) = self.scopes.last_mut() {
+            s.excluded = Some(name);
+        }
+        self.expr(value);
+        if let Some(s) = self.scopes.last_mut() {
+            s.excluded = None;
+        }
     }
 
     fn expr(&mut self, e: &'e Expr) {
@@ -160,11 +222,11 @@ impl<'e, 'r> Walker<'e, 'r> {
 
     fn expr_inner(&mut self, e: &'e Expr) {
         match &e.kind {
-            ExprKind::Identifier { name, .. } => {
-                if !self.bound(&name.text) {
+            ExprKind::Identifier { name, inclusive } => {
+                if !self.bound(&name.text, *inclusive) {
                     if let Some((old, new)) = self.rename
                         && name.text == old
-                        && self.bound(new)
+                        && self.bound(new, *inclusive)
                     {
                         self.captured.push(name.span);
                     }
@@ -184,7 +246,7 @@ impl<'e, 'r> Walker<'e, 'r> {
                 let names = bindings.iter().map(|b| b.name.text.as_str()).collect();
                 self.scoped(names, |w| {
                     for b in bindings {
-                        w.expr(&b.value);
+                        w.initializer(&b.name.text, &b.value);
                     }
                     w.expr(body);
                 });
@@ -204,6 +266,15 @@ impl<'e, 'r> Walker<'e, 'r> {
                 self.scoped(names, |w| w.expr(body));
             }
             ExprKind::Invoke { function, args } => {
+                if let ExprKind::Identifier { name, inclusive } = &function.kind
+                    && !self.bound(&name.text, *inclusive)
+                {
+                    self.found.calls.push(FreeCall {
+                        name,
+                        args: args.len(),
+                        span: e.span,
+                    });
+                }
                 self.expr(function);
                 for a in args {
                     self.expr(a);
@@ -213,7 +284,7 @@ impl<'e, 'r> Walker<'e, 'r> {
                 let names = fields.iter().map(|f| f.name.text.as_str()).collect();
                 self.scoped(names, |w| {
                     for f in fields {
-                        w.expr(&f.value);
+                        w.initializer(&f.name.text, &f.value);
                     }
                 });
             }
@@ -333,6 +404,59 @@ mod tests {
     }
 
     #[test]
+    fn scoping_is_exclusive_in_initializers() {
+        // A step or field does not see itself (Desktop: `let x = x in x`
+        // names an unknown `x`; recursion needs `@`), siblings do.
+        assert_eq!(free("let x = x in x"), ["x"]);
+        assert_eq!(
+            free("let f = (n) => if n = 0 then 1 else n * f(n - 1) in f(3)"),
+            ["f"]
+        );
+        assert!(free("let f = (n) => if n = 0 then 1 else n * @f(n - 1) in f(3)").is_empty());
+        assert!(free("let a = b, b = a in a").is_empty());
+        assert!(free("[a = 1, b = a + 1][b]").is_empty());
+        assert!(free("let a = 1, r = let a = a + 1 in a in r").is_empty());
+        assert_eq!(free("[a = a + 1]"), ["a"]);
+        // Nested scopes inside the initializer keep the exclusion; the body
+        // and later siblings do not.
+        assert_eq!(free("let a = (x) => a + x, b = a in b"), ["a"]);
+    }
+
+    #[test]
+    fn calls_of_free_names_are_listed() {
+        let expr =
+            parse_expression("let f = (x) => x, t = Text.Upper(\"a\", 1) in f(List.Sum({}))")
+                .unwrap();
+        let calls: Vec<_> = free_names(&expr)
+            .calls
+            .iter()
+            .map(|c| (c.name.text.clone(), c.args, c.span))
+            .collect();
+        assert_eq!(
+            calls,
+            [
+                ("Text.Upper".to_owned(), 2, Span::new(22, 40)),
+                ("List.Sum".to_owned(), 1, Span::new(46, 58)),
+            ]
+        );
+        // A step shadowing a library name is local.
+        let expr = parse_expression("let Text.Upper = (x) => x in Text.Upper(1, 2)").unwrap();
+        assert!(free_names(&expr).calls.is_empty());
+    }
+
+    #[test]
+    fn section_members_see_each_other() {
+        let crate::Document::Section(s) =
+            crate::parse_document("section S; A = B + C; B = A; shared C = Missing;").unwrap()
+        else {
+            panic!("not a section");
+        };
+        let found = section_free_names(&s);
+        let names: Vec<_> = found.free.iter().map(|n| n.text.as_str()).collect();
+        assert_eq!(names, ["Missing"]);
+    }
+
+    #[test]
     fn rename_rewrites_only_free_references() {
         let src = "let\n    // Orders, the query\n    Source = Table.Combine({Orders, #\"Orders\", @Orders, Section1!Orders}),\n    Kept = Table.SelectRows(Source, each [Orders] <> \"Orders\"),\n    F = (Orders) => Orders + 1,\n    R = [Orders = 1, x = Orders]\nin\n    Kept";
         let out = rename_query(src, "Orders", "Sales Orders")
@@ -359,16 +483,35 @@ mod tests {
             rename_query("let Orders = 1 in Orders", "Orders", "S"),
             Ok(None)
         );
+        // The initializer of a step named like the query refers to the query.
+        assert_eq!(
+            rename_query("let Orders = Orders in Orders", "Orders", "Sales")
+                .unwrap()
+                .as_deref(),
+            Some("let Orders = Sales in Orders")
+        );
     }
 
     #[test]
     fn rename_refuses_captures_and_unparsable_text() {
-        let src = "let Source = AzureStorage.Blobs(Url) in Source";
+        let src = "let Source = AzureStorage.Blobs(Url), Next = Url in Next";
         assert_eq!(
             rename_query(src, "Url", "Source"),
             Err(RenameError::Captured {
-                span: Span::new(32, 35)
+                span: Span::new(45, 48)
             })
+        );
+        // Inside its own initializer the step is not in scope, so the new
+        // name still refers to the query.
+        assert_eq!(
+            rename_query(
+                "let Source = AzureStorage.Blobs(Url) in Source",
+                "Url",
+                "Source"
+            )
+            .unwrap()
+            .as_deref(),
+            Some("let Source = AzureStorage.Blobs(Source) in Source")
         );
         assert!(rename_query("Url & (each Url)(1)", "Url", "_").is_err());
         // Not captured where the new name is not in scope.
