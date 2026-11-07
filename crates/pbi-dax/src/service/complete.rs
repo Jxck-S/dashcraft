@@ -9,6 +9,7 @@ use pbi_model::{dax_column_ref, dax_measure_ref, dax_table_ref};
 use super::catalog;
 use super::help::{floor_char_boundary, in_comment, keyword_description, signature_help};
 use super::schema::{Schema, SchemaTable};
+use super::scope::{self, DeclKind, is_query};
 use crate::syntax::{Keyword, LexError, Span, Token, TokenKind, tokenize};
 
 /// What a completion item inserts.
@@ -105,7 +106,7 @@ pub fn complete(src: &str, offset: usize, schema: &Schema, max_items: usize) -> 
         };
     }
     let local = if query {
-        query_schema(src, &tokens, schema)
+        scope::query_schema(&scope::query_defines(src, &tokens), schema)
     } else {
         None
     };
@@ -132,9 +133,14 @@ pub fn complete(src: &str, offset: usize, schema: &Schema, max_items: usize) -> 
     match &cx.want {
         Want::Nothing => {}
         Want::Expression { start } => {
-            for v in variables(src, &tokens, cx.span.start) {
-                c.offer(CompletionKind::Variable, &[&v], || {
-                    item(&v, CompletionKind::Variable, v.clone(), "variable")
+            let scopes = scope::scopes(src, &tokens, query);
+            for v in scopes.visible_at(cx.span.start) {
+                let detail = match v.kind {
+                    DeclKind::Var => "variable",
+                    DeclKind::Param => "parameter",
+                };
+                c.offer(CompletionKind::Variable, &[&v.name], || {
+                    item(&v.name, CompletionKind::Variable, v.name.clone(), detail)
                 });
             }
             offer_functions(&mut c, schema, cx.paren_follows);
@@ -218,13 +224,6 @@ struct Context {
     prefix: String,
     /// A `(` follows the replaced text directly.
     paren_follows: bool,
-}
-
-fn is_query(src: &str, tokens: &[Token]) -> bool {
-    tokens
-        .iter()
-        .find(|t| !t.is_trivia())
-        .is_some_and(|t| matches!(t.keyword(src), Some(Keyword::Define | Keyword::Evaluate)))
 }
 
 fn context(src: &str, tokens: &[Token], offset: usize, query: bool) -> Option<Context> {
@@ -399,115 +398,6 @@ fn typed_name(src: &str, start: usize, offset: usize, escaped: &str, plain: &str
     src.get(start.saturating_add(1)..offset)
         .unwrap_or("")
         .replace(escaped, plain)
-}
-
-/// The variables declared before `before` whose scope reaches it, in
-/// declaration order. A `VAR` becomes visible at the next `VAR` or `RETURN`
-/// of its block (not inside its own expression) and goes out of scope at the
-/// end of the argument or parenthesis that contains the block.
-fn variables(src: &str, tokens: &[Token], before: usize) -> Vec<String> {
-    struct Var {
-        name: String,
-        depth: usize,
-    }
-    let sig: Vec<&Token> = tokens
-        .iter()
-        .filter(|t| !t.is_trivia() && t.span.end <= before)
-        .collect();
-    let mut depth = 0usize;
-    let mut visible: Vec<Var> = Vec::new();
-    let mut pending: Vec<Var> = Vec::new();
-    let commit = |pending: &mut Vec<Var>, visible: &mut Vec<Var>, depth: usize| {
-        let (now, later): (Vec<Var>, Vec<Var>) = pending.drain(..).partition(|v| v.depth == depth);
-        visible.extend(now);
-        *pending = later;
-    };
-    for (k, t) in sig.iter().enumerate() {
-        match t.kind {
-            TokenKind::LParen | TokenKind::LBrace => depth += 1,
-            TokenKind::RParen | TokenKind::RBrace => {
-                depth = depth.saturating_sub(1);
-                visible.retain(|v| v.depth <= depth);
-                pending.retain(|v| v.depth <= depth);
-            }
-            TokenKind::Comma if depth > 0 => {
-                visible.retain(|v| v.depth < depth);
-                pending.retain(|v| v.depth < depth);
-            }
-            TokenKind::Ident => match t.keyword(src) {
-                Some(Keyword::Var) => {
-                    commit(&mut pending, &mut visible, depth);
-                    if let Some(n) = sig.get(k + 1).filter(|n| n.kind == TokenKind::Ident) {
-                        pending.push(Var {
-                            name: n.text(src).to_string(),
-                            depth,
-                        });
-                    }
-                }
-                Some(
-                    Keyword::Return
-                    | Keyword::Define
-                    | Keyword::Evaluate
-                    | Keyword::Measure
-                    | Keyword::Column
-                    | Keyword::Table
-                    | Keyword::Function,
-                ) => commit(&mut pending, &mut visible, depth),
-                _ => {}
-            },
-            _ => {}
-        }
-    }
-    // A later declaration of the same name shadows an earlier one.
-    let mut seen = HashSet::new();
-    let mut names: Vec<String> = visible
-        .into_iter()
-        .rev()
-        .filter(|v| seen.insert(v.name.to_lowercase()))
-        .map(|v| v.name)
-        .collect();
-    names.reverse();
-    names
-}
-
-/// `schema` plus the `DEFINE` entries of a query, found on tokens so a
-/// query that does not parse yet still has them. `None` when it has none.
-fn query_schema(src: &str, tokens: &[Token], schema: &Schema) -> Option<Schema> {
-    let sig: Vec<&Token> = tokens.iter().filter(|t| !t.is_trivia()).collect();
-    let mut local: Option<Schema> = None;
-    for (k, t) in sig.iter().enumerate() {
-        let Some(kw) = t.keyword(src) else { continue };
-        let Some(name) = sig.get(k + 1) else { continue };
-        let member = sig
-            .get(k + 2)
-            .filter(|m| m.kind == TokenKind::BracketIdent && m.span.start == name.span.end);
-        let named = matches!(name.kind, TokenKind::Ident | TokenKind::QuotedIdent);
-        match kw {
-            Keyword::Measure | Keyword::Column if named => {
-                if let Some(m) = member {
-                    let s = local.get_or_insert_with(|| schema.clone());
-                    let (table, member) = (name.value(src), m.value(src));
-                    if kw == Keyword::Measure {
-                        s.add_measure(&table, &member);
-                    } else {
-                        s.add_column(&table, &member);
-                    }
-                }
-            }
-            Keyword::Table if named => {
-                local
-                    .get_or_insert_with(|| schema.clone())
-                    .add_open_table(&name.value(src));
-            }
-            Keyword::Function if name.kind == TokenKind::Ident => {
-                local
-                    .get_or_insert_with(|| schema.clone())
-                    .add_function(name.text(src));
-            }
-            _ => {}
-        }
-    }
-    local
 }
 
 fn item(label: &str, kind: CompletionKind, insert_text: String, detail: &str) -> CompletionItem {

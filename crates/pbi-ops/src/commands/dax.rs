@@ -1,10 +1,13 @@
 //! `dax.query`, `dax.evaluateMeasure`, `measures.values`, `dax.diagnostics`,
 //! `dax.signatureHelp`, `dax.hover`, `dax.complete`.
 
+use std::sync::Arc;
 use std::time::Instant;
 
-use pbi_model::Severity;
-use pbi_session::dax_service::{self, CompletionKind, HoverKind, NameDetails, Schema, SourceKind};
+use pbi_model::{Model, Severity, names_eq};
+use pbi_session::dax_service::{
+    self, CompletionKind, HoverKind, NameDetails, Schema, SemanticKind, SourceKind, Symbol,
+};
 use pbi_session::{FilterSpec, filters_from_page, filters_from_report};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -508,8 +511,23 @@ impl Command for DaxDiagnostics {
 /// revision) plus the report-level measures (`reportExtensions.json`) of
 /// any of its reports; without a document, an unknown schema.
 fn language_schema(ws: &Workspace, doc_id: Option<&str>) -> Result<(Option<u64>, Schema), OpError> {
+    language_context(ws, doc_id).map(|c| (c.revision, c.schema))
+}
+
+/// [`language_schema`] and the model it came from.
+struct LanguageContext {
+    revision: Option<u64>,
+    schema: Schema,
+    model: Option<Arc<Model>>,
+}
+
+fn language_context(ws: &Workspace, doc_id: Option<&str>) -> Result<LanguageContext, OpError> {
     let Some(id) = doc_id else {
-        return Ok((None, Schema::unknown()));
+        return Ok(LanguageContext {
+            revision: None,
+            schema: Schema::unknown(),
+            model: None,
+        });
     };
     let entry = doc(ws, id)?;
     let capture = entry.session().revision_snapshot();
@@ -527,7 +545,11 @@ fn language_schema(ws: &Workspace, doc_id: Option<&str>) -> Result<(Option<u64>,
             },
         );
     }
-    Ok((Some(capture.revision), schema))
+    Ok(LanguageContext {
+        revision: Some(capture.revision),
+        schema,
+        model: Some(capture.model),
+    })
 }
 
 /// A cursor in a DAX text: `offset`, `utf16Offset`, or `line` with
@@ -943,7 +965,8 @@ pub struct DaxCompletionItemOut {
     /// `(` already follows, the label for anything else.
     pub insert_text: String,
     /// `SUM(column) → number`, `column (string)`, `measure`, `table`,
-    /// `variable`, `keyword`, `user-defined function`.
+    /// `variable`, `parameter` (of a user-defined function), `keyword`,
+    /// `user-defined function`.
     pub detail: String,
     /// The home table of a column or measure.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1035,5 +1058,396 @@ impl Command for DaxComplete {
             items,
             incomplete: c.incomplete,
         })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// Text positions of non-decreasing byte offsets, in one pass over the
+/// text (each [`TextPositionOut::at`] rescans from the start).
+struct Positions<'a> {
+    src: &'a str,
+    at: TextPositionOut,
+}
+
+impl<'a> Positions<'a> {
+    fn new(src: &'a str) -> Self {
+        Self {
+            src,
+            at: TextPositionOut {
+                offset: 0,
+                utf16_offset: 0,
+                line: 1,
+                column: 1,
+            },
+        }
+    }
+
+    fn at(&mut self, offset: usize) -> TextPositionOut {
+        let mut offset = offset.min(self.src.len());
+        while !self.src.is_char_boundary(offset) {
+            offset = offset.saturating_sub(1);
+        }
+        let Some(gap) = self.src.get(self.at.offset..offset) else {
+            return TextPositionOut::at(self.src, offset);
+        };
+        for c in gap.chars() {
+            self.at.utf16_offset += c.len_utf16();
+            if c == '\n' {
+                self.at.line += 1;
+                self.at.column = 1;
+            } else {
+                self.at.column += 1;
+            }
+        }
+        self.at.offset = offset;
+        self.at
+    }
+}
+
+/// `dax.tokens`.
+#[derive(Debug)]
+pub struct DaxTokens;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DaxTokensParams {
+    /// Resolve names against this document's model and report-level
+    /// measures (`d1`, …). Without it names keep their syntactic kind and
+    /// none is unresolved.
+    #[serde(default)]
+    pub doc_id: Option<String>,
+    /// The DAX text.
+    pub text: String,
+}
+
+/// What a token is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DaxTokenKind {
+    /// `VAR`, `RETURN`, `EVALUATE`, `TRUE`, `DESC`, a parameter type, …
+    Keyword,
+    Function,
+    /// A user-defined function of the model or query.
+    UserFunction,
+    Table,
+    Column,
+    Measure,
+    Variable,
+    /// A parameter of a user-defined function.
+    Parameter,
+    /// A query parameter, `@name`.
+    QueryParameter,
+    String,
+    /// `dt"2024-01-31"`.
+    DateTime,
+    Number,
+    Comment,
+    Operator,
+}
+
+/// One token.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxTokenOut {
+    pub start: TextPositionOut,
+    /// End (exclusive).
+    pub end: TextPositionOut,
+    pub kind: DaxTokenKind,
+    /// The text declares the name here: a `VAR`, a function parameter, a
+    /// query `DEFINE`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub declaration: bool,
+    /// A name the document's model and the text do not have.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub unresolved: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxTokensOut {
+    /// The document revision whose model was used (with `docId`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub document_revision: Option<u64>,
+    /// In source order, without whitespace and punctuation.
+    pub tokens: Vec<DaxTokenOut>,
+}
+
+impl Command for DaxTokens {
+    type Params = DaxTokensParams;
+    type Output = DaxTokensOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "dax.tokens",
+            title: "DAX semantic tokens",
+            summary: "What every token of a DAX text is (keyword, function, table, column, measure, variable, parameter, literal, comment) for highlighting, with declarations and unknown names marked.",
+            category: Category::Dax,
+            examples: &[
+                (
+                    "Names resolved against the model",
+                    r#"{"docId": "d1", "text": "VAR x = [Total Sales] RETURN x * 2"}"#,
+                ),
+                (
+                    "Without a document",
+                    r#"{"text": "EVALUATE TOPN(5, Sales) ORDER BY Sales[Amount] DESC"}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let (document_revision, schema) = language_schema(ws, p.doc_id.as_deref())?;
+        let src = p.text.as_str();
+        let mut positions = Positions::new(src);
+        let tokens = dax_service::semantic_tokens(src, &schema)
+            .into_iter()
+            .map(|t| DaxTokenOut {
+                start: positions.at(t.span.start),
+                end: positions.at(t.span.end),
+                kind: match t.kind {
+                    SemanticKind::Keyword => DaxTokenKind::Keyword,
+                    SemanticKind::Function => DaxTokenKind::Function,
+                    SemanticKind::UserFunction => DaxTokenKind::UserFunction,
+                    SemanticKind::Table => DaxTokenKind::Table,
+                    SemanticKind::Column => DaxTokenKind::Column,
+                    SemanticKind::Measure => DaxTokenKind::Measure,
+                    SemanticKind::Variable => DaxTokenKind::Variable,
+                    SemanticKind::Parameter => DaxTokenKind::Parameter,
+                    SemanticKind::QueryParameter => DaxTokenKind::QueryParameter,
+                    SemanticKind::String => DaxTokenKind::String,
+                    SemanticKind::DateTime => DaxTokenKind::DateTime,
+                    SemanticKind::Number => DaxTokenKind::Number,
+                    SemanticKind::Comment => DaxTokenKind::Comment,
+                    SemanticKind::Operator => DaxTokenKind::Operator,
+                },
+                declaration: t.declaration,
+                unresolved: t.unresolved,
+            })
+            .collect();
+        Ok(DaxTokensOut {
+            document_revision,
+            tokens,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `dax.references`.
+#[derive(Debug)]
+pub struct DaxReferences;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DaxReferencesParams {
+    /// Resolve names against this document's model and report-level
+    /// measures (`d1`, …), and name model objects by `objectId`.
+    #[serde(default)]
+    pub doc_id: Option<String>,
+    /// The DAX text.
+    pub text: String,
+    /// The cursor.
+    pub position: TextPositionIn,
+}
+
+/// What a symbol is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DaxSymbolKind {
+    Function,
+    /// A user-defined function of the model or query.
+    UserFunction,
+    Table,
+    Column,
+    Measure,
+    Variable,
+    /// A parameter of a user-defined function.
+    Parameter,
+}
+
+/// The symbol at the cursor.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxSymbolOut {
+    pub kind: DaxSymbolKind,
+    /// The name as DAX, spelled as in the model, else as declared, else as
+    /// first written: `SUM`, `Sales`, `'Product Category'[Category]`,
+    /// `[Total Sales]`, a variable.
+    pub name: String,
+    /// The home table of a column or measure, when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub table: Option<String>,
+    /// The model's table, column or measure of that name (with `docId`;
+    /// the `objectId` of `model.*` edit commands). A query `DEFINE` of the
+    /// same name overrides it within the text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub object_id: Option<u64>,
+}
+
+/// A span of the text.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxRangeOut {
+    pub start: TextPositionOut,
+    /// End (exclusive).
+    pub end: TextPositionOut,
+}
+
+/// One occurrence of the symbol.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxReferenceOut {
+    pub start: TextPositionOut,
+    /// End (exclusive).
+    pub end: TextPositionOut,
+    /// The text declares the symbol here.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub declaration: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxReferencesOut {
+    /// The document revision whose model was used (with `docId`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub document_revision: Option<u64>,
+    /// Absent when the cursor is not on a name (a keyword, literal,
+    /// comment or operator).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub symbol: Option<DaxSymbolOut>,
+    /// Where the text declares the symbol (a `VAR`, a function parameter,
+    /// a query `DEFINE`); absent for model objects and DAX functions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub definition: Option<DaxRangeOut>,
+    /// Every occurrence in source order, the declaration included.
+    pub references: Vec<DaxReferenceOut>,
+}
+
+/// The model object a symbol names, matching names case-insensitively.
+fn object_id(model: &Model, symbol: &Symbol) -> Option<u64> {
+    let table = |name: &str| model.tables.iter().find(|t| names_eq(&t.name, name));
+    match symbol {
+        Symbol::Table { name } => table(name).map(|t| t.id.get()),
+        Symbol::Column {
+            table: Some(home),
+            name,
+        } => table(home)?
+            .columns
+            .iter()
+            .find(|c| names_eq(&c.name, name))
+            .map(|c| c.id.get()),
+        Symbol::Measure { table: home, name } => match home {
+            Some(home) => table(home)?
+                .measures
+                .iter()
+                .find(|m| names_eq(&m.name, name)),
+            None => model
+                .tables
+                .iter()
+                .flat_map(|t| &t.measures)
+                .find(|m| names_eq(&m.name, name)),
+        }
+        .map(|m| m.id.get()),
+        _ => None,
+    }
+}
+
+impl Command for DaxReferences {
+    type Params = DaxReferencesParams;
+    type Output = DaxReferencesOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "dax.references",
+            title: "DAX references",
+            summary: "The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId.",
+            category: Category::Dax,
+            examples: &[
+                (
+                    "A measure of the model",
+                    r#"{"docId": "d1", "text": "[Total Sales] / CALCULATE([Total Sales], ALL(Stores))", "position": {"offset": 3}}"#,
+                ),
+                (
+                    "A variable, without a document",
+                    r#"{"text": "VAR x = 1 RETURN x + x", "position": {"line": 1, "column": 5}}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let LanguageContext {
+            revision: document_revision,
+            schema,
+            model,
+        } = language_context(ws, p.doc_id.as_deref())?;
+        let src = p.text.as_str();
+        let offset = p.position.resolve(src)?;
+        let Some(r) = dax_service::references(src, offset, &schema) else {
+            return Ok(DaxReferencesOut {
+                document_revision,
+                symbol: None,
+                definition: None,
+                references: Vec::new(),
+            });
+        };
+        let mut positions = Positions::new(src);
+        let references = r
+            .sites
+            .iter()
+            .map(|site| DaxReferenceOut {
+                start: positions.at(site.span.start),
+                end: positions.at(site.span.end),
+                declaration: site.declaration,
+            })
+            .collect();
+        let definition = r.definition.map(|d| DaxRangeOut {
+            start: TextPositionOut::at(src, d.start),
+            end: TextPositionOut::at(src, d.end),
+        });
+        let kind = match &r.symbol {
+            Symbol::Function { .. } => DaxSymbolKind::Function,
+            Symbol::UserFunction { .. } => DaxSymbolKind::UserFunction,
+            Symbol::Table { .. } => DaxSymbolKind::Table,
+            Symbol::Column { .. } => DaxSymbolKind::Column,
+            Symbol::Measure { .. } => DaxSymbolKind::Measure,
+            Symbol::Variable { .. } => DaxSymbolKind::Variable,
+            Symbol::Parameter { .. } => DaxSymbolKind::Parameter,
+        };
+        let symbol = DaxSymbolOut {
+            kind,
+            name: r.symbol.display(),
+            table: r.symbol.table().map(str::to_owned),
+            object_id: model.as_deref().and_then(|m| object_id(m, &r.symbol)),
+        };
+        Ok(DaxReferencesOut {
+            document_revision,
+            symbol: Some(symbol),
+            definition,
+            references,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Positions, TextPositionOut};
+
+    #[test]
+    fn positions_match_a_rescan_at_every_offset() {
+        let src = "a\u{e9}\n\u{1f600}x\r\n\u{4e2d}\n";
+        let mut forward = Positions::new(src);
+        for offset in 0..=src.len() + 1 {
+            assert_eq!(
+                forward.at(offset),
+                TextPositionOut::at(src, offset),
+                "{offset}"
+            );
+        }
+        // Going back rescans.
+        assert_eq!(forward.at(2), TextPositionOut::at(src, 2));
     }
 }

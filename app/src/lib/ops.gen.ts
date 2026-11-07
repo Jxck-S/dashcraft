@@ -1187,7 +1187,8 @@ export interface DaxCompletionItemOut {
   insertText: string
   /**
    * `SUM(column) → number`, `column (string)`, `measure`, `table`,
-   * `variable`, `keyword`, `user-defined function`.
+   * `variable`, `parameter` (of a user-defined function), `keyword`,
+   * `user-defined function`.
    */
   detail: string
   /** The home table of a column or measure. */
@@ -1338,6 +1339,51 @@ export interface DaxQueryParams {
   blankAsNull?: boolean
 }
 
+/** A span of the text. */
+export interface DaxRangeOut {
+  start: TextPositionOut
+  /** End (exclusive). */
+  end: TextPositionOut
+}
+
+/** One occurrence of the symbol. */
+export interface DaxReferenceOut {
+  start: TextPositionOut
+  /** End (exclusive). */
+  end: TextPositionOut
+  /** The text declares the symbol here. */
+  declaration?: boolean
+}
+
+export interface DaxReferencesOut {
+  /** The document revision whose model was used (with `docId`). */
+  documentRevision?: number | null
+  /**
+   * Absent when the cursor is not on a name (a keyword, literal,
+   * comment or operator).
+   */
+  symbol?: DaxSymbolOut | null
+  /**
+   * Where the text declares the symbol (a `VAR`, a function parameter,
+   * a query `DEFINE`); absent for model objects and DAX functions.
+   */
+  definition?: DaxRangeOut | null
+  /** Every occurrence in source order, the declaration included. */
+  references: DaxReferenceOut[]
+}
+
+export interface DaxReferencesParams {
+  /**
+   * Resolve names against this document's model and report-level
+   * measures (`d1`, …), and name model objects by `objectId`.
+   */
+  docId?: string | null
+  /** The DAX text. */
+  text: string
+  /** The cursor. */
+  position: TextPositionIn
+}
+
 /** One DAX expression a rename rewrites. */
 export interface DaxRewriteOut {
   /**
@@ -1399,6 +1445,28 @@ export interface DaxSignatureOut {
   nameEnd: TextPositionOut
 }
 
+/** What a symbol is. */
+export type DaxSymbolKind = 'function' | 'table' | 'column' | 'measure' | 'variable' | 'userFunction' | 'parameter'
+
+/** The symbol at the cursor. */
+export interface DaxSymbolOut {
+  kind: DaxSymbolKind
+  /**
+   * The name as DAX, spelled as in the model, else as declared, else as
+   * first written: `SUM`, `Sales`, `'Product Category'[Category]`,
+   * `[Total Sales]`, a variable.
+   */
+  name: string
+  /** The home table of a column or measure, when known. */
+  table?: string | null
+  /**
+   * The model's table, column or measure of that name (with `docId`;
+   * the `objectId` of `model.*` edit commands). A query `DEFINE` of the
+   * same name overrides it within the text.
+   */
+  objectId?: number | null
+}
+
 /** One result table of a DAX query. */
 export interface DaxTableOut {
   columns: ResultColumnOut[]
@@ -1411,6 +1479,42 @@ export interface DaxTableOut {
 
 /** What a DAX text is. */
 export type DaxTextKind = 'auto' | 'expression' | 'query'
+
+/** What a token is. */
+export type DaxTokenKind = 'function' | 'table' | 'column' | 'measure' | 'variable' | 'string' | 'number' | 'comment' | 'operator' | 'keyword' | 'userFunction' | 'parameter' | 'queryParameter' | 'dateTime'
+
+/** One token. */
+export interface DaxTokenOut {
+  start: TextPositionOut
+  /** End (exclusive). */
+  end: TextPositionOut
+  kind: DaxTokenKind
+  /**
+   * The text declares the name here: a `VAR`, a function parameter, a
+   * query `DEFINE`.
+   */
+  declaration?: boolean
+  /** A name the document's model and the text do not have. */
+  unresolved?: boolean
+}
+
+export interface DaxTokensOut {
+  /** The document revision whose model was used (with `docId`). */
+  documentRevision?: number | null
+  /** In source order, without whitespace and punctuation. */
+  tokens: DaxTokenOut[]
+}
+
+export interface DaxTokensParams {
+  /**
+   * Resolve names against this document's model and report-level
+   * measures (`d1`, …). Without it names keep their syntactic kind and
+   * none is unresolved.
+   */
+  docId?: string | null
+  /** The DAX text. */
+  text: string
+}
 
 export interface DeleteColumnParams {
   /** The document id from `doc.open` (`d1`, …). */
@@ -4181,6 +4285,10 @@ export interface OpsCommands {
   'dax.hover': { params: DaxHoverParams; output: DaxHoverOut }
   /** The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet. */
   'dax.complete': { params: DaxCompleteParams; output: DaxCompleteOut }
+  /** What every token of a DAX text is (keyword, function, table, column, measure, variable, parameter, literal, comment) for highlighting, with declarations and unknown names marked. */
+  'dax.tokens': { params: DaxTokensParams; output: DaxTokensOut }
+  /** The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId. */
+  'dax.references': { params: DaxReferencesParams; output: DaxReferencesOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4303,6 +4411,8 @@ export const OPS_META = {
   'dax.signatureHelp': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'dax.hover': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'dax.complete': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'dax.tokens': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'dax.references': { category: 'dax', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4458,6 +4568,10 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     daxHover: (params: DaxHoverParams, options?: O) => run('dax.hover', params, options),
     /** The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet. */
     daxComplete: (params: DaxCompleteParams, options?: O) => run('dax.complete', params, options),
+    /** What every token of a DAX text is (keyword, function, table, column, measure, variable, parameter, literal, comment) for highlighting, with declarations and unknown names marked. */
+    daxTokens: (params: DaxTokensParams, options?: O) => run('dax.tokens', params, options),
+    /** The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId. */
+    daxReferences: (params: DaxReferencesParams, options?: O) => run('dax.references', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */

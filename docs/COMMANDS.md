@@ -142,6 +142,8 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`dax.signatureHelp`](#daxsignaturehelp) | The DAX function call around a cursor: its signature, parameters, return type, description and the parameter the cursor is in; works on text that does not parse yet. | A |
 | [`dax.hover`](#daxhover) | Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded. | A |
 | [`dax.complete`](#daxcomplete) | The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet. | A |
+| [`dax.tokens`](#daxtokens) | What every token of a DAX text is (keyword, function, table, column, measure, variable, parameter, literal, comment) for highlighting, with declarations and unknown names marked. | A |
+| [`dax.references`](#daxreferences) | The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -1116,6 +1118,59 @@ Examples:
 
 - A measure of the model, inside brackets: `{"docId":"d1","text":"[Tot","position":{"offset":4}}`
 - Functions, without a document: `{"text":"SUMX(Sales, SU","position":{"line":1,"column":15},"maxItems":10}`
+
+### `dax.tokens`
+
+**DAX semantic tokens.** What every token of a DAX text is (keyword, function, table, column, measure, variable, parameter, literal, comment) for highlighting, with declarations and unknown names marked.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` (optional) | string \| null | Resolve names against this document's model and report-level measures (`d1`, …). Without it names keep their syntactic kind and none is unresolved. |
+| `text` | string | The DAX text. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `documentRevision`? | integer \| null | The document revision whose model was used (with `docId`). |
+| `tokens` | DaxTokenOut[] | In source order, without whitespace and punctuation. |
+
+Examples:
+
+- Names resolved against the model: `{"docId":"d1","text":"VAR x = [Total Sales] RETURN x * 2"}`
+- Without a document: `{"text":"EVALUATE TOPN(5, Sales) ORDER BY Sales[Amount] DESC"}`
+
+### `dax.references`
+
+**DAX references.** The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` (optional) | string \| null | Resolve names against this document's model and report-level measures (`d1`, …), and name model objects by `objectId`. |
+| `text` | string | The DAX text. |
+| `position` | TextPositionIn | The cursor. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `documentRevision`? | integer \| null | The document revision whose model was used (with `docId`). |
+| `symbol`? | DaxSymbolOut \| null | Absent when the cursor is not on a name (a keyword, literal, comment or operator). |
+| `definition`? | DaxRangeOut \| null | Where the text declares the symbol (a `VAR`, a function parameter, a query `DEFINE`); absent for model objects and DAX functions. |
+| `references` | DaxReferenceOut[] | Every occurrence in source order, the declaration included. |
+
+Examples:
+
+- A measure of the model: `{"docId":"d1","text":"[Total Sales] / CALCULATE([Total Sales], ALL(Stores))","position":{"offset":3}}`
+- A variable, without a document: `{"text":"VAR x = 1 RETURN x + x","position":{"line":1,"column":5}}`
 
 ## Render
 

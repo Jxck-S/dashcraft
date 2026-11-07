@@ -863,8 +863,9 @@ optional language server.
     command): functions, tables, columns, measures, variables in scope, a query's `DEFINE`s and
     keywords by context, ranked by match quality and by what the active parameter takes; P12
     (3.0 ms p95 over 2,000 measures, target 20: acceptance 3 met); the `dax_service` fuzz target.
-  - [ ] M7.1d semantic tokens, go to definition, find references (`dax.tokens`,
-    `dax.references`).
+  - [x] M7.1d (2026-11-07) semantic tokens, go to definition, find references (`dax.tokens`,
+    `dax.references`), on a scope analysis shared with completion; checked on the 2,507 queries
+    Power BI Desktop ran without error (no error diagnostics, no unknown names).
 - [ ] **M7.2 DAX formatter.** Deterministic and idempotent, keeps comments, options for line
   width and casing.
 - [ ] **M7.3 M language service and formatter.** In `pbi-m`: completion of library functions,

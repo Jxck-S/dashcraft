@@ -185,6 +185,15 @@ async fn no_false_errors_on_any_fixture_expression() {
                     problems.push(format!("{at}: {text}\n  {d}"));
                 }
             }
+            // Highlighting agrees: no name it marks unknown.
+            let out = r
+                .run("dax.tokens", json!({"docId": doc, "text": text}))
+                .await;
+            for t in out["tokens"].as_array().unwrap() {
+                if t["unresolved"] == true {
+                    problems.push(format!("{at}: {text}\n  unresolved token {t}"));
+                }
+            }
         }
         assert!(
             problems.is_empty(),
@@ -710,4 +719,215 @@ async fn completion_suggests_model_names_variables_and_functions() {
             .unwrap_err();
         assert_eq!(err.code, pbi_ops::OpErrorCode::InvalidParams, "{max}");
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn tokens_and_references_resolve_model_names() {
+    let Some(path) = fixture(PBIP) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r.open(json!({"path": s(&path)})).await;
+    let text = "VAR \u{e9} = [Total Sales]\n\
+                RETURN DIVIDE(\u{e9}, CALCULATE([total sales], ALL(Stores[Region]), Nope))";
+
+    let out = r
+        .run("dax.tokens", json!({"docId": doc, "text": text}))
+        .await;
+    assert!(out["documentRevision"].is_u64(), "{out}");
+    let tokens = out["tokens"].as_array().unwrap();
+    let summary: Vec<String> = tokens
+        .iter()
+        .map(|t| {
+            let start = t["start"]["offset"].as_u64().unwrap() as usize;
+            let end = t["end"]["offset"].as_u64().unwrap() as usize;
+            format!(
+                "{}:{}{}{}",
+                &text[start..end],
+                t["kind"].as_str().unwrap(),
+                if t["declaration"] == true { "*" } else { "" },
+                if t["unresolved"] == true { "?" } else { "" }
+            )
+        })
+        .collect();
+    assert_eq!(
+        summary,
+        [
+            "VAR:keyword",
+            "\u{e9}:variable*",
+            "=:operator",
+            "[Total Sales]:measure",
+            "RETURN:keyword",
+            "DIVIDE:function",
+            "\u{e9}:variable",
+            "CALCULATE:function",
+            "[total sales]:measure",
+            "ALL:function",
+            "Stores:table",
+            "[Region]:column",
+            "Nope:table?",
+        ]
+    );
+    // Line, column and UTF-16 offset of each position.
+    assert_eq!(
+        tokens[4]["start"],
+        json!({"offset": 23, "utf16Offset": 22, "line": 2, "column": 1})
+    );
+    assert!(tokens[0].get("declaration").is_none(), "{out}");
+
+    // A measure: every use, its model objectId, no definition in the text.
+    let measures = r.run("model.measures", json!({"docId": doc})).await;
+    let total_sales = measures["measures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["name"] == "Total Sales")
+        .map(|m| m["id"].clone())
+        .unwrap();
+    let at = |offset: usize| json!({"docId": doc, "text": text, "position": {"offset": offset}});
+    let out = r
+        .run("dax.references", at(text.find("total").unwrap()))
+        .await;
+    assert_eq!(
+        out["symbol"],
+        json!({"kind": "measure", "name": "[Total Sales]", "table": "Orders", "objectId": total_sales})
+    );
+    assert!(out.get("definition").is_none(), "{out}");
+    let starts: Vec<&Value> = out["references"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| &r["start"]["offset"])
+        .collect();
+    assert_eq!(starts, [&json!(9), &json!(text.find("[total").unwrap())]);
+
+    // A column and a table carry their objectIds too.
+    let out = r
+        .run("dax.references", at(text.find("Region").unwrap()))
+        .await;
+    assert_eq!(
+        (&out["symbol"]["kind"], &out["symbol"]["name"]),
+        (&json!("column"), &json!("Stores[Region]"))
+    );
+    assert!(out["symbol"]["objectId"].is_u64(), "{out}");
+    let out = r
+        .run("dax.references", at(text.find("Stores").unwrap()))
+        .await;
+    assert!(out["symbol"]["objectId"].is_u64(), "{out}");
+    assert_ne!(out["symbol"]["objectId"], json!(total_sales));
+    // An unknown name has none.
+    let out = r
+        .run("dax.references", at(text.find("Nope").unwrap()))
+        .await;
+    assert_eq!(out["symbol"]["kind"], "table");
+    assert!(out["symbol"].get("objectId").is_none(), "{out}");
+
+    // A variable: go to its declaration, by line and column.
+    let out = r
+        .run(
+            "dax.references",
+            json!({"text": text, "position": {"line": 2, "column": 15}}),
+        )
+        .await;
+    assert!(out.get("documentRevision").is_none(), "{out}");
+    assert_eq!(out["symbol"], json!({"kind": "variable", "name": "\u{e9}"}));
+    assert_eq!(
+        out["definition"],
+        json!({
+            "start": {"offset": 4, "utf16Offset": 4, "line": 1, "column": 5},
+            "end": {"offset": 6, "utf16Offset": 5, "line": 1, "column": 6},
+        })
+    );
+    assert_eq!(out["references"][0]["declaration"], true);
+    assert_eq!(out["references"].as_array().unwrap().len(), 2);
+
+    // Not on a name.
+    let out = r.run("dax.references", at(1)).await;
+    assert_eq!(out["references"], json!([]));
+    assert!(out.get("symbol").is_none(), "{out}");
+}
+
+/// Every query Power BI Desktop ran without an error
+/// (`reference/groundtruth/recordings/`, ADR-0011), checked against the
+/// model it ran on: no error diagnostic and no name highlighting marks
+/// unknown.
+#[tokio::test(flavor = "multi_thread")]
+async fn queries_desktop_runs_have_no_errors_or_unknown_names() {
+    let root = reference_root().join("groundtruth");
+    let corpus_dir = root.join("corpus");
+    if !corpus_dir.is_dir() {
+        println!("SKIP: {} missing", corpus_dir.display());
+        return;
+    }
+    let r = Runner::new();
+    let mut checked = 0;
+    let mut wrong = Vec::new();
+    let mut corpora: Vec<PathBuf> = std::fs::read_dir(&corpus_dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|e| e == "json"))
+        .collect();
+    corpora.sort();
+    for corpus_path in corpora {
+        let read = |path: &std::path::Path| -> Value {
+            serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
+        };
+        let corpus = read(&corpus_path);
+        let recording_path = root
+            .join("recordings")
+            .join(corpus_path.file_name().unwrap());
+        if !recording_path.exists() {
+            println!("SKIP: {} missing", recording_path.display());
+            continue;
+        }
+        let model = match corpus["fixture"].as_str().unwrap() {
+            "acme" => reference_root().join(PBIP),
+            "dax-lab" => root.join("fixtures/dax-lab/DaxLab.pbip"),
+            other => reference_root()
+                .join("samples/microsoft")
+                .join(other.strip_prefix("sample:").unwrap()),
+        };
+        if !model.exists() {
+            println!("SKIP: {} missing", model.display());
+            continue;
+        }
+        let doc = r.open(json!({"path": s(&model)})).await;
+        for case in read(&recording_path)["cases"].as_array().unwrap() {
+            let (Some(query), None) = (case["query"].as_str(), case.get("error")) else {
+                continue;
+            };
+            checked += 1;
+            let at = format!("{}: {}", corpus_path.display(), case["id"]);
+            let out = r
+                .run("dax.diagnostics", json!({"docId": doc, "text": query}))
+                .await;
+            for d in out["diagnostics"].as_array().unwrap() {
+                if d["severity"] == "error" {
+                    wrong.push(format!("{at}\n  {d}"));
+                }
+            }
+            let out = r
+                .run("dax.tokens", json!({"docId": doc, "text": query}))
+                .await;
+            for t in out["tokens"].as_array().unwrap() {
+                if t["unresolved"] == true {
+                    let start = t["start"]["offset"].as_u64().unwrap() as usize;
+                    let end = t["end"]["offset"].as_u64().unwrap() as usize;
+                    wrong.push(format!(
+                        "{at}\n  unresolved {}: {}",
+                        &query[start..end],
+                        t["kind"]
+                    ));
+                }
+            }
+        }
+        r.run("doc.close", json!({"docId": doc})).await;
+    }
+    assert!(
+        wrong.is_empty(),
+        "{} of {checked}:\n{}",
+        wrong.len(),
+        wrong.join("\n")
+    );
+    println!("{checked} queries Desktop ran: no errors, no unknown names");
 }

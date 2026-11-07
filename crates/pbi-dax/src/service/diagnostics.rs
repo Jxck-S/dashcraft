@@ -6,7 +6,9 @@
 //! `[Name]` is accepted when it is a measure, a column of any table, a column
 //! an expression adds by name (`ADDCOLUMNS(…, "Name", …)`), or an implicit
 //! column (`[Value]` of a table constructor or `GENERATESERIES`, `[Date]` of
-//! `CALENDAR`).
+//! `CALENDAR`), and any name once the text calls a function whose result
+//! columns DashCraft cannot know (`INFO.VIEW.COLUMNS()`, a user-defined
+//! function).
 
 use std::collections::HashSet;
 
@@ -126,7 +128,7 @@ pub fn diagnostics(src: &str, kind: SourceKind, schema: &Schema) -> Vec<Diagnost
     let mut out = match kind {
         SourceKind::Expression => match parse_expression(src) {
             Ok(expr) => {
-                let names = Names::collect(&[&expr], &[]);
+                let names = Names::collect(&[&expr], &[], schema);
                 let mut out = Vec::new();
                 check(&expr, src, schema, &names, &mut out);
                 out
@@ -158,7 +160,7 @@ fn check_query(query: &Query, src: &str, schema: &Schema) -> Vec<Diagnostic> {
     let mut out = Vec::new();
     let exprs = query.expressions();
     if query.defines.is_empty() {
-        let names = Names::collect(&exprs, &[]);
+        let names = Names::collect(&exprs, &[], schema);
         for e in exprs {
             check(e, src, schema, &names, &mut out);
         }
@@ -201,7 +203,7 @@ fn check_query(query: &Query, src: &str, schema: &Schema) -> Vec<Diagnostic> {
             local.add_column(table, name);
         }
     }
-    let names = Names::collect(&exprs, &query_vars);
+    let names = Names::collect(&exprs, &query_vars, &local);
     for e in exprs {
         check(e, src, &local, &names, &mut out);
     }
@@ -223,16 +225,20 @@ struct Names {
     vars: HashSet<String>,
     strings: HashSet<String>,
     implicit_columns: bool,
+    /// A call whose result columns are not known: `INFO.*` or a
+    /// user-defined function.
+    untyped_columns: bool,
     /// Component keywords (`NAMEOF(…, TABLE)`) that parse as table names.
     keywords: HashSet<Span>,
 }
 
 impl Names {
-    fn collect(exprs: &[&Expr], extra_vars: &[String]) -> Self {
+    fn collect(exprs: &[&Expr], extra_vars: &[String], schema: &Schema) -> Self {
         let mut names = Names {
             vars: extra_vars.iter().map(|v| v.to_lowercase()).collect(),
             strings: HashSet::new(),
             implicit_columns: false,
+            untyped_columns: false,
             keywords: HashSet::new(),
         };
         for root in exprs {
@@ -260,6 +266,11 @@ impl Names {
                     {
                         names.keywords.insert(component.span);
                     }
+                }
+                ExprKind::Call { name, raw_name, .. }
+                    if catalog::is_info_function(name) || schema.has_function(raw_name) =>
+                {
+                    names.untyped_columns = true;
                 }
                 _ => {}
             });
@@ -354,6 +365,7 @@ fn check(root: &Expr, src: &str, schema: &Schema, names: &Names, out: &mut Vec<D
                 if schema.measure_table(column).is_some()
                     || schema.has_column_anywhere(column)
                     || names.is_added_column(column)
+                    || names.untyped_columns
                     || schema.tables().iter().any(|t| t.is_open())
                 {
                     return;

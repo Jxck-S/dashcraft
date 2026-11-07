@@ -10,21 +10,31 @@
 //!   one-line description (DashCraft's words) of every supported function.
 //! - [`signature_help`], [`hover`] and [`complete`] at a cursor offset; they
 //!   work on tokens, so text that does not parse yet still gets answers.
+//! - [`semantic_tokens`]: what every token is (keyword, function, table,
+//!   column, measure, variable, parameter, literal, …) for highlighting, and
+//!   [`references`]: the symbol at a cursor, where the text declares it and
+//!   every place it occurs (go to definition, find references).
 //!
 //! The registry exposes it as `dax.diagnostics`, `dax.signatureHelp`,
-//! `dax.hover` and `dax.complete` (`pbi-ops`, through `pbi-session`).
+//! `dax.hover`, `dax.complete`, `dax.tokens` and `dax.references`
+//! (`pbi-ops`, through `pbi-session`).
 
 pub mod catalog;
 mod complete;
 mod diagnostics;
 mod help;
 mod schema;
+mod scope;
+mod symbols;
 
 pub use catalog::{FunctionInfo, FunctionParam, ReturnType};
 pub use complete::{CompletionItem, CompletionKind, Completions, complete};
 pub use diagnostics::{Diagnostic, DiagnosticCode, MAX_DIAGNOSTICS, SourceKind, diagnostics};
 pub use help::{Hover, HoverKind, SignatureHelp, hover, signature_help};
 pub use schema::{NameDetails, Schema, SchemaTable};
+pub use symbols::{
+    ReferenceSite, References, SemanticKind, SemanticToken, Symbol, references, semantic_tokens,
+};
 
 pub use crate::eval::is_supported_function;
 pub use crate::syntax::{Span, line_col};

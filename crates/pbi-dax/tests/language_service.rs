@@ -4,7 +4,7 @@
 
 use pbi_dax::service::{
     CompletionKind, Completions, Diagnostic, DiagnosticCode, Hover, HoverKind, MAX_DIAGNOSTICS,
-    Schema, SourceKind, complete, diagnostics, hover, signature_help,
+    Schema, SourceKind, complete, diagnostics, hover, references, semantic_tokens, signature_help,
 };
 use pbi_model::{Column, DataType, Measure, Model, PropValue, RawObject, Severity, Table};
 
@@ -676,6 +676,28 @@ fn completion_offers_the_variables_in_scope() {
     // Declaring a name: nothing to suggest.
     assert!(labels("VAR na¦").is_empty());
     assert!(labels("VAR x ¦").is_empty());
+    // An inner block shadows an outer variable only until its RETURN
+    // expression ends.
+    assert_eq!(
+        vars("VAR x = 1 VAR y = VAR z = 2 RETURN z RETURN ¦"),
+        ["x", "y"]
+    );
+    // Function parameters in the body; a definition's variables end where
+    // the next definition starts; query variables reach the end.
+    let c = comp("DEFINE FUNCTION Half = (value : SCALAR) => val¦");
+    let v = c.items.first().unwrap();
+    assert_eq!(
+        (v.label.as_str(), v.kind, v.detail.as_str()),
+        ("value", CompletionKind::Variable, "parameter")
+    );
+    assert!(
+        vars("DEFINE MEASURE Sales[a] = VAR inner = 1 RETURN inner MEASURE Sales[b] = ¦")
+            .is_empty()
+    );
+    assert_eq!(
+        vars("DEFINE VAR shared = 1 MEASURE Sales[a] = VAR own = 2 RETURN own EVALUATE {¦"),
+        ["shared"]
+    );
 }
 
 #[test]
@@ -742,6 +764,277 @@ fn completion_is_empty_in_comments_literals_and_without_a_model() {
     assert_eq!(c.items.first().map(|i| i.label.as_str()), Some("s"));
 }
 
+/// `text:kind`, with `*` for a declaration and `?` for an unresolved name.
+fn tokens_of(src: &str, schema: &Schema) -> Vec<String> {
+    semantic_tokens(src, schema)
+        .into_iter()
+        .map(|t| {
+            format!(
+                "{}:{}{}{}",
+                t.span.text(src),
+                t.kind.as_str(),
+                if t.declaration { "*" } else { "" },
+                if t.unresolved { "?" } else { "" }
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn semantic_tokens_classify_names_literals_and_operators() {
+    let schema = Schema::from_model(&model());
+    let src = "VAR x = SUMX(Sales, Sales[Amount]) -- c\nRETURN IF(x > 1, [Total Sales], \
+               'Product Category'[Category] & \"a\" & dt\"2024-01-31\" & @p & \
+               [Margin] & Nope & [Nope] & Nope(1) & DESC)";
+    assert_eq!(
+        tokens_of(src, &schema),
+        [
+            "VAR:keyword",
+            "x:variable*",
+            "=:operator",
+            "SUMX:function",
+            "Sales:table",
+            "Sales:table",
+            "[Amount]:column",
+            "-- c:comment",
+            "RETURN:keyword",
+            "IF:function",
+            "x:variable",
+            ">:operator",
+            "1:number",
+            "[Total Sales]:measure",
+            "'Product Category':table",
+            "[Category]:column",
+            "&:operator",
+            "\"a\":string",
+            "&:operator",
+            "dt\"2024-01-31\":dateTime",
+            "&:operator",
+            "@p:queryParameter",
+            "&:operator",
+            "[Margin]:column",
+            "&:operator",
+            "Nope:table?",
+            "&:operator",
+            "[Nope]:measure?",
+            "&:operator",
+            "Nope:function?",
+            "1:number",
+            "&:operator",
+            "DESC:keyword",
+        ]
+    );
+    // The columns of a user-defined or `INFO` function's table are unknown:
+    // any bare name may be one (as the diagnostics see it). `NAMEOF`'s
+    // component is a keyword.
+    let src = "COUNTROWS(FILTER(INFO.VIEW.COLUMNS(), [Type] = 1)) + Twice([Nope]) \
+               + LEN(NAMEOF(Sales[Amount], parent))";
+    assert_eq!(
+        tokens_of(src, &schema),
+        [
+            "COUNTROWS:function",
+            "FILTER:function",
+            "INFO.VIEW.COLUMNS:function",
+            "[Type]:column",
+            "=:operator",
+            "1:number",
+            "+:operator",
+            "Twice:userFunction",
+            "[Nope]:column",
+            "+:operator",
+            "LEN:function",
+            "NAMEOF:function",
+            "Sales:table",
+            "[Amount]:column",
+            "parent:keyword",
+        ]
+    );
+    assert!(
+        check(src).iter().all(|d| d.severity != Severity::Error),
+        "{:?}",
+        check(src)
+    );
+    // Without a model, names keep their syntactic kind and nothing is
+    // unresolved; an unknown function may be one of the model's.
+    assert_eq!(
+        tokens_of(
+            "[Total Sales] + Foo[Bar] + Foo + Bar(1)",
+            &Schema::unknown()
+        ),
+        [
+            "[Total Sales]:measure",
+            "+:operator",
+            "Foo:table",
+            "[Bar]:column",
+            "+:operator",
+            "Foo:table",
+            "+:operator",
+            "Bar:userFunction",
+            "1:number",
+        ]
+    );
+    // Unterminated strings and comments are still highlighted.
+    assert_eq!(
+        tokens_of("1 /* open", &schema),
+        ["1:number", "/* open:comment"]
+    );
+    assert_eq!(tokens_of("\"open", &schema), ["\"open:string"]);
+}
+
+#[test]
+fn semantic_tokens_know_query_definitions_and_parameters() {
+    let schema = Schema::from_model(&model());
+    let src = "DEFINE VAR q = 1 MEASURE Sales[Profit] = VAR m = [Total Sales] RETURN m * q \
+               FUNCTION Half = (v : SCALAR VAL) => v / 2 TABLE Top = TOPN(1, Sales) \
+               COLUMN Sales[Big] = Sales[Amount] > 100 \
+               EVALUATE ADDCOLUMNS(Top, \"h\", Half([Profit])) ORDER BY [h] DESC";
+    assert_eq!(
+        tokens_of(src, &schema),
+        [
+            "DEFINE:keyword",
+            "VAR:keyword",
+            "q:variable*",
+            "=:operator",
+            "1:number",
+            "MEASURE:keyword",
+            "Sales:table",
+            "[Profit]:measure*",
+            "=:operator",
+            "VAR:keyword",
+            "m:variable*",
+            "=:operator",
+            "[Total Sales]:measure",
+            "RETURN:keyword",
+            "m:variable",
+            "*:operator",
+            "q:variable",
+            "FUNCTION:keyword",
+            "Half:userFunction*",
+            "=:operator",
+            "v:parameter*",
+            "SCALAR:keyword",
+            "VAL:keyword",
+            "=>:operator",
+            "v:parameter",
+            "/:operator",
+            "2:number",
+            "TABLE:keyword",
+            "Top:table*",
+            "=:operator",
+            "TOPN:function",
+            "1:number",
+            "Sales:table",
+            "COLUMN:keyword",
+            "Sales:table",
+            "[Big]:column*",
+            "=:operator",
+            "Sales:table",
+            "[Amount]:column",
+            ">:operator",
+            "100:number",
+            "EVALUATE:keyword",
+            "ADDCOLUMNS:function",
+            "Top:table",
+            "\"h\":string",
+            "Half:userFunction",
+            "[Profit]:measure",
+            "ORDER:keyword",
+            "BY:keyword",
+            "[h]:column",
+            "DESC:keyword",
+        ]
+    );
+}
+
+/// The symbol at the cursor as DAX, the text at its definition, and each
+/// site as `start` (with `*` for the declaration).
+fn refs(marked: &str, schema: &Schema) -> Option<(String, Option<String>, Vec<String>)> {
+    let (src, offset) = cursor(marked);
+    let r = references(&src, offset, schema)?;
+    assert!(r.span.start <= offset && offset <= r.span.end, "{marked}");
+    let sites = r
+        .sites
+        .iter()
+        .map(|s| {
+            let name = |t: &str| t.trim_matches('\'').to_lowercase();
+            assert_eq!(name(s.span.text(&src)), name(r.span.text(&src)));
+            format!("{}{}", s.span.start, if s.declaration { "*" } else { "" })
+        })
+        .collect();
+    let definition = r.definition.map(|d| d.text(&src).to_string());
+    Some((r.symbol.display(), definition, sites))
+}
+
+#[test]
+fn references_find_every_occurrence_of_the_symbol() {
+    let schema = Schema::from_model(&model());
+    let r = |marked: &str| refs(marked, &schema);
+    let some = |name: &str, def: Option<&str>, sites: &[&str]| {
+        Some((
+            name.to_string(),
+            def.map(str::to_string),
+            sites.iter().map(|s| (*s).to_string()).collect::<Vec<_>>(),
+        ))
+    };
+    // A variable: its declaration and uses.
+    assert_eq!(
+        r("VAR x = 1 VAR y = x + 1 RETURN x¦ * y"),
+        some("x", Some("x"), &["4*", "18", "31"])
+    );
+    // An inner declaration shadows the outer one through its RETURN only.
+    let src = "VAR x = 1 VAR y = VAR x = 2 RETURN x RETURN x + y";
+    let outer = src.rfind("x +").unwrap();
+    let inner = src.find("x RETURN x +").unwrap();
+    assert_eq!(
+        r(&format!("{}¦{}", &src[..outer], &src[outer..])),
+        some("x", Some("x"), &["4*", &outer.to_string()])
+    );
+    assert_eq!(
+        r(&format!("{}¦{}", &src[..inner], &src[inner..])),
+        some("x", Some("x"), &["22*", &inner.to_string()])
+    );
+    // Model objects: measures by name, columns by table and name, tables
+    // through qualifiers; no definition in the text.
+    assert_eq!(
+        r("[Total Sales] + Sales[Total Sales] + CALCULATE([total sales]¦)"),
+        some("[Total Sales]", None, &["0", "21", "47"])
+    );
+    assert_eq!(
+        r("SUM(Sales[Amount]) + SUMX(Sales, Sales[amount]¦) + [Amount]"),
+        some("Sales[Amount]", None, &["9", "38", "50"])
+    );
+    assert_eq!(
+        r("COUNTROWS(Sales¦) + SUM(Sales[Amount]) + COUNTROWS('Sales')"),
+        some("Sales", None, &["10", "23", "50"])
+    );
+    assert_eq!(
+        r("SUM(Sales[Amount]) + sum¦(Sales[Margin])"),
+        some("SUM", None, &["0", "21"])
+    );
+    // A query's own definitions and a function's parameters.
+    assert_eq!(
+        r("DEFINE MEASURE Sales[Profit] = 1 EVALUATE ROW(\"p\", [Profit]¦, \"q\", Sales[Profit])"),
+        some("[Profit]", Some("[Profit]"), &["20*", "51", "71"])
+    );
+    assert_eq!(
+        r("DEFINE FUNCTION Half = (v : SCALAR) => v¦ / 2 EVALUATE {Half(4)}"),
+        some("v", Some("v"), &["24*", "39"])
+    );
+    assert_eq!(
+        r("DEFINE FUNCTION Half = (v : SCALAR) => v / 2 EVALUATE {Ha¦lf(4)}"),
+        some("Half", Some("Half"), &["16*", "55"])
+    );
+    // Keywords, literals and comments name nothing.
+    for marked in ["VAR x = 1 RET¦URN x", "1¦2 + 3", "-- SU¦M", "\"Sa¦les\""] {
+        assert_eq!(r(marked), None, "{marked}");
+    }
+    // Without a model, names match by their syntax.
+    assert_eq!(
+        refs("Foo[Bar] + SUM(Foo[bar]¦)", &Schema::unknown()),
+        some("Foo[Bar]", None, &["3", "18"])
+    );
+}
+
 /// Every service answers at every offset of awkward text without panicking,
 /// with spans inside the text on character boundaries.
 #[test]
@@ -764,11 +1057,28 @@ fn language_services_survive_every_offset() {
         "VAR a = (VAR b = 1 RETURN b) RETURN a, b)}) ((",
         "EVALUATE ORDER BY START AT ,,, @p dt\"2024",
         "|| | # ` 1e 1.2.3 .5 =>",
+        "DEFINE FUNCTION f = (a : SCALAR, b) => a + b EVALUATE {f(1, 2)} ORDER BY",
+        "(x) => ) => (y : => z",
+        "VAR VAR = RETURN RETURN ) VAR x = 1 RETURN x MEASURE",
     ];
     for src in texts {
         let kind = SourceKind::detect(src);
         let _ = diagnostics(src, kind, &schema);
+        let mut end = 0;
+        for t in semantic_tokens(src, &schema) {
+            assert!(end <= t.span.start && t.span.start < t.span.end, "{src:?}");
+            assert!(src.is_char_boundary(t.span.start) && src.is_char_boundary(t.span.end));
+            end = t.span.end;
+        }
+        assert!(end <= src.len());
         for offset in 0..=src.len() + 2 {
+            if let Some(r) = references(src, offset, &schema) {
+                assert!(
+                    r.sites.iter().any(|s| s.span == r.span),
+                    "{src:?} @ {offset}"
+                );
+                assert!(r.sites.iter().all(|s| s.span.end <= src.len()));
+            }
             let _ = signature_help(src, offset);
             if let Some(h) = hover(src, offset, &schema) {
                 assert!(h.span.end <= src.len(), "{src:?} @ {offset}");
