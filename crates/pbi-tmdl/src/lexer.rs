@@ -266,11 +266,11 @@ pub struct Header {
     pub value: Option<Span>,
 }
 
-fn is_ident_start(b: u8) -> bool {
+pub(crate) fn is_ident_start(b: u8) -> bool {
     b.is_ascii_alphabetic() || b == b'_'
 }
 
-fn is_ident_char(b: u8) -> bool {
+pub(crate) fn is_ident_char(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
 
@@ -280,14 +280,14 @@ pub(crate) fn is_keyword(s: &str) -> bool {
     b.first().copied().is_some_and(is_ident_start) && b.iter().copied().all(is_ident_char)
 }
 
-fn skip_ws(b: &[u8], mut i: usize) -> usize {
+pub(crate) fn skip_ws(b: &[u8], mut i: usize) -> usize {
     while matches!(b.get(i), Some(b' ' | b'\t')) {
         i += 1;
     }
     i
 }
 
-fn trimmed_rest(text: &str, from: usize) -> Span {
+pub(crate) fn trimmed_rest(text: &str, from: usize) -> Span {
     let rest = text.get(from..).unwrap_or_default();
     let t = rest.trim();
     if t.is_empty() {

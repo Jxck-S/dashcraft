@@ -1,10 +1,10 @@
-//! The TMDL language service (M7.4): `tmdl.diagnostics`.
+//! The TMDL language service (M7.4): `tmdl.diagnostics`, `tmdl.complete` and `tmdl.hover`.
 
-use pbi_core::tmdl_service::{self, Source, TmdlDiagnostic};
+use pbi_core::tmdl_service::{self, FileText, ItemKind, Source, TmdlDiagnostic};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::dax::TextPositionOut;
+use super::dax::{MAX_COMPLETION_ITEMS, TextPositionIn, TextPositionOut, default_max_items};
 use super::{BASE, bounded};
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
@@ -128,5 +128,282 @@ impl TmdlDiagnosticOut {
             message: d.message,
             suggestion: d.suggestion,
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// What a suggestion or a hovered word is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum TmdlItemKind {
+    /// A keyword that starts an object (`column`, `measure`).
+    Object,
+    /// A property keyword (`dataType`, `isHidden`).
+    Property,
+    /// A value of an enumeration, or `true` / `false`.
+    Value,
+    /// The object type of a top-level `ref` line.
+    ObjectType,
+    Table,
+    Column,
+    Measure,
+    Hierarchy,
+    /// Another declared object: a query group, relationship, role, culture, perspective,
+    /// expression, data source or function.
+    Name,
+}
+
+impl From<ItemKind> for TmdlItemKind {
+    fn from(kind: ItemKind) -> Self {
+        match kind {
+            ItemKind::Object => Self::Object,
+            ItemKind::Property => Self::Property,
+            ItemKind::Value => Self::Value,
+            ItemKind::ObjectType => Self::ObjectType,
+            ItemKind::Table => Self::Table,
+            ItemKind::Column => Self::Column,
+            ItemKind::Measure => Self::Measure,
+            ItemKind::Hierarchy => Self::Hierarchy,
+            ItemKind::Name => Self::Name,
+        }
+    }
+}
+
+/// The other files of the folder: `files` without the one at `path` (the edited text
+/// replaces it).
+fn other_files<'a>(
+    path: Option<&str>,
+    files: &'a [TmdlFileIn],
+) -> Result<Vec<FileText<'a>>, OpError> {
+    bounded("files", files.len(), MAX_TMDL_FILES)?;
+    Ok(files
+        .iter()
+        .filter(|f| Some(f.path.as_str()) != path)
+        .map(|f| FileText {
+            path: &f.path,
+            text: &f.text,
+        })
+        .collect())
+}
+
+/// `tmdl.complete`.
+#[derive(Debug)]
+pub struct TmdlComplete;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TmdlCompleteParams {
+    /// The TMDL text being edited.
+    pub text: String,
+    /// The cursor.
+    pub position: TextPositionIn,
+    /// The text's path relative to the `definition` folder; the file of `files` with this path
+    /// is replaced by `text`.
+    #[serde(default)]
+    pub path: Option<String>,
+    /// The other files of the model's `definition` folder: their tables, columns, measures and
+    /// other objects are suggested where a reference names one, and their `database` sets the
+    /// compatibility level.
+    #[serde(default)]
+    pub files: Vec<TmdlFileIn>,
+    /// Most items returned, best first (default 100, at most 1000).
+    #[serde(default = "default_max_items")]
+    pub max_items: usize,
+}
+
+/// One suggestion.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TmdlCompletionItemOut {
+    /// What is shown (`dataType`, `'Order Lines'.Quantity`).
+    pub label: String,
+    pub kind: TmdlItemKind,
+    /// The text that replaces `start`..`end`: a keyword with `: `, ` ` or ` = ` after it on an
+    /// otherwise empty line, a name quoted as TMDL writes it.
+    pub insert_text: String,
+    /// A keyword's forms (`dataType: <value>`), a value's enumeration, what a name is.
+    pub detail: String,
+    /// What a keyword takes and needs, or a declared object's `///` description.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TmdlCompleteOut {
+    /// Start of the word a chosen item replaces (the cursor when nothing is typed yet).
+    pub start: TextPositionOut,
+    /// End (exclusive) of the replaced word.
+    pub end: TextPositionOut,
+    /// The typed text the items match.
+    pub prefix: String,
+    /// Best match first: the same word, then words that start with the prefix, then a word
+    /// part that does, then words that contain it. Keywords are those of the object the line
+    /// belongs to, accepted at the database's compatibility level, without properties already
+    /// set or properties after a child object; after `keyword:` the values of its type; after
+    /// a reference keyword the objects it may name. Empty inside expressions.
+    pub items: Vec<TmdlCompletionItemOut>,
+    /// More items matched than `maxItems`.
+    pub incomplete: bool,
+}
+
+impl Command for TmdlComplete {
+    type Params = TmdlCompleteParams;
+    type Output = TmdlCompleteOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "tmdl.complete",
+            title: "TMDL completion",
+            summary: "The TMDL keywords, values and object names that fit at a cursor, as Microsoft's TMDL reader accepts them there, best match first, with the text to insert.",
+            category: Category::Tmdl,
+            examples: &[
+                (
+                    "The properties of a column",
+                    r#"{"text": "table Stores\n\tcolumn Region\n\t\tdata", "position": {"line": 3, "column": 7}}"#,
+                ),
+                (
+                    "A column of another file",
+                    r#"{"text": "table Stores\n\tcolumn Region\n\t\tsortByColumn: ", "position": {"line": 3, "column": 17}, "path": "tables/Stores.tmdl", "files": [{"path": "tables/Stores.tmdl", "text": ""}, {"path": "tables/More.tmdl", "text": "table Stores\n\tcolumn 'Region Order'\n"}]}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(_ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let max_items = bounded("maxItems", p.max_items, MAX_COMPLETION_ITEMS)?;
+        if max_items == 0 {
+            return Err(OpError::invalid_params("maxItems must be at least 1"));
+        }
+        let others = other_files(p.path.as_deref(), &p.files)?;
+        let src = p.text.as_str();
+        let offset = p.position.resolve(src)?;
+        let c = tmdl_service::complete(src, offset, &others, max_items);
+        Ok(TmdlCompleteOut {
+            start: TextPositionOut::at(src, c.start),
+            end: TextPositionOut::at(src, c.end),
+            prefix: c.prefix,
+            items: c
+                .items
+                .into_iter()
+                .map(|i| TmdlCompletionItemOut {
+                    label: i.label,
+                    kind: i.kind.into(),
+                    insert_text: i.insert_text,
+                    detail: i.detail,
+                    description: i.description,
+                })
+                .collect(),
+            incomplete: c.incomplete,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `tmdl.hover`.
+#[derive(Debug)]
+pub struct TmdlHover;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TmdlHoverParams {
+    /// The TMDL text.
+    pub text: String,
+    /// The cursor.
+    pub position: TextPositionIn,
+    /// The text's path relative to the `definition` folder; the file of `files` with this path
+    /// is replaced by `text`.
+    #[serde(default)]
+    pub path: Option<String>,
+    /// The other files of the model's `definition` folder, where referenced objects are
+    /// declared.
+    #[serde(default)]
+    pub files: Vec<TmdlFileIn>,
+}
+
+/// Where a referenced object is declared.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TmdlDeclarationOut {
+    /// The file's `path`; `path` of the parameters (or absent) for the text itself.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    /// 1-based line of the declaration.
+    pub line: u32,
+}
+
+/// The word under the cursor.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TmdlHoverInfo {
+    pub kind: TmdlItemKind,
+    /// The keyword, the value, or the object's name (`'Order Lines'.Quantity`).
+    pub name: String,
+    /// Start of the hovered word.
+    pub start: TextPositionOut,
+    /// End (exclusive).
+    pub end: TextPositionOut,
+    /// A keyword's forms, value type and compatibility level; an enumeration's values; a
+    /// referenced object's `///` description and declaration line, as Markdown.
+    pub markdown: String,
+    /// Where the object a reference names is declared.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub declaration: Option<TmdlDeclarationOut>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TmdlHoverOut {
+    /// Absent when there is nothing to describe at the cursor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hover: Option<TmdlHoverInfo>,
+}
+
+impl Command for TmdlHover {
+    type Params = TmdlHoverParams;
+    type Output = TmdlHoverOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "tmdl.hover",
+            title: "TMDL hover",
+            summary: "Describes the TMDL word at a cursor: a keyword's forms, value and level, an enumeration value, or the object a reference names and where it is declared.",
+            category: Category::Tmdl,
+            examples: &[
+                (
+                    "A property keyword",
+                    r#"{"text": "table Stores\n\tcolumn Region\n\t\tsummarizeBy: none\n", "position": {"line": 3, "column": 5}}"#,
+                ),
+                (
+                    "A column of another file",
+                    r#"{"text": "relationship r1\n\tfromColumn: Orders.Store\n", "position": {"line": 2, "column": 22}, "files": [{"path": "tables/Orders.tmdl", "text": "table Orders\n\tcolumn Store\n"}]}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(_ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let others = other_files(p.path.as_deref(), &p.files)?;
+        let src = p.text.as_str();
+        let offset = p.position.resolve(src)?;
+        let hover = tmdl_service::hover(src, offset, &others).map(|h| TmdlHoverInfo {
+            kind: h.kind.into(),
+            name: h.name,
+            start: TextPositionOut::at(src, h.start),
+            end: TextPositionOut::at(src, h.end),
+            markdown: h.markdown,
+            declaration: h.declaration.map(|d| TmdlDeclarationOut {
+                path: match d.file {
+                    None => p.path.clone(),
+                    Some(i) => others.get(i).map(|f| f.path.to_owned()),
+                },
+                line: d.line,
+            }),
+        });
+        Ok(TmdlHoverOut { hover })
     }
 }

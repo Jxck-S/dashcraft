@@ -821,3 +821,311 @@ fn diagnostics_report_no_error_on_models_the_reader_loads() {
         assert!(bench.errors(&[]).is_empty());
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Completion and hover against the files Desktop and the TOM library wrote
+
+/// Folders saved by Power BI Desktop or the TOM library, and the example.
+const SAVED_MODELS: [&str; 4] = [
+    "examples/acme-outfitters/AcmeOutfitters.SemanticModel/definition",
+    "groundtruth/tmdl-probe",
+    "groundtruth/fixtures/dax-lab/DaxLab.SemanticModel/definition",
+    "groundtruth/gt4/s24/before",
+];
+
+/// Keywords whose name names another object (besides `ref` lines).
+const NAMED_REFERENCES: [&str; 6] = [
+    "tablePermission",
+    "columnPermission",
+    "perspectiveTable",
+    "perspectiveColumn",
+    "perspectiveMeasure",
+    "perspectiveHierarchy",
+];
+
+fn saved_models() -> Vec<(&'static str, Vec<(String, String)>)> {
+    let root = reference_root();
+    SAVED_MODELS
+        .iter()
+        .filter_map(|folder| {
+            let dir = root.join(folder);
+            if !dir.exists() {
+                println!("SKIP: {} missing", dir.display());
+                return None;
+            }
+            Some((*folder, read_model(&dir)))
+        })
+        .collect()
+}
+
+/// The files of a folder other than the `i`-th.
+fn others_of(files: &[(String, String)], i: usize) -> Vec<pbi_tmdl::service::FileText<'_>> {
+    files
+        .iter()
+        .enumerate()
+        .filter(|(j, _)| *j != i)
+        .map(|(_, (path, text))| pbi_tmdl::service::FileText { path, text })
+        .collect()
+}
+
+/// Every node with the keywords of its ancestors.
+fn all_nodes<'a>(
+    nodes: &'a [pbi_tmdl::Node],
+    parents: &mut Vec<&'a str>,
+    out: &mut Vec<(Vec<&'a str>, &'a pbi_tmdl::Node)>,
+) {
+    for node in nodes {
+        out.push((parents.clone(), node));
+        parents.push(node.keyword());
+        all_nodes(&node.children, parents, out);
+        parents.pop();
+    }
+}
+
+/// A name or value as compared: quotes dropped, case folded.
+fn folded(s: &str) -> String {
+    s.chars()
+        .filter(|c| *c != '\'' && *c != '"')
+        .collect::<String>()
+        .trim()
+        .to_lowercase()
+}
+
+/// Whether every context with `keyword: value` types the value as `true`/`false`, an
+/// enumeration or a reference, the values completion offers.
+fn offers_values(keyword: &str) -> bool {
+    use pbi_tmdl::service::{Form, ValueType};
+    let mut types = pbi_tmdl::service::catalog()
+        .contexts_of(keyword)
+        .filter_map(|c| c.keyword(keyword))
+        .filter(|k| k.support(Form::Colon).accepted())
+        .map(|k| k.value)
+        .peekable();
+    types.peek().is_some()
+        && types.all(|t| matches!(t, ValueType::Bool | ValueType::Enum(_) | ValueType::Ref))
+}
+
+/// Recall: at the end of every keyword, value and reference written in the saved models, the
+/// completion list offers it, and hover describes it (a reference with its declaration).
+#[test]
+fn completion_offers_what_saved_models_contain() {
+    use pbi_tmdl::service::{ItemKind, complete, hover};
+    let mut misses = Vec::new();
+    let mut counts = BTreeMap::<&str, usize>::new();
+    for (folder, files) in saved_models() {
+        for (i, (path, text)) in files.iter().enumerate() {
+            let others = others_of(&files, i);
+            let file = pbi_tmdl::parse_file(path, text).unwrap();
+            let mut nodes = Vec::new();
+            all_nodes(&file.nodes, &mut Vec::new(), &mut nodes);
+            for (parents, node) in nodes {
+                if parents
+                    .iter()
+                    .any(|p| p.eq_ignore_ascii_case("translations"))
+                {
+                    continue;
+                }
+                let line = node.line_number();
+                let mut check = |what: &'static str, span: pbi_tmdl::lexer::Span, written: &str| {
+                    let offset = node.line.offset + span.end;
+                    let completions = complete(text, offset, &others, 1000);
+                    *counts.entry(what).or_default() += 1;
+                    let wanted = folded(written);
+                    if !completions
+                        .items
+                        .iter()
+                        .any(|it| folded(&it.label) == wanted)
+                    {
+                        let labels: Vec<&str> = completions
+                            .items
+                            .iter()
+                            .map(|it| it.label.as_str())
+                            .collect();
+                        misses.push(format!(
+                            "{folder}/{path}:{line}: {what} `{written}` not offered (got {labels:?})"
+                        ));
+                    }
+                    let middle = node.line.offset + span.start + (span.end - span.start) / 2;
+                    let hovered = hover(text, middle, &others);
+                    let expected = match what {
+                        "keyword" if node.is_ref() => return,
+                        "keyword" => hovered.is_some(),
+                        "value" => hovered
+                            .as_ref()
+                            .is_some_and(|h| h.kind == ItemKind::Value || h.declaration.is_some()),
+                        _ => hovered.as_ref().is_some_and(|h| h.declaration.is_some()),
+                    };
+                    if !expected {
+                        misses.push(format!(
+                            "{folder}/{path}:{line}: {what} `{written}` hovers as {hovered:?}"
+                        ));
+                    }
+                };
+                check("keyword", node.header.keyword, node.keyword());
+                if let (Some(pbi_tmdl::lexer::Operator::Colon), Some(span), false) =
+                    (node.operator(), node.header.value, node.is_ref())
+                {
+                    let value = span.get(&node.line.text);
+                    if offers_values(node.keyword())
+                        && !value.is_empty()
+                        && !value.contains(',')
+                        && value.parse::<i64>().is_err()
+                    {
+                        check("value", span, value);
+                    }
+                }
+                if (node.is_ref() || NAMED_REFERENCES.contains(&node.keyword()))
+                    && let Some(span) = node.header.name
+                {
+                    check("name", span, span.get(&node.line.text));
+                }
+            }
+        }
+    }
+    println!("checked {counts:?}");
+    assert!(
+        misses.is_empty(),
+        "{} misses:\n{}",
+        misses.len(),
+        misses.join("\n")
+    );
+}
+
+/// Byte offset of 1-based line `number` (the end of `text` past the last line).
+fn line_start(text: &str, number: u32) -> usize {
+    match number.checked_sub(2) {
+        None => 0,
+        Some(n) => text
+            .match_indices('\n')
+            .nth(n as usize)
+            .map_or(text.len(), |(i, _)| i + 1),
+    }
+}
+
+/// Diagnostics that depend on the value or the name typed after the keyword, not on where the
+/// keyword is.
+const VALUE_CODES: [&str; 3] = [
+    pbi_tmdl::service::codes::INVALID_VALUE,
+    pbi_tmdl::service::codes::UNRESOLVED_REFERENCE,
+    pbi_tmdl::service::codes::MISSING_REF_TARGET,
+];
+
+/// Precision: every keyword completion offers on a new line, as the first and as the last child
+/// of each kind of object in the saved models (and at the top level), written in each form it
+/// lists, is accepted where it is: the diagnostics, which follow the reader, report no error
+/// about the keyword's context, form, level or position.
+#[test]
+fn completed_keywords_are_accepted_where_offered() {
+    use pbi_tmdl::service::{ItemKind, complete};
+    let root = reference_root();
+    let mut failures = Vec::new();
+    let mut probes = 0usize;
+    for folder in [SAVED_MODELS[0], SAVED_MODELS[2]] {
+        let dir = root.join(folder);
+        if !dir.exists() {
+            println!("SKIP: {} missing", dir.display());
+            continue;
+        }
+        let mut bench = Workbench::new(&dir);
+        let files = bench.files.clone();
+        let mut seen = BTreeSet::new();
+        for (i, (path, text)) in files.iter().enumerate() {
+            let others = others_of(&files, i);
+            let file = pbi_tmdl::parse_file(path, text).unwrap();
+            let mut nodes = Vec::new();
+            all_nodes(&file.nodes, &mut Vec::new(), &mut nodes);
+            // (where, offset of the new line, its indentation)
+            let mut spots = Vec::new();
+            if seen.insert("<top level>".to_owned()) {
+                spots.push(("<top level>".to_owned(), text.len(), String::new()));
+            }
+            for (parents, node) in nodes {
+                let Some(first) = node.children.first() else {
+                    continue;
+                };
+                let equals = if node.operator() == Some(pbi_tmdl::lexer::Operator::Equals) {
+                    " ="
+                } else {
+                    ""
+                };
+                let key = format!("{}/{}{equals}", parents.join("/"), node.keyword());
+                if parents
+                    .iter()
+                    .any(|p| p.eq_ignore_ascii_case("translations"))
+                    || !seen.insert(key.clone())
+                {
+                    continue;
+                }
+                let header_end = node
+                    .block
+                    .as_ref()
+                    .and_then(|b| b.lines.last())
+                    .map_or(node.line_number(), |l| l.number);
+                let indent = first.line.indentation().to_owned();
+                spots.push((
+                    format!("{key} (first)"),
+                    line_start(text, header_end + 1),
+                    indent.clone(),
+                ));
+                spots.push((
+                    format!("{key} (last)"),
+                    line_start(text, node.last_line_number() + 1),
+                    indent,
+                ));
+            }
+            for (spot, at, indent) in spots {
+                let newline = if at == text.len() && !text.ends_with('\n') {
+                    "\n"
+                } else {
+                    ""
+                };
+                let (before, after) = text.split_at(at);
+                let probe = |line: &str| format!("{before}{newline}{indent}{line}\n{after}");
+                let cursor = before.len() + newline.len() + indent.len();
+                let offered = complete(&probe(""), cursor, &others, 1000);
+                for item in &offered.items {
+                    if !matches!(item.kind, ItemKind::Object | ItemKind::Property)
+                        || item.label == "ref"
+                    {
+                        continue;
+                    }
+                    for pattern in item.detail.split(", ") {
+                        let value = if pattern.ends_with(": <value>") {
+                            let typed = format!("{}: ", item.label);
+                            let values = complete(&probe(&typed), cursor + typed.len(), &others, 1);
+                            values
+                                .items
+                                .first()
+                                .map_or("1".to_owned(), |v| v.insert_text.clone())
+                        } else {
+                            "1".to_owned()
+                        };
+                        probes += 1;
+                        let line = pattern
+                            .replace("<name>", &format!("Probe{probes}"))
+                            .replace("<value>", &value);
+                        let errors = bench.errors(&[(path.as_str(), probe(&line))]);
+                        let wrong: Vec<_> = errors
+                            .iter()
+                            .filter(|e| !VALUE_CODES.contains(&e.code))
+                            .map(|e| format!("{} {}", e.code, e.message))
+                            .collect();
+                        if !wrong.is_empty() {
+                            failures.push(format!(
+                                "{folder}/{path} {spot}: `{line}`: {}",
+                                wrong.join("; ")
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!("{probes} probes");
+    assert!(
+        failures.is_empty(),
+        "{} failures:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}

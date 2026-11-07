@@ -144,7 +144,7 @@ fn node_keyword(node: &Node) -> &str {
 /// Objects whose content is not checked: a culture's `translations` block, which TOM writes
 /// for translated captions. The catalog has no record of it (the reader fails on an empty
 /// block, so it cannot be probed keyword by keyword).
-const OPAQUE: [(&str, &str); 1] = [("cultureInfo", "translations")];
+pub(super) const OPAQUE: [(&str, &str); 1] = [("cultureInfo", "translations")];
 
 fn is_opaque(ctx: &Context, node: &Node, word: &str) -> bool {
     node_form(node) == Form::Bare
@@ -189,7 +189,7 @@ pub fn diagnostics(sources: &[Source]) -> Vec<TmdlDiagnostic> {
 }
 
 /// The `compatibilityLevel` of the top-level `database`.
-fn compatibility_level<'a>(files: impl Iterator<Item = &'a TmdlFile>) -> Option<u32> {
+pub(super) fn compatibility_level<'a>(files: impl Iterator<Item = &'a TmdlFile>) -> Option<u32> {
     for file in files {
         for node in file.find("database") {
             if let Some(level) = node.child("compatibilityLevel") {
@@ -209,28 +209,28 @@ fn compatibility_level<'a>(files: impl Iterator<Item = &'a TmdlFile>) -> Option<
 // Names declared in the files
 
 /// Case-folded name → name as declared.
-type Names = HashMap<String, String>;
+pub(super) type Names = HashMap<String, String>;
 
 #[derive(Debug, Default)]
-struct TableInfo {
-    columns: Names,
-    measures: Names,
-    hierarchies: Names,
+pub(super) struct TableInfo {
+    pub(super) columns: Names,
+    pub(super) measures: Names,
+    pub(super) hierarchies: Names,
     /// Has a `partition … = calculated`: its columns are calculated table columns.
-    calculated: bool,
+    pub(super) calculated: bool,
 }
 
 #[derive(Debug, Default)]
-struct Index {
-    has_model: bool,
-    tables: HashMap<String, (String, TableInfo)>,
+pub(super) struct Index {
+    pub(super) has_model: bool,
+    pub(super) tables: HashMap<String, (String, TableInfo)>,
     /// Other top-level objects by kind (`queryGroup`, `relationship`, `role`, …; cultures under
     /// `culture`).
-    objects: HashMap<&'static str, Names>,
+    pub(super) objects: HashMap<&'static str, Names>,
 }
 
 /// Object kinds a top-level `ref` line may name, with the kind they are indexed under.
-const ROOT_REF_KINDS: [(&str, &str); 10] = [
+pub(super) const ROOT_REF_KINDS: [(&str, &str); 10] = [
     ("table", "table"),
     ("role", "role"),
     ("culture", "culture"),
@@ -243,7 +243,7 @@ const ROOT_REF_KINDS: [(&str, &str); 10] = [
     ("function", "function"),
 ];
 
-fn ref_kind(keyword: &str) -> Option<&'static str> {
+pub(super) fn ref_kind(keyword: &str) -> Option<&'static str> {
     ROOT_REF_KINDS
         .iter()
         .find(|(k, _)| k.eq_ignore_ascii_case(keyword))
@@ -251,7 +251,7 @@ fn ref_kind(keyword: &str) -> Option<&'static str> {
 }
 
 impl Index {
-    fn build<'a>(files: impl Iterator<Item = &'a TmdlFile>) -> Self {
+    pub(super) fn build<'a>(files: impl Iterator<Item = &'a TmdlFile>) -> Self {
         let mut index = Index::default();
         for file in files {
             for node in &file.nodes {
@@ -316,15 +316,15 @@ impl Index {
         }
     }
 
-    fn table(&self, name: &str) -> Option<&TableInfo> {
+    pub(super) fn table(&self, name: &str) -> Option<&TableInfo> {
         self.tables.get(&name_key(name)).map(|(_, t)| t)
     }
 
-    fn table_names(&self) -> impl Iterator<Item = &str> {
+    pub(super) fn table_names(&self) -> impl Iterator<Item = &str> {
         self.tables.values().map(|(n, _)| n.as_str())
     }
 
-    fn has_object(&self, kind: &str, name: &str) -> bool {
+    pub(super) fn has_object(&self, kind: &str, name: &str) -> bool {
         if kind == "table" {
             return self.table(name).is_some();
         }
@@ -333,7 +333,7 @@ impl Index {
             .is_some_and(|names| names.contains_key(&name_key(name)))
     }
 
-    fn object_names(&self, kind: &str) -> Vec<&str> {
+    pub(super) fn object_names(&self, kind: &str) -> Vec<&str> {
         if kind == "table" {
             return self.table_names().collect();
         }
@@ -343,7 +343,7 @@ impl Index {
             .unwrap_or_default()
     }
 
-    fn is_calculated(&self, table: &str) -> bool {
+    pub(super) fn is_calculated(&self, table: &str) -> bool {
         self.table(table).is_some_and(|t| t.calculated)
     }
 }
@@ -615,25 +615,13 @@ impl Checker<'_> {
         node: &Node,
         table: Option<&str>,
     ) -> Option<&'static Context> {
-        let name = if keyword.eq_ignore_ascii_case("column") {
-            if node.operator() == Some(Operator::Equals) {
-                "calculatedColumn"
-            } else if table.is_some_and(|t| self.index.is_calculated(t)) {
-                "calculatedTableColumn"
-            } else {
-                "column"
-            }
-        } else if keyword.eq_ignore_ascii_case("partition") {
-            match node.expression().as_deref().map(str::trim) {
-                Some(v) if v.eq_ignore_ascii_case("calculated") => "calculatedPartition",
-                Some(v) if v.eq_ignore_ascii_case("calculationGroup") => {
-                    "calculationGroupPartition"
-                }
-                _ => "partition",
-            }
-        } else {
-            keyword
-        };
+        let expression = node.expression();
+        let name = child_context_name(
+            keyword,
+            node.operator(),
+            expression.as_deref(),
+            table.is_some_and(|t| self.index.is_calculated(t)),
+        );
         self.catalog.context(name)
     }
 
@@ -1345,15 +1333,15 @@ struct Decl<'a> {
     node: &'a Node,
 }
 
-#[derive(Clone, Copy)]
-enum Member {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Member {
     Column,
     Measure,
     Hierarchy,
 }
 
 impl Member {
-    fn of(self, table: &TableInfo) -> &Names {
+    pub(super) fn of(self, table: &TableInfo) -> &Names {
         match self {
             Member::Column => &table.columns,
             Member::Measure => &table.measures,
@@ -1361,7 +1349,7 @@ impl Member {
         }
     }
 
-    fn label(self) -> &'static str {
+    pub(super) fn label(self) -> &'static str {
         match self {
             Member::Column => "column",
             Member::Measure => "measure",
@@ -1370,8 +1358,36 @@ impl Member {
     }
 }
 
+/// The context of the child lines of an object written `keyword`: `column X = …` is a
+/// calculated column, a column of a calculated table (`in_calculated_table`) a calculated table
+/// column, and `partition X = calculated` and `= calculationGroup` have contexts of their own.
+pub(super) fn child_context_name<'a>(
+    keyword: &'a str,
+    operator: Option<Operator>,
+    expression: Option<&str>,
+    in_calculated_table: bool,
+) -> &'a str {
+    if keyword.eq_ignore_ascii_case("column") {
+        if operator == Some(Operator::Equals) {
+            "calculatedColumn"
+        } else if in_calculated_table {
+            "calculatedTableColumn"
+        } else {
+            "column"
+        }
+    } else if keyword.eq_ignore_ascii_case("partition") {
+        match expression.map(str::trim) {
+            Some(v) if v.eq_ignore_ascii_case("calculated") => "calculatedPartition",
+            Some(v) if v.eq_ignore_ascii_case("calculationGroup") => "calculationGroupPartition",
+            _ => "partition",
+        }
+    } else {
+        keyword
+    }
+}
+
 /// `the top level` or `` `table` ``.
-fn context_label(ctx: &Context) -> String {
+pub(super) fn context_label(ctx: &Context) -> String {
     if ctx.name == "root" {
         "the top level of a file".to_owned()
     } else {
@@ -1388,7 +1404,7 @@ fn content_is_json(nodes: &[Node]) -> bool {
     })
 }
 
-fn truncate(s: &str, max: usize) -> String {
+pub(super) fn truncate(s: &str, max: usize) -> String {
     match s.char_indices().nth(max) {
         Some((i, _)) => format!("{}…", s.get(..i).unwrap_or(s)),
         None => s.to_owned(),

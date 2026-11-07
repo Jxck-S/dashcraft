@@ -3,14 +3,14 @@
 //! swaps, deletions, duplications, truncations, junk insertion, indentation
 //! changes) and checks that parsing never panics, the CST stays lossless,
 //! the writer's output always parses, model → TMDL → model is stable, and the
-//! language service's diagnostics stay inside the files.
+//! language service's diagnostics, completions and hovers stay inside the files.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::path::{Path, PathBuf};
 
 use pbi_model::{Model, PropValue, Severity};
-use pbi_tmdl::service::{MAX_DIAGNOSTICS, Source, diagnostics};
+use pbi_tmdl::service::{FileText, MAX_DIAGNOSTICS, Source, complete, diagnostics, hover};
 use pbi_tmdl::{
     SyntaxError, TmdlError, clear_origins, codes, load_model, parse_file, write_model,
     write_model_preserving,
@@ -314,6 +314,50 @@ fn check_diagnostics(set: &[(String, String)], iteration: u64) {
     }
 }
 
+/// Completion and hover at a few cursors of file `target` (as the `tmdl_service` fuzz target
+/// checks): ranges inside the text on character boundaries, the prefix typed before the cursor,
+/// at most the items asked for with distinct, non-empty labels, declarations in the files.
+fn check_completion(set: &[(String, String)], target: usize, rng: &mut Rng, iteration: u64) {
+    let text = &set[target].1;
+    let others: Vec<FileText> = set
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != target)
+        .map(|(_, (path, text))| FileText { path, text })
+        .collect();
+    for offset in [rng.below(text.len() + 1), text.len()] {
+        let c = complete(text, offset, &others, 20);
+        assert!(
+            c.start <= c.end && text.get(c.start..c.end).is_some(),
+            "iteration {iteration}: completion range at {offset}: {c:?}"
+        );
+        assert!(
+            text[c.start..].starts_with(&c.prefix) && c.items.len() <= 20,
+            "iteration {iteration}: at {offset}: {c:?}"
+        );
+        let mut labels: Vec<&str> = c.items.iter().map(|i| i.label.as_str()).collect();
+        assert!(
+            labels.iter().all(|l| !l.is_empty()),
+            "iteration {iteration}: {c:?}"
+        );
+        labels.sort_unstable();
+        labels.dedup();
+        assert_eq!(labels.len(), c.items.len(), "iteration {iteration}: {c:?}");
+        if let Some(h) = hover(text, offset, &others) {
+            assert!(
+                h.start < h.end && text.get(h.start..h.end).is_some(),
+                "iteration {iteration}: hover range at {offset}: {h:?}"
+            );
+            if let Some(d) = &h.declaration {
+                assert!(
+                    d.line >= 1 && d.file.is_none_or(|f| f < others.len()),
+                    "iteration {iteration}: {h:?}"
+                );
+            }
+        }
+    }
+}
+
 /// Cases and seed can be raised for longer local runs:
 /// `PBI_TMDL_PROPTEST_CASES=100000 PBI_TMDL_PROPTEST_SEED=7 cargo test -p pbi-tmdl --test robustness`.
 #[test]
@@ -340,6 +384,7 @@ fn mutated_fixtures_never_panic_and_round_trip() {
         let target = rng.below(set.len());
         set[target].1 = mutate(&mut rng, &set[target].1, &pool);
         check_diagnostics(&set, iteration);
+        check_completion(&set, target, &mut rng, iteration);
         let mutated = &set[target];
         match parse_file(&mutated.0, &mutated.1) {
             Ok(file) => assert_eq!(file.to_string(), mutated.1, "iteration {iteration}"),

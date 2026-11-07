@@ -151,6 +151,8 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`m.complete`](#mcomplete) | The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as. | A |
 | [`m.format`](#mformat) | Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated. | A |
 | [`tmdl.diagnostics`](#tmdldiagnostics) | What Microsoft's TMDL reader rejects in TMDL files: unknown keywords, wrong forms and values, levels, duplicates and unresolved references, with the closest name. | A |
+| [`tmdl.complete`](#tmdlcomplete) | The TMDL keywords, values and object names that fit at a cursor, as Microsoft's TMDL reader accepts them there, best match first, with the text to insert. | A |
+| [`tmdl.hover`](#tmdlhover) | Describes the TMDL word at a cursor: a keyword's forms, value and level, an enumeration value, or the object a reference names and where it is declared. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -1377,6 +1379,63 @@ Examples:
 
 - One table file: `{"files":[{"path":"tables/Stores.tmdl","text":"table Stores\n\tcolumn Region\n\t\tdataTyp: string\n"}]}`
 - A model folder: `{"files":[{"path":"model.tmdl","text":"model Model\n\tculture: en-US\n"},{"path":"tables/Stores.tmdl","text":"table Stores\n\tcolumn Region\n\t\tdataType: string\n\t\tsortByColumn: Regions\n"}]}`
+
+### `tmdl.complete`
+
+**TMDL completion.** The TMDL keywords, values and object names that fit at a cursor, as Microsoft's TMDL reader accepts them there, best match first, with the text to insert.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `text` | string | The TMDL text being edited. |
+| `position` | TextPositionIn | The cursor. |
+| `path` (optional) | string \| null | The text's path relative to the `definition` folder; the file of `files` with this path is replaced by `text`. |
+| `files` (optional) | TmdlFileIn[] | The other files of the model's `definition` folder: their tables, columns, measures and other objects are suggested where a reference names one, and their `database` sets the compatibility level. |
+| `maxItems` (optional) | integer | Most items returned, best first (default 100, at most 1000). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `start` | TextPositionOut | Start of the word a chosen item replaces (the cursor when nothing is typed yet). |
+| `end` | TextPositionOut | End (exclusive) of the replaced word. |
+| `prefix` | string | The typed text the items match. |
+| `items` | TmdlCompletionItemOut[] | Best match first: the same word, then words that start with the prefix, then a word part that does, then words that contain it. Keywords are those of the object the line belongs to, accepted at the database's compatibility level, without properties already set or properties after a child object; after `keyword:` the values of its type; after a reference keyword the objects it may name. Empty inside expressions. |
+| `incomplete` | boolean | More items matched than `maxItems`. |
+
+Examples:
+
+- The properties of a column: `{"text":"table Stores\n\tcolumn Region\n\t\tdata","position":{"line":3,"column":7}}`
+- A column of another file: `{"text":"table Stores\n\tcolumn Region\n\t\tsortByColumn: ","position":{"line":3,"column":17},"path":"tables/Stores.tmdl","files":[{"path":"tables/Stores.tmdl","text":""},{"path":"tables/More.tmdl","text":"table Stores\n\tcolumn 'Region Order'\n"}]}`
+
+### `tmdl.hover`
+
+**TMDL hover.** Describes the TMDL word at a cursor: a keyword's forms, value and level, an enumeration value, or the object a reference names and where it is declared.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `text` | string | The TMDL text. |
+| `position` | TextPositionIn | The cursor. |
+| `path` (optional) | string \| null | The text's path relative to the `definition` folder; the file of `files` with this path is replaced by `text`. |
+| `files` (optional) | TmdlFileIn[] | The other files of the model's `definition` folder, where referenced objects are declared. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `hover`? | TmdlHoverInfo \| null | Absent when there is nothing to describe at the cursor. |
+
+Examples:
+
+- A property keyword: `{"text":"table Stores\n\tcolumn Region\n\t\tsummarizeBy: none\n","position":{"line":3,"column":5}}`
+- A column of another file: `{"text":"relationship r1\n\tfromColumn: Orders.Store\n","position":{"line":2,"column":22},"files":[{"path":"tables/Orders.tmdl","text":"table Orders\n\tcolumn Store\n"}]}`
 
 ## Render
 

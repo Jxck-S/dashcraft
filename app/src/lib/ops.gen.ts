@@ -4184,6 +4184,69 @@ export interface TextPositionOut {
   column: number
 }
 
+export interface TmdlCompleteOut {
+  /** Start of the word a chosen item replaces (the cursor when nothing is typed yet). */
+  start: TextPositionOut
+  /** End (exclusive) of the replaced word. */
+  end: TextPositionOut
+  /** The typed text the items match. */
+  prefix: string
+  /**
+   * Best match first: the same word, then words that start with the prefix, then a word
+   * part that does, then words that contain it. Keywords are those of the object the line
+   * belongs to, accepted at the database's compatibility level, without properties already
+   * set or properties after a child object; after `keyword:` the values of its type; after
+   * a reference keyword the objects it may name. Empty inside expressions.
+   */
+  items: TmdlCompletionItemOut[]
+  /** More items matched than `maxItems`. */
+  incomplete: boolean
+}
+
+export interface TmdlCompleteParams {
+  /** The TMDL text being edited. */
+  text: string
+  /** The cursor. */
+  position: TextPositionIn
+  /**
+   * The text's path relative to the `definition` folder; the file of `files` with this path
+   * is replaced by `text`.
+   */
+  path?: string | null
+  /**
+   * The other files of the model's `definition` folder: their tables, columns, measures and
+   * other objects are suggested where a reference names one, and their `database` sets the
+   * compatibility level.
+   */
+  files?: TmdlFileIn[]
+  /** Most items returned, best first (default 100, at most 1000). */
+  maxItems?: number
+}
+
+/** One suggestion. */
+export interface TmdlCompletionItemOut {
+  /** What is shown (`dataType`, `'Order Lines'.Quantity`). */
+  label: string
+  kind: TmdlItemKind
+  /**
+   * The text that replaces `start`..`end`: a keyword with `: `, ` ` or ` = ` after it on an
+   * otherwise empty line, a name quoted as TMDL writes it.
+   */
+  insertText: string
+  /** A keyword's forms (`dataType: <value>`), a value's enumeration, what a name is. */
+  detail: string
+  /** What a keyword takes and needs, or a declared object's `///` description. */
+  description?: string | null
+}
+
+/** Where a referenced object is declared. */
+export interface TmdlDeclarationOut {
+  /** The file's `path`; `path` of the parameters (or absent) for the text itself. */
+  path?: string | null
+  /** 1-based line of the declaration. */
+  line: number
+}
+
 /** One problem in a file. */
 export interface TmdlDiagnosticOut {
   /** The file's `path`. */
@@ -4234,6 +4297,49 @@ export interface TmdlFileIn {
   /** The file's text. */
   text: string
 }
+
+/** The word under the cursor. */
+export interface TmdlHoverInfo {
+  kind: TmdlItemKind
+  /** The keyword, the value, or the object's name (`'Order Lines'.Quantity`). */
+  name: string
+  /** Start of the hovered word. */
+  start: TextPositionOut
+  /** End (exclusive). */
+  end: TextPositionOut
+  /**
+   * A keyword's forms, value type and compatibility level; an enumeration's values; a
+   * referenced object's `///` description and declaration line, as Markdown.
+   */
+  markdown: string
+  /** Where the object a reference names is declared. */
+  declaration?: TmdlDeclarationOut | null
+}
+
+export interface TmdlHoverOut {
+  /** Absent when there is nothing to describe at the cursor. */
+  hover?: TmdlHoverInfo | null
+}
+
+export interface TmdlHoverParams {
+  /** The TMDL text. */
+  text: string
+  /** The cursor. */
+  position: TextPositionIn
+  /**
+   * The text's path relative to the `definition` folder; the file of `files` with this path
+   * is replaced by `text`.
+   */
+  path?: string | null
+  /**
+   * The other files of the model's `definition` folder, where referenced objects are
+   * declared.
+   */
+  files?: TmdlFileIn[]
+}
+
+/** What a suggestion or a hovered word is. */
+export type TmdlItemKind = 'table' | 'column' | 'measure' | 'hierarchy' | 'object' | 'property' | 'value' | 'objectType' | 'name'
 
 /** One line of a data point tooltip. */
 export interface TooltipLineOut {
@@ -4645,6 +4751,10 @@ export interface OpsCommands {
   'm.format': { params: MFormatParams; output: MFormatOut }
   /** What Microsoft's TMDL reader rejects in TMDL files: unknown keywords, wrong forms and values, levels, duplicates and unresolved references, with the closest name. */
   'tmdl.diagnostics': { params: TmdlDiagnosticsParams; output: TmdlDiagnosticsOut }
+  /** The TMDL keywords, values and object names that fit at a cursor, as Microsoft's TMDL reader accepts them there, best match first, with the text to insert. */
+  'tmdl.complete': { params: TmdlCompleteParams; output: TmdlCompleteOut }
+  /** Describes the TMDL word at a cursor: a keyword's forms, value and level, an enumeration value, or the object a reference names and where it is declared. */
+  'tmdl.hover': { params: TmdlHoverParams; output: TmdlHoverOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4776,6 +4886,8 @@ export const OPS_META = {
   'm.complete': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'm.format': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'tmdl.diagnostics': { category: 'tmdl', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'tmdl.complete': { category: 'tmdl', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'tmdl.hover': { category: 'tmdl', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4949,6 +5061,10 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     mFormat: (params: MFormatParams, options?: O) => run('m.format', params, options),
     /** What Microsoft's TMDL reader rejects in TMDL files: unknown keywords, wrong forms and values, levels, duplicates and unresolved references, with the closest name. */
     tmdlDiagnostics: (params: TmdlDiagnosticsParams, options?: O) => run('tmdl.diagnostics', params, options),
+    /** The TMDL keywords, values and object names that fit at a cursor, as Microsoft's TMDL reader accepts them there, best match first, with the text to insert. */
+    tmdlComplete: (params: TmdlCompleteParams, options?: O) => run('tmdl.complete', params, options),
+    /** Describes the TMDL word at a cursor: a keyword's forms, value and level, an enumeration value, or the object a reference names and where it is declared. */
+    tmdlHover: (params: TmdlHoverParams, options?: O) => run('tmdl.hover', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */

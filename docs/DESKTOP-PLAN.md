@@ -936,6 +936,18 @@ optional language server.
     the reader (3 ledgered: 2 lenient, 1 by design); all 78 checks of the 54 edited models of
     `tmdl-validity` match, including the line; no false errors on Acme, the probe model, dax-lab
     and the GT-4 model; the `tmdl_service` fuzz target.
+  - [x] M7.4b (2026-11-07) TMDL completion and hover from the same catalog:
+    `pbi_tmdl::service::{complete, hover}` and the `tmdl.complete` and `tmdl.hover` commands
+    read half-typed text tolerantly and offer the keywords of the object the line belongs to at
+    the database's compatibility level (without properties already set or after a child
+    object, and without a second `model` or `database`), the values of a property's type, and
+    the tables, columns, measures, hierarchies and other objects a reference may name across
+    the model folder; hover describes a keyword's forms, value and level, an enumeration value,
+    or a referenced object with its `///` description and declaration. Recall on the files
+    Desktop and TOM saved (Acme, the probe model, dax-lab, the GT-4 model): every one of 1,936
+    keywords, 497 values and 48 references is offered and hovered; precision: 841 keyword
+    completions written into each kind of object of Acme and dax-lab in every offered form are
+    accepted by the diagnostics, which follow the reader.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,
   calculation items, format string expressions and RLS filters; commit and cancel; multi-line.
 - [ ] **M7.6 Optional `dashcraft lsp`.** A Language Server Protocol adapter over the same
@@ -946,7 +958,7 @@ optional language server.
 
 **New registry commands.** `dax.complete`, `dax.signatureHelp`, `dax.hover`, `dax.diagnostics`,
 `dax.format`, `dax.tokens`, `dax.references`, `m.complete`, `m.hover`, `m.diagnostics`,
-`m.format`, `tmdl.complete`, `tmdl.diagnostics`, `tmdl.format`.
+`m.format`, `tmdl.complete`, `tmdl.diagnostics`, `tmdl.format`; also `tmdl.hover`.
 
 **Writers.** None.
 
