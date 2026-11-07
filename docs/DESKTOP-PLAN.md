@@ -851,6 +851,14 @@ optional language server.
   DashCraft-written one-line descriptions, diagnostics (syntax, unknown references, unsupported
   functions, type hints), semantic tokens, go to definition, find references; incremental and
   cancellable.
+  - [x] M7.1a diagnostics (2026-11-07): `pbi_dax::service` (`Schema` from a model or unknown,
+    `diagnostics`), the `dax.diagnostics` command; syntax, unknown tables, columns and measures
+    with "did you mean" suggestions, unsupported functions as warnings. Acceptance 2 met: no false
+    errors (and no warnings) on the 136 DAX expressions of Acme and the committed samples.
+    `NAMEOF` added to the evaluator on the way (matched against Desktop 2.159).
+  - [ ] M7.1b completion, signature help, hover, a function catalog with DashCraft-written
+    descriptions, arity diagnostics, P12.
+  - [ ] M7.1c semantic tokens, go to definition, find references.
 - [ ] **M7.2 DAX formatter.** Deterministic and idempotent, keeps comments, options for line
   width and casing.
 - [ ] **M7.3 M language service and formatter.** In `pbi-m`: completion of library functions,

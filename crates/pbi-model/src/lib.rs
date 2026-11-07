@@ -61,7 +61,10 @@ pub use document::{
     SourceFormat, SourceInfo,
 };
 pub use ids::{IdGen, ObjectId};
-pub use names::{dax_column_ref, dax_measure_ref, dax_table_ref, names_eq, tmdl_name};
+pub use names::{
+    closest_name, dax_column_ref, dax_measure_ref, dax_table_ref, name_edit_distance,
+    name_match_score, names_eq, tmdl_name,
+};
 pub use props::{Annotation, Origin, PropValue, PropertyBag, RawObject};
 pub use query::{
     AggregationFunction, ComparisonKind, Condition, FieldExpr, Filter, FilterKind, Literal,

@@ -117,7 +117,7 @@ the ADRs to write first and what is blocked on a human. M27 to M30 are optional 
 for 1.0.
 
 - [x] [M6](DESKTOP-PLAN.md#m6-editable-document-state-and-save): editable document state and save (one revisioned state, atomic undoable edits through the registry and MCP, Save/Save As PBIP). Complete apart from the screen-reader runs (A6), which need a person (see *Open items* below).
-- [ ] [M7](DESKTOP-PLAN.md#m7-language-foundation): language foundation (DAX, M and TMDL language services and formatters, formula bar IntelliSense).
+- [ ] [M7](DESKTOP-PLAN.md#m7-language-foundation): language foundation (DAX, M and TMDL language services and formatters, formula bar IntelliSense). In progress: DAX diagnostics (`dax.diagnostics`, M7.1).
 - [ ] [M8](DESKTOP-PLAN.md#m8-recovery-external-changes-and-semantic-diff): recovery, external changes and semantic diff.
 - [ ] [M9](DESKTOP-PLAN.md#m9-reading-view-parity): reading view parity (highlight, drill, drillthrough, bookmarks, tooltip pages, synced slicers, header menus, images).
 - [ ] [M10](DESKTOP-PLAN.md#m10-modeling-core): modeling core (tables, columns, measures, Enter data, hierarchies, relationships, Model and Table view editing).
@@ -147,7 +147,7 @@ The items below predate the plan; each is annotated with the plan step that now 
 
 - [ ] `m4-windows-groundtruth` (→ M31.1, ground-truth sessions GT-1 to GT-6): ground-truth sessions on a Windows machine with Power BI Desktop (**unblocked** 2026-11-05: Desktop 2.159; [ADR-0011](adr/0011-desktop-ground-truth.md), [reference/groundtruth](../reference/groundtruth/README.md)). Black-box only: no decompiling or debugging of Desktop binaries; screenshots and icons are never committed.
   - UI Automation dump of the ribbon tabs, groups, buttons, tooltips and positions, to check the Desktop-style shell (→ GT-1, M24.1).
-  - [x] DAX differential testing: curated and generated queries over the example model, the `functions.rs` cases and three MIT samples, compared between DashCraft and Desktop's local Analysis Services instance: 2,242 cases, 1 ledger entry (→ M13.5, GT-2). Still manual: the queries Desktop's visuals send (Performance analyzer export).
+  - [x] DAX differential testing: curated and generated queries over the example model, the `functions.rs` cases and three MIT samples, compared between DashCraft and Desktop's local Analysis Services instance: 2,259 cases, 1 ledger entry (→ M13.5, GT-2). Still manual: the queries Desktop's visuals send (Performance analyzer export).
   - More golden images: Desktop-rendered pages of the example's reports and of the visual types that only have synthetic tests (→ GT-3, M31.3; manual export steps in the ground-truth README).
   - More Desktop-saved fixtures (synthetic content only): a PBIR-Legacy PBIP, a real `.pbi/cache.abf`, a Power Pivot workbook, a DAX Studio VPAX, a Report Builder RDL (→ GT-4, M26.5, M31.4).
   - Desktop-canonical TMDL and PBIR output to validate the writers byte for byte (→ M26.1, GT-4).

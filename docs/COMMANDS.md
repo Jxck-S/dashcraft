@@ -20,7 +20,7 @@ dashcraft mcp                                        # MCP server for AI agents 
 ```
 
 - Parameters are camelCase JSON objects; unknown fields are rejected (`invalidParams`).
-- Documents are opened with `doc.open`, which returns a `docId` (`d1`, `d2`, …) for the other commands. Data commands (`data.page`, `dax.*`, `measures.values`, `render.*`, `canvas.*`, `export.table`) load the data on first use unless the document was opened with `"autoRefresh": false`; `data.refresh` reloads it.
+- Documents are opened with `doc.open`, which returns a `docId` (`d1`, `d2`, …) for the other commands. Data commands (`data.page`, `dax.query`, `dax.evaluateMeasure`, `measures.values`, `render.*`, `canvas.*`, `export.table`) load the data on first use unless the document was opened with `"autoRefresh": false`; `data.refresh` reloads it.
 - `dashcraft run` prints the result as JSON. Exit codes: 0 success; 1 fatal or usage error; 2 the input was read but data or expressions have errors (`query` errors, or a result with `"ok": false` — failed tables, ⚠ measures, failed visuals, lint findings).
 
 ### Batches
@@ -138,6 +138,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`dax.query`](#daxquery) | Evaluates a DAX query (EVALUATE …) and returns columns and rows per result table; loads the data on first use. | L A |
 | [`dax.evaluateMeasure`](#daxevaluatemeasure) | One measure's value (raw and formatted, or ⚠ error with its DAX) under report/page and column filters. | A |
 | [`measures.values`](#measuresvalues) | Every measure's formatted value under optional report/page filters; failed measures show ⚠ and their DAX. | L A |
+| [`dax.diagnostics`](#daxdiagnostics) | Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -1004,6 +1005,34 @@ Examples:
 
 - Unfiltered: `{"docId":"d1"}`
 - Under the Stores report's filters: `{"docId":"d1","report":"Stores"}`
+
+### `dax.diagnostics`
+
+**Check DAX.** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` (optional) | string \| null | Check names against this document's model and report-level measures (`d1`, …). Without it only syntax and functions are checked. |
+| `text` | string | The DAX text. |
+| `kind` (optional) | `"auto"` \| `"expression"` \| `"query"` | `auto` (default), `expression` or `query`. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `documentRevision`? | integer \| null | The document revision whose model names were used (with `docId`). |
+| `kind` | `"expression"` \| `"query"` | How the text was checked. |
+| `ok` | boolean | No errors (warnings allowed). |
+| `diagnostics` | DaxDiagnosticOut[] | In source order, at most 1000. |
+
+Examples:
+
+- A measure against the model: `{"docId":"d1","text":"CALCULATE([Total Sales], Stores[Regoin] = \"West\")"}`
+- Syntax only, without a document: `{"text":"EVALUATE ROW(\"n\", 1 +)"}`
 
 ## Render
 

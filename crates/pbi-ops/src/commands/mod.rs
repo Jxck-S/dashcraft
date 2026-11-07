@@ -109,6 +109,7 @@ pub fn catalog() -> Registry {
         .with::<dax::DaxQuery>()
         .with::<dax::DaxEvaluateMeasure>()
         .with::<dax::MeasuresValues>()
+        .with::<dax::DaxDiagnostics>()
         // render
         .with::<render::RenderPage>()
         .with::<render::RenderVisual>()

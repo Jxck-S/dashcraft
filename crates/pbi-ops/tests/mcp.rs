@@ -244,6 +244,12 @@ async fn initialize_negotiates_the_protocol_version() {
     assert_eq!(r["capabilities"]["tools"]["listChanged"], false);
     assert_eq!(r["serverInfo"]["name"], "dashcraft");
     assert!(r["instructions"].as_str().unwrap().contains("doc_open"));
+    assert!(
+        r["instructions"]
+            .as_str()
+            .unwrap()
+            .contains("dax_diagnostics")
+    );
     assert_eq!(c.request("ping", json!({})).await["result"], json!({}));
     let list = c.request("tools/list", json!({})).await;
     let tool = &list["result"]["tools"][0];

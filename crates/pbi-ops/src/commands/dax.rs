@@ -1,14 +1,16 @@
-//! `dax.query`, `dax.evaluateMeasure`, `measures.values`.
+//! `dax.query`, `dax.evaluateMeasure`, `measures.values`, `dax.diagnostics`.
 
 use std::time::Instant;
 
+use pbi_model::Severity;
+use pbi_session::dax_service::{self, Schema, SourceKind};
 use pbi_session::{FilterSpec, filters_from_page, filters_from_report};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::data::{CellFormat, result_columns, rows};
-use super::{BASE, bounded, loaded_doc, millis};
+use super::{BASE, bounded, doc, loaded_doc, millis};
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
 use crate::dto::{
@@ -323,6 +325,185 @@ impl Command for MeasuresValues {
             filters: FilterSpecOut::from(&spec),
             data: RefreshCounts::of_session(entry.session()),
             measures,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `dax.diagnostics`.
+#[derive(Debug)]
+pub struct DaxDiagnostics;
+
+/// What a DAX text is.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DaxTextKind {
+    /// A query when the text starts with `DEFINE` or `EVALUATE`, else an
+    /// expression.
+    #[default]
+    Auto,
+    /// A single expression: a measure, calculated column or table,
+    /// calculation item, RLS filter, format string or detail rows.
+    Expression,
+    /// `[DEFINE …] EVALUATE …`.
+    Query,
+}
+
+/// How a DAX text was checked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DaxCheckedKind {
+    Expression,
+    Query,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DaxDiagnosticsParams {
+    /// Check names against this document's model and report-level measures
+    /// (`d1`, …). Without it only syntax and functions are checked.
+    #[serde(default)]
+    pub doc_id: Option<String>,
+    /// The DAX text.
+    pub text: String,
+    /// `auto` (default), `expression` or `query`.
+    #[serde(default)]
+    pub kind: DaxTextKind,
+}
+
+/// A position in the checked text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TextPositionOut {
+    /// UTF-8 byte offset.
+    pub offset: usize,
+    /// UTF-16 code-unit offset (JavaScript string index).
+    pub utf16_offset: usize,
+    /// 1-based line (lines end at `\n`).
+    pub line: usize,
+    /// 1-based column, in characters.
+    pub column: usize,
+}
+
+impl TextPositionOut {
+    fn at(src: &str, offset: usize) -> Self {
+        let (line, column) = dax_service::line_col(src, offset);
+        let mut offset = offset.min(src.len());
+        while !src.is_char_boundary(offset) {
+            offset = offset.saturating_sub(1);
+        }
+        let utf16_offset = src.get(..offset).map_or(0, |s| s.encode_utf16().count());
+        Self {
+            offset,
+            utf16_offset,
+            line,
+            column,
+        }
+    }
+}
+
+/// One problem in the text.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxDiagnosticOut {
+    /// `error` or `warning` (a function DashCraft cannot evaluate yet).
+    pub severity: String,
+    /// `syntax`, `unknownTable`, `unknownColumn`, `unknownMeasure` or
+    /// `unsupportedFunction`.
+    pub code: String,
+    pub message: String,
+    /// Start of the text the problem covers.
+    pub start: TextPositionOut,
+    /// End (exclusive).
+    pub end: TextPositionOut,
+    /// A "did you mean …" correction.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suggestion: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaxDiagnosticsOut {
+    /// The document revision whose model names were used (with `docId`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub document_revision: Option<u64>,
+    /// How the text was checked.
+    pub kind: DaxCheckedKind,
+    /// No errors (warnings allowed).
+    pub ok: bool,
+    /// In source order, at most 1000.
+    pub diagnostics: Vec<DaxDiagnosticOut>,
+}
+
+impl Command for DaxDiagnostics {
+    type Params = DaxDiagnosticsParams;
+    type Output = DaxDiagnosticsOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "dax.diagnostics",
+            title: "Check DAX",
+            summary: "Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion) and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded.",
+            category: Category::Dax,
+            examples: &[
+                (
+                    "A measure against the model",
+                    r#"{"docId": "d1", "text": "CALCULATE([Total Sales], Stores[Regoin] = \"West\")"}"#,
+                ),
+                (
+                    "Syntax only, without a document",
+                    r#"{"text": "EVALUATE ROW(\"n\", 1 +)"}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let (document_revision, schema) = match &p.doc_id {
+            Some(id) => {
+                let entry = doc(ws, id)?;
+                let capture = entry.session().revision_snapshot();
+                let mut schema = Schema::from_model(&capture.model);
+                // Report-level measures (`reportExtensions.json`) of any report.
+                for m in capture.document.reports.iter().flat_map(|r| &r.measures) {
+                    schema.add_measure(&m.table, &m.name);
+                }
+                (Some(capture.revision), schema)
+            }
+            None => (None, Schema::unknown()),
+        };
+        let kind = match p.kind {
+            DaxTextKind::Auto => SourceKind::detect(&p.text),
+            DaxTextKind::Expression => SourceKind::Expression,
+            DaxTextKind::Query => SourceKind::Query,
+        };
+        let src = p.text.as_str();
+        let diagnostics: Vec<DaxDiagnosticOut> = dax_service::diagnostics(src, kind, &schema)
+            .into_iter()
+            .map(|d| DaxDiagnosticOut {
+                severity: match d.severity {
+                    Severity::Error => "error",
+                    Severity::Warning => "warning",
+                    Severity::Info => "info",
+                }
+                .to_owned(),
+                code: d.code.as_str().to_owned(),
+                message: d.message,
+                start: TextPositionOut::at(src, d.span.start),
+                end: TextPositionOut::at(src, d.span.end),
+                suggestion: d.suggestion,
+            })
+            .collect();
+        Ok(DaxDiagnosticsOut {
+            document_revision,
+            kind: match kind {
+                SourceKind::Expression => DaxCheckedKind::Expression,
+                SourceKind::Query => DaxCheckedKind::Query,
+            },
+            ok: diagnostics.iter().all(|d| d.severity != "error"),
+            diagnostics,
         })
     }
 }

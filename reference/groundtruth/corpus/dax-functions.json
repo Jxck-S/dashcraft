@@ -1489,6 +1489,91 @@
       "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZECOLUMNS(Product[Name], \"Q\", IGNORE([Total Qty]))))"
     },
     {
+      "id": "misc/55661814",
+      "expr": "NAMEOF(sales[qty])",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(sales[qty]))"
+    },
+    {
+      "id": "misc/d962f4dd",
+      "expr": "NAMEOF([total qty])",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([total qty]))"
+    },
+    {
+      "id": "misc/92c504b4",
+      "expr": "NAMEOF(Product[Product Count])",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Product[Product Count]))"
+    },
+    {
+      "id": "misc/d01fb949",
+      "expr": "NAMEOF(product)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(product))"
+    },
+    {
+      "id": "misc/0e1a2467",
+      "expr": "NAMEOF((Sales[Qty]), self)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF((Sales[Qty]), self))"
+    },
+    {
+      "id": "misc/efcd027e",
+      "expr": "NAMEOF(Sales[Qty], COLUMN)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], COLUMN))"
+    },
+    {
+      "id": "misc/c728b06b",
+      "expr": "NAMEOF(Sales[Qty], PARENT)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], PARENT))"
+    },
+    {
+      "id": "misc/7fae790a",
+      "expr": "NAMEOF(Sales[Qty], TABLE)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], TABLE))"
+    },
+    {
+      "id": "misc/9687bc61",
+      "expr": "NAMEOF([Total Qty], MEASURE)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([Total Qty], MEASURE))"
+    },
+    {
+      "id": "misc/e3023fca",
+      "expr": "NAMEOF([Total Qty], Full)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([Total Qty], Full))"
+    },
+    {
+      "id": "misc/abc73047",
+      "expr": "NAMEOF(Product, SELF)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Product, SELF))"
+    },
+    {
+      "id": "misc/cedcc769",
+      "expr": "NAMEOF(Sales[Qty], MEASURE)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], MEASURE))"
+    },
+    {
+      "id": "misc/8d5462a0",
+      "expr": "NAMEOF([Total Qty], COLUMN)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([Total Qty], COLUMN))"
+    },
+    {
+      "id": "misc/6cfb28c6",
+      "expr": "NAMEOF(Product, PARENT)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Product, PARENT))"
+    },
+    {
+      "id": "misc/52b73839",
+      "expr": "NAMEOF(Sales[Qty], \"TABLE\")",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], \"TABLE\"))"
+    },
+    {
+      "id": "misc/54981e54",
+      "expr": "NAMEOF([Qty])",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([Qty]))"
+    },
+    {
+      "id": "misc/76a9945c",
+      "expr": "NAMEOF(1)",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(1))"
+    },
+    {
       "id": "visual/c2ff4539",
       "expr": "MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Pct\", DIVIDE([Total Qty], CALCULATE([Total Qty], ALLSELECTED()))), [Pct])",
       "query": "EVALUATE ROW(\"v\", MAXX(SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Fruit\", \"Veg\"}, Product[Category]), \"Pct\", DIVIDE([Total Qty], CALCULATE([Total Qty], ALLSELECTED()))), [Pct]))"

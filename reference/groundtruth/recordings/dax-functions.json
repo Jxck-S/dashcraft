@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "suite": "dax-functions",
   "desktop": { "version": "2.159.1231.0", "engine": "17.0.93.23", "culture": "en-US" },
-  "recordedOn": "2026-11-05",
+  "recordedOn": "2026-11-07",
   "cases": [
     {
       "id": "logical/1c6a28bc",
@@ -2326,6 +2326,124 @@
       "rows": [
         [5]
       ]
+    },
+    {
+      "id": "misc/55661814",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(sales[qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        ["'Sales'[Qty]"]
+      ]
+    },
+    {
+      "id": "misc/d962f4dd",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([total qty]))",
+      "columns": ["[v]"],
+      "rows": [
+        ["'Sales'[Total Qty]"]
+      ]
+    },
+    {
+      "id": "misc/92c504b4",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Product[Product Count]))",
+      "columns": ["[v]"],
+      "rows": [
+        ["'Product'[Product Count]"]
+      ]
+    },
+    {
+      "id": "misc/d01fb949",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(product))",
+      "columns": ["[v]"],
+      "rows": [
+        ["'Product'"]
+      ]
+    },
+    {
+      "id": "misc/0e1a2467",
+      "query": "EVALUATE ROW(\"v\", NAMEOF((Sales[Qty]), self))",
+      "columns": ["[v]"],
+      "rows": [
+        ["[Qty]"]
+      ]
+    },
+    {
+      "id": "misc/efcd027e",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], COLUMN))",
+      "columns": ["[v]"],
+      "rows": [
+        ["[Qty]"]
+      ]
+    },
+    {
+      "id": "misc/c728b06b",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], PARENT))",
+      "columns": ["[v]"],
+      "rows": [
+        ["'Sales'"]
+      ]
+    },
+    {
+      "id": "misc/7fae790a",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], TABLE))",
+      "columns": ["[v]"],
+      "rows": [
+        ["'Sales'"]
+      ]
+    },
+    {
+      "id": "misc/9687bc61",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([Total Qty], MEASURE))",
+      "columns": ["[v]"],
+      "rows": [
+        ["[Total Qty]"]
+      ]
+    },
+    {
+      "id": "misc/e3023fca",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([Total Qty], Full))",
+      "columns": ["[v]"],
+      "rows": [
+        ["'Sales'[Total Qty]"]
+      ]
+    },
+    {
+      "id": "misc/abc73047",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Product, SELF))",
+      "columns": ["[v]"],
+      "rows": [
+        ["'Product'"]
+      ]
+    },
+    {
+      "id": "misc/cedcc769",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], MEASURE))",
+      "error": "Query (1, 19) The value of component, 'MEASURE', is not valid for the given object in NAMEOF function."
+    },
+    {
+      "id": "misc/8d5462a0",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([Total Qty], COLUMN))",
+      "error": "Query (1, 19) The value of component, 'COLUMN', is not valid for the given object in NAMEOF function."
+    },
+    {
+      "id": "misc/6cfb28c6",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Product, PARENT))",
+      "error": "Query (1, 19) The value of component, 'PARENT', is not valid for the given object in NAMEOF function."
+    },
+    {
+      "id": "misc/52b73839",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Qty], \"TABLE\"))",
+      "error": "Query (1, 38) Valid arguments for component are TABLE, COLUMN, MEASURE, CALENDAR, FULL, SELF, and PARENT."
+    },
+    {
+      "id": "misc/54981e54",
+      "query": "EVALUATE ROW(\"v\", NAMEOF([Qty]))",
+      "error": "Query (1, 19) Only measure or fully-qualified column or table or calendar references are allowed in NAMEOF function."
+    },
+    {
+      "id": "misc/76a9945c",
+      "query": "EVALUATE ROW(\"v\", NAMEOF(1))",
+      "error": "Query (1, 19) Only measure or fully-qualified column or table or calendar references are allowed in NAMEOF function."
     },
     {
       "id": "visual/c2ff4539",

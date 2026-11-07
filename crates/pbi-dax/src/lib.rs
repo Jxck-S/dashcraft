@@ -14,6 +14,8 @@
 //!   gaps.
 //! - [`rename`]: token-level rewriting of table, column and measure
 //!   references for DAX-aware renames.
+//! - [`service`]: the language service (schema of model names,
+//!   diagnostics) behind the editor commands.
 //!
 //! Visuals evaluate measures per data point with
 //! [`EvalContext::with_data_point`] (or [`EvalContext::with_allselected`] +
@@ -24,6 +26,7 @@
 pub mod eval;
 pub mod format;
 pub mod rename;
+pub mod service;
 pub mod syntax;
 
 pub use eval::{

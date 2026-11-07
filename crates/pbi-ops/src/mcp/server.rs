@@ -148,6 +148,11 @@ impl McpServer {
                 " {render} with \"format\": \"png\" returns the page as an image."
             ));
         }
+        if let Some(check) = name("dax.diagnostics") {
+            out.push_str(&format!(
+                " {check} checks DAX you write (names, syntax) before you run or save it."
+            ));
+        }
         out.push_str(&format!(
             " Readable folders: {}. Writable folders: {}.",
             roots(policy.read_roots()),
