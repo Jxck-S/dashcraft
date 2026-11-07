@@ -28,7 +28,7 @@ use crate::ids::ObjectId;
 use crate::semantic::Model;
 
 pub use edit::{
-    SetColumnProperties, SetDescription, SetMeasureExpression, SetMeasureProperties,
+    MoveVisual, SetColumnProperties, SetDescription, SetMeasureExpression, SetMeasureProperties,
     SetVisualPosition,
 };
 pub use history::{History, HistoryResult};

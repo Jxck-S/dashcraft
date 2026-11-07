@@ -5,6 +5,29 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-07
+
+### M6 visual groups move and resize (M6.5)
+
+- **What:** `pbi-model` gains `Page::page_rect`, `parent_group` and `is_group_relative`
+  (`PageRect`; groups nested up to 32 levels) and `placement_of`, which places a visual and, for a
+  group, its members: children stored relative to the group keep their offsets on a move and scale
+  on a resize in scale mode; children stored in page units are moved or scaled with it. The new
+  `MoveVisual` command is evaluated when applied, so a move and a resize of the same visual in one
+  `doc.applyEdits` compose; its inverse restores every old position. `pbi-render` resolves
+  positions through `page_rect`. `report.visual.move`/`resize` and the `setVisualPosition` edit
+  use it; results gain `members`. Tests: four group tests in `crates/pbi-model/src/report.rs`,
+  `move_visual_takes_a_groups_members_along_and_undoes_exactly` and `batched_moves_compose`
+  (`command/tests.rs`), `visual_groups_move_and_resize_with_their_members`
+  (`crates/pbi-ops/tests/save.rs`: move, resize, batch, save of three files, reopen, render, undo).
+- **Why:** the last open part of M6.5 (moving visual groups; DESKTOP-PLAN).
+- **Numbers:** GT-6 s23: Desktop and DashCraft save the same positions for a group resize
+  (1232 → 616 wide) and move (x 24 → 100) in 5 of 5 files; Desktop shows DashCraft's output at the
+  expected page rectangles within 1 px. Render snapshots unchanged. M6.5 ticked.
+- **Open:** a child stored in page units is told apart from a relative one by whether it lies
+  inside the group, as the renderer did before; data column delete and hierarchy level edits come
+  with the editors (M10).
+
 ## 2026-11-06
 
 ### M6 queries capture one revision, also with "View as" (M6.2, acceptance 8)

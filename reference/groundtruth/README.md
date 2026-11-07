@@ -297,6 +297,19 @@ of Desktop's answers changed (33 measures by Value Tier, 2 metadata cases, 3 tab
 DashCraft's results on the edited example match all 643: 601 of 601 measures, 26 of 26
 calculation-group and RLS cases, 11 of 11 tables and 5 of 5 metadata cases, with no ledger entry.
 
+**Visual groups moved and resized.** On a copy of the Desktop project (`s23`), group the four cards
+of the Overview report's Time Intelligence page by hand: a group visual `KPI cards`
+(`visualGroup` with `groupMode: ScaleMode`) at (24, 152, 1232 × 100), and the cards with its
+`parentGroupName` and positions relative to it. Desktop shows the cards where they were, so it reads
+group children as relative to the group. In Desktop set the group's width to 616 and its horizontal
+position to 100 (Format visual, Properties, Size and Position) and save; on a second copy run
+`report.visual.resize` (width 616) and `report.visual.move` (x 100) of the group, then `doc.save`.
+Results with Desktop 2.159: both write the same position in all five files: the group at
+(100, 152, 616 × 100) and the cards, still relative to it, at x 0, 158, 316 and 474 with widths 150,
+150, 150 and 142 (the resize scaled their offsets and widths; the move left them unchanged).
+Desktop opened DashCraft's saved project and shows the group and the four cards at those page
+positions, within a pixel. Nothing is recorded: the check changes no value.
+
 ## Manual sessions not yet recorded
 
 These need Desktop's GUI and someone at the machine.

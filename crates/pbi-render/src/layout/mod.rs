@@ -37,7 +37,7 @@ pub mod frames;
 
 use std::collections::HashMap;
 
-use pbi_model::{DisplayOption, Page, Report, Visual};
+use pbi_model::{DisplayOption, MAX_GROUP_DEPTH, Page, Report, Visual};
 use serde::{Deserialize, Serialize};
 
 use crate::scene::{Color, Insets, Paint, Rect, Stroke, Transform};
@@ -50,8 +50,6 @@ pub use frames::{FrameOptions, frame_group, render_page_frames, render_page_with
 pub const DEFAULT_PAGE_SIZE: (f64, f64) = (1280.0, 720.0);
 /// Largest page dimension honored (untrusted-input guard).
 pub const MAX_PAGE_DIMENSION: f64 = 100_000.0;
-/// Deepest group nesting followed.
-const MAX_GROUP_DEPTH: usize = 32;
 
 /// Vertical placement of a page shorter than the viewport (report
 /// `section.verticalAlignment`).
@@ -376,36 +374,16 @@ fn position_rect(v: &Visual) -> Rect {
     Rect::new(f(p.x), f(p.y), f(p.width).max(0.0), f(p.height).max(0.0))
 }
 
-/// Absolute rectangles of every visual (group offsets applied).
+/// Absolute rectangles of every visual (group offsets applied, see
+/// [`Page::page_rect`]).
 fn resolve_positions(page: &Page) -> HashMap<&str, Rect> {
-    let by_name: HashMap<&str, &Visual> =
-        page.visuals.iter().map(|v| (v.name.as_str(), v)).collect();
-    let mut out: HashMap<&str, Rect> = HashMap::new();
-    for v in &page.visuals {
-        let rect = absolute_rect(v, &by_name, 0);
-        out.insert(v.name.as_str(), rect);
-    }
-    out
-}
-
-fn absolute_rect(v: &Visual, by_name: &HashMap<&str, &Visual>, depth: usize) -> Rect {
-    let own = position_rect(v);
-    let parent = v
-        .parent_group_name
-        .as_deref()
-        .filter(|p| *p != v.name)
-        .and_then(|p| by_name.get(p));
-    let Some(parent) = parent.filter(|_| depth < MAX_GROUP_DEPTH) else {
-        return own;
-    };
-    let group = absolute_rect(parent, by_name, depth + 1);
-    let relative = own.translate(group.x, group.y);
-    let eps = 0.5;
-    if group.contains_rect(&own, eps) || !group.contains_rect(&relative, eps) {
-        own
-    } else {
-        relative
-    }
+    page.visuals
+        .iter()
+        .map(|v| {
+            let r = page.page_rect(v);
+            (v.name.as_str(), Rect::new(r.x, r.y, r.width, r.height))
+        })
+        .collect()
 }
 
 /// Effective hidden flag (a hidden group hides its descendants).
