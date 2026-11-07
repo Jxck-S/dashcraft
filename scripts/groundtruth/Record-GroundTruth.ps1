@@ -18,6 +18,9 @@ Desktop's mashup engine against the standard library alone (no model query is in
 temporary hidden table of any open model (or the one on -Port), which is deleted afterwards; the
 recording keeps each case's value as typed JSON ("value") or its error ("error").
 
+Corpora with "language": "tmdl" are skipped: Record-Tmdl.ps1 records them with Microsoft's TOM
+library instead of Desktop.
+
 .EXAMPLE
 pwsh scripts/groundtruth/Record-GroundTruth.ps1 -Refresh
 pwsh scripts/groundtruth/Record-GroundTruth.ps1 -Corpus reference/groundtruth/corpus/dax-functions.json
@@ -46,6 +49,7 @@ $refreshed = @{}
 
 foreach ($file in $Corpus) {
     $suite = Get-Content -Raw $file | ConvertFrom-Json -NoEnumerate
+    if ($suite.PSObject.Properties['language'] -and $suite.language -eq 'tmdl') { continue } # Record-Tmdl.ps1
     $isM = [bool]($suite.PSObject.Properties['language'] -and $suite.language -eq 'm')
     $instancePort = if ($Port) { $Port }
     elseif ($isM) {

@@ -53,6 +53,12 @@
 //! byte from its CST, so saving an edited model only rewrites the files of
 //! edited objects.
 //!
+//! # Language service
+//!
+//! [`service`] checks TMDL the way Microsoft's TMDL reader loads it:
+//! [`service::diagnostics`] over a set of files, against a keyword catalog
+//! recorded from that reader ([`service::catalog`], ADR-0029).
+//!
 //! The crate never touches the file system except in
 //! [`load_model_from_dir`]; containers (ZIP, folders) pass `(path, text)`
 //! pairs to [`load_model`].
@@ -62,6 +68,7 @@ mod error;
 pub mod expr;
 pub mod lexer;
 mod load;
+pub mod service;
 mod writer;
 
 use std::path::{Path, PathBuf};

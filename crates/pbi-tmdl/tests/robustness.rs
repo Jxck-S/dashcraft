@@ -2,13 +2,15 @@
 //! A deterministic property test mutates the fixture files (line shuffles,
 //! swaps, deletions, duplications, truncations, junk insertion, indentation
 //! changes) and checks that parsing never panics, the CST stays lossless,
-//! the writer's output always parses, and model → TMDL → model is stable.
+//! the writer's output always parses, model → TMDL → model is stable, and the
+//! language service's diagnostics stay inside the files.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::path::{Path, PathBuf};
 
 use pbi_model::{Model, PropValue, Severity};
+use pbi_tmdl::service::{MAX_DIAGNOSTICS, Source, diagnostics};
 use pbi_tmdl::{
     SyntaxError, TmdlError, clear_origins, codes, load_model, parse_file, write_model,
     write_model_preserving,
@@ -290,6 +292,28 @@ fn env_u64(name: &str, default: u64) -> u64 {
         .unwrap_or(default)
 }
 
+/// The language service's diagnostics stay inside the files (as the `tmdl_service` fuzz
+/// target checks).
+fn check_diagnostics(set: &[(String, String)], iteration: u64) {
+    let sources: Vec<Source> = set.iter().map(|(p, t)| Source::new(p, t)).collect();
+    let found = diagnostics(&sources);
+    assert!(found.len() <= MAX_DIAGNOSTICS, "iteration {iteration}");
+    for d in &found {
+        let source = &sources[d.file];
+        assert_eq!(d.path, source.path, "iteration {iteration}: {d:?}");
+        assert!(
+            d.start <= d.end && source.text.get(d.start..d.end).is_some(),
+            "iteration {iteration}: range outside {:?}: {d:?}",
+            source.path
+        );
+        assert!(d.line >= 1 && d.column >= 1, "iteration {iteration}: {d:?}");
+        assert!(
+            d.suggestion.as_deref() != Some(""),
+            "iteration {iteration}: {d:?}"
+        );
+    }
+}
+
 /// Cases and seed can be raised for longer local runs:
 /// `PBI_TMDL_PROPTEST_CASES=100000 PBI_TMDL_PROPTEST_SEED=7 cargo test -p pbi-tmdl --test robustness`.
 #[test]
@@ -315,6 +339,7 @@ fn mutated_fixtures_never_panic_and_round_trip() {
         let mut set = files.clone();
         let target = rng.below(set.len());
         set[target].1 = mutate(&mut rng, &set[target].1, &pool);
+        check_diagnostics(&set, iteration);
         let mutated = &set[target];
         match parse_file(&mutated.0, &mutated.1) {
             Ok(file) => assert_eq!(file.to_string(), mutated.1, "iteration {iteration}"),

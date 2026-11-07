@@ -3,9 +3,11 @@
 //! Reads `reference/groundtruth/{corpus,recordings}/*.json` and
 //! `deviations.json` (JSON only, no engine) and prints per suite: cases,
 //! recorded cases, cases whose query changed since recording (re-record),
-//! volatile (shape-only) cases, ledger entries, and the Desktop version.
-//! The comparison itself is `cargo test -p pbi-session --test groundtruth` (DAX suites) and
-//! `cargo test -p pbi-m --test groundtruth` (M suites).
+//! volatile (shape-only) cases, ledger entries, and the oracle's version (Power BI Desktop, or
+//! Microsoft's TOM library for the TMDL suites).
+//! The comparison itself is `cargo test -p pbi-session --test groundtruth` (DAX suites),
+//! `cargo test -p pbi-m --test groundtruth` (M suites) and
+//! `cargo test -p pbi-tmdl --test groundtruth` (TMDL suites).
 //! With `--check`, a missing recording, an unrecorded case or a changed query
 //! fails. See `reference/groundtruth/README.md`.
 
@@ -22,7 +24,7 @@ const USAGE: &str = "\
 usage: cargo xtask groundtruth [--check]
 
 Prints the coverage of reference/groundtruth (cases, recorded, query changed,
-volatile, ledger entries, Desktop version) per suite. --check fails when a
+volatile, ledger entries, oracle version) per suite. --check fails when a
 corpus has no recording, a case is not recorded or its query changed.
 ";
 
@@ -34,8 +36,10 @@ struct SuiteStatus {
     changed: usize,
     volatile: usize,
     ledger: usize,
-    desktop: Option<String>,
+    /// Version of the oracle: `2.159…` (Desktop) or `TOM 19.118.3`.
+    oracle: Option<String>,
     has_recording: bool,
+    tmdl: bool,
 }
 
 impl SuiteStatus {
@@ -61,17 +65,27 @@ pub fn main(args: &[String]) -> Result<bool> {
     print_table(&statuses);
     let incomplete: Vec<&SuiteStatus> = statuses.iter().filter(|s| !s.is_complete()).collect();
     if !incomplete.is_empty() {
-        println!(
-            "\nto record: {} (scripts/groundtruth/Record-GroundTruth.ps1, Windows + Power BI Desktop)",
+        let list = |tmdl: bool| {
             incomplete
                 .iter()
+                .filter(|s| s.tmdl == tmdl)
                 .map(|s| s.suite.as_str())
                 .collect::<Vec<_>>()
                 .join(", ")
-        );
+        };
+        let desktop = list(false);
+        if !desktop.is_empty() {
+            println!(
+                "\nto record: {desktop} (scripts/groundtruth/Record-GroundTruth.ps1, Windows + Power BI Desktop)"
+            );
+        }
+        let tom = list(true);
+        if !tom.is_empty() {
+            println!("\nto record: {tom} (scripts/groundtruth/Record-Tmdl.ps1, PowerShell 7)");
+        }
     }
     println!(
-        "compare: cargo test -p pbi-session --test groundtruth; cargo test -p pbi-m --test groundtruth"
+        "compare: cargo test -p pbi-session --test groundtruth; cargo test -p pbi-m --test groundtruth; cargo test -p pbi-tmdl --test groundtruth"
     );
     Ok(!check || incomplete.is_empty())
 }
@@ -148,7 +162,13 @@ fn status(
         suite: suite.to_owned(),
         ledger: ledger.unwrap_or(0),
         has_recording: recording.is_some(),
-        desktop: recording.and_then(|r| r["desktop"]["version"].as_str().map(str::to_owned)),
+        oracle: recording.and_then(|r| {
+            r["desktop"]["version"]
+                .as_str()
+                .map(str::to_owned)
+                .or_else(|| r["oracle"]["version"].as_str().map(|v| format!("TOM {v}")))
+        }),
+        tmdl: corpus["language"] == "tmdl",
         ..SuiteStatus::default()
     };
     for case in cases(corpus) {
@@ -167,7 +187,7 @@ fn status(
 
 fn print_table(statuses: &[SuiteStatus]) {
     println!(
-        "{:<32} {:>6} {:>9} {:>8} {:>9} {:>7}  desktop",
+        "{:<32} {:>6} {:>9} {:>8} {:>9} {:>7}  oracle",
         "suite", "cases", "recorded", "changed", "volatile", "ledger"
     );
     for s in statuses {
@@ -179,7 +199,7 @@ fn print_table(statuses: &[SuiteStatus]) {
             s.changed,
             s.volatile,
             s.ledger,
-            s.desktop
+            s.oracle
                 .as_deref()
                 .unwrap_or(if s.has_recording { "?" } else { "not recorded" })
         );
@@ -217,9 +237,15 @@ mod tests {
             (s.cases, s.recorded, s.changed, s.volatile, s.ledger),
             (3, 1, 1, 1, 2)
         );
-        assert_eq!(s.desktop.as_deref(), Some("2.159"));
+        assert_eq!(s.oracle.as_deref(), Some("2.159"));
         assert!(!s.is_complete());
         let s = status("x", &corpus, None, None);
         assert!(!s.has_recording && !s.is_complete());
+        let corpus = json!({"language": "tmdl", "cases": [{"id": "a", "query": "q"}]});
+        let recording =
+            json!({"oracle": {"version": "19.118.3"}, "cases": [{"id": "a", "query": "q"}]});
+        let s = status("t", &corpus, Some(&recording), None);
+        assert_eq!(s.oracle.as_deref(), Some("TOM 19.118.3"));
+        assert!(s.tmdl && s.is_complete());
     }
 }

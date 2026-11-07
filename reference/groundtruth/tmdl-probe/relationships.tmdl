@@ -1,0 +1,3 @@
+relationship r1
+	fromColumn: T.K
+	toColumn: U.K

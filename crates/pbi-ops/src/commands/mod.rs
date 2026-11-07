@@ -13,6 +13,7 @@ pub mod m;
 pub mod meta;
 pub mod render;
 pub mod security;
+pub mod tmdl;
 pub mod transform;
 pub mod workspace;
 
@@ -123,6 +124,7 @@ pub fn catalog() -> Registry {
         .with::<m::MSignatureHelp>()
         .with::<m::MComplete>()
         .with::<m::MFormat>()
+        .with::<tmdl::TmdlDiagnostics>()
         // render
         .with::<render::RenderPage>()
         .with::<render::RenderVisual>()

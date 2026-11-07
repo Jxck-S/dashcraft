@@ -17,5 +17,6 @@
 | [0013](0013-save-conflicts-and-recovery.md) | Save, external changes and recovery | Accepted |
 | [0014](0014-serialization-contract.md) | Serialization contract and generated identifiers | Accepted |
 | [0015](0015-accessibility-target.md) | Accessibility target and verification | Accepted |
+| [0029](0029-tmdl-reader-ground-truth.md) | Ground truth from Microsoft's TMDL reader: TOM's `TmdlSerializer` as a black-box oracle for TMDL validity, under ADR-0011's rules (0016 to 0028 are reserved for the proposals in DESKTOP-PLAN) | Accepted |
 
 New ADRs use the next number and the sections Status, Context, Decision, Alternatives considered, Consequences. To change a decision, write a new ADR and mark the old one "Superseded by ADR-NNNN". Don't rewrite history.

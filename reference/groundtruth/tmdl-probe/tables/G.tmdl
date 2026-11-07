@@ -1,0 +1,12 @@
+table G
+
+	calculationGroup
+
+		calculationItem I = SELECTEDMEASURE()
+
+	column Name
+		sortByColumn: Ordinal
+
+	column Ordinal
+
+	partition G = calculationGroup
