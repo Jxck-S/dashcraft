@@ -1280,6 +1280,276 @@ def m_functions_suite() -> dict:
     )
 
 
+# --- TMDL suites (ADR-0029) -------------------------------------------------------------------
+# Recorded by scripts/groundtruth/Record-Tmdl.ps1 with Microsoft's TOM TMDL reader (black box:
+# TmdlSerializer.DeserializeDatabaseFromFolder) and checked by crates/pbi-tmdl/tests/groundtruth.rs.
+# A case's query is a small spec of `key: value` lines (`\t`, `\n` and `\\` escaped):
+#   keywords: file, after (an anchor line), depth, optional prefix lines, the candidate keywords;
+#     every keyword is probed as `kw abc`, `kw`, `kw: abc` and `kw = 1` on a new line after the
+#     anchor (under the prefix lines, one level deeper, when there are any).
+#   values: the same placement, `keyword: value` for every candidate value.
+#   edit: file, find (must occur once), replace; the whole fixture is then deserialized.
+
+TMDL_PROBE = "reference/groundtruth/tmdl-probe"
+TMDL_ACME = "reference/examples/acme-outfitters/AcmeOutfitters.SemanticModel/definition"
+
+# Candidate keywords: TOM object and property names from the public TOM/TMSL documentation and
+# the keywords DashCraft's TMDL reader and writer know. The recording keeps the accepted ones.
+TMDL_KEYWORDS = """
+name id description annotation extendedProperty changedProperty ref createRef
+compatibilityLevel compatibilityMode language collation readWriteMode storageLocation model database
+culture defaultMode defaultDataView dataAccessOptions defaultPowerBIDataSourceVersion forceUniqueNames
+discourageImplicitMeasures discourageReportMeasures dataSourceVariablesOverrideBehavior
+dataSourceDefaultMaxConnections sourceQueryCulture mAttributes discourageCompositeModels
+automaticAggregationOptions maxParallelismPerRefresh maxParallelismPerQuery disableAutoExists
+directLakeBehavior valueFilterBehavior selectionExpressionBehavior defaultMeasure analyticsAIMetadata
+function calendar bindingInfo dataSource queryGroup expression table relationship role perspective
+cultureInfo legacyRedirects returnErrorValuesAsNull fastCombine
+dataCategory isHidden isPrivate showAsVariationsOnly alternateSourcePrecedence excludeFromModelRefresh
+lineageTag sourceLineageTag systemManaged excludeFromAutomaticAggregations defaultDetailRowsDefinition
+refreshPolicy calculationGroup column measure hierarchy partition calendarColumnGroup
+dataType isUnique isKey isNullable alignment tableDetailPosition isDefaultLabel isDefaultImage summarizeBy
+type formatString isAvailableInMdx keepUniqueRows displayOrdinal sourceProviderType displayFolder
+encodingHint sortByColumn sourceColumn isNameInferred isDataTypeInferred columnOriginTable
+columnOriginColumn attributeHierarchy relatedColumnDetails alternateOf variation evaluationBehavior
+groupByColumn detailRowsDefinition kpi isSimpleMeasure formatStringDefinition hideMembers level ordinal
+mode dataView source retainDataTillForceCalculate dataCoverageDefinition
+isActive crossFilteringBehavior joinOnDateBehavior relyOnReferentialIntegrity securityFilteringBehavior
+fromColumn fromCardinality toColumn toCardinality fromTable toTable
+modelPermission member tablePermission filterExpression metadataPermission columnPermission
+linguisticMetadata translation translations content contentType
+perspectiveTable includeAll perspectiveColumn perspectiveMeasure perspectiveHierarchy
+kind parameterValuesColumn remoteParameterName folder
+precedence multipleOrEmptySelectionExpression noSelectionExpression calculationItem
+targetDescription targetExpression targetFormatString statusGraphic statusDescription statusExpression
+trendGraphic trendDescription trendExpression
+policyType rollingWindowGranularity rollingWindowPeriods incrementalGranularity incrementalPeriods
+incrementalPeriodsOffset sourceExpression pollingExpression
+baseColumn baseTable summarization defaultHierarchy defaultColumn isDefault state errorMessage
+connectionString impersonationMode account password provider timeout maxConnections isolation
+connectionDetails credential options contextExpression privacySetting query
+memberName memberId identityProvider memberType
+primaryColumn associatedColumn timeUnit timeUnitColumnAssociation
+""".split()
+
+# Probe contexts: (name, file, anchor line, depth, prefix lines). A context is named after the
+# object whose child lines it probes (`root`: top-level lines of a file); calculatedColumn,
+# calculatedTableColumn, calculatedPartition and calculationGroupPartition are the variants
+# `column X = <expression>`, a column of a table with a calculated partition, and
+# `partition X = calculated | calculationGroup`. The probe goes after the anchor line, so an
+# object's own property lines must come before it: TOM rejects a property after a child object.
+TMDL_CONTEXTS = [
+    ("root", "expressions.tmdl", "expression E = 1", 0, []),
+    ("database", "database.tmdl", "\tcompatibilityLevel: 1702", 1, []),
+    ("model", "model.tmdl", "model Model", 1, []),
+    ("dataAccessOptions", "model.tmdl", "model Model", 1, ["dataAccessOptions"]),
+    ("automaticAggregationOptions", "model.tmdl", "model Model", 1, ["automaticAggregationOptions"]),
+    ("function", "model.tmdl", "model Model", 1, ["function F = () => 1"]),
+    ("queryGroup", "model.tmdl", "queryGroup Q", 1, []),
+    ("expression", "expressions.tmdl", "expression E = 1", 1, []),
+    ("relationship", "relationships.tmdl", "\ttoColumn: U.K", 1, []),
+    ("table", "tables/T.tmdl", "table T", 1, []),
+    ("refreshPolicy", "tables/T.tmdl", "table T", 1, ["refreshPolicy"]),
+    ("calendar", "tables/T.tmdl", "table T", 1, ["calendar Cal"]),
+    ("measure", "tables/T.tmdl", "\tmeasure M = SUM(T[V])", 2, []),
+    ("kpi", "tables/T.tmdl", "\tmeasure M = SUM(T[V])", 2, ["kpi"]),
+    ("formatStringDefinition", "tables/T.tmdl", "\tmeasure M = SUM(T[V])", 2, ['formatStringDefinition = "0"']),
+    ("detailRowsDefinition", "tables/T.tmdl", "\tmeasure M = SUM(T[V])", 2, ["detailRowsDefinition = T"]),
+    ("column", "tables/T.tmdl", "\tcolumn K", 2, []),
+    ("calculatedColumn", "tables/T.tmdl", "\tcolumn C = T[V] * 2", 2, []),
+    ("calculatedTableColumn", "tables/U.tmdl", "\t\tisKey", 2, []),
+    ("relatedColumnDetails", "tables/T.tmdl", "\tcolumn K", 2, ["relatedColumnDetails"]),
+    ("alternateOf", "tables/T.tmdl", "\tcolumn K", 2, ["alternateOf"]),
+    ("variation", "tables/T.tmdl", "\tcolumn K", 2, ["variation Var"]),
+    ("changedProperty", "tables/T.tmdl", "\tcolumn K", 2, ["changedProperty = isHidden"]),
+    ("hierarchy", "tables/T.tmdl", "\thierarchy H", 2, []),
+    ("level", "tables/T.tmdl", "\t\t\tcolumn: K", 3, []),
+    ("partition", "tables/T.tmdl", "\tpartition T = m", 2, []),
+    ("calculatedPartition", "tables/U.tmdl", "\tpartition U = calculated", 2, []),
+    ("calculationGroupPartition", "tables/G.tmdl", "\tpartition G = calculationGroup", 2, []),
+    ("calculationGroup", "tables/G.tmdl", "\tcalculationGroup", 2, []),
+    ("multipleOrEmptySelectionExpression", "tables/G.tmdl", "\tcalculationGroup", 2, ["multipleOrEmptySelectionExpression = 1"]),
+    ("noSelectionExpression", "tables/G.tmdl", "\tcalculationGroup", 2, ["noSelectionExpression = 1"]),
+    ("calculationItem", "tables/G.tmdl", "\t\tcalculationItem I = SELECTEDMEASURE()", 3, []),
+    ("role", "roles/R.tmdl", "role R", 1, []),
+    ("member", "roles/R.tmdl", "role R", 1, ["member u"]),
+    ("tablePermission", "roles/R.tmdl", "\ttablePermission T = TRUE()", 2, []),
+    ("columnPermission", "roles/R.tmdl", "\ttablePermission T = TRUE()", 2, ["columnPermission K"]),
+    ("cultureInfo", "cultures/en-US.tmdl", "cultureInfo en-US", 1, []),
+    ("linguisticMetadata", "cultures/en-US.tmdl", "cultureInfo en-US", 1, ["linguisticMetadata = <Linguistic />"]),
+    ("perspective", "perspectives/P.tmdl", "perspective P", 1, []),
+    ("perspectiveTable", "perspectives/P.tmdl", "\tperspectiveTable T", 2, []),
+    ("perspectiveColumn", "perspectives/P.tmdl", "\t\tperspectiveColumn K", 3, []),
+    ("perspectiveMeasure", "perspectives/P.tmdl", "\tperspectiveTable T", 2, ["perspectiveMeasure M"]),
+    ("perspectiveHierarchy", "perspectives/P.tmdl", "\tperspectiveTable T", 2, ["perspectiveHierarchy H"]),
+]
+
+# Enum values: (TOM enum type, context, keyword, candidate values from the public TOM docs).
+TMDL_ENUMS = [
+    ("CompatibilityMode", "database", "compatibilityMode", "unknown analysisServices powerBI excel"),
+    ("ReadWriteMode", "database", "readWriteMode", "readWrite readOnly readOnlyExclusive"),
+    ("ModeType", "partition", "mode", "import directQuery default push dual directLake"),
+    ("DataViewType", "partition", "dataView", "full sample default"),
+    ("PowerBIDataSourceVersion", "model", "defaultPowerBIDataSourceVersion", "powerBI_V1 powerBI_V2 powerBI_V3"),
+    ("DataSourceVariablesOverrideBehaviorType", "model", "dataSourceVariablesOverrideBehavior", "disallow allow"),
+    ("DirectLakeBehavior", "model", "directLakeBehavior", "automatic directLakeOnly directQueryOnly"),
+    ("ValueFilterBehaviorType", "model", "valueFilterBehavior", "automatic independent coalesced"),
+    ("SelectionExpressionBehaviorType", "model", "selectionExpressionBehavior", "automatic nonvisual visual"),
+    ("ExpressionKind", "expression", "kind", "m dax"),
+    ("RelationshipType", "relationship", "type", "singleColumn"),
+    ("CrossFilteringBehavior", "relationship", "crossFilteringBehavior", "oneDirection bothDirections automatic"),
+    ("DateTimeRelationshipBehavior", "relationship", "joinOnDateBehavior", "dateAndTime datePartOnly"),
+    ("SecurityFilteringBehavior", "relationship", "securityFilteringBehavior", "oneDirection bothDirections none"),
+    ("RelationshipEndCardinality", "relationship", "fromCardinality", "none one many"),
+    ("ObjectState", "measure", "state",
+     "ready noData calculationNeeded semanticError evaluationError dependencyError incomplete forceCalculationNeeded"),
+    ("DataType", "column", "dataType", "automatic string int64 double dateTime decimal boolean binary unknown variant"),
+    ("Alignment", "column", "alignment", "default left right center"),
+    ("AggregateFunction", "column", "summarizeBy", "default none sum min max count average distinctCount"),
+    ("ColumnType", "column", "type", "data calculated rowNumber calculatedTableColumn"),
+    ("EncodingHintType", "column", "encodingHint", "default hash value"),
+    ("HierarchyHideMembersType", "hierarchy", "hideMembers", "default hideBlankMembers"),
+    ("ModelPermission", "role", "modelPermission", "none read readRefresh refresh administrator"),
+    ("MetadataPermission", "tablePermission", "metadataPermission", "default none read"),
+    ("RefreshPolicyType", "refreshPolicy", "policyType", "basic"),
+    ("RefreshPolicyMode", "refreshPolicy", "mode", "import hybrid"),
+    ("RefreshGranularityType", "refreshPolicy", "rollingWindowGranularity", "invalid day month quarter year"),
+    ("SummarizationType", "alternateOf", "summarization", "groupBy sum count min max"),
+    ("ContentType", "linguisticMetadata", "contentType", "xml json"),
+    ("TmdlRoleMemberType", "member", "memberType", "auto user group activeDirectory windows external"),
+]
+
+
+def tmdl_escape(s: str) -> str:
+    return s.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n")
+
+
+def tmdl_spec(**fields: str) -> str:
+    return "".join(f"{k}: {tmdl_escape(str(v))}\n" for k, v in fields.items())
+
+
+def tmdl_suite(name: str, title: str, definition: str, cases: list[dict]) -> dict:
+    doc = suite(name, title, definition, [], cases)
+    doc["language"] = "tmdl"
+    return doc
+
+
+def tmdl_catalog_suite() -> dict:
+    contexts = {c[0]: c for c in TMDL_CONTEXTS}
+    cases = []
+    for name, file, after, depth, prefix in TMDL_CONTEXTS:
+        spec = {"file": file, "after": after, "depth": depth}
+        if prefix:
+            spec["prefix"] = "\n".join(prefix)
+        cases.append({"id": f"keywords/{name}", "query": tmdl_spec(**spec, keywords=" ".join(TMDL_KEYWORDS))})
+    # The integers the reader accepts too (it rejects the ones the enumeration does not define).
+    numbers = " ".join(str(n) for n in range(-1, 21))
+    for enum, ctx, keyword, values in TMDL_ENUMS:
+        values = f"{values} {numbers}"
+        _, file, after, depth, prefix = contexts[ctx]
+        spec = {"file": file, "after": after, "depth": depth}
+        if prefix:
+            spec["prefix"] = "\n".join(prefix)
+        cases.append({"id": f"values/{enum}", "query": tmdl_spec(**spec, keyword=keyword, values=values)})
+    return tmdl_suite(
+        "tmdl-catalog",
+        "Which TMDL keywords Microsoft's TOM TMDL reader accepts in each object context, in which forms, from which compatibility level, and the accepted enum values",
+        TMDL_PROBE,
+        cases,
+    )
+
+
+def _acme_line(file: str, prefix: str) -> str:
+    """The first line of an Acme TMDL file that starts with `prefix` (keeps the cases in step with
+    the generated example)."""
+    for line in (ROOT / TMDL_ACME / file).read_text(encoding="utf-8").split("\n"):
+        if line.startswith(prefix):
+            return line
+    raise SystemExit(f"{file}: no line starting with {prefix!r}")
+
+
+def tmdl_validity_suite() -> dict:
+    stores_tag = _acme_line("tables/Stores.tmdl", "\tlineageTag: ")
+    store_id = "\tcolumn 'Store ID'\n\t\tdataType: string\n\t\tisKey"
+    edits = [
+        ("baseline", "model.tmdl", "model Model", "model Model"),
+        ("keyword/unknown-table-property", "tables/Stores.tmdl", stores_tag, stores_tag + "\n\tlineageTagg: x"),
+        ("keyword/misspelled-column-property", "tables/Stores.tmdl", store_id, store_id.replace("dataType", "dataTyp")),
+        ("keyword/description-property", "tables/Stores.tmdl", stores_tag, stores_tag + "\n\tdescription: Stores"),
+        ("keyword/case-insensitive", "tables/Stores.tmdl", store_id, store_id.replace("dataType", "DataType")),
+        ("keyword/object-in-wrong-context", "tables/Stores.tmdl", stores_tag, stores_tag + "\n\tlevel X"),
+        ("keyword/unknown-model-object", "model.tmdl", "ref table Orders", "ref table Orders\ntabel Extra"),
+        ("value/bad-enum", "tables/Stores.tmdl", store_id, store_id.replace("dataType: string", "dataType: strin")),
+        ("value/enum-case-insensitive", "tables/Stores.tmdl", store_id, store_id.replace("dataType: string", "dataType: STRING")),
+        ("value/bad-bool", "tables/Stores.tmdl", store_id, store_id.replace("isKey", "isKey: yes")),
+        ("value/bool-false", "tables/Stores.tmdl", store_id, store_id.replace("isKey", "isKey: false")),
+        ("value/bad-int", "tables/Time Calc.tmdl", "\t\tprecedence: 10", "\t\tprecedence: ten"),
+        ("value/int-sign", "tables/Time Calc.tmdl", "\t\tprecedence: 10", "\t\tprecedence: +10"),
+        ("value/int-overflow", "tables/Time Calc.tmdl", "\t\tprecedence: 10", "\t\tprecedence: 99999999999"),
+        ("value/int-decimal", "tables/Time Calc.tmdl", "\t\tprecedence: 10", "\t\tprecedence: 1.5"),
+        ("value/enum-number", "tables/Stores.tmdl", store_id, store_id.replace("dataType: string", "dataType: 2")),
+        ("value/enum-list", "tables/Stores.tmdl", store_id, store_id + "\n\t\tencodingHint: hash, value"),
+        ("value/enum-quoted", "tables/Stores.tmdl", store_id, store_id.replace("dataType: string", "dataType: 'string'")),
+        ("value/bool-capitalized", "tables/Stores.tmdl", store_id, store_id.replace("isKey", "isKey: True")),
+        ("value/bool-number", "tables/Stores.tmdl", store_id, store_id.replace("isKey", "isKey: 1")),
+        ("value/bool-equals", "tables/Stores.tmdl", store_id, store_id.replace("isKey", "isKey = true")),
+        ("value/property-not-allowed-here", "tables/Stores.tmdl", store_id, store_id + "\n\t\tisNameInferred: true"),
+        ("value/missing", "tables/Stores.tmdl", store_id, store_id.replace("dataType: string", "dataType:")),
+        ("value/bad-cardinality", "relationships.tmdl", "\tfromColumn: Orders.'Store ID'",
+         "\tfromColumn: Orders.'Store ID'\n\tfromCardinality: single"),
+        ("value/bad-permission", "roles/Region West.tmdl", "\tmodelPermission: read", "\tmodelPermission: write"),
+        ("duplicate/property", "tables/Stores.tmdl", store_id, store_id + "\n\t\tisKey"),
+        ("duplicate/column", "tables/Stores.tmdl", stores_tag, stores_tag + "\n\n\tcolumn Region\n\t\tdataType: string"),
+        ("duplicate/measure-same-table", "tables/Customers.tmdl", "\tmeasure 'Customer Count' = COUNTROWS(Customers)",
+         "\tmeasure 'Customer Count' = COUNTROWS(Customers)\n\n\tmeasure 'Customer Count' = 1"),
+        ("duplicate/measure-other-table", "tables/Stores.tmdl", stores_tag, stores_tag + "\n\n\tmeasure 'Customer Count' = 1"),
+        ("duplicate/table-other-file", "tables/Extra.tmdl", "", "table Stores\n\n\tcolumn Extra\n\t\tdataType: string\n"),
+        ("reference/sort-by-column", "tables/Time Calc.tmdl", "\t\tsortByColumn: Ordinal", "\t\tsortByColumn: Ordinals"),
+        ("reference/relationship-to-column", "relationships.tmdl", "\ttoColumn: Customers.'Customer ID'",
+         "\ttoColumn: Customers.'Customer Key'"),
+        ("reference/relationship-from-table", "relationships.tmdl", "\tfromColumn: Orders.'Customer ID'",
+         "\tfromColumn: Order.'Customer ID'"),
+        ("reference/level-column", "tables/Date.tmdl", "\t\t\tcolumn: Quarter", "\t\t\tcolumn: Quarters"),
+        ("reference/query-group", "expressions.tmdl", "\tqueryGroup: Parameters", "\tqueryGroup: Parameter"),
+        ("reference/table-permission", "roles/Region West.tmdl", "\ttablePermission Stores =", "\ttablePermission Storez ="),
+        ("reference/sort-by-column-case-insensitive", "tables/Time Calc.tmdl", "\t\tsortByColumn: Ordinal",
+         "\t\tsortByColumn: ordinal"),
+        ("reference/ref-table", "model.tmdl", "ref table Orders", "ref table Orderz"),
+        ("reference/ref-role", "model.tmdl", "ref role 'Region West'", "ref role 'Region East'"),
+        ("order/property-after-annotation", "tables/Stores.tmdl", store_id,
+         store_id.replace("\t\tdataType", "\t\tannotation X = 1\n\t\tdataType")),
+        ("order/table-property-after-measure", "tables/Stores.tmdl", stores_tag,
+         stores_tag + "\n\n\tmeasure X = 1\n\n\tisHidden"),
+        ("syntax/space-indent", "tables/Stores.tmdl", store_id, store_id.replace("\t\tisKey", "    isKey")),
+        ("syntax/mixed-indent", "tables/Stores.tmdl", store_id, store_id.replace("\t\tisKey", "\t  isKey")),
+        ("syntax/over-indent", "tables/Stores.tmdl", store_id, store_id.replace("\t\tisKey", "\t\t\tisKey")),
+        ("syntax/unterminated-quote", "tables/Stores.tmdl", "\tcolumn 'Store ID'", "\tcolumn 'Store ID"),
+        ("syntax/annotation-without-value", "tables/Stores.tmdl", stores_tag, stores_tag + "\n\n\tannotation X"),
+        ("syntax/empty-file", "tables/Empty.tmdl", "", ""),
+        ("compat/function-below-1702", "model.tmdl", "ref table Orders", "function F = () => 1\n\nref table Orders"),
+        ("compat/selection-expression-below-1605", "tables/Time Calc.tmdl", "\t\tprecedence: 10",
+         "\t\tprecedence: 10\n\n\t\tnoSelectionExpression = SELECTEDMEASURE()"),
+        ("expression/dax-not-checked", "tables/Stores.tmdl", stores_tag, stores_tag + "\n\n\tmeasure Broken = SUM([Nope]"),
+        ("expression/m-not-checked", "expressions.tmdl", "\tqueryGroup: Parameters", "\tqueryGroup: Parameters\n\nexpression Bad = let x in"),
+        ("expression/measure-without-expression", "tables/Stores.tmdl", stores_tag, stores_tag + "\n\n\tmeasure Empty"),
+        ("culture/translations", "cultures/fr-FR.tmdl", "",
+         "cultureInfo fr-FR\n\n\ttranslations\n\t\tmodel Model\n\t\t\tcaption: Modele\n\t\t\ttable Stores\n"
+         "\t\t\t\tcaption: Magasins\n\t\t\t\tcolumn Region\n\t\t\t\t\tcaption: Region FR\n"
+         "\t\t\t\t\tdisplayFolder: Lieu\n"),
+        ("culture/translations-unknown-table", "cultures/fr-FR.tmdl", "",
+         "cultureInfo fr-FR\n\n\ttranslations\n\t\tmodel Model\n\t\t\ttable Storez\n\t\t\t\tcaption: Magasins\n"),
+    ]
+    cases = []
+    for cid, file, find, replace in edits:
+        cases.append({"id": cid, "query": tmdl_spec(file=file, find=find, replace=replace)})
+    return tmdl_suite(
+        "tmdl-validity",
+        "Whether Microsoft's TOM TMDL reader accepts edited copies of the Acme Outfitters model, and the error it reports",
+        TMDL_ACME,
+        cases,
+    )
+
+
 def render(doc: dict) -> str:
     return json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
 
@@ -1302,6 +1572,8 @@ def main() -> int:
         m_library_suite(),
         m_arity_suite(),
         m_functions_suite(),
+        tmdl_catalog_suite(),
+        tmdl_validity_suite(),
         *sample_suites(),
     ]
     stale = []

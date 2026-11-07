@@ -1,0 +1,7 @@
+table U
+
+	column K
+		isKey
+
+	partition U = calculated
+		source = DATATABLE("K", STRING, {{"a"}})

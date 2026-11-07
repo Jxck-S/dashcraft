@@ -35,7 +35,7 @@ reimplementation of Power BI Desktop ([ADR-0004](docs/adr/0004-desktop-ready-arc
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Milestones M0–M5, the "Next" list, open human decisions |
 | [docs/GAPS.md](docs/GAPS.md) | Gaps scorecard: what is missing, scored 0–5 per area |
 | [docs/DEVLOG.md](docs/DEVLOG.md) | What changed per wave, why, and the numbers |
-| [docs/adr/](docs/adr/README.md) | Decisions 0001–0011; new decisions get a new ADR |
+| [docs/adr/](docs/adr/README.md) | Decisions 0001–0015 and 0029; new decisions get a new ADR |
 | [reference/README.md](reference/README.md) | Test fixtures: the synthetic Acme Outfitters example, the Microsoft samples, optional local data (§7) |
 
 ## 2. Layer map and where things live
@@ -69,7 +69,7 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
 | `crates/<crate>/` | Library crates above; `crates/pbi-dax/FUNCTIONS.md` (DAX coverage, checked by tests), `crates/pbi-core/src/lint/RULES.md` (18 lint rules), `crates/pbi-vertipaq/FORMAT-NOTES.md` and `REFERENCES.md` |
 | `app/` | Tauri 2 + Svelte 5 + TypeScript front end; [app/README.md](app/README.md), [app/docs/desktop-ui-reference.md](app/docs/desktop-ui-reference.md) (every Desktop element and what we do with it) |
 | `xtask/`, `perf/` | Repo automation; perf scenarios (`budgets.toml`), per-machine `baseline.json`, shared `harness.rs` |
-| `fuzz/` | Own Cargo workspace, 16 `cargo-fuzz` targets, seeds, dictionaries, `run.sh` |
+| `fuzz/` | Own Cargo workspace, 17 `cargo-fuzz` targets, seeds, dictionaries, `run.sh` |
 | `reference/` | Fixtures (`$DASHCRAFT_REFERENCE` overrides; §7): `examples/acme-outfitters/` (synthetic PBIP + CSV; its `blob-map.json` maps `AzureStorage.Blobs` URLs to the local CSVs), `samples/microsoft/` (MIT samples); `reference/README.md` says which test uses what |
 | `docs/` | `ARCHITECTURE`, `ROADMAP`, `GAPS`, `DEVLOG`, `CLI` (every flag and JSON schema), `COMMANDS` (generated), `USER-GUIDE`, `VISUALS` (per-visual support, render verification), `perf`, `ci` (CI, release, fuzzing), `packaging`, `MCP` (MCP server), `AI` (opt-in AI), `adr/`, `research/` (*Craft reviews) |
 | `FORMATS.md` | Format support matrix; update when a reader or data path changes |
@@ -180,6 +180,9 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
 - **Accessibility** (ADR-0015): new and changed app surfaces target WCAG 2.2 AA with keyboard,
   focus, names, contrast, reduced-motion and platform/webview screen-reader checks; independent
   audit before 1.0.
+- **TMDL ground truth** (ADR-0029): Microsoft's TMDL reader (TOM, from NuGet, never committed) is
+  the black-box oracle for which TMDL loads; its verdicts generate the TMDL language service's
+  keyword catalog. Numbers 0016 to 0028 are reserved for the proposals in `docs/DESKTOP-PLAN.md`.
 - **Blob access**: offline only, through the `BlobResolver` trait and `blob-map.json`; real Azure
   access (SAS or az token from the OS keychain) may come later behind the same trait.
 - **Save formats**: PBIP via `save_as_pbip`, PBIT via `export_pbit` (`dashcraft convert`). Writing

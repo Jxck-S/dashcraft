@@ -285,6 +285,7 @@ say.
 | [ADR-0014](adr/0014-serialization-contract.md) | Serialization contract and generated identifiers | No-op byte identity, preservation, canonical evidence, bounded deviations, compatibility and injectable identifiers | M6.1 |
 | [ADR-0015](adr/0015-accessibility-target.md) | Accessibility target and verification | WCAG 2.2 AA target, per-surface checklist, platform/webview screen-reader smoke tests and independent 1.0 audit | M6.1 |
 | Ground-truth decision → [ADR-0011](adr/0011-desktop-ground-truth.md) (accepted) | Ground-truth recordings from Power BI Desktop | The black-box protocol (synthetic inputs only, outputs only, no binaries inspected); what may be committed (values, JSON and text produced from synthetic inputs) and what stays local (images); where recordings live and how they are refreshed per Desktop release | The first ground-truth session (whichever GT-n runs first); every criterion blocked by a GT session waits for it |
+| [ADR-0029](adr/0029-tmdl-reader-ground-truth.md) (accepted) | Ground truth from Microsoft's TMDL reader | TOM's TMDL reader (NuGet `Microsoft.AnalysisServices`) as a black-box oracle for which TMDL loads, under ADR-0011's rules; takes the next free number after the reserved proposals | M7.4 |
 | ADR-0016 | Local file data sources in M | Generalize `BlobResolver` into a data-source resolver that reads local files through the path policy; per-source permissions and privacy levels; still no network; extends golden rule 5 for local files only | M16.1 |
 | ADR-0017 | Cultures and regional settings | Culture handling in M parsing and formatting, DAX `FORMAT` and typed conversions; model culture versus UI locale versus regional settings; CLDR-derived data and its licence | M16.8 |
 | ADR-0018 | Columnar storage, compression and the local data cache | In-memory encodings (dictionary, value, bit-packing, run-length, segments) under the Arrow-facing API; threading model; memory budgets; a DashCraft-owned cache for PBIP data (format, location, invalidation), never written as `.pbi/cache.abf` | M17.1 |
@@ -923,6 +924,18 @@ optional language server.
     (apart from the one by-design ledger entry).
 - [ ] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of
   properties and object references, formatting that matches the writer.
+  - [x] M7.4a (2026-11-07) TMDL diagnostics checked against Microsoft's TMDL reader
+    ([ADR-0029](adr/0029-tmdl-reader-ground-truth.md)): the reader (TOM 19.118.3) recorded
+    keyword by keyword (suite `tmdl-catalog`: 43 contexts, 160 keywords in five forms, the
+    compatibility level each needs, 30 enumerations with the names and integers they accept) as
+    `pbi_tmdl::service::catalog`; `pbi_tmdl::service::diagnostics` and the `tmdl.diagnostics`
+    command report what the reader rejects (unknown and misplaced keywords with the closest one,
+    wrong forms and values, compatibility levels, duplicates, conflicting declarations,
+    unresolved references across a model folder including translations, properties after
+    objects, bad `ref` lines, syntax). Of 4,109 keyword, form, level and value checks 4,106 match
+    the reader (3 ledgered: 2 lenient, 1 by design); all 78 checks of the 54 edited models of
+    `tmdl-validity` match, including the line; no false errors on Acme, the probe model, dax-lab
+    and the GT-4 model; the `tmdl_service` fuzz target.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,
   calculation items, format string expressions and RLS filters; commit and cancel; multi-line.
 - [ ] **M7.6 Optional `dashcraft lsp`.** A Language Server Protocol adapter over the same

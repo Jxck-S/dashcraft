@@ -496,7 +496,7 @@ export interface CapabilityLimits {
 export type CardinalityParam = 'one' | 'many'
 
 /** What a command is about; groups the catalog. */
-export type Category = 'meta' | 'workspace' | 'inspect' | 'lint' | 'data' | 'dax' | 'm' | 'render' | 'canvas' | 'export' | 'convert' | 'transform' | 'edit' | 'ai'
+export type Category = 'meta' | 'workspace' | 'inspect' | 'lint' | 'data' | 'dax' | 'm' | 'tmdl' | 'render' | 'canvas' | 'export' | 'convert' | 'transform' | 'edit' | 'ai'
 
 /** One chat message. */
 export interface ChatMessage {
@@ -4184,6 +4184,57 @@ export interface TextPositionOut {
   column: number
 }
 
+/** One problem in a file. */
+export interface TmdlDiagnosticOut {
+  /** The file's `path`. */
+  path: string
+  /** `error` (Microsoft's TMDL reader rejects the files) or `warning`. */
+  severity: string
+  /**
+   * `TMDL101` unknown keyword, `TMDL102` keyword of another object, `TMDL103` wrong form,
+   * `TMDL104` above the compatibility level, `TMDL105` invalid value, `TMDL106` duplicate
+   * property, `TMDL107` conflicting declarations, `TMDL108` unresolved reference, `TMDL109`
+   * property after a child object, `TMDL110` syntax, `TMDL111` lines under a property,
+   * `TMDL112` invalid `ref`, `TMDL113` second model; warnings: `TMDL120` `ref` to an
+   * undeclared object, the parser's `TMDL006` (orphan `///`) and `TMDL007` (mixed
+   * indentation).
+   */
+  code: string
+  message: string
+  /** Start of the text the problem covers. */
+  start: TextPositionOut
+  /** End (exclusive). */
+  end: TextPositionOut
+  /** A replacement for the range: the closest keyword, value or name. */
+  suggestion?: string | null
+}
+
+export interface TmdlDiagnosticsOut {
+  /** No errors (warnings allowed). */
+  ok: boolean
+  /** By file (in input order), then position; at most 1000. */
+  diagnostics: TmdlDiagnosticOut[]
+}
+
+export interface TmdlDiagnosticsParams {
+  /**
+   * The files to check: a whole `definition` folder (references between files are then
+   * resolved) or single files (only their own structure and values are checked).
+   */
+  files: TmdlFileIn[]
+}
+
+/** One TMDL file. */
+export interface TmdlFileIn {
+  /**
+   * The path relative to the model's `definition` folder (`tables/Orders.tmdl`); it names
+   * the file in diagnostics.
+   */
+  path: string
+  /** The file's text. */
+  text: string
+}
+
 /** One line of a data point tooltip. */
 export interface TooltipLineOut {
   label: string
@@ -4592,6 +4643,8 @@ export interface OpsCommands {
   'm.complete': { params: MCompleteParams; output: MCompleteOut }
   /** Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated. */
   'm.format': { params: MFormatParams; output: MFormatOut }
+  /** What Microsoft's TMDL reader rejects in TMDL files: unknown keywords, wrong forms and values, levels, duplicates and unresolved references, with the closest name. */
+  'tmdl.diagnostics': { params: TmdlDiagnosticsParams; output: TmdlDiagnosticsOut }
   /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
   'render.page': { params: RenderPageParams; output: RenderOut }
   /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */
@@ -4722,6 +4775,7 @@ export const OPS_META = {
   'm.signatureHelp': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'm.complete': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'm.format': { category: 'm', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'tmdl.diagnostics': { category: 'tmdl', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'render.page': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'render.visual': { category: 'render', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'canvas.render': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -4893,6 +4947,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     mComplete: (params: MCompleteParams, options?: O) => run('m.complete', params, options),
     /** Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated. */
     mFormat: (params: MFormatParams, options?: O) => run('m.format', params, options),
+    /** What Microsoft's TMDL reader rejects in TMDL files: unknown keywords, wrong forms and values, levels, duplicates and unresolved references, with the closest name. */
+    tmdlDiagnostics: (params: TmdlDiagnosticsParams, options?: O) => run('tmdl.diagnostics', params, options),
     /** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. */
     renderPage: (params: RenderPageParams, options?: O) => run('render.page', params, options),
     /** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). */

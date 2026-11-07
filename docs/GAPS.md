@@ -69,6 +69,8 @@ Update **2026-11-07** (M7.3c M hover, signature help and completion): `m.hover`,
 
 Update **2026-11-07** (M7.3d M formatter): `m.format`, idempotent and tree-preserving on every query of Acme and the samples; the recorded M expressions give Desktop's results after formatting (§2 language-service row; no score change). M7.3 is complete.
 
+Update **2026-11-07** (M7.4a TMDL diagnostics): `tmdl.diagnostics`, checked against Microsoft's TMDL reader (4,106 of 4,109 keyword, form, level and value checks and all 78 checks of 54 edited models match). New §1 TMDL language-service row at 3 (§1 average unchanged at 3.2).
+
 ## How to read it
 
 - **Status**: ✅ done (behaves like Power BI for this capability, within the documented limits) ·
@@ -85,7 +87,7 @@ Update **2026-11-07** (M7.3d M formatter): `m.format`, idempotent and tree-prese
 
 | # | Area | Avg score | Rows ✅ / 🟡 / ❌ | Biggest gaps |
 |---|---|---|---|---|
-| 1 | [File formats](#1-file-formats) | 3.2 | 11 / 8 / 6 | Bookmarks, images, `DataMashup` only kept; report-level measures not evaluated; Fabric remote mode |
+| 1 | [File formats](#1-file-formats) | 3.2 | 11 / 9 / 6 | Bookmarks, images, `DataMashup` only kept; report-level measures not evaluated; Fabric remote mode |
 | 2 | [M language and library](#2-m-language-and-library) | 3.3 | 7 / 3 / 3 | Library breadth (384 of Desktop's 941 functions), the M formatter, cultures, other data sources |
 | 3 | [DAX](#3-dax) | 3.8 | 5 / 6 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; relationship overrides in `RELATED`/`SUMMARIZE` |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh, drill-down |
@@ -112,6 +114,7 @@ Source: [FORMATS.md](../FORMATS.md), `crates/pbi-core/src/reader/`.
 | Content-based detection, safe containers (caps, zip-slip, no symlinks) | ✅ | 5 | `crates/pbi-core/tests/{detect,containers}.rs`; fuzz `detect`, `zip_container` | — |
 | PBIP project (several models and reports) | 🟡 | 4 | `pbi-core::reader::project`; `crates/dashcraft-cli/tests/snapshots/cli__inspect_pbip.snap` | The app shows only the first model (`extraModels`) |
 | TMDL read + write | ✅ | 5 | byte-identical round-trip of every fixture file (`crates/pbi-tmdl/tests/fixtures.rs`, `desktop_sample.rs`); after the same edits (four measures, a calculated column and table, a hierarchy, a relationship) the saved TMDL equals Power BI Desktop's byte for byte apart from new identifiers and the two entries of `reference/groundtruth/gt4/deviations.json`: Desktop's property order, CRLF line ends and blank last line (GT-4 s24, `crates/pbi-ops/tests/save.rs::edits_save_like_power_bi_desktop`); KPIs, detail rows and dynamic format strings in Desktop's form, also from TMSL (`kpi_and_detail_rows_are_written_in_desktop_form`, GT-6 s25) | Desktop's form of the constructs no edit creates yet (roles, partitions, calculation items, perspectives, translations; M26.1) |
+| TMDL language service (M7.4) | 🟡 | 3 | `tmdl.diagnostics`: unknown and misplaced keywords with the closest one, forms, values, compatibility levels, duplicates, conflicting declarations, unresolved references across a model folder (also in translations), property order, `ref` lines and syntax, from a keyword catalog recorded from Microsoft's TMDL reader (ADR-0029); 4,106 of 4,109 catalog checks and all 78 checks of the 54 edited models of `tmdl-validity` match the reader, no false errors on Acme, dax-lab and the GT-4 model (`pbi_tmdl::service`, `crates/pbi-tmdl/tests/groundtruth.rs`, `crates/pbi-ops/tests/tmdl_language.rs`); fuzz `tmdl_service` | Completion and hover (M7.4b), formatting (M7.4c), the TMDL view's editor |
 | TMSL `model.bim` / PBIT `DataModelSchema` read + write | ✅ | 5 | `crates/pbi-tmsl/tests/tmsl.rs` (layout-preserving, UTF-16LE) | — |
 | PBIR read + write | ✅ | 5 | every fixture file re-written byte-for-byte (`crates/pbi-pbir/tests/roundtrip.rs`) | — |
 | PBIR-Legacy `report.json` / PBIX `Report/Layout` read + write | 🟡 | 3 | `pbi-pbir::legacy`, synthetic `crates/pbi-pbir/tests/legacy.rs`; legacy `Layout` reports in `reference/samples/microsoft/` | Themes of legacy reports in the CLI and `render.*` |
@@ -393,7 +396,7 @@ Source: [SECURITY.md](SECURITY.md), [docs/ci.md](ci.md#fuzz-targets).
 |---|---|---|---|---|
 | No `unsafe`; no `unwrap`/`expect` outside tests | ✅ | 5 | workspace lints; clippy `-D warnings` | — |
 | Untrusted-input hardening (caps, zip-slip, symlinks, DTDs refused) | ✅ | 5 | `crates/pbi-core/tests/containers.rs`; fuzzing found and fixed a drive-letter zip-slip | — |
-| Fuzzing: 16 `cargo-fuzz` targets, nightly | ✅ | 4 | `fuzz/fuzz_targets/`, `.github/workflows/fuzz.yml` | Dedicated targets for RDL, VPAX, legacy XML metadata (only via `open_bytes` today) |
+| Fuzzing: 17 `cargo-fuzz` targets, nightly | ✅ | 4 | `fuzz/fuzz_targets/`, `.github/workflows/fuzz.yml` | Dedicated targets for RDL, VPAX, legacy XML metadata (only via `open_bytes` today) |
 | Secret redaction in metadata and connection strings | ✅ | 4 | FORMATS.md; reader tests | — |
 | App hardening (CSP, minimal capabilities, sanitized SVG) | ✅ | 4 | app/README "Security" | — |
 | No script execution, no telemetry | ✅ | 5 | AGENTS.md rules 4–5 | — |

@@ -40,6 +40,8 @@ pub enum Category {
     Dax,
     /// The M (Power Query) language service.
     M,
+    /// The TMDL language service.
+    Tmdl,
     /// Report pages to SVG / PNG.
     Render,
     /// The interactive canvas (slicers, cross-filters, scrolling).
@@ -59,7 +61,7 @@ pub enum Category {
 
 impl Category {
     /// Every category, in catalog order.
-    pub const ALL: [Category; 14] = [
+    pub const ALL: [Category; 15] = [
         Category::Meta,
         Category::Workspace,
         Category::Inspect,
@@ -67,6 +69,7 @@ impl Category {
         Category::Data,
         Category::Dax,
         Category::M,
+        Category::Tmdl,
         Category::Render,
         Category::Canvas,
         Category::Export,
@@ -87,6 +90,7 @@ impl Category {
             Category::Data => "data",
             Category::Dax => "dax",
             Category::M => "m",
+            Category::Tmdl => "tmdl",
             Category::Render => "render",
             Category::Canvas => "canvas",
             Category::Export => "export",
@@ -97,11 +101,12 @@ impl Category {
         }
     }
 
-    /// Section title in the Markdown catalog (`Meta`, …, `AI`).
+    /// Section title in the Markdown catalog (`Meta`, …, `TMDL`, …, `AI`).
     #[must_use]
     pub fn title(self) -> String {
         match self {
             Category::Ai => "AI".to_owned(),
+            Category::Tmdl => "TMDL".to_owned(),
             other => {
                 let s = other.as_str();
                 let mut c = s.chars();

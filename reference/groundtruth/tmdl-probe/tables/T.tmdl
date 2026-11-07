@@ -1,0 +1,18 @@
+table T
+
+	measure M = SUM(T[V])
+
+	column K
+
+	column V
+		dataType: int64
+
+	column C = T[V] * 2
+
+	hierarchy H
+
+		level L
+			column: K
+
+	partition T = m
+		source = 1

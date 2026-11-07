@@ -1013,7 +1013,8 @@ async fn queries_desktop_runs_have_no_errors_or_unknown_names() {
             serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
         };
         let corpus = read(&corpus_path);
-        if corpus["language"] == "m" {
+        // DAX corpora have no `language`; M and TMDL corpora are checked elsewhere.
+        if corpus.get("language").is_some_and(|l| l != "dax") {
             continue;
         }
         let recording_path = root

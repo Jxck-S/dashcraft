@@ -1,0 +1,10 @@
+model Model
+
+queryGroup Q
+
+ref table T
+ref table U
+ref table G
+ref role R
+ref culture en-US
+ref perspective P

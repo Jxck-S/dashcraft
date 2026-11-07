@@ -150,6 +150,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`m.signatureHelp`](#msignaturehelp) | The M function call around a cursor: library function, #date-style constructor, function step or function query, its parameters and the one the cursor is in; works on unparsed text. | A |
 | [`m.complete`](#mcomplete) | The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as. | A |
 | [`m.format`](#mformat) | Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated. | A |
+| [`tmdl.diagnostics`](#tmdldiagnostics) | What Microsoft's TMDL reader rejects in TMDL files: unknown keywords, wrong forms and values, levels, duplicates and unresolved references, with the closest name. | A |
 | [`render.page`](#renderpage) | Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use. | L A W |
 | [`render.visual`](#rendervisual) | Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions). | L A W |
 | [`canvas.render`](#canvasrender) | Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters. | M L A |
@@ -183,7 +184,7 @@ Parameters:
 | Field | Type | Description |
 |---|---|---|
 | `schemas` (optional) | boolean | Include each command's parameter and result JSON Schemas. |
-| `category` (optional) | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"m"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` \| null | Only this category. |
+| `category` (optional) | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"m"` \| `"tmdl"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` \| null | Only this category. |
 | `agentSafe` (optional) | boolean | Only the commands offered to agents. |
 
 Result:
@@ -217,7 +218,7 @@ Result:
 | `id` | string | Stable dotted id (`doc.open`); the JSON-RPC method name. |
 | `title` | string |  |
 | `summary` | string | One line: what it does and returns. |
-| `category` | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"m"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` | What a command is about; groups the catalog. |
+| `category` | `"meta"` \| `"workspace"` \| `"inspect"` \| `"lint"` \| `"data"` \| `"dax"` \| `"m"` \| `"tmdl"` \| `"render"` \| `"canvas"` \| `"export"` \| `"convert"` \| `"transform"` \| `"edit"` \| `"ai"` | What a command is about; groups the catalog. |
 | `mutatesDocument` | boolean | Changes the in-memory state of an open document (ordered per document). |
 | `longRunning` | boolean | Reports progress and can take a while. |
 | `agentSafe` | boolean | Offered to AI agents (MCP) by default. |
@@ -1350,6 +1351,32 @@ Examples:
 
 - A query: `{"text":"let Source = Csv.Document(File.Contents(\"orders.csv\"),[Delimiter=\",\"]), Rows = Table.RowCount(Source) in Rows"}`
 - Narrow, two-space indentation: `{"text":"Table.SelectRows(Orders, each [Quantity] > 1 and [Channel] = \"Online\")","maxWidth":40,"indentWidth":2}`
+
+## TMDL
+
+### `tmdl.diagnostics`
+
+**Check TMDL.** What Microsoft's TMDL reader rejects in TMDL files: unknown keywords, wrong forms and values, levels, duplicates and unresolved references, with the closest name.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `files` | TmdlFileIn[] | The files to check: a whole `definition` folder (references between files are then resolved) or single files (only their own structure and values are checked). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `ok` | boolean | No errors (warnings allowed). |
+| `diagnostics` | TmdlDiagnosticOut[] | By file (in input order), then position; at most 1000. |
+
+Examples:
+
+- One table file: `{"files":[{"path":"tables/Stores.tmdl","text":"table Stores\n\tcolumn Region\n\t\tdataTyp: string\n"}]}`
+- A model folder: `{"files":[{"path":"model.tmdl","text":"model Model\n\tculture: en-US\n"},{"path":"tables/Stores.tmdl","text":"table Stores\n\tcolumn Region\n\t\tdataType: string\n\t\tsortByColumn: Regions\n"}]}`
 
 ## Render
 

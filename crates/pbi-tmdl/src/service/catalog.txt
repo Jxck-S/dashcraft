@@ -1,0 +1,470 @@
+# TMDL keywords accepted by Microsoft's TMDL reader, per context. Generated from
+# reference/groundtruth/recordings/tmdl-catalog.json; do not edit: run
+# DASHCRAFT_BLESS=1 cargo test -p pbi-tmdl --test groundtruth
+# ctx <context> <level the context's object needs or ->
+# kw <context> <keyword> <object|property|both> <value type> <default value type>
+#    <kw name> <kw> <kw: value> <kw = value> <kw name = value>
+#    (- rejected, y accepted, N from compatibility level N, >N above level N)
+# enum <TOM enumeration> <values accepted by name> <integers of -1 .. 20 accepted>
+oracle	19.118.3
+ctx	root	-
+kw	root	annotation	object	-	expr	y	-	-	-	y
+kw	root	extendedProperty	object	-	expr	y	-	-	-	y
+kw	root	model	object	-	-	y	-	-	-	-
+kw	root	database	object	-	-	y	y	-	-	-
+kw	root	culture	object	-	-	y	-	-	-	-
+kw	root	analyticsAIMetadata	object	-	-	>1702	-	-	-	-
+kw	root	function	object	-	expr	1702	-	-	-	1702
+kw	root	bindingInfo	object	-	-	y	-	-	-	-
+kw	root	dataSource	object	-	expr	y	-	-	-	y
+kw	root	queryGroup	object	-	-	y	-	-	-	-
+kw	root	expression	object	-	expr	y	-	-	-	y
+kw	root	table	object	-	-	y	-	-	-	-
+kw	root	relationship	object	-	-	y	-	-	-	-
+kw	root	role	object	-	-	y	-	-	-	-
+kw	root	perspective	object	-	-	y	-	-	-	-
+kw	root	cultureInfo	object	-	-	y	-	-	-	-
+ctx	database	-
+kw	database	id	property	text	-	-	-	y	y	-
+kw	database	compatibilityLevel	property	int	-	-	y	y	y	-
+kw	database	compatibilityMode	property	enum:CompatibilityMode	-	-	-	y	y	-
+kw	database	language	property	int	-	-	-	y	y	-
+kw	database	readWriteMode	property	enum:ReadWriteMode	-	-	-	y	y	-
+kw	database	storageLocation	property	text	-	-	-	y	y	-
+ctx	model	-
+kw	model	id	property	text	-	-	-	y	y	-
+kw	model	annotation	object	-	expr	y	-	-	-	y
+kw	model	extendedProperty	object	-	expr	y	-	-	-	y
+kw	model	compatibilityLevel	property	int	-	-	y	y	y	-
+kw	model	language	property	int	-	-	y	y	y	-
+kw	model	collation	property	text	-	-	-	y	y	-
+kw	model	storageLocation	property	text	-	-	-	y	y	-
+kw	model	culture	both	text	-	y	-	y	-	-
+kw	model	defaultMode	property	enum:ModeType	-	-	-	y	y	-
+kw	model	defaultDataView	property	enum:DataViewType	-	-	-	y	y	-
+kw	model	dataAccessOptions	object	-	json	-	y	-	y	-
+kw	model	defaultPowerBIDataSourceVersion	property	enum:PowerBIDataSourceVersion	-	-	-	y	y	-
+kw	model	forceUniqueNames	property	bool	-	-	y	y	y	-
+kw	model	discourageImplicitMeasures	property	bool	-	-	y	y	y	-
+kw	model	dataSourceVariablesOverrideBehavior	property	enum:DataSourceVariablesOverrideBehaviorType	-	-	-	y	y	-
+kw	model	dataSourceDefaultMaxConnections	property	int	-	-	-	y	y	-
+kw	model	sourceQueryCulture	property	text	-	-	-	y	y	-
+kw	model	mAttributes	property	text	-	-	-	y	y	-
+kw	model	discourageCompositeModels	property	bool	-	-	1600	1600	1600	-
+kw	model	automaticAggregationOptions	object	-	json	-	1600	-	1600	-
+kw	model	maxParallelismPerRefresh	property	int	-	-	-	1600	1600	-
+kw	model	maxParallelismPerQuery	property	int	-	-	-	1600	1600	-
+kw	model	disableAutoExists	property	int	-	-	-	1600	1600	-
+kw	model	directLakeBehavior	property	enum:DirectLakeBehavior	-	-	-	1604	1604	-
+kw	model	valueFilterBehavior	property	enum:ValueFilterBehaviorType	-	-	-	1606	1606	-
+kw	model	selectionExpressionBehavior	property	enum:SelectionExpressionBehaviorType	-	-	-	1700	1700	-
+kw	model	defaultMeasure	property	ref	-	-	-	y	y	-
+kw	model	analyticsAIMetadata	object	-	-	>1702	-	-	-	-
+kw	model	function	object	-	expr	1702	-	-	-	1702
+kw	model	bindingInfo	object	-	-	y	-	-	-	-
+kw	model	dataSource	object	-	expr	y	-	-	-	y
+kw	model	queryGroup	object	-	-	y	-	-	-	-
+kw	model	expression	object	-	expr	y	-	-	-	y
+kw	model	table	object	-	-	y	-	-	-	-
+kw	model	relationship	object	-	-	y	-	-	-	-
+kw	model	role	object	-	-	y	-	-	-	-
+kw	model	perspective	object	-	-	y	-	-	-	-
+kw	model	cultureInfo	object	-	-	y	-	-	-	-
+ctx	dataAccessOptions	-
+kw	dataAccessOptions	legacyRedirects	property	bool	-	-	y	y	y	-
+kw	dataAccessOptions	returnErrorValuesAsNull	property	bool	-	-	y	y	y	-
+kw	dataAccessOptions	fastCombine	property	bool	-	-	y	y	y	-
+ctx	automaticAggregationOptions	1600
+ctx	function	1702
+kw	function	annotation	object	-	expr	y	-	-	-	y
+kw	function	extendedProperty	object	-	expr	y	-	-	-	y
+kw	function	changedProperty	object	-	expr	-	y	-	y	-
+kw	function	expression	property	text	-	-	-	y	y	-
+kw	function	isHidden	property	bool	-	-	y	y	y	-
+kw	function	lineageTag	property	text	-	-	-	y	y	-
+kw	function	sourceLineageTag	property	text	-	-	-	y	y	-
+ctx	queryGroup	-
+kw	queryGroup	annotation	object	-	expr	y	-	-	-	y
+ctx	expression	-
+kw	expression	annotation	object	-	expr	y	-	-	-	y
+kw	expression	extendedProperty	object	-	expr	y	-	-	-	y
+kw	expression	mAttributes	property	text	-	-	-	y	y	-
+kw	expression	queryGroup	property	ref	-	-	-	y	y	-
+kw	expression	expression	property	text	-	-	-	y	y	-
+kw	expression	lineageTag	property	text	-	-	-	y	y	-
+kw	expression	sourceLineageTag	property	text	-	-	-	y	y	-
+kw	expression	kind	property	enum:ExpressionKind	-	-	-	y	y	-
+kw	expression	parameterValuesColumn	property	ref	-	-	-	y	y	-
+kw	expression	remoteParameterName	property	text	-	-	-	1600	1600	-
+ctx	relationship	-
+kw	relationship	annotation	object	-	expr	y	-	-	-	y
+kw	relationship	extendedProperty	object	-	expr	y	-	-	-	y
+kw	relationship	changedProperty	object	-	expr	-	1600	-	1600	-
+kw	relationship	type	property	enum:RelationshipType	-	-	-	y	y	-
+kw	relationship	isActive	property	bool	-	-	y	y	y	-
+kw	relationship	crossFilteringBehavior	property	enum:CrossFilteringBehavior	-	-	-	y	y	-
+kw	relationship	joinOnDateBehavior	property	enum:DateTimeRelationshipBehavior	-	-	-	y	y	-
+kw	relationship	relyOnReferentialIntegrity	property	bool	-	-	y	y	y	-
+kw	relationship	securityFilteringBehavior	property	enum:SecurityFilteringBehavior	-	-	-	y	y	-
+kw	relationship	fromColumn	property	ref	-	-	-	y	y	-
+kw	relationship	fromCardinality	property	enum:RelationshipEndCardinality	-	-	-	y	y	-
+kw	relationship	toColumn	property	ref	-	-	-	y	y	-
+kw	relationship	toCardinality	property	enum:RelationshipEndCardinality	-	-	-	y	y	-
+kw	relationship	state	property	enum:ObjectState	-	-	-	y	y	-
+ctx	table	-
+kw	table	annotation	object	-	expr	y	-	-	-	y
+kw	table	extendedProperty	object	-	expr	y	-	-	-	y
+kw	table	changedProperty	object	-	expr	-	1600	-	1600	-
+kw	table	calendar	object	-	-	1701	-	-	-	-
+kw	table	dataCategory	property	text	-	-	-	y	y	-
+kw	table	isHidden	property	bool	-	-	y	y	y	-
+kw	table	isPrivate	property	bool	-	-	y	y	y	-
+kw	table	showAsVariationsOnly	property	bool	-	-	y	y	y	-
+kw	table	alternateSourcePrecedence	property	int	-	-	-	y	y	-
+kw	table	excludeFromModelRefresh	property	bool	-	-	y	y	y	-
+kw	table	lineageTag	property	text	-	-	-	y	y	-
+kw	table	sourceLineageTag	property	text	-	-	-	y	y	-
+kw	table	systemManaged	property	bool	-	-	1600	1600	1600	-
+kw	table	excludeFromAutomaticAggregations	property	bool	-	-	1600	1600	1600	-
+kw	table	defaultDetailRowsDefinition	object	-	expr	-	y	-	y	-
+kw	table	refreshPolicy	object	-	-	-	y	-	-	-
+kw	table	calculationGroup	object	-	-	-	y	-	-	-
+kw	table	column	object	-	expr	y	-	-	-	y
+kw	table	measure	object	-	expr	y	-	-	-	y
+kw	table	hierarchy	object	-	-	y	-	-	-	-
+kw	table	partition	object	-	expr	y	-	-	-	y
+kw	table	ordinal	property	int	-	-	y	y	y	-
+ctx	refreshPolicy	-
+kw	refreshPolicy	annotation	object	-	expr	y	-	-	-	y
+kw	refreshPolicy	extendedProperty	object	-	expr	y	-	-	-	y
+kw	refreshPolicy	mode	property	enum:RefreshPolicyMode	-	-	-	1600	1600	-
+kw	refreshPolicy	policyType	property	enum:RefreshPolicyType	-	-	-	y	y	-
+kw	refreshPolicy	rollingWindowGranularity	property	enum:RefreshGranularityType	-	-	-	y	y	-
+kw	refreshPolicy	rollingWindowPeriods	property	int	-	-	-	y	y	-
+kw	refreshPolicy	incrementalGranularity	property	enum:RefreshGranularityType	-	-	-	y	y	-
+kw	refreshPolicy	incrementalPeriods	property	int	-	-	-	y	y	-
+kw	refreshPolicy	incrementalPeriodsOffset	property	int	-	-	-	y	y	-
+kw	refreshPolicy	sourceExpression	property	text	-	-	-	y	y	-
+kw	refreshPolicy	pollingExpression	property	text	-	-	-	y	y	-
+ctx	calendar	1701
+kw	calendar	lineageTag	property	text	-	-	-	y	y	-
+kw	calendar	sourceLineageTag	property	text	-	-	-	y	y	-
+kw	calendar	calendarColumnGroup	object	-	expr	-	y	-	y	-
+ctx	measure	-
+kw	measure	annotation	object	-	expr	y	-	-	-	y
+kw	measure	extendedProperty	object	-	expr	y	-	-	-	y
+kw	measure	changedProperty	object	-	expr	-	1600	-	1600	-
+kw	measure	expression	property	text	-	-	-	y	y	-
+kw	measure	dataCategory	property	text	-	-	-	y	y	-
+kw	measure	isHidden	property	bool	-	-	y	y	y	-
+kw	measure	lineageTag	property	text	-	-	-	y	y	-
+kw	measure	sourceLineageTag	property	text	-	-	-	y	y	-
+kw	measure	dataType	property	enum:DataType	-	-	-	y	y	-
+kw	measure	formatString	property	text	-	-	-	y	y	-
+kw	measure	displayFolder	property	text	-	-	-	y	y	-
+kw	measure	detailRowsDefinition	object	-	expr	-	y	-	y	-
+kw	measure	kpi	object	-	-	-	y	-	-	-
+kw	measure	isSimpleMeasure	property	bool	-	-	y	y	y	-
+kw	measure	formatStringDefinition	object	-	expr	-	1601	-	1601	-
+kw	measure	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	measure	errorMessage	property	text	-	-	-	y	y	-
+ctx	kpi	-
+kw	kpi	annotation	object	-	expr	y	-	-	-	y
+kw	kpi	extendedProperty	object	-	expr	y	-	-	-	y
+kw	kpi	targetDescription	property	text	-	-	-	y	y	-
+kw	kpi	targetExpression	property	text	-	-	-	y	y	-
+kw	kpi	targetFormatString	property	text	-	-	-	y	y	-
+kw	kpi	statusGraphic	property	text	-	-	-	y	y	-
+kw	kpi	statusDescription	property	text	-	-	-	y	y	-
+kw	kpi	statusExpression	property	text	-	-	-	y	y	-
+kw	kpi	trendGraphic	property	text	-	-	-	y	y	-
+kw	kpi	trendDescription	property	text	-	-	-	y	y	-
+kw	kpi	trendExpression	property	text	-	-	-	y	y	-
+ctx	formatStringDefinition	1601
+kw	formatStringDefinition	expression	property	text	-	-	-	y	y	-
+kw	formatStringDefinition	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	formatStringDefinition	errorMessage	property	text	-	-	-	y	y	-
+ctx	detailRowsDefinition	-
+kw	detailRowsDefinition	expression	property	text	-	-	-	y	y	-
+kw	detailRowsDefinition	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	detailRowsDefinition	errorMessage	property	text	-	-	-	y	y	-
+ctx	column	-
+kw	column	annotation	object	-	expr	y	-	-	-	y
+kw	column	extendedProperty	object	-	expr	y	-	-	-	y
+kw	column	changedProperty	object	-	expr	-	1600	-	1600	-
+kw	column	dataCategory	property	text	-	-	-	y	y	-
+kw	column	isHidden	property	bool	-	-	y	y	y	-
+kw	column	lineageTag	property	text	-	-	-	y	y	-
+kw	column	sourceLineageTag	property	text	-	-	-	y	y	-
+kw	column	dataType	property	enum:DataType	-	-	-	y	y	-
+kw	column	isUnique	property	bool	-	-	y	y	y	-
+kw	column	isKey	property	bool	-	-	y	y	y	-
+kw	column	isNullable	property	bool	-	-	y	y	y	-
+kw	column	alignment	property	enum:Alignment	-	-	-	y	y	-
+kw	column	tableDetailPosition	property	int	-	-	-	y	y	-
+kw	column	isDefaultLabel	property	bool	-	-	y	y	y	-
+kw	column	isDefaultImage	property	bool	-	-	y	y	y	-
+kw	column	summarizeBy	property	enum:AggregateFunction	-	-	-	y	y	-
+kw	column	type	property	enum:ColumnType	-	-	-	y	y	-
+kw	column	formatString	property	text	-	-	-	y	y	-
+kw	column	isAvailableInMdx	property	bool	-	-	y	y	y	-
+kw	column	keepUniqueRows	property	bool	-	-	y	y	y	-
+kw	column	displayOrdinal	property	int	-	-	-	y	y	-
+kw	column	sourceProviderType	property	text	-	-	-	y	y	-
+kw	column	displayFolder	property	text	-	-	-	y	y	-
+kw	column	encodingHint	property	enum:EncodingHintType	-	-	-	y	y	-
+kw	column	sortByColumn	property	ref	-	-	-	y	y	-
+kw	column	sourceColumn	property	text	-	-	-	y	y	-
+kw	column	isDataTypeInferred	property	bool	-	-	y	y	y	-
+kw	column	relatedColumnDetails	object	-	-	-	y	-	-	-
+kw	column	alternateOf	object	-	-	-	y	-	-	-
+kw	column	variation	object	-	-	y	-	-	-	-
+kw	column	state	property	enum:ObjectState	-	-	-	y	y	-
+ctx	calculatedColumn	-
+kw	calculatedColumn	annotation	object	-	expr	y	-	-	-	y
+kw	calculatedColumn	extendedProperty	object	-	expr	y	-	-	-	y
+kw	calculatedColumn	changedProperty	object	-	expr	-	1600	-	1600	-
+kw	calculatedColumn	expression	property	text	-	-	-	y	y	-
+kw	calculatedColumn	dataCategory	property	text	-	-	-	y	y	-
+kw	calculatedColumn	isHidden	property	bool	-	-	y	y	y	-
+kw	calculatedColumn	lineageTag	property	text	-	-	-	y	y	-
+kw	calculatedColumn	sourceLineageTag	property	text	-	-	-	y	y	-
+kw	calculatedColumn	dataType	property	enum:DataType	-	-	-	y	y	-
+kw	calculatedColumn	isUnique	property	bool	-	-	y	y	y	-
+kw	calculatedColumn	isKey	property	bool	-	-	y	y	y	-
+kw	calculatedColumn	isNullable	property	bool	-	-	y	y	y	-
+kw	calculatedColumn	alignment	property	enum:Alignment	-	-	-	y	y	-
+kw	calculatedColumn	tableDetailPosition	property	int	-	-	-	y	y	-
+kw	calculatedColumn	isDefaultLabel	property	bool	-	-	y	y	y	-
+kw	calculatedColumn	isDefaultImage	property	bool	-	-	y	y	y	-
+kw	calculatedColumn	summarizeBy	property	enum:AggregateFunction	-	-	-	y	y	-
+kw	calculatedColumn	type	property	enum:ColumnType	-	-	-	y	-	-
+kw	calculatedColumn	formatString	property	text	-	-	-	y	y	-
+kw	calculatedColumn	isAvailableInMdx	property	bool	-	-	y	y	y	-
+kw	calculatedColumn	keepUniqueRows	property	bool	-	-	y	y	y	-
+kw	calculatedColumn	displayOrdinal	property	int	-	-	-	y	y	-
+kw	calculatedColumn	sourceProviderType	property	text	-	-	-	y	y	-
+kw	calculatedColumn	displayFolder	property	text	-	-	-	y	y	-
+kw	calculatedColumn	encodingHint	property	enum:EncodingHintType	-	-	-	y	y	-
+kw	calculatedColumn	sortByColumn	property	ref	-	-	-	y	y	-
+kw	calculatedColumn	isDataTypeInferred	property	bool	-	-	y	y	y	-
+kw	calculatedColumn	relatedColumnDetails	object	-	-	-	y	-	-	-
+kw	calculatedColumn	alternateOf	object	-	-	-	y	-	-	-
+kw	calculatedColumn	variation	object	-	-	y	-	-	-	-
+kw	calculatedColumn	state	property	enum:ObjectState	-	-	-	y	y	-
+ctx	calculatedTableColumn	-
+kw	calculatedTableColumn	annotation	object	-	expr	y	-	-	-	y
+kw	calculatedTableColumn	extendedProperty	object	-	expr	y	-	-	-	y
+kw	calculatedTableColumn	changedProperty	object	-	expr	-	1600	-	1600	-
+kw	calculatedTableColumn	dataCategory	property	text	-	-	-	y	y	-
+kw	calculatedTableColumn	isHidden	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	lineageTag	property	text	-	-	-	y	y	-
+kw	calculatedTableColumn	sourceLineageTag	property	text	-	-	-	y	y	-
+kw	calculatedTableColumn	dataType	property	enum:DataType	-	-	-	y	y	-
+kw	calculatedTableColumn	isUnique	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	isKey	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	isNullable	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	alignment	property	enum:Alignment	-	-	-	y	y	-
+kw	calculatedTableColumn	tableDetailPosition	property	int	-	-	-	y	y	-
+kw	calculatedTableColumn	isDefaultLabel	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	isDefaultImage	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	summarizeBy	property	enum:AggregateFunction	-	-	-	y	y	-
+kw	calculatedTableColumn	type	property	enum:ColumnType	-	-	-	y	y	-
+kw	calculatedTableColumn	formatString	property	text	-	-	-	y	y	-
+kw	calculatedTableColumn	isAvailableInMdx	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	keepUniqueRows	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	displayOrdinal	property	int	-	-	-	y	y	-
+kw	calculatedTableColumn	sourceProviderType	property	text	-	-	-	y	y	-
+kw	calculatedTableColumn	displayFolder	property	text	-	-	-	y	y	-
+kw	calculatedTableColumn	encodingHint	property	enum:EncodingHintType	-	-	-	y	y	-
+kw	calculatedTableColumn	sortByColumn	property	ref	-	-	-	y	y	-
+kw	calculatedTableColumn	sourceColumn	property	text	-	-	-	y	y	-
+kw	calculatedTableColumn	isNameInferred	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	isDataTypeInferred	property	bool	-	-	y	y	y	-
+kw	calculatedTableColumn	relatedColumnDetails	object	-	-	-	y	-	-	-
+kw	calculatedTableColumn	alternateOf	object	-	-	-	y	-	-	-
+kw	calculatedTableColumn	variation	object	-	-	y	-	-	-	-
+kw	calculatedTableColumn	state	property	enum:ObjectState	-	-	-	y	y	-
+ctx	relatedColumnDetails	-
+kw	relatedColumnDetails	groupByColumn	property	ref	-	-	-	y	y	-
+ctx	alternateOf	-
+kw	alternateOf	annotation	object	-	expr	y	-	-	-	y
+kw	alternateOf	baseColumn	property	ref	-	-	-	y	y	-
+kw	alternateOf	baseTable	property	ref	-	-	-	y	y	-
+kw	alternateOf	summarization	property	enum:SummarizationType	-	-	-	y	y	-
+ctx	variation	-
+kw	variation	annotation	object	-	expr	y	-	-	-	y
+kw	variation	extendedProperty	object	-	expr	y	-	-	-	y
+kw	variation	relationship	property	ref	-	-	-	y	y	-
+kw	variation	defaultHierarchy	property	ref	-	-	-	y	y	-
+kw	variation	defaultColumn	property	ref	-	-	-	y	y	-
+kw	variation	isDefault	property	bool	-	-	y	y	y	-
+ctx	changedProperty	1600
+ctx	hierarchy	-
+kw	hierarchy	annotation	object	-	expr	y	-	-	-	y
+kw	hierarchy	extendedProperty	object	-	expr	y	-	-	-	y
+kw	hierarchy	changedProperty	object	-	expr	-	1600	-	1600	-
+kw	hierarchy	isHidden	property	bool	-	-	y	y	y	-
+kw	hierarchy	lineageTag	property	text	-	-	-	y	y	-
+kw	hierarchy	sourceLineageTag	property	text	-	-	-	y	y	-
+kw	hierarchy	displayFolder	property	text	-	-	-	y	y	-
+kw	hierarchy	hideMembers	property	enum:HierarchyHideMembersType	-	-	-	y	y	-
+kw	hierarchy	level	object	-	-	y	-	-	-	-
+kw	hierarchy	state	property	enum:ObjectState	-	-	-	y	y	-
+ctx	level	-
+kw	level	annotation	object	-	expr	y	-	-	-	y
+kw	level	extendedProperty	object	-	expr	y	-	-	-	y
+kw	level	changedProperty	object	-	expr	-	1600	-	1600	-
+kw	level	lineageTag	property	text	-	-	-	y	y	-
+kw	level	sourceLineageTag	property	text	-	-	-	y	y	-
+kw	level	column	property	ref	-	-	-	y	y	-
+kw	level	ordinal	property	int	-	-	y	y	y	-
+ctx	partition	-
+kw	partition	annotation	object	-	expr	y	-	-	-	y
+kw	partition	extendedProperty	object	-	expr	y	-	-	-	y
+kw	partition	dataSource	property	ref	-	-	-	y	y	-
+kw	partition	queryGroup	property	ref	-	-	-	y	y	-
+kw	partition	expression	property	text	-	-	-	y	y	-
+kw	partition	mode	property	enum:ModeType	-	-	-	y	y	-
+kw	partition	dataView	property	enum:DataViewType	-	-	-	y	y	-
+kw	partition	source	object	-	expr	-	y	-	y	-
+kw	partition	retainDataTillForceCalculate	property	bool	-	-	y	y	y	-
+kw	partition	dataCoverageDefinition	object	-	expr	-	1603	-	1603	-
+kw	partition	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	partition	query	property	text	-	-	-	y	y	-
+ctx	calculatedPartition	-
+kw	calculatedPartition	annotation	object	-	expr	y	-	-	-	y
+kw	calculatedPartition	extendedProperty	object	-	expr	y	-	-	-	y
+kw	calculatedPartition	dataSource	property	ref	-	-	-	y	y	-
+kw	calculatedPartition	queryGroup	property	ref	-	-	-	y	y	-
+kw	calculatedPartition	expression	property	text	-	-	-	y	y	-
+kw	calculatedPartition	mode	property	enum:ModeType	-	-	-	y	y	-
+kw	calculatedPartition	dataView	property	enum:DataViewType	-	-	-	y	y	-
+kw	calculatedPartition	source	object	-	expr	-	y	-	y	-
+kw	calculatedPartition	retainDataTillForceCalculate	property	bool	-	-	y	y	y	-
+kw	calculatedPartition	dataCoverageDefinition	object	-	expr	-	1603	-	1603	-
+kw	calculatedPartition	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	calculatedPartition	query	property	text	-	-	-	y	y	-
+ctx	calculationGroupPartition	-
+kw	calculationGroupPartition	annotation	object	-	expr	y	-	-	-	y
+kw	calculationGroupPartition	extendedProperty	object	-	expr	y	-	-	-	y
+kw	calculationGroupPartition	dataSource	property	ref	-	-	-	y	y	-
+kw	calculationGroupPartition	queryGroup	property	ref	-	-	-	y	y	-
+kw	calculationGroupPartition	expression	property	text	-	-	-	y	y	-
+kw	calculationGroupPartition	mode	property	enum:ModeType	-	-	-	y	y	-
+kw	calculationGroupPartition	dataView	property	enum:DataViewType	-	-	-	y	y	-
+kw	calculationGroupPartition	source	object	-	-	-	y	-	-	-
+kw	calculationGroupPartition	retainDataTillForceCalculate	property	bool	-	-	y	y	y	-
+kw	calculationGroupPartition	dataCoverageDefinition	both	text	expr	-	1603	1603	1603	-
+kw	calculationGroupPartition	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	calculationGroupPartition	query	property	text	-	-	-	y	y	-
+ctx	calculationGroup	-
+kw	calculationGroup	annotation	object	-	expr	y	-	-	-	y
+kw	calculationGroup	precedence	property	int	-	-	-	y	y	-
+kw	calculationGroup	multipleOrEmptySelectionExpression	object	-	expr	-	1605	-	1605	-
+kw	calculationGroup	noSelectionExpression	object	-	expr	-	1605	-	1605	-
+kw	calculationGroup	calculationItem	object	-	expr	y	-	-	-	y
+ctx	multipleOrEmptySelectionExpression	1605
+kw	multipleOrEmptySelectionExpression	expression	property	text	-	-	-	y	y	-
+kw	multipleOrEmptySelectionExpression	formatStringDefinition	object	-	expr	-	y	-	y	-
+kw	multipleOrEmptySelectionExpression	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	multipleOrEmptySelectionExpression	errorMessage	property	text	-	-	-	y	y	-
+ctx	noSelectionExpression	1605
+kw	noSelectionExpression	expression	property	text	-	-	-	y	y	-
+kw	noSelectionExpression	formatStringDefinition	object	-	expr	-	y	-	y	-
+kw	noSelectionExpression	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	noSelectionExpression	errorMessage	property	text	-	-	-	y	y	-
+ctx	calculationItem	-
+kw	calculationItem	expression	property	text	-	-	-	y	y	-
+kw	calculationItem	formatStringDefinition	object	-	expr	-	y	-	y	-
+kw	calculationItem	ordinal	property	int	-	-	y	y	y	-
+kw	calculationItem	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	calculationItem	errorMessage	property	text	-	-	-	y	y	-
+ctx	role	-
+kw	role	annotation	object	-	expr	y	-	-	-	y
+kw	role	extendedProperty	object	-	expr	y	-	-	-	y
+kw	role	modelPermission	property	enum:ModelPermission	-	-	-	y	y	-
+kw	role	member	object	-	expr	y	-	-	-	y
+kw	role	tablePermission	object	-	expr	y	-	-	-	y
+ctx	member	-
+kw	member	annotation	object	-	expr	y	-	-	-	y
+kw	member	extendedProperty	object	-	expr	y	-	-	-	y
+kw	member	identityProvider	property	text	-	-	-	y	y	-
+kw	member	memberType	property	enum:TmdlRoleMemberType	-	-	-	y	y	-
+ctx	tablePermission	-
+kw	tablePermission	annotation	object	-	expr	y	-	-	-	y
+kw	tablePermission	extendedProperty	object	-	expr	y	-	-	-	y
+kw	tablePermission	table	property	ref	-	-	-	y	y	-
+kw	tablePermission	filterExpression	property	text	-	-	-	y	y	-
+kw	tablePermission	metadataPermission	property	enum:MetadataPermission	-	-	-	y	y	-
+kw	tablePermission	columnPermission	object	-	expr	y	-	-	-	y
+kw	tablePermission	state	property	enum:ObjectState	-	-	-	y	y	-
+kw	tablePermission	errorMessage	property	text	-	-	-	y	y	-
+ctx	columnPermission	-
+kw	columnPermission	annotation	object	-	expr	y	-	-	-	y
+kw	columnPermission	extendedProperty	object	-	expr	y	-	-	-	y
+kw	columnPermission	column	property	ref	-	-	-	y	y	-
+kw	columnPermission	metadataPermission	property	enum:MetadataPermission	-	-	-	y	y	-
+ctx	cultureInfo	-
+kw	cultureInfo	annotation	object	-	expr	y	-	-	-	y
+kw	cultureInfo	extendedProperty	object	-	expr	y	-	-	-	y
+kw	cultureInfo	linguisticMetadata	both	text	content	-	y	y	y	-
+ctx	linguisticMetadata	-
+kw	linguisticMetadata	annotation	object	-	expr	y	-	-	-	y
+kw	linguisticMetadata	extendedProperty	object	-	expr	y	-	-	-	y
+kw	linguisticMetadata	content	property	content	-	-	-	y	y	-
+kw	linguisticMetadata	contentType	property	enum:ContentType	-	-	-	y	y	-
+ctx	perspective	-
+kw	perspective	annotation	object	-	expr	y	-	-	-	y
+kw	perspective	extendedProperty	object	-	expr	y	-	-	-	y
+kw	perspective	perspectiveTable	object	-	-	y	-	-	-	-
+ctx	perspectiveTable	-
+kw	perspectiveTable	annotation	object	-	expr	y	-	-	-	y
+kw	perspectiveTable	extendedProperty	object	-	expr	y	-	-	-	y
+kw	perspectiveTable	table	property	ref	-	-	-	y	y	-
+kw	perspectiveTable	includeAll	property	bool	-	-	y	y	y	-
+kw	perspectiveTable	perspectiveColumn	object	-	-	y	-	-	-	-
+kw	perspectiveTable	perspectiveMeasure	object	-	-	y	-	-	-	-
+kw	perspectiveTable	perspectiveHierarchy	object	-	-	y	-	-	-	-
+ctx	perspectiveColumn	-
+kw	perspectiveColumn	annotation	object	-	expr	y	-	-	-	y
+kw	perspectiveColumn	extendedProperty	object	-	expr	y	-	-	-	y
+kw	perspectiveColumn	column	property	ref	-	-	-	y	y	-
+ctx	perspectiveMeasure	-
+kw	perspectiveMeasure	annotation	object	-	expr	y	-	-	-	y
+kw	perspectiveMeasure	extendedProperty	object	-	expr	y	-	-	-	y
+kw	perspectiveMeasure	measure	property	ref	-	-	-	y	y	-
+ctx	perspectiveHierarchy	-
+kw	perspectiveHierarchy	annotation	object	-	expr	y	-	-	-	y
+kw	perspectiveHierarchy	extendedProperty	object	-	expr	y	-	-	-	y
+kw	perspectiveHierarchy	hierarchy	property	ref	-	-	-	y	y	-
+enum	CompatibilityMode	unknown	analysisServices	powerBI	excel	0	1	2	4
+enum	ReadWriteMode	readWrite	readOnly	readOnlyExclusive	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	ModeType	import	directQuery	default	push	dual	directLake	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	DataViewType	full	sample	default	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	PowerBIDataSourceVersion	powerBI_V1	powerBI_V2	powerBI_V3	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	DataSourceVariablesOverrideBehaviorType	disallow	allow	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	DirectLakeBehavior	automatic	directLakeOnly	directQueryOnly	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	ValueFilterBehaviorType	automatic	independent	coalesced	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	SelectionExpressionBehaviorType	automatic	nonvisual	visual	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	ExpressionKind	m	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	RelationshipType	singleColumn	1
+enum	CrossFilteringBehavior	oneDirection	bothDirections	automatic	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	DateTimeRelationshipBehavior	dateAndTime	datePartOnly	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	SecurityFilteringBehavior	oneDirection	bothDirections	none	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	RelationshipEndCardinality	none	one	many	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	ObjectState	ready	noData	calculationNeeded	semanticError	evaluationError	dependencyError	incomplete	forceCalculationNeeded	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	DataType	automatic	string	int64	double	dateTime	decimal	boolean	binary	unknown	variant	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	Alignment	default	left	right	center	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	AggregateFunction	default	none	sum	min	max	count	average	distinctCount	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	ColumnType	data	calculated	rowNumber	calculatedTableColumn	1	2	3	4
+enum	EncodingHintType	default	hash	value	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	HierarchyHideMembersType	default	hideBlankMembers	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	ModelPermission	none	read	readRefresh	refresh	administrator	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	MetadataPermission	default	none	read	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	RefreshPolicyType	basic	0
+enum	RefreshPolicyMode	import	hybrid	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	RefreshGranularityType	invalid	day	month	quarter	year	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	SummarizationType	groupBy	sum	count	min	max	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	ContentType	xml	json	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20
+enum	TmdlRoleMemberType	auto	user	group	activeDirectory	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20

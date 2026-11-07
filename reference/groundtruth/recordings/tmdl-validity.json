@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "suite": "tmdl-validity",
+  "oracle": { "library": "Microsoft.AnalysisServices (TOM)", "version": "19.118.3", "api": "TmdlSerializer.DeserializeDatabaseFromFolder" },
+  "recordedOn": "2026-11-07",
+  "cases": [
+    {
+      "id": "baseline",
+      "query": "file: model.tmdl\nfind: model Model\nreplace: model Model\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "keyword/unknown-table-property",
+      "query": "file: tables/Stores.tmdl\nfind: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\nreplace: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\\n\\tlineageTagg: x\n",
+      "verdict": "unsupported",
+      "document": "tables/Stores.tmdl",
+      "line": 4
+    },
+    {
+      "id": "keyword/misspelled-column-property",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataTyp: string\\n\\t\\tisKey\n",
+      "verdict": "unsupported",
+      "document": "tables/Stores.tmdl",
+      "line": 6
+    },
+    {
+      "id": "keyword/description-property",
+      "query": "file: tables/Stores.tmdl\nfind: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\nreplace: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\\n\\tdescription: Stores\n",
+      "verdict": "unsupported",
+      "document": "tables/Stores.tmdl",
+      "line": 4
+    },
+    {
+      "id": "keyword/case-insensitive",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tDataType: string\\n\\t\\tisKey\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "keyword/object-in-wrong-context",
+      "query": "file: tables/Stores.tmdl\nfind: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\nreplace: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\\n\\tlevel X\n",
+      "verdict": "unsupported",
+      "document": "tables/Stores.tmdl",
+      "line": 4
+    },
+    {
+      "id": "keyword/unknown-model-object",
+      "query": "file: model.tmdl\nfind: ref table Orders\nreplace: ref table Orders\\ntabel Extra\n",
+      "verdict": "unsupported",
+      "document": "model.tmdl",
+      "line": 28
+    },
+    {
+      "id": "value/bad-enum",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: strin\\n\\t\\tisKey\n",
+      "verdict": "type:DataType",
+      "document": "tables/Stores.tmdl",
+      "line": 6
+    },
+    {
+      "id": "value/enum-case-insensitive",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: STRING\\n\\t\\tisKey\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "value/bad-bool",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey: yes\n",
+      "verdict": "type:Boolean",
+      "document": "tables/Stores.tmdl",
+      "line": 7
+    },
+    {
+      "id": "value/bool-false",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey: false\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "value/bad-int",
+      "query": "file: tables/Time Calc.tmdl\nfind: \\t\\tprecedence: 10\nreplace: \\t\\tprecedence: ten\n",
+      "verdict": "type:Int32",
+      "document": "tables/Time Calc.tmdl",
+      "line": 6
+    },
+    {
+      "id": "value/int-sign",
+      "query": "file: tables/Time Calc.tmdl\nfind: \\t\\tprecedence: 10\nreplace: \\t\\tprecedence: +10\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "value/int-overflow",
+      "query": "file: tables/Time Calc.tmdl\nfind: \\t\\tprecedence: 10\nreplace: \\t\\tprecedence: 99999999999\n",
+      "verdict": "OverflowException:Value was either too large or too small for an Int32."
+    },
+    {
+      "id": "value/int-decimal",
+      "query": "file: tables/Time Calc.tmdl\nfind: \\t\\tprecedence: 10\nreplace: \\t\\tprecedence: 1.5\n",
+      "verdict": "type:Int32",
+      "document": "tables/Time Calc.tmdl",
+      "line": 6
+    },
+    {
+      "id": "value/enum-number",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: 2\\n\\t\\tisKey\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "value/enum-list",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\\n\\t\\tencodingHint: hash, value\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "value/enum-quoted",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: 'string'\\n\\t\\tisKey\n",
+      "verdict": "type:DataType",
+      "document": "tables/Stores.tmdl",
+      "line": 6
+    },
+    {
+      "id": "value/bool-capitalized",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey: True\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "value/bool-number",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey: 1\n",
+      "verdict": "type:Boolean",
+      "document": "tables/Stores.tmdl",
+      "line": 7
+    },
+    {
+      "id": "value/bool-equals",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey = true\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "value/property-not-allowed-here",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\\n\\t\\tisNameInferred: true\n",
+      "verdict": "TmdlSerializationException:Property 'isNameInferred' is unknown and is not expected in the situation it appears.",
+      "document": "tables/Stores.tmdl",
+      "line": 8
+    },
+    {
+      "id": "value/missing",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType:\\n\\t\\tisKey\n",
+      "verdict": "type:DataType",
+      "document": "tables/Stores.tmdl",
+      "line": 6
+    },
+    {
+      "id": "value/bad-cardinality",
+      "query": "file: relationships.tmdl\nfind: \\tfromColumn: Orders.'Store ID'\nreplace: \\tfromColumn: Orders.'Store ID'\\n\\tfromCardinality: single\n",
+      "verdict": "type:RelationshipEndCardinality",
+      "document": "relationships.tmdl",
+      "line": 12
+    },
+    {
+      "id": "value/bad-permission",
+      "query": "file: roles/Region West.tmdl\nfind: \\tmodelPermission: read\nreplace: \\tmodelPermission: write\n",
+      "verdict": "type:ModelPermission",
+      "document": "roles/Region West.tmdl",
+      "line": 3
+    },
+    {
+      "id": "duplicate/property",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\\n\\t\\tisKey\n",
+      "verdict": "DuplicatedProperty:Duplicated property - isKey appears more then once in the current context!",
+      "document": "tables/Stores.tmdl",
+      "line": 8
+    },
+    {
+      "id": "duplicate/column",
+      "query": "file: tables/Stores.tmdl\nfind: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\nreplace: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\\n\\n\\tcolumn Region\\n\\t\\tdataType: string\n",
+      "verdict": "TmdlSerializationException:TMDL objects cannot be merged because both declare the same property: dataType AdditionalInformation: 1st object: type=Column, name='Region', path='./tables/Stores' 2nd object: type=Column, name='Region', path='./tables/Stores'",
+      "document": "tables/Stores.tmdl",
+      "line": 25
+    },
+    {
+      "id": "duplicate/measure-same-table",
+      "query": "file: tables/Customers.tmdl\nfind: \\tmeasure 'Customer Count' = COUNTROWS(Customers)\nreplace: \\tmeasure 'Customer Count' = COUNTROWS(Customers)\\n\\n\\tmeasure 'Customer Count' = 1\n",
+      "verdict": "TmdlSerializationException:TMDL objects cannot be merged because both declare the same property: expression AdditionalInformation: 1st object: type=Measure, name=''Customer Count'', path='./tables/Customers' 2nd object: type=Measure, name=''Customer Count'', path='./tables/Customers'",
+      "document": "tables/Customers.tmdl",
+      "line": 8
+    },
+    {
+      "id": "duplicate/measure-other-table",
+      "query": "file: tables/Stores.tmdl\nfind: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\nreplace: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\\n\\n\\tmeasure 'Customer Count' = 1\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "duplicate/table-other-file",
+      "query": "file: tables/Extra.tmdl\nfind: \nreplace: table Stores\\n\\n\\tcolumn Extra\\n\\t\\tdataType: string\\n\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "reference/sort-by-column",
+      "query": "file: tables/Time Calc.tmdl\nfind: \\t\\tsortByColumn: Ordinal\nreplace: \\t\\tsortByColumn: Ordinals\n",
+      "verdict": "unresolved",
+      "references": ["Property SortByColumn of object \"column 'Time Calculation' in table 'Time Calc'\" refers to an object which cannot be found"]
+    },
+    {
+      "id": "reference/relationship-to-column",
+      "query": "file: relationships.tmdl\nfind: \\ttoColumn: Customers.'Customer ID'\nreplace: \\ttoColumn: Customers.'Customer Key'\n",
+      "verdict": "unresolved",
+      "references": ["Property ToColumn of object \"relationship c79d4066-724d-5669-b57b-f6bf11da6f40\" refers to an object which cannot be found"]
+    },
+    {
+      "id": "reference/relationship-from-table",
+      "query": "file: relationships.tmdl\nfind: \\tfromColumn: Orders.'Customer ID'\nreplace: \\tfromColumn: Order.'Customer ID'\n",
+      "verdict": "unresolved",
+      "references": ["Property FromColumn of object \"relationship c79d4066-724d-5669-b57b-f6bf11da6f40\" refers to an object which cannot be found"]
+    },
+    {
+      "id": "reference/level-column",
+      "query": "file: tables/Date.tmdl\nfind: \\t\\t\\tcolumn: Quarter\nreplace: \\t\\t\\tcolumn: Quarters\n",
+      "verdict": "unresolved",
+      "references": ["Property Column of object \"level Quarter in hierarchy Calendar in table Date\" refers to an object which cannot be found"]
+    },
+    {
+      "id": "reference/query-group",
+      "query": "file: expressions.tmdl\nfind: \\tqueryGroup: Parameters\nreplace: \\tqueryGroup: Parameter\n",
+      "verdict": "unresolved",
+      "references": ["Property QueryGroup of object \"expression StorageContainerUrl\" refers to an object which cannot be found"]
+    },
+    {
+      "id": "reference/table-permission",
+      "query": "file: roles/Region West.tmdl\nfind: \\ttablePermission Stores =\nreplace: \\ttablePermission Storez =\n",
+      "verdict": "unresolved",
+      "references": ["Property Table of object \"table permission Storez in role 'Region West'\" refers to an object which cannot be found"]
+    },
+    {
+      "id": "reference/sort-by-column-case-insensitive",
+      "query": "file: tables/Time Calc.tmdl\nfind: \\t\\tsortByColumn: Ordinal\nreplace: \\t\\tsortByColumn: ordinal\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "reference/ref-table",
+      "query": "file: model.tmdl\nfind: ref table Orders\nreplace: ref table Orderz\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "reference/ref-role",
+      "query": "file: model.tmdl\nfind: ref role 'Region West'\nreplace: ref role 'Region East'\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "order/property-after-annotation",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tannotation X = 1\\n\\t\\tdataType: string\\n\\t\\tisKey\n",
+      "verdict": "indent",
+      "document": "tables/Stores.tmdl",
+      "line": 7
+    },
+    {
+      "id": "order/table-property-after-measure",
+      "query": "file: tables/Stores.tmdl\nfind: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\nreplace: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\\n\\n\\tmeasure X = 1\\n\\n\\tisHidden\n",
+      "verdict": "unknown",
+      "document": "tables/Stores.tmdl",
+      "line": 7
+    },
+    {
+      "id": "syntax/space-indent",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n    isKey\n",
+      "verdict": "unknown",
+      "document": "tables/Stores.tmdl",
+      "line": 7
+    },
+    {
+      "id": "syntax/mixed-indent",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t  isKey\n",
+      "verdict": "indent",
+      "document": "tables/Stores.tmdl",
+      "line": 7
+    },
+    {
+      "id": "syntax/over-indent",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\tisKey\nreplace: \\tcolumn 'Store ID'\\n\\t\\tdataType: string\\n\\t\\t\\tisKey\n",
+      "verdict": "indent",
+      "document": "tables/Stores.tmdl",
+      "line": 7
+    },
+    {
+      "id": "syntax/unterminated-quote",
+      "query": "file: tables/Stores.tmdl\nfind: \\tcolumn 'Store ID'\nreplace: \\tcolumn 'Store ID\n",
+      "verdict": "indent",
+      "document": "tables/Stores.tmdl",
+      "line": 5
+    },
+    {
+      "id": "syntax/annotation-without-value",
+      "query": "file: tables/Stores.tmdl\nfind: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\nreplace: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\\n\\n\\tannotation X\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "syntax/empty-file",
+      "query": "file: tables/Empty.tmdl\nfind: \nreplace: \n",
+      "verdict": "ok"
+    },
+    {
+      "id": "compat/function-below-1702",
+      "query": "file: model.tmdl\nfind: ref table Orders\nreplace: function F = () => 1\\n\\nref table Orders\n",
+      "verdict": "compat",
+      "document": "model.tmdl",
+      "line": 1
+    },
+    {
+      "id": "compat/selection-expression-below-1605",
+      "query": "file: tables/Time Calc.tmdl\nfind: \\t\\tprecedence: 10\nreplace: \\t\\tprecedence: 10\\n\\n\\t\\tnoSelectionExpression = SELECTEDMEASURE()\n",
+      "verdict": "compat",
+      "document": "model.tmdl",
+      "line": 1
+    },
+    {
+      "id": "expression/dax-not-checked",
+      "query": "file: tables/Stores.tmdl\nfind: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\nreplace: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\\n\\n\\tmeasure Broken = SUM([Nope]\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "expression/m-not-checked",
+      "query": "file: expressions.tmdl\nfind: \\tqueryGroup: Parameters\nreplace: \\tqueryGroup: Parameters\\n\\nexpression Bad = let x in\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "expression/measure-without-expression",
+      "query": "file: tables/Stores.tmdl\nfind: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\nreplace: \\tlineageTag: 334e5958-1f6f-5c0f-9f84-13dd60e137df\\n\\n\\tmeasure Empty\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "culture/translations",
+      "query": "file: cultures/fr-FR.tmdl\nfind: \nreplace: cultureInfo fr-FR\\n\\n\\ttranslations\\n\\t\\tmodel Model\\n\\t\\t\\tcaption: Modele\\n\\t\\t\\ttable Stores\\n\\t\\t\\t\\tcaption: Magasins\\n\\t\\t\\t\\tcolumn Region\\n\\t\\t\\t\\t\\tcaption: Region FR\\n\\t\\t\\t\\t\\tdisplayFolder: Lieu\\n\n",
+      "verdict": "ok"
+    },
+    {
+      "id": "culture/translations-unknown-table",
+      "query": "file: cultures/fr-FR.tmdl\nfind: \nreplace: cultureInfo fr-FR\\n\\n\\ttranslations\\n\\t\\tmodel Model\\n\\t\\t\\ttable Storez\\n\\t\\t\\t\\tcaption: Magasins\\n\n",
+      "verdict": "unresolved",
+      "references": ["Property Object of object \"Translation in culture fr-FR\" refers to an object which cannot be found"]
+    }
+  ]
+}

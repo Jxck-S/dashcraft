@@ -68,6 +68,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "tmdl_service"
+path = "fuzz_targets/tmdl_service.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "tmsl"
 path = "fuzz_targets/tmsl.rs"
 test = false

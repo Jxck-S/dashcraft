@@ -65,6 +65,8 @@ pub mod save_in_place;
 
 pub use error::CoreError;
 pub use lint::{Finding, LintOptions, LintReport, LintSummary, lint, lint_document};
+/// The TMDL language service (keyword catalog, diagnostics).
+pub use pbi_tmdl::service as tmdl_service;
 pub use reader::{
     ExtraModel, FormatOutline, MetadataPart, ModelSource, OpenOptions, OpenedDocument,
     REMOTE_DESCRIPTION, ReportSource, codes, open_bytes, open_path,

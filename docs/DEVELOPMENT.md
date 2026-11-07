@@ -54,7 +54,7 @@ The app crate is not a default member (it needs the built front end and, on Linu
 
 - **Tests** in every crate: TMDL byte-identical and PBIR JSON-identical round-trips on every fixture file, `insta` snapshots of `inspect --json`, one test per DAX function, M standard-library tests, XPress9 known-good vectors, engine filter-propagation tests, registry commands through `Registry::execute`, CLI end-to-end tests.
 - **Render tests** (`crates/pbi-render/tests/`): `insta` render snapshots of all 8 example pages, the 39 card values of `expected.json` on the rendered pages, every page of the Microsoft samples; golden SSIM (≥ 0.85 per region and page, no exceptions) only where `reference/golden/<example>/<report>/<page>.png` exists ([method](VISUALS.md#render-verification)).
-- **Fuzzing**: 16 `cargo-fuzz` targets (ZIP containers, detection, `open_bytes`, TMDL, TMSL, PBIR, legacy layout, M parser, evaluator and language service, DAX parser and language service, XPress9, ABF, VertiPaq, people parser), nightly ([ci.md](ci.md#fuzz-targets)).
+- **Fuzzing**: 17 `cargo-fuzz` targets (ZIP containers, detection, `open_bytes`, TMDL and its language service, TMSL, PBIR, legacy layout, M parser, evaluator and language service, DAX parser and language service, XPress9, ABF, VertiPaq, people parser), nightly ([ci.md](ci.md#fuzz-targets)).
 
 ## Test data
 

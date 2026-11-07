@@ -12,6 +12,24 @@
       "case": "literals/decimal-precision",
       "kind": "byDesign",
       "reason": "Desktop keeps an M number literal as System.Decimal until arithmetic turns it into a double, so `9007199254740993` and `123456789.123456789` print as written; DashCraft's M numbers are f64, so a literal with more than 15-17 significant digits prints its nearest double. Computed values (the third item) agree."
+    },
+    {
+      "suite": "tmdl-catalog",
+      "case": "keywords/root/bindingInfo/named",
+      "kind": "lenient",
+      "reason": "The reader needs a `type` property inside a bindingInfo object and fails on the probe's empty one ('Cannot read or find the Type property of BindingInfo'). DashCraft does not check which properties an object must have; it checks the keywords, forms and values it has."
+    },
+    {
+      "suite": "tmdl-catalog",
+      "case": "keywords/model/bindingInfo/named",
+      "kind": "lenient",
+      "reason": "As keywords/root/bindingInfo/named: an empty bindingInfo object (without its `type` property) is not reported."
+    },
+    {
+      "suite": "tmdl-catalog",
+      "case": "keywords/cultureInfo/translations/bare",
+      "kind": "byDesign",
+      "reason": "The reader fails with a NullReferenceException on an empty `translations` block (TOM itself writes it only with content). DashCraft takes `translations` as a culture's translation block, checks the tables, columns, measures and hierarchies it names (tmdl-validity culture/*) and does not report an empty one."
     }
   ]
 }
