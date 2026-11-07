@@ -866,8 +866,12 @@ optional language server.
   - [x] M7.1d (2026-11-07) semantic tokens, go to definition, find references (`dax.tokens`,
     `dax.references`), on a scope analysis shared with completion; checked on the 2,507 queries
     Power BI Desktop ran without error (no error diagnostics, no unknown names).
-- [ ] **M7.2 DAX formatter.** Deterministic and idempotent, keeps comments, options for line
+- [x] **M7.2 DAX formatter.** Deterministic and idempotent, keeps comments, options for line
   width and casing.
+  - [x] (2026-11-07) `pbi_dax::service::format` and the `dax.format` command; the output is
+    re-parsed and must give the same tree. Acceptance 1 met for DAX: idempotent and
+    tree-preserving on the 136 Acme and sample expressions and the 2,507 queries Desktop ran;
+    2,902 reformatted ground-truth queries return Desktop's original results.
 - [ ] **M7.3 M language service and formatter.** In `pbi-m`: completion of library functions,
   queries, steps and parameters (names supplied by the caller), diagnostics, hover, formatting.
 - [ ] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of

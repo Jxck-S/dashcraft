@@ -1,9 +1,10 @@
 //! DAX language service (`pbi_dax::service`): diagnostics, signature help,
-//! hover, completion, semantic tokens and references, as `dax.diagnostics`,
-//! `dax.signatureHelp`, `dax.hover`, `dax.complete`, `dax.tokens` and
-//! `dax.references` run them on every keystroke.
+//! hover, completion, semantic tokens, references and the formatter, as
+//! `dax.diagnostics`, `dax.signatureHelp`, `dax.hover`, `dax.complete`,
+//! `dax.tokens`, `dax.references` and `dax.format` run them.
 //!
-//! The first byte picks the completion item limit; the rest is the text.
+//! The first byte picks the completion item limit and a narrow line width;
+//! the rest is the text.
 //! Diagnostics run for both source kinds against a small model and an
 //! unknown one; the cursor services run at every offset of a short text and
 //! at 64 spread offsets of a long one (plus past the end).
@@ -12,15 +13,17 @@
 //! boundaries; at most `MAX_DIAGNOSTICS` diagnostics; at most the requested
 //! number of completion items, none with an empty label or insert text;
 //! tokens in order without overlap; the references contain the name at the
-//! cursor and their definition is one of them.
+//! cursor and their definition is one of them; the formatter never reports
+//! its own output as not equivalent (`Unstable`), a syntax error lies inside
+//! the text, and formatting the output again changes nothing.
 #![no_main]
 
 use std::sync::OnceLock;
 
 use libfuzzer_sys::fuzz_target;
 use pbi_dax::service::{
-    MAX_DIAGNOSTICS, NameDetails, Schema, SourceKind, Span, complete, diagnostics, hover,
-    references, semantic_tokens, signature_help,
+    Casing, FormatError, FormatOptions, MAX_DIAGNOSTICS, NameDetails, Schema, SourceKind, Span,
+    complete, diagnostics, format, hover, references, semantic_tokens, signature_help,
 };
 
 const EVERY_OFFSET_UP_TO: usize = 256;
@@ -126,6 +129,20 @@ fn check_tokens(src: &str, schema: &Schema) {
     }
 }
 
+fn check_format(src: &str, kind: SourceKind, options: &FormatOptions) {
+    match format(src, kind, options) {
+        Ok(out) => {
+            let again = format(&out, kind, options);
+            assert!(
+                again.as_deref() == Ok(out.as_str()),
+                "formatting is not idempotent ({again:?}) for {src:?} -> {out:?}"
+            );
+        }
+        Err(FormatError::Syntax(d)) => check_span(src, d.span, "format syntax error"),
+        Err(FormatError::Unstable) => panic!("the formatter changed {src:?} ({options:?})"),
+    }
+}
+
 fuzz_target!(|data: &[u8]| {
     let Some((&first, rest)) = data.split_first() else {
         return;
@@ -145,6 +162,17 @@ fuzz_target!(|data: &[u8]| {
             }
         }
         check_tokens(src, s);
+    }
+    let narrow = FormatOptions {
+        max_width: usize::from(first % 64),
+        indent_width: usize::from(first % 5),
+        use_tabs: first & 0x40 != 0,
+        keyword_case: Casing::Lower,
+        function_case: Casing::Keep,
+    };
+    for kind in [SourceKind::Expression, SourceKind::Query] {
+        check_format(src, kind, &FormatOptions::default());
+        check_format(src, kind, &narrow);
     }
     let len = src.len();
     if len <= EVERY_OFFSET_UP_TO {

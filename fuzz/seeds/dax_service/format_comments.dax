@@ -1,0 +1,6 @@
+DEFINE
+    // margin of the year
+    MEASURE Sales[Margin] = VAR c = [Total Cost] /* cost */ RETURN DIVIDE([Total Sales] - c, [Total Sales])
+
+-- rows
+EVALUATE SUMMARIZECOLUMNS('Date'[Year], "M", [Margin], "S", IF(NOT ISBLANK([Total Sales]) && [Total Sales] > 10 || TRUE(), 1, 0)) ORDER BY 'Date'[Year] DESC

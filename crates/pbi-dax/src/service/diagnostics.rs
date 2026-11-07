@@ -145,7 +145,7 @@ pub fn diagnostics(src: &str, kind: SourceKind, schema: &Schema) -> Vec<Diagnost
     out
 }
 
-fn syntax(src: &str, e: &ParseError) -> Diagnostic {
+pub(super) fn syntax(src: &str, e: &ParseError) -> Diagnostic {
     let span = if e.span.is_empty() && e.span.start >= src.len() {
         // At the end of the text: cover the last character so it shows.
         let start = src.char_indices().next_back().map_or(0, |(i, _)| i);

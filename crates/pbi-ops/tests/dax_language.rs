@@ -1,8 +1,10 @@
-//! `dax.diagnostics`, `dax.signatureHelp` and `dax.hover` through
-//! `Registry::execute`: positions and suggestions on the Acme Outfitters
-//! example, checks without a document, edits seen at once, cursor positions
-//! in every form, and no false error on any DAX expression of the example
-//! and the Microsoft samples (M7 acceptance 2).
+//! The DAX language service through `Registry::execute` (`dax.diagnostics`,
+//! `dax.signatureHelp`, `dax.hover`, `dax.complete`, `dax.tokens`,
+//! `dax.references`, `dax.format`): positions and suggestions on the Acme
+//! Outfitters example, checks without a document, edits seen at once,
+//! cursor positions in every form, no false error on any DAX expression of
+//! the example and the Microsoft samples (M7 acceptance 2), and formatting
+//! that is idempotent and keeps them free of errors (M7 acceptance 1).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -194,6 +196,10 @@ async fn no_false_errors_on_any_fixture_expression() {
                     problems.push(format!("{at}: {text}\n  unresolved token {t}"));
                 }
             }
+            // Formatting is idempotent and the result has no errors either.
+            if let Some(problem) = format_problem(&r, &doc, text, "expression").await {
+                problems.push(format!("{at}: {text}\n  {problem}"));
+            }
         }
         assert!(
             problems.is_empty(),
@@ -223,6 +229,140 @@ async fn no_false_errors_on_any_fixture_expression() {
         // The example alone has measures, calculated columns and tables,
         // calculation items and RLS filters.
         assert!(checked >= 40, "only {checked} expressions found");
+    }
+}
+
+/// Formats `text` narrow (and again with the defaults): `None` when every
+/// layout is idempotent and has no error diagnostic against the document.
+async fn format_problem(r: &Runner, doc: &str, text: &str, kind: &str) -> Option<String> {
+    for options in [
+        json!({}),
+        json!({"maxWidth": 40, "keywordCase": "lower", "functionCase": "keep", "useTabs": true}),
+    ] {
+        let mut params = options.clone();
+        params["text"] = json!(text);
+        params["kind"] = json!(kind);
+        let out = r.run("dax.format", params.clone()).await;
+        if out["ok"] != true {
+            return Some(format!("does not format: {out}"));
+        }
+        let formatted = out["text"].as_str().unwrap().to_owned();
+        params["text"] = json!(formatted);
+        let again = r.run("dax.format", params).await;
+        if again["changed"] != false {
+            return Some(format!(
+                "not idempotent ({options}):\n{formatted}\n---\n{}",
+                again["text"]
+            ));
+        }
+        let check = r
+            .run(
+                "dax.diagnostics",
+                json!({"docId": doc, "text": formatted, "kind": kind}),
+            )
+            .await;
+        if let Some(d) = check["diagnostics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|d| d["severity"] == "error")
+        {
+            return Some(format!("formatted ({options}):\n{formatted}\n  {d}"));
+        }
+    }
+    None
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn format_lays_out_dax_and_reports_syntax_errors() {
+    let r = Runner::new();
+    let out = r
+        .run(
+            "dax.format",
+            json!({"text": "calculate(sum(Sales[Amount]),Stores[Region]=\"West\") -- west"}),
+        )
+        .await;
+    assert_eq!(
+        out,
+        json!({
+            "kind": "expression",
+            "ok": true,
+            "text": "CALCULATE(SUM(Sales[Amount]), Stores[Region] = \"West\") -- west",
+            "changed": true
+        })
+    );
+    let out = r
+        .run(
+            "dax.format",
+            json!({"text": "CALCULATE(SUM(Sales[Amount]), Stores[Region] = \"West\")", "maxWidth": 30}),
+        )
+        .await;
+    assert_eq!(
+        out["text"],
+        "CALCULATE(\n    SUM(Sales[Amount]),\n    Stores[Region] = \"West\"\n)"
+    );
+    let out = r
+        .run(
+            "dax.format",
+            json!({
+                "text": "evaluate filter(Sales,Sales[Amount]>1) order by Sales[Amount] desc",
+                "keywordCase": "lower",
+                "functionCase": "keep",
+                "indentWidth": 2,
+                "useTabs": false
+            }),
+        )
+        .await;
+    assert_eq!(
+        (&out["kind"], &out["text"]),
+        (
+            &json!("query"),
+            &json!("evaluate\n  filter(Sales, Sales[Amount] > 1)\norder by Sales[Amount] desc")
+        )
+    );
+    let out = r
+        .run(
+            "dax.format",
+            json!({"text": "VAR a = 1\nRETURN\n\ta", "useTabs": true}),
+        )
+        .await;
+    assert_eq!((&out["ok"], &out["changed"]), (&json!(true), &json!(false)));
+    // `kind` overrides the detection.
+    let out = r
+        .run(
+            "dax.format",
+            json!({"text": "EVALUATE {1}", "kind": "expression"}),
+        )
+        .await;
+    assert_eq!(out["kind"], "expression");
+
+    // A syntax error leaves the text as it is and says where.
+    let text = "SUM(\"😀\" +)";
+    let out = r.run("dax.format", json!({"text": text})).await;
+    assert_eq!(
+        (&out["ok"], &out["changed"], &out["text"]),
+        (&json!(false), &json!(false), &json!(text))
+    );
+    let d = &out["diagnostics"];
+    assert!(d.is_null(), "{out}");
+    let d = &out["diagnostic"];
+    assert_eq!(
+        (&d["severity"], &d["code"]),
+        (&json!("error"), &json!("syntax"))
+    );
+    // At the `)`: the emoji is 4 UTF-8 bytes, 2 UTF-16 code units.
+    assert_eq!(d["start"]["offset"], 12, "{d}");
+    assert_eq!(d["start"]["utf16Offset"], 10, "{d}");
+
+    for (params, needle) in [
+        (json!({"text": "1", "maxWidth": 10_001}), "maxWidth"),
+        (json!({"text": "1", "indentWidth": 17}), "indentWidth"),
+        (json!({"text": "1", "keywordCase": "title"}), "title"),
+        (json!({"text": "1", "docId": "d1"}), "docId"),
+    ] {
+        let err = r.try_run("dax.format", params).await.unwrap_err();
+        assert_eq!(err.code, pbi_ops::OpErrorCode::InvalidParams, "{err:?}");
+        assert!(err.message.contains(needle), "{err:?}");
     }
 }
 
@@ -920,6 +1060,9 @@ async fn queries_desktop_runs_have_no_errors_or_unknown_names() {
                     ));
                 }
             }
+            if let Some(problem) = format_problem(&r, &doc, query, "query").await {
+                wrong.push(format!("{at}\n  {problem}"));
+            }
         }
         r.run("doc.close", json!({"docId": doc})).await;
     }
@@ -929,5 +1072,5 @@ async fn queries_desktop_runs_have_no_errors_or_unknown_names() {
         wrong.len(),
         wrong.join("\n")
     );
-    println!("{checked} queries Desktop ran: no errors, no unknown names");
+    println!("{checked} queries Desktop ran: no errors, no unknown names, formatted idempotently");
 }
