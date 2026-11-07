@@ -673,6 +673,42 @@ async fn rename_describe_and_move_through_the_registry() {
     );
     assert_eq!(scalar(&r, &doc, "[Total]").await, sum);
     assert_eq!(visual_position(&r, &doc, "Overview", "total").await, start);
+
+    // A caller-supplied label names the history step; an over-long one is refused.
+    let total_id = measure(&measures, "Total")["id"].clone();
+    let labelled = json!({"docId": doc, "label": "  Edit measure 'Total'  ", "edits": [
+        {"type": "setDescription", "objectId": total_id, "text": "All sales"}
+    ]});
+    let out = r.run("doc.applyEdits", labelled).await;
+    assert_eq!(out["changed"], true);
+    assert!(out.get("warnings").is_none(), "{out}");
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(history["undoLabel"], "Edit measure 'Total'");
+    r.run("doc.undo", json!({"docId": doc})).await;
+    let history = r.run("doc.history", json!({"docId": doc})).await;
+    assert_eq!(history["redoLabel"], "Edit measure 'Total'");
+    let long = json!({"docId": doc, "label": "x".repeat(201), "edits": [
+        {"type": "setDescription", "objectId": total_id, "text": "All sales"}
+    ]});
+    assert_eq!(
+        error_code(r.try_run("doc.applyEdits", long).await),
+        OpErrorCode::InvalidParams
+    );
+
+    // A measure's DAX that does not parse is kept, with the warning model.measure.update gives.
+    let broken = json!({"docId": doc, "edits": [
+        {"type": "updateMeasure", "measureId": total_id, "expression": "SUM(Orders[Amount]"}
+    ]});
+    let out = r.run("doc.applyEdits", broken).await;
+    assert_eq!(out["changed"], true);
+    assert!(
+        out["warnings"][0]
+            .as_str()
+            .is_some_and(|w| w.starts_with("the expression does not parse")),
+        "{out}"
+    );
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(scalar(&r, &doc, "[Total]").await, sum);
 }
 
 #[tokio::test(flavor = "multi_thread")]

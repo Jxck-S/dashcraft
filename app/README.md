@@ -9,7 +9,8 @@ headless CI does not need webview libraries.
 **The app is a thin front end over the command registry** (`pbi-ops`,
 [ADR-0007](../docs/adr/0007-command-registry.md)): documents live in a `pbi_ops::Workspace`, and
 every domain operation — open / close, refresh, grid pages, statistics, CSV loads, derived
-columns, DAX queries, measures, report filters, the interactive canvas, exports — is a registry
+columns, DAX queries, measures, report filters, the interactive canvas, edits, undo and redo,
+save, exports — is a registry
 command run by the one generic IPC command `ops_execute` → `Registry::execute`, exactly as
 `dashcraft run`, `dashcraft serve` and AI agents run it (see [Architecture](#architecture-an-adapter-over-the-command-registry)).
 
@@ -33,7 +34,7 @@ app/
     components/ai/     the opt-in AI features: OptionsDialog + AiOptionsPage (Options → AI),
                        ConsentDialog (previews the exact request), ExplainPane, SuggestMeasureDialog,
                        Markdown (safe rendering of answers)
-    components/        PropertiesPane, PowerQueryDialog, RelationshipsDialog, RefreshPanel,
+    components/        PropertiesPane (+ PropertyField, its editable fields), PowerQueryDialog, RelationshipsDialog, RefreshPanel,
                        CsvDialog, DiagnosticsPanel, Modal, CodeView, Toasts, DropOverlay, Icon
     lib/bindings.ts    GENERATED typed IPC client + events (tauri-specta), do not edit
     lib/ops.gen.ts     GENERATED types + `makeOps` wrappers of every command of the app's registry
@@ -41,6 +42,8 @@ app/
     lib/ops.ts         `ops.<command>(params)` over `ops_execute`: request ids, progress, cancel
     lib/backend.ts     the UI's gateway: the current document, registry calls adapted to view models
                        (grid cells, tree ids, canvas pages by id), app commands, dialog, drag-drop
+    lib/editing.ts     editing helpers: `Name = expression` parsing, history tooltips, the edit
+                       shortcuts, which formats save in place (pure, tested)
     lib/ai.ts          AI availability, status, the consent flow (`runAi`: refused → dialog → retry)
     lib/markdown.ts    minimal Markdown → fully escaped HTML for AI answers (no DOM; links as text)
     lib/ribbon.ts      the ribbon of each view (tabs, groups, buttons, enabled state, actions)
@@ -52,6 +55,7 @@ app/
     lib/data.ts        UI helpers over the data results: table states, refresh runs, tooltips, SQL quoting
   scripts/gen-ops.mjs  runs the ops.gen.ts generator (a pbi-ai test) with or without --write
   tests/markdown.test.ts  the Markdown renderer's escaping tests (`node --test`, part of `npm run check`)
+  tests/editing.test.ts   the editing helpers' tests (same runner)
   src-tauri/           Rust crate `dashcraft-app` (lib `dashcraft_app_lib` + bin `dashcraft-app`)
     src/ops.rs         `ops_execute` / `ops_cancel` / `ops_catalog`: the bridge to `pbi_ops::Registry`
     src/ai.rs          installs the AI host (`<app config dir>/ai.json`, OS keychain); ai/demo.rs: the
@@ -72,16 +76,19 @@ app/
 
 ## The Desktop shell (m4-desktop-shell)
 
-The window follows Power BI Desktop's layout, button names and locations, read-only.
+The window follows Power BI Desktop's layout, button names and locations. It edits measures,
+calculated columns and tables and object properties, with undo, redo and save (see *Editing*);
+everything else is read-only.
 [`docs/desktop-ui-reference.md`](docs/desktop-ui-reference.md) lists every element with its
 Desktop location (sources: Microsoft Learn) and what DashCraft does with it. In short:
 
-- **Title bar**: DashCraft mark, Quick Access Toolbar (Save / Undo / Redo, disabled), centred
-  `<file> - DashCraft` (also the native window title), and **Search** (Alt+Q) over the current
-  ribbon's commands, the views and the model's tables, columns and measures.
+- **Title bar**: DashCraft mark, Quick Access Toolbar (**Save**, **Undo**, **Redo**), centred
+  `<file> - DashCraft` (also the native window title; `*` in front while there are unsaved edits),
+  and **Search** (Alt+Q) over the current ribbon's commands, the views and the model's tables,
+  columns and measures.
 - **Ribbon**: **File** opens the backstage (Home, Open with **Recent**, Export, Options and
   settings → **Options** (the opt-in AI page) and Data source settings = **Blob map…**, Get help →
-  About; Save / Publish disabled). The
+  About; **Save** and **Save as**; Publish disabled). The
   tabs depend on the view, as in Desktop: Report view **Home, Insert, Modeling, Design, View,
   Optimize, Help** (+ Measure / Column / Table tools for a selected field); Table view Home, Help,
   Table tools, Column tools; Model view Home, Help; DAX query and TMDL views Home (Clipboard,
@@ -110,8 +117,8 @@ Desktop location (sources: Microsoft Learn) and what DashCraft does with it. In 
   **Measures** panel (former KPI strip) docked under the canvas, collapsed by default, evaluated
   in the canvas's filter context (report + page filters, slicers, cross-filter) by default, also
   feeding the Data pane's measure tooltips.
-- **Formula bar** (Report and Table views): the DAX of the selected measure, calculated column or
-  calculated table, read-only.
+- **Formula bar** (Report and Table views): `Name = expression` of the selected measure,
+  calculated column or calculated table, editable (see *Editing*).
 - **Table view**: the data grid of the table chosen in the Data pane, SQL filter bar, column
   statistics, column menu (sort, statistics, filter, **Parse people field…**), Schema mode;
   status bar `Table: … (n rows) Column: … (n distinct values)`.
@@ -232,6 +239,34 @@ results and DTOs. Locations below refer to the Desktop shell above.
   file in the tooltip). Clicking the diagnostics counter opens the diagnostics panel (severity, code, message,
   origin; messages linked to an object select it) with a Detection tab (format, confidence,
   signals, models, reports, parts). Esc closes it.
+- **Editing** (M6.8): every edit is a registry command on the open document (`doc.applyEdits`
+  with a history label), so it is one undo step, it recalculates what it reaches, and the views
+  reload afterwards.
+  - **Formula bar**: edit `Name = expression` and press Enter or ✓ (Shift+Enter starts a new
+    line; Esc or ✕ cancels). A new name is a rename (references follow), the new DAX an update of
+    the measure, calculated column or calculated table; both together are one undo step. An error
+    (a calculated column's or table's DAX that does not parse, a taken name, a circular
+    dependency) shows under the editor and keeps the draft. A measure keeps DAX that does not
+    parse: the edit is applied, a warning toast says so, and the measure returns an error until
+    it is fixed.
+  - **Properties pane**: Description (tables, columns, measures), Display folder and Format string
+    (columns, measures). Enter commits (Ctrl+Enter in Description), as does leaving the field;
+    Esc cancels; an empty field clears the property.
+  - **Undo / Redo**: Quick Access Toolbar or Ctrl/⌘+Z, Ctrl/⌘+Y (Ctrl/⌘+Shift+Z); the tooltips
+    name the step (`doc.history`). In a text field these keys undo its typing instead.
+  - **Save** (Quick Access Toolbar, File → Save, Ctrl/⌘+S): writes only the changed files into the
+    opened PBIP project (`doc.save`). When the files changed on disk since opening, it asks to
+    overwrite or cancel. A PBIX, PBIT or BIM is saved as a new project instead, after saying that
+    imported data is not carried over.
+  - **Save as** (File → Save as, Ctrl/⌘+Shift+S): the document, edits included, as a new PBIP
+    project in an empty folder (`doc.saveAs`); the document is then that project.
+  - **Unsaved edits**: `*` in the title. Closing the document or the window, or opening another
+    file, asks *Save*, *Don't save* or *Cancel* first.
+  - The TMDL view shows a project's files with the unsaved edits, as Save would write them.
+  - Checks: `cargo test -p dashcraft-app` (`edits_save_and_close_through_the_registry`),
+    `npm run check` (`tests/editing.test.ts`), and on Windows the UI smoke and accessibility
+    scripts of [`scripts/app-checks/`](../scripts/app-checks/) against a debug build
+    ([results](../docs/accessibility/m6-editing.md)).
 - **Remote models** (`byConnection` / live connection): a banner "Remote model — not available
   offline"; pages, visuals and fields are still shown.
 
@@ -455,6 +490,8 @@ Svelte components ──► lib/backend.ts ──► lib/ops.ts  ops.dataPage({�
 | `data.loadCsv`, `text.previewPeople`, `data.addDerivedColumn`, `data.removeDerivedColumn` | Load CSV manually…, Parse people field…, Remove derived column |
 | `dax.query`, `measures.values`, `report.filters` | DAX query view, Measures panel (canvas, report or page filters) |
 | `canvas.render`, `canvas.click`, `canvas.scroll`, `canvas.toggleMatrixRow`, `canvas.clearSelections`, `canvas.setSlicerSearch`, `canvas.closePopups`, `canvas.reset`, `canvas.tooltip` | the interactive report canvas |
+| `doc.applyEdits`, `doc.undo`, `doc.redo`, `doc.history` | formula bar and Properties edits, Undo / Redo and their tooltips, the `*` marker |
+| `doc.save`, `doc.saveAs` | File → Save, Save as (Ctrl+S, Ctrl+Shift+S), the unsaved-changes prompt |
 | `convert.pbip`, `convert.pbit` | File → Export |
 | `ai.status`, `ai.settings.set`, `ai.apiKey.set`, `ai.apiKey.clear`, `ai.consent.revoke` | Options → AI (opt-in; see [AI features](#ai-features-opt-in)) |
 | `ai.preview`, `ai.consent.grant` | the consent dialog (the only place a consent is granted) |
@@ -605,10 +642,11 @@ shared with `dashcraft ai login`). AI is **off by default**; the UI ([docs/AI.md
   off for `style-src` only (`dangerousDisableAssetCspModification: ["style-src"]`). `devCsp`
   additionally allows the Vite HMR websocket.
 - Capabilities: `core:default`, `core:window:allow-set-title` (the `<file> - DashCraft` window title),
-  `dialog:allow-open` and `dialog:allow-save` (File → Export). There is no fs, shell or http plugin.
-  File access happens only in Rust commands (documents, `blob-map.json`, CSVs: read only; writes:
-  File → Recent's `recent-files.json` in the app config folder, and File → Export's PBIP / PBIT to
-  the path chosen in the dialog).
+  `core:window:allow-destroy` (closing the window after the unsaved-changes prompt),
+  `dialog:allow-open` and `dialog:allow-save` (File → Export, Save as). There is no fs, shell or
+  http plugin. File access happens only in Rust commands (documents, `blob-map.json`, CSVs: read
+  only; writes: File → Recent's `recent-files.json` in the app config folder, File → Save into the
+  opened PBIP project, and File → Save as / Export to the folder or path chosen in the dialog).
 - Icons are inline SVG from the vendored Fluent files (`{@html}` of static assets, never of
   document data); fonts are bundled (`font-src 'self'`).
 - Report pages are SVG produced by pbi-render (text XML-escaped, images only as `data:image/…`),
@@ -683,3 +721,10 @@ on Windows 10 and 11.
   manager while the app runs starts a second window. (macOS Finder opens, `RunEvent::Opened`,
   reach the running app as `open-file-requested` since v0.2.0.)
 - Opening is not cancellable from the UI (the pbi-core readers are synchronous); refreshes are.
+- macOS: Cmd+Q and Quit in the Dock end the app without the unsaved-changes prompt; Tauri cannot
+  intercept them yet ([tauri-apps/tauri#9198](https://github.com/tauri-apps/tauri/issues/9198)).
+  Closing the window asks first.
+- Ctrl+S while a formula or Properties field holds an uncommitted draft saves without the draft.
+- Editing covers existing objects only: creating or deleting tables, columns, measures,
+  hierarchies and relationships, and moving visuals, are registry commands without a UI yet
+  (M10, M18).

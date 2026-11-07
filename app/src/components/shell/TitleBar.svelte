@@ -10,15 +10,28 @@
     enabled: boolean
     run: () => void
   }
+
+  /** A Quick Access Toolbar button: its state, tooltip (with the shortcut) and action. */
+  export interface QatAction {
+    enabled: boolean
+    title: string
+    run: () => void
+  }
 </script>
 
 <script lang="ts">
   import Icon from '../Icon.svelte'
   import { NOT_AVAILABLE } from '../../lib/shell'
 
-  // Title bar row: app mark, Quick Access Toolbar (Save / Undo / Redo: read-only viewer, so
-  // disabled), the centered document title and the search box (commands and fields).
-  let { title, items }: { title: string; items: SearchItem[] } = $props()
+  // Title bar row: app mark, Quick Access Toolbar (Save, Undo and Redo of the document's edit
+  // history), the centered document title and the search box (commands and fields).
+  let { title, items, qat }: { title: string; items: SearchItem[]; qat: { save: QatAction; undo: QatAction; redo: QatAction } } = $props()
+
+  const qatButtons = $derived<Array<{ action: QatAction; icon: IconName; label: string }>>([
+    { action: qat.save, icon: 'save', label: 'Save' },
+    { action: qat.undo, icon: 'undo', label: 'Undo' },
+    { action: qat.redo, icon: 'redo', label: 'Redo' },
+  ])
 
   let query = $state('')
   let open = $state(false)
@@ -79,9 +92,9 @@
   <div class="left">
     <span class="mark" aria-hidden="true"></span>
     <div class="qat" role="toolbar" aria-label="Quick access toolbar">
-      <button disabled title={`Save (Ctrl+S) — ${NOT_AVAILABLE}`} aria-label="Save"><Icon name="save" size={16} /></button>
-      <button disabled title={`Undo (Ctrl+Z) — ${NOT_AVAILABLE}`} aria-label="Undo"><Icon name="undo" size={16} /></button>
-      <button disabled title={`Redo (Ctrl+Y) — ${NOT_AVAILABLE}`} aria-label="Redo"><Icon name="redo" size={16} /></button>
+      {#each qatButtons as b (b.label)}
+        <button disabled={!b.action.enabled} title={b.action.title} aria-label={b.label} onclick={b.action.run}><Icon name={b.icon} size={16} /></button>
+      {/each}
     </div>
   </div>
   <div class="title" title={title}>{title}</div>
@@ -171,10 +184,16 @@
     border: none;
     border-radius: 4px;
     background: transparent;
+    cursor: pointer;
+  }
+
+  .qat button:hover:not(:disabled) {
+    background: var(--color-hover);
   }
 
   .qat button:disabled {
     color: var(--color-text-disabled);
+    cursor: default;
   }
 
   .title {

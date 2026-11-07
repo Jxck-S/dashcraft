@@ -7,7 +7,7 @@
   import DropOverlay from './components/DropOverlay.svelte'
   import Icon from './components/Icon.svelte'
   import PowerQueryDialog from './components/PowerQueryDialog.svelte'
-  import PropertiesPane from './components/PropertiesPane.svelte'
+  import PropertiesPane, { type PropertyEdit } from './components/PropertiesPane.svelte'
   import RefreshPanel from './components/RefreshPanel.svelte'
   import RelationshipsDialog from './components/RelationshipsDialog.svelte'
   import Toasts, { type Toast } from './components/Toasts.svelte'
@@ -22,7 +22,7 @@
   import Pane from './components/shell/Pane.svelte'
   import Ribbon from './components/shell/Ribbon.svelte'
   import StatusBar, { type DataStatus, type StatusZoom } from './components/shell/StatusBar.svelte'
-  import TitleBar, { type SearchItem } from './components/shell/TitleBar.svelte'
+  import TitleBar, { type QatAction, type SearchItem } from './components/shell/TitleBar.svelte'
   import ViewRail from './components/shell/ViewRail.svelte'
   import DaxQueryView, { newTab, type DaxTab } from './components/views/DaxQueryView.svelte'
   import ModelView from './components/views/ModelView.svelte'
@@ -35,6 +35,8 @@
     BlobMapDto,
     CanvasAction,
     CsvLoad,
+    DocumentHistory,
+    Edit,
     FilterSpec,
     MeasureDto,
     MeasureValue,
@@ -52,6 +54,7 @@
     ViewAsState,
   } from './lib/backend'
   import { applyProgress, applyReport, newRun, runProgress, stopRun, type RefreshRun } from './lib/data'
+  import * as editing from './lib/editing'
   import { baseName, formatTimestamp, plural } from './lib/format'
   import { daxColumnRef, daxTableRef, ownerTables, type LoadedDocument, type SelectedId } from './lib/model'
   import type { AiPreviewParams, AiStatusOut } from './lib/ops'
@@ -143,6 +146,23 @@
   let powerQuery = $state<{ initial: number | null } | null>(null)
   let relationshipsOpen = $state(false)
 
+  // Editing: undo / redo and unsaved edits (`doc.history`), a save in progress, and a question
+  // waiting for the user (save before closing, a file changed on disk, Save as).
+  type Choice = { id: string; label: string; primary?: boolean }
+  let history = $state.raw<DocumentHistory | null>(null)
+  let saving = $state(false)
+  let question = $state.raw<{ title: string; text: string[]; choices: Choice[]; resolve: (id: string | null) => void } | null>(null)
+  let stepping = false
+
+  /** The formula bar's object: a measure, a calculated column or a calculated table. */
+  type Formula = { id: number; target: 'measure' | 'column' | 'table'; name: string; expression: string; kind: string }
+  type PropertyField = Parameters<PropertyEdit['commit']>[0]
+  const FIELD_NAMES: Record<PropertyField, string> = { description: 'description', displayFolder: 'display folder', formatString: 'format string' }
+
+  function fieldPatch(field: PropertyField, value: string): { description?: string; displayFolder?: string; formatString?: string } {
+    return { [field]: value }
+  }
+
   // Row-level security (Modeling → View as): the model's roles and the view in effect.
   let security = $state.raw<SecurityRoles | null>(null)
   let viewAsOpen = $state(false)
@@ -206,15 +226,50 @@
     return column ? { kind: 'column', column, table } : null
   })
 
-  const formula = $derived.by(() => {
+  const formula = $derived.by((): Formula | null => {
     if (activeView !== 'report' && activeView !== 'table') return null
     const s = selection
-    if (s?.kind === 'measure') return { name: s.measure.name, expression: s.measure.expression, kind: 'Measure' }
+    if (s?.kind === 'measure') return { id: s.measure.id, target: 'measure', name: s.measure.name, expression: s.measure.expression, kind: 'Measure' }
     if (s?.kind === 'column' && s.column.kind === 'calculated' && s.column.expression != null) {
-      return { name: s.column.name, expression: s.column.expression, kind: 'Calculated column' }
+      return { id: s.column.id, target: 'column', name: s.column.name, expression: s.column.expression, kind: 'Calculated column' }
     }
-    if (s?.kind === 'table' && s.table.expression != null) return { name: s.table.name, expression: s.table.expression, kind: 'Calculated table' }
+    if (s?.kind === 'table' && s.table.expression != null) return { id: s.table.id, target: 'table', name: s.table.name, expression: s.table.expression, kind: 'Calculated table' }
     return null
+  })
+
+  /** Edits go through the registry's `model.*` / `doc.*` commands: they need a local model. */
+  const canEdit = $derived(backend.hasBackend && localModel && doc !== null)
+
+  /** The Properties pane's editable fields of the selected measure, column or table. */
+  const propertyEdit = $derived.by((): PropertyEdit | null => {
+    const s = selection
+    if (!canEdit || !s) return null
+    if (s.kind === 'measure') {
+      const m = s.measure
+      const commit = (field: PropertyField, value: string) => applyEdits([{ type: 'updateMeasure', measureId: m.id, ...fieldPatch(field, value) }], `Change the ${FIELD_NAMES[field]} of measure '${m.name}'`)
+      return { id: m.id, description: m.description, displayFolder: m.displayFolder, formatString: m.formatString, commit }
+    }
+    if (s.kind === 'column') {
+      const c = s.column
+      if (c.kind === 'rowNumber') return null
+      const commit = (field: PropertyField, value: string) => applyEdits([{ type: 'updateColumn', columnId: c.id, ...fieldPatch(field, value) }], `Change the ${FIELD_NAMES[field]} of column '${c.name}'`)
+      return { id: c.id, description: c.description, displayFolder: c.displayFolder, formatString: c.formatString, commit }
+    }
+    const t = s.table
+    const commit = (_field: PropertyField, value: string) => applyEdits([{ type: 'updateTable', tableId: t.id, description: value }], `Change the description of table '${t.name}'`)
+    return { id: t.id, description: t.description, commit }
+  })
+
+  const isMac = typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
+
+  /** The Quick Access Toolbar: Save, Undo and Redo with the step they act on. */
+  const qat = $derived.by((): { save: QatAction; undo: QatAction; redo: QatAction } => {
+    const titles = editing.historyTitles(history, isMac)
+    return {
+      save: { enabled: canEdit && !saving, title: `Save (${isMac ? '⌘S' : 'Ctrl+S'})`, run: () => void saveDocument() },
+      undo: { enabled: canEdit && !saving && (history?.canUndo ?? false), title: titles.undo, run: () => void stepHistory('undo') },
+      redo: { enabled: canEdit && !saving && (history?.canRedo ?? false), title: titles.redo, run: () => void stepHistory('redo') },
+    }
   })
 
   const aiAvailability = $derived(ai.availability(aiStatus))
@@ -304,7 +359,7 @@
     if (!ids.includes(untrack(() => ribbonTab))) ribbonTab = 'home'
   })
 
-  const windowTitle = $derived(doc ? `${doc.summary.fileName} - DashCraft` : 'DashCraft')
+  const windowTitle = $derived(editing.windowTitle(doc?.summary.fileName ?? null, history?.dirty ?? false))
   $effect(() => {
     void backend.setWindowTitle(windowTitle)
   })
@@ -313,6 +368,8 @@
     const items: SearchItem[] = [
       { kind: 'command', label: 'Open…', detail: 'File', icon: 'open', enabled: backend.hasBackend, run: () => void pickAndOpen('file') },
       { kind: 'command', label: 'Open folder…', detail: 'File', icon: 'folder', enabled: backend.hasBackend, run: () => void pickAndOpen('folder') },
+      { kind: 'command', label: 'Save', detail: 'File', icon: 'save', enabled: canEdit && !saving, run: () => void saveDocument() },
+      { kind: 'command', label: 'Save as…', detail: 'File', icon: 'save', enabled: canEdit && !saving, run: () => void saveAsProject() },
       { kind: 'command', label: 'Report view', detail: 'Views', icon: 'report', enabled: true, run: () => setView('report') },
       { kind: 'command', label: 'Table view', detail: 'Views', icon: 'data', enabled: doc !== null, run: () => setView('table') },
       { kind: 'command', label: 'Model view', detail: 'Views', icon: 'model', enabled: doc !== null, run: () => setView('model') },
@@ -462,8 +519,11 @@
     const previous = doc?.summary.docId
     backend.setCurrent(views)
     doc = views
-    if (previous && previous !== summary.docId) void backend.closeDocument(previous)
+    // The user already chose to save or discard the previous document's edits (`confirmDiscard`).
+    if (previous && previous !== summary.docId) void backend.closeDocument(previous, true)
     resetViews()
+    history = null
+    void refreshHistory()
     run = null
     refreshPanelOpen = false
     csvTarget = null
@@ -494,7 +554,9 @@
     }
   }
 
-  async function openPath(path: string) {
+  /** Opens `path`; asks first about unsaved edits unless the caller did (`confirmed`). */
+  async function openPath(path: string, confirmed = false) {
+    if (!confirmed && !(await confirmDiscard())) return
     const seq = ++openSeq
     busy = true
     busyLabel = `Opening ${baseName(path)}…`
@@ -517,11 +579,13 @@
   }
 
   async function closeDocument() {
+    if (!(await confirmDiscard())) return
     ++openSeq
     busy = false
     backstage = null
-    await backend.closeDocument()
+    await backend.closeDocument(undefined, true)
     doc = null
+    history = null
     resetViews()
     diagnosticsOpen = false
     statuses = []
@@ -581,6 +645,231 @@
     // A refresh re-applies an active view; it may now fail closed (`viewAs.error`).
     if (security?.viewAs.active) void loadSecurity()
     await loadStatuses()
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Editing: formula bar, Properties pane, undo / redo, File → Save / Save as
+  // ---------------------------------------------------------------------------------------------
+
+  async function refreshHistory() {
+    const docId = doc?.summary.docId
+    if (!docId || !backend.hasBackend) return
+    const result = await backend.history()
+    if (docId === doc?.summary.docId) history = result.ok ? result.value : null
+  }
+
+  /** The document changed (edit, undo, redo, Save as): reload its views and keep the selection. */
+  async function afterEdit() {
+    if (!doc) return
+    const docId = doc.summary.docId
+    const views = await backend.loadViews(docId)
+    if (docId !== doc?.summary.docId) return
+    if (!views.ok) {
+      fail(views.error)
+      return
+    }
+    backend.setCurrent(views.value)
+    doc = views.value
+    tmdl = null
+    tmdlError = null
+    if (activeView === 'tmdl') void loadTmdl()
+    void loadDiagram(docId)
+    void loadSecurity(docId)
+    if (selected != null) void select(selected)
+    await Promise.all([refreshHistory(), dataChanged()])
+  }
+
+  /** Applies `edits` as one undo step; resolves an error message, or `null` once the views show it. */
+  async function applyEdits(edits: Edit[], label: string): Promise<string | null> {
+    if (!canEdit) return 'This document cannot be edited: it has no local model.'
+    const result = await backend.applyEdits(edits, label)
+    if (!result.ok) return result.error
+    const warnings = result.value.warnings ?? []
+    status = { message: label, isError: false }
+    if (warnings.length > 0) toast('warning', `${label}.${warnings.map((w) => ` Note: ${w}.`).join('')}`)
+    await afterEdit()
+    return null
+  }
+
+  /** The formula bar's `Name = expression`: a rename and the new expression as one undo step. */
+  async function commitFormula(text: string): Promise<string | null> {
+    const f = formula
+    if (!f) return 'Select a measure, calculated column or calculated table first.'
+    const parsed = editing.parseFormula(text)
+    if (!parsed.ok) return parsed.error
+    const before = editing.parseFormula(editing.formulaText(f.name, f.expression))
+    const renamed = parsed.name !== f.name
+    const edits: Edit[] = renamed ? [{ type: 'renameObject', objectId: f.id, newName: parsed.name }] : []
+    if (!before.ok || before.expression !== parsed.expression) {
+      const expression = parsed.expression
+      edits.push(
+        f.target === 'measure'
+          ? { type: 'updateMeasure', measureId: f.id, expression }
+          : f.target === 'column'
+            ? { type: 'updateColumn', columnId: f.id, expression }
+            : { type: 'updateTable', tableId: f.id, expression },
+      )
+    }
+    if (edits.length === 0) return null
+    const what = f.kind.toLowerCase()
+    return applyEdits(edits, renamed && edits.length === 1 ? `Rename ${what} '${f.name}'` : `Edit ${what} '${f.name}'`)
+  }
+
+  /** Undo / Redo (Quick Access Toolbar, Ctrl+Z, Ctrl+Y) of the newest step. */
+  async function stepHistory(direction: 'undo' | 'redo') {
+    const h = history
+    if (!canEdit || saving || stepping || !(direction === 'undo' ? h?.canUndo : h?.canRedo)) return
+    stepping = true
+    const label = (direction === 'undo' ? h?.undoLabel : h?.redoLabel) ?? 'the last edit'
+    const result = direction === 'undo' ? await backend.undo() : await backend.redo()
+    if (result.ok) {
+      status = { message: `${direction === 'undo' ? 'Undid' : 'Redid'} ${label}`, isError: false }
+      await afterEdit()
+    } else fail(result.error)
+    stepping = false
+  }
+
+  /** Shows a question dialog; resolves the chosen id, or `null` when it is dismissed (Esc, ✕). */
+  function ask(title: string, text: string[], choices: Choice[]): Promise<string | null> {
+    backstage = null
+    return new Promise((resolve) => {
+      question?.resolve(null)
+      question = { title, text, choices, resolve }
+    })
+  }
+
+  function answer(id: string | null) {
+    const q = question
+    question = null
+    q?.resolve(id)
+  }
+
+  /**
+   * Before unsaved edits would be lost (close, open another file, quit) asks Save, Don't save or
+   * Cancel, as Desktop does. Resolves `true` to go on: saved, or the edits are to be discarded.
+   */
+  async function confirmDiscard(): Promise<boolean> {
+    if (!doc || !backend.hasBackend) return true
+    const docId = doc.summary.docId
+    const result = await backend.history()
+    if (!result.ok || !result.value.dirty || docId !== doc?.summary.docId) return true
+    history = result.value
+    const choice = await ask('Unsaved changes', [`Do you want to save your changes to ${doc.summary.fileName}?`, "Don't save discards every edit since the last save."], [
+      { id: 'save', label: 'Save', primary: true },
+      { id: 'discard', label: "Don't save" },
+      { id: 'cancel', label: 'Cancel' },
+    ])
+    if (choice === 'save') return saveDocument()
+    return choice === 'discard'
+  }
+
+  /** Edits were written to disk: the TMDL view shows the files again, the title loses its `*`. */
+  async function documentSaved() {
+    tmdl = null
+    tmdlError = null
+    if (activeView === 'tmdl') void loadTmdl()
+    await refreshHistory()
+  }
+
+  /**
+   * File → Save (Ctrl+S): writes the edits into the opened PBIP project; any other format is saved
+   * as a new project (Save as) after saying so. Resolves `true` once saved.
+   */
+  async function saveDocument(): Promise<boolean> {
+    if (!doc || !canEdit || saving) return false
+    if (!editing.canSaveInPlace(doc.summary.format)) return saveAsProject(true)
+    const fileName = doc.summary.fileName
+    saving = true
+    status = { message: `Saving ${fileName}…`, isError: false }
+    let result = await backend.save()
+    if (!result.ok && result.kind === 'conflict') {
+      const choice = await ask(
+        'Files changed on disk',
+        [result.error, 'Overwrite replaces them with this document. Cancel keeps them; your edits stay unsaved here.'],
+        [
+          { id: 'overwrite', label: 'Overwrite' },
+          { id: 'cancel', label: 'Cancel', primary: true },
+        ],
+      )
+      if (choice !== 'overwrite') {
+        saving = false
+        status = { message: 'Save cancelled', isError: false }
+        return false
+      }
+      result = await backend.save(true)
+    }
+    saving = false
+    if (!result.ok) {
+      if (editing.needsSaveAs(result)) return saveAsProject(true)
+      fail(result.error)
+      return false
+    }
+    const saved = result.value
+    const deleted = saved.deleted.length > 0 ? `, ${plural(saved.deleted.length, 'file')} deleted` : ''
+    status = { message: `Saved ${fileName}: ${plural(saved.written.length, 'file')} written${deleted}`, isError: false }
+    await documentSaved()
+    return true
+  }
+
+  /**
+   * File → Save as (Ctrl+Shift+S): the document, edits included, as a new PBIP project, which it
+   * then is. With `explain`, says first why (File → Save of a PBIX, PBIT, BIM, …).
+   */
+  async function saveAsProject(explain = false): Promise<boolean> {
+    if (!doc || !canEdit || saving) return false
+    const summary = doc.summary
+    if (explain) {
+      const choice = await ask(
+        'Save as a Power BI project',
+        [
+          `DashCraft saves edits as a Power BI project (PBIP) folder; ${summary.fileName} stays unchanged.`,
+          'Data imported into the file is not carried over: refresh the project to load it.',
+        ],
+        [
+          { id: 'saveAs', label: 'Save as project…', primary: true },
+          { id: 'cancel', label: 'Cancel' },
+        ],
+      )
+      if (choice !== 'saveAs') return false
+    }
+    let folder: string | null
+    try {
+      folder = await backend.pickFolder('Save as a Power BI project: choose an empty folder')
+    } catch (e) {
+      fail(`Folder dialog failed: ${String(e)}`)
+      return false
+    }
+    if (!folder) return false
+    saving = true
+    status = { message: `Saving as a project in ${folder}…`, isError: false }
+    let result = await backend.saveAs(folder)
+    if (!result.ok && editing.folderNotEmpty(result)) {
+      const choice = await ask(
+        'Folder not empty',
+        [`${folder} is not empty.`, 'Saving into it replaces the files the project writes and keeps the other files.'],
+        [
+          { id: 'overwrite', label: 'Save into it' },
+          { id: 'cancel', label: 'Cancel', primary: true },
+        ],
+      )
+      if (choice !== 'overwrite') {
+        saving = false
+        status = { message: 'Save cancelled', isError: false }
+        return false
+      }
+      result = await backend.saveAs(folder, true)
+    }
+    saving = false
+    if (!result.ok) {
+      fail(result.error)
+      return false
+    }
+    const saved = result.value
+    await afterEdit()
+    void refreshRecent()
+    status = { message: `Saved as ${saved.pbipFile} in ${saved.projectDir}`, isError: false }
+    toast(saved.warnings.length > 0 ? 'warning' : 'info', `Saved as ${saved.pbipFile}.${saved.warnings.map((w) => ` Note: ${w}.`).join('')}`)
+    return true
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -1005,9 +1294,10 @@
   }
 
   async function pickAndOpen(kind: 'file' | 'folder') {
+    if (!(await confirmDiscard())) return
     try {
       const path = await backend.pickPath(kind)
-      if (path) await openPath(path)
+      if (path) await openPath(path, true)
     } catch (e) {
       fail(`Open dialog failed: ${String(e)}`)
     }
@@ -1020,7 +1310,15 @@
 
   function handleKeydown(event: KeyboardEvent) {
     const mod = event.metaKey || event.ctrlKey
-    if (mod && !event.altKey && event.key.toLowerCase() === 'o') {
+    const shortcut = editing.editShortcut(event)
+    if (shortcut) {
+      // Ctrl+S never reaches the webview; Ctrl+Z / Ctrl+Y stay with a text field (`editShortcut`).
+      if (shortcut === 'save' || shortcut === 'saveAs' || canEdit) event.preventDefault()
+      if (!canEdit || question) return
+      if (shortcut === 'save') void saveDocument()
+      else if (shortcut === 'saveAs') void saveAsProject()
+      else void stepHistory(shortcut)
+    } else if (mod && !event.altKey && event.key.toLowerCase() === 'o') {
       event.preventDefault()
       if (backend.hasBackend) void pickAndOpen(event.shiftKey ? 'folder' : 'file')
     } else if (event.ctrlKey && event.key === 'F1') {
@@ -1043,6 +1341,7 @@
     let disposed = false
     let unlisten: (() => void) | undefined
     let unlistenOpen: (() => void) | undefined
+    let unlistenClose: (() => void) | undefined
     daxTabs = [newTab(1, defaultQuery())]
     daxSeq = 1
 
@@ -1054,6 +1353,10 @@
         const stopOpen = await backend.onOpenFileRequested((path) => void openPath(path))
         if (disposed) stopOpen()
         else unlistenOpen = stopOpen
+        // Closing the window (✕, Alt+F4) asks about unsaved edits first.
+        const stopClose = await backend.onCloseRequested(() => confirmDiscard())
+        if (disposed) stopClose()
+        else unlistenClose = stopClose
         blobMap = await backend.blobMap()
         if (blobMap?.error) toast('warning', `Blob map not used: ${blobMap.error}`)
         if (!backend.hasBackend) {
@@ -1089,6 +1392,7 @@
       disposed = true
       unlisten?.()
       unlistenOpen?.()
+      unlistenClose?.()
     }
   })
 </script>
@@ -1104,7 +1408,7 @@
     onclose={closable ? () => (panes = { ...panes, properties: false }) : undefined}
     width={280}
   >
-    <PropertiesPane {details} loading={detailsLoading} error={detailsError} explain={measureExplain} />
+    <PropertiesPane {details} loading={detailsLoading} error={detailsError} explain={measureExplain} edit={propertyEdit} />
   </Pane>
 {/snippet}
 
@@ -1145,7 +1449,7 @@
 {/snippet}
 
 <div class="shell">
-  <TitleBar title={windowTitle} items={searchItems} />
+  <TitleBar title={windowTitle} items={searchItems} {qat} />
   <Ribbon tabs={ribbonTabs} active={ribbonTab} collapsed={ribbonCollapsed} onselect={(id) => (ribbonTab = id)} onfile={() => openBackstage()} ontogglecollapse={() => (ribbonCollapsed = !ribbonCollapsed)} />
 
   {#if viewing && doc}
@@ -1212,7 +1516,15 @@
   {/if}
 
   {#if formula}
-    <FormulaBar name={formula.name} expression={formula.expression} kind={formula.kind} explain={formula.kind === 'Measure' ? measureExplain : null} />
+    {#key formula.id}
+      <FormulaBar
+        name={formula.name}
+        expression={formula.expression}
+        kind={formula.kind}
+        explain={formula.kind === 'Measure' ? measureExplain : null}
+        oncommit={canEdit ? commitFormula : null}
+      />
+    {/key}
   {/if}
 
   <div class="workspace" aria-busy={busy}>
@@ -1411,6 +1723,20 @@
     </Modal>
   {/if}
 
+  {#if question}
+    {@const q = question}
+    {#key q}
+      <Modal title={q.title} width={460} onclose={() => answer(null)}>
+        {#each q.text as line, i (i)}<p>{line}</p>{/each}
+        {#snippet footer()}
+          {#each q.choices as choice (choice.id)}
+            <button class:primary={choice.primary} onclick={() => answer(choice.id)}>{choice.label}</button>
+          {/each}
+        {/snippet}
+      </Modal>
+    {/key}
+  {/if}
+
   {#if diagnosticsOpen && doc}
     <DiagnosticsPanel diagnostics={doc.diagnostics} detection={doc.detection} onselect={(id) => void select(id)} onclose={() => (diagnosticsOpen = false)} />
   {/if}
@@ -1445,6 +1771,8 @@
     onchooseblobmap={() => void chooseBlobMap()}
     onclearblobmap={() => void clearBlobMap()}
     onclosedoc={() => void closeDocument()}
+    onsave={canEdit && !saving ? () => void saveDocument() : null}
+    onsaveas={canEdit && !saving ? () => void saveAsProject() : null}
     canExport={localModel}
     onexport={(kind) => void exportDocument(kind)}
     onoptions={openAiOptions}

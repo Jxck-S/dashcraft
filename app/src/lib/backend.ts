@@ -12,7 +12,7 @@
 
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { open, save } from '@tauri-apps/plugin-dialog'
+import { open, save as saveDialog } from '@tauri-apps/plugin-dialog'
 import {
   commands,
   events,
@@ -41,6 +41,11 @@ import {
   type ConvertPbipOut,
   type ConvertPbitOut,
   type DerivedColumnOut,
+  type DocumentEditOut,
+  type DocumentHistoryOut,
+  type DocumentSaveAsOut,
+  type DocumentSaveOut,
+  type EditOperation,
   type FilterSpecOut,
   type MeasureValueOut,
   type OpsErrorKind,
@@ -131,13 +136,15 @@ let derived: DerivedColumnOut[] = []
 
 /** Makes `doc` the document the functions below work on (`null`: none). */
 export function setCurrent(doc: LoadedDocument | null) {
-  if (current && current.docId !== doc?.summary.docId) {
+  const same = current !== null && current.docId === doc?.summary.docId
+  if (current && !same) {
     // Evaluations of the previous document are obsolete.
     void cancelLatest('measures')
     void cancelLatest('dax')
   }
   current = doc ? { docId: doc.summary.docId, tree: doc.tree, reports: doc.reports } : null
-  derived = []
+  // The same document reloaded after an edit keeps its session derived columns.
+  if (!same) derived = []
 }
 
 export async function appVersion(): Promise<string> {
@@ -180,13 +187,17 @@ export async function currentDocument(): Promise<LoadedDocument | null> {
   return views.ok ? views.value : null
 }
 
-/** Closes document `docId` (default: the current one), cancelling its refresh and renders. */
-export async function closeDocument(docId: string | null = current?.docId ?? null): Promise<Outcome<null>> {
+/**
+ * Closes document `docId` (default: the current one), cancelling its refresh and renders. A
+ * document with unsaved edits closes only with `discard` (the caller asked first); else it fails
+ * with `unsupported`.
+ */
+export async function closeDocument(docId: string | null = current?.docId ?? null, discard = false): Promise<Outcome<null>> {
   if (!docId) return { ok: true, value: null }
   if (docId === current?.docId) setCurrent(null)
   // `doc.close` waits for the document's running mutating command: end a refresh first.
   if (refreshRequest && refreshDoc === docId) await cancel(refreshRequest)
-  return map(await ops.docClose({ docId }), () => null)
+  return map(await ops.docClose({ docId, discardChanges: discard }), () => null)
 }
 
 /** Properties-pane details for one object of the current document. */
@@ -701,7 +712,7 @@ export async function exportPbit(outPath: string, reportId: number | null): Prom
 /** Native "Save" dialog for one file with the given extensions. `null` when cancelled. */
 export async function pickSavePath(title: string, defaultPath: string | undefined, filters: Array<{ name: string; extensions: string[] }>): Promise<string | null> {
   if (!hasBackend) return null
-  const selected = await save({ title, defaultPath, filters })
+  const selected = await saveDialog({ title, defaultPath, filters })
   return typeof selected === 'string' ? selected : null
 }
 
@@ -710,6 +721,79 @@ export async function pickFolder(title: string): Promise<string | null> {
   if (!hasBackend) return null
   const selected = await open({ directory: true, multiple: false, title })
   return typeof selected === 'string' ? selected : null
+}
+
+// ---------------------------------------------------------------------------
+// Editing (formula bar, Properties pane, Quick Access Toolbar, File → Save / Save as)
+// ---------------------------------------------------------------------------
+
+export type DocumentHistory = DocumentHistoryOut
+export type DocumentEdit = DocumentEditOut
+export type DocumentSave = DocumentSaveOut
+export type DocumentSaveAs = DocumentSaveAsOut
+export type Edit = EditOperation
+
+/** Undo / redo state and unsaved edits of the current document (`doc.history`). */
+export async function history(): Promise<Outcome<DocumentHistoryOut>> {
+  const doc = current?.docId
+  return doc ? ops.docHistory({ docId: doc }) : NO_DOCUMENT
+}
+
+/** Undoes the newest edit step (`doc.undo`). */
+export async function undo(): Promise<Outcome<DocumentEditOut>> {
+  const doc = current?.docId
+  return doc ? ops.docUndo({ docId: doc }) : NO_DOCUMENT
+}
+
+/** Redoes the newest undone step (`doc.redo`). */
+export async function redo(): Promise<Outcome<DocumentEditOut>> {
+  const doc = current?.docId
+  return doc ? ops.docRedo({ docId: doc }) : NO_DOCUMENT
+}
+
+/** Applies `edits` atomically as one undo step named `label` (`doc.applyEdits`). */
+export async function applyEdits(edits: EditOperation[], label: string): Promise<Outcome<DocumentEditOut>> {
+  const doc = current?.docId
+  return doc ? ops.docApplyEdits({ docId: doc, edits, label }) : NO_DOCUMENT
+}
+
+/**
+ * Saves the edits into the opened PBIP project (`doc.save`). Fails with `conflict` when project
+ * files changed on disk since the open or last save (retry with `overwrite` after asking), and
+ * with `unsupported` for any other format (use `saveAs`).
+ */
+export async function save(overwrite = false): Promise<Outcome<DocumentSaveOut>> {
+  const doc = current?.docId
+  return doc ? ops.docSave({ docId: doc, overwrite }) : NO_DOCUMENT
+}
+
+/**
+ * Saves the document as a new PBIP project in `outDir` (`doc.saveAs`), which it then is: the next
+ * Save writes there. Fails with `io` for a non-empty folder unless `overwrite`. The project is
+ * added to File → Recent.
+ */
+export async function saveAs(outDir: string, overwrite = false): Promise<Outcome<DocumentSaveAsOut>> {
+  const doc = current?.docId
+  if (!doc) return NO_DOCUMENT
+  const saved = await ops.docSaveAs({ docId: doc, outDir, overwrite })
+  if (saved.ok) {
+    // `pbipFile` is relative to the project folder.
+    const pbip = `${saved.value.projectDir.replace(/[\\/]+$/, '')}/${saved.value.pbipFile}`
+    void call(() => commands.addRecentFile(pbip))
+  }
+  return saved
+}
+
+/**
+ * Runs `confirm` when the window is asked to close (title-bar ✕, Alt+F4): it closes only when
+ * `confirm` resolves `true` (e.g. no unsaved edits, or the user chose Save or Don't save).
+ * Returns an unsubscribe function.
+ */
+export async function onCloseRequested(confirm: () => Promise<boolean>): Promise<() => void> {
+  if (!hasBackend) return () => {}
+  return getCurrentWindow().onCloseRequested(async (event) => {
+    if (!(await confirm())) event.preventDefault()
+  })
 }
 
 // ---------------------------------------------------------------------------

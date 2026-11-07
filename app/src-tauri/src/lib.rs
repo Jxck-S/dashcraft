@@ -825,6 +825,211 @@ mod tests {
         }
     }
 
+    /// The app's editing loop through `ops_execute`, as the formula bar, Properties pane, Quick
+    /// Access Toolbar and File → Save / Save as drive it: the views follow each edit, the TMDL
+    /// view shows unsaved edits as Save writes them, and a dirty document only closes when the
+    /// user discards the edits.
+    #[test]
+    fn edits_save_and_close_through_the_registry() {
+        let Some(source) = fixture(ACME) else {
+            return;
+        };
+        let root =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/dashcraft-app-tests/edit");
+        let _ = std::fs::remove_dir_all(&root);
+        let project = root.join("acme");
+        copy_dir(&source, &project);
+        let (_app, webview) = mock_app(StartupPath::default());
+
+        let views = open(&webview, &project.join("AcmeOutfitters.pbip"));
+        let doc = views["summary"]["docId"].clone();
+        let find_measure = |views: &Value, id: &Value| -> Option<(Value, Value)> {
+            array(&views["tree"], "tables").iter().find_map(|t| {
+                array(t, "measures")
+                    .iter()
+                    .find(|m| &m["id"] == id)
+                    .map(|m| (t["name"].clone(), m.clone()))
+            })
+        };
+        let (table, measure) = array(&views["tree"], "tables")
+            .iter()
+            .find_map(|t| {
+                array(t, "measures")
+                    .first()
+                    .map(|m| (t["name"].clone(), m.clone()))
+            })
+            .unwrap();
+        let id = measure["id"].clone();
+        let name = measure["name"].as_str().unwrap().to_owned();
+        let table_file = format!("tables/{}.tmdl", table.as_str().unwrap());
+        let views_of =
+            |doc: &Value| invoke(&webview, "document_views", json!({ "docId": doc })).unwrap();
+        let tmdl_of = |doc: &Value| -> (Value, String) {
+            let tmdl = invoke(&webview, "tmdl_view", json!({ "docId": doc })).unwrap();
+            let text = array(&tmdl, "files")
+                .iter()
+                .find(|f| f["path"] == table_file.as_str())
+                .unwrap_or_else(|| panic!("no {table_file} in {tmdl}"))["text"]
+                .as_str()
+                .unwrap()
+                .to_owned();
+            (tmdl["source"].clone(), text)
+        };
+        assert_eq!(tmdl_of(&doc).0, "files");
+
+        // Properties pane and formula bar: one edit; every view shows it.
+        run(
+            &webview,
+            "model.measure.update",
+            json!({ "docId": doc, "measureId": id, "expression": "1 + 41",
+                    "description": "Edited in the app", "formatString": "0.00" }),
+        );
+        let (_, edited) = find_measure(&views_of(&doc), &id).unwrap();
+        assert_eq!(
+            (
+                &edited["expression"],
+                &edited["description"],
+                &edited["formatString"]
+            ),
+            (
+                &json!("1 + 41"),
+                &json!("Edited in the app"),
+                &json!("0.00")
+            )
+        );
+        let details = invoke(
+            &webview,
+            "object_details",
+            json!({ "docId": doc, "id": id }),
+        )
+        .unwrap();
+        assert_eq!(details["description"], "Edited in the app");
+        let (source_kind, text) = tmdl_of(&doc);
+        assert_eq!(source_kind, "edited");
+        assert!(text.contains("1 + 41"), "{text}");
+        let history = run(&webview, "doc.history", json!({ "docId": doc }));
+        assert_eq!(
+            (
+                &history["dirty"],
+                &history["canUndo"],
+                &history["undoLabel"]
+            ),
+            (&json!(true), &json!(true), &json!("Edit measure"))
+        );
+
+        // A renamed formula: rename and expression as one labelled step (Quick Access Toolbar).
+        let label = format!("Edit measure '{name}'");
+        run(
+            &webview,
+            "doc.applyEdits",
+            json!({ "docId": doc, "label": label, "edits": [
+                { "type": "renameObject", "objectId": id, "newName": "App Edited" },
+                { "type": "updateMeasure", "measureId": id, "expression": "2 + 40" }
+            ]}),
+        );
+        let history = run(&webview, "doc.history", json!({ "docId": doc }));
+        assert_eq!(history["undoLabel"], label.as_str());
+        run(&webview, "doc.undo", json!({ "docId": doc }));
+        let (_, undone) = find_measure(&views_of(&doc), &id).unwrap();
+        assert_eq!(
+            (&undone["name"], &undone["expression"]),
+            (&json!(name), &json!("1 + 41"))
+        );
+        run(&webview, "doc.redo", json!({ "docId": doc }));
+        let (_, redone) = find_measure(&views_of(&doc), &id).unwrap();
+        assert_eq!(redone["name"], "App Edited");
+
+        // Closing a dirty document needs the user's "Don't save".
+        let refused = ops(&webview, "doc.close", json!({ "docId": doc })).unwrap_err();
+        assert_eq!(refused["code"], "unsupported", "{refused}");
+
+        // File → Save writes the project in place.
+        let saved = run(&webview, "doc.save", json!({ "docId": doc }));
+        assert_eq!(saved["dirty"], false);
+        assert!(!array(&saved, "written").is_empty(), "{saved}");
+        let history = run(&webview, "doc.history", json!({ "docId": doc }));
+        assert_eq!(history["dirty"], false);
+        let (source_kind, text) = tmdl_of(&doc);
+        assert_eq!(source_kind, "files");
+        assert!(
+            text.contains("App Edited") && text.contains("2 + 40"),
+            "{text}"
+        );
+        let on_disk = std::fs::read_to_string(
+            project
+                .join("AcmeOutfitters.SemanticModel/definition")
+                .join(&table_file),
+        )
+        .unwrap();
+        assert!(on_disk.contains("2 + 40"), "{on_disk}");
+        assert_eq!(
+            run(&webview, "doc.close", json!({ "docId": doc }))["closed"],
+            true
+        );
+
+        // A discarded edit: close with `discardChanges` leaves the files unchanged.
+        let views = open(&webview, &project.join("AcmeOutfitters.pbip"));
+        let doc = views["summary"]["docId"].clone();
+        run(
+            &webview,
+            "model.measure.update",
+            json!({ "docId": doc, "table": table, "measure": "App Edited",
+                    "description": "Not saved" }),
+        );
+        run(
+            &webview,
+            "doc.close",
+            json!({ "docId": doc, "discardChanges": true }),
+        );
+        let after = std::fs::read_to_string(
+            project
+                .join("AcmeOutfitters.SemanticModel/definition")
+                .join(&table_file),
+        )
+        .unwrap();
+        assert_eq!(after, on_disk);
+
+        // File → Save as: a PBIX becomes a PBIP project the document continues in.
+        if let Some(pbix) = fixture("samples/microsoft/Revenue Opportunities.pbix") {
+            let views = open(&webview, &pbix);
+            let doc = views["summary"]["docId"].clone();
+            let refused = ops(&webview, "doc.save", json!({ "docId": doc })).unwrap_err();
+            assert_eq!(refused["code"], "unsupported", "{refused}");
+            let out = root.join("Revenue Opportunities");
+            let saved = run(
+                &webview,
+                "doc.saveAs",
+                json!({ "docId": doc, "outDir": out }),
+            );
+            assert_eq!(saved["previousFormat"], "pbix");
+            assert!(!array(&saved, "warnings").is_empty(), "{saved}");
+            let summary = &views_of(&doc)["summary"];
+            assert_eq!(summary["format"], "pbip", "{summary}");
+            assert!(
+                summary["fileName"].as_str().unwrap().ends_with(".pbip"),
+                "{summary}"
+            );
+            assert_eq!(
+                run(&webview, "doc.save", json!({ "docId": doc }))["dirty"],
+                false
+            );
+            // A non-empty folder needs `overwrite` (the app asks first).
+            let refused = ops(
+                &webview,
+                "doc.saveAs",
+                json!({ "docId": doc, "outDir": out }),
+            )
+            .unwrap_err();
+            assert_eq!(refused["code"], "io", "{refused}");
+            run(
+                &webview,
+                "doc.saveAs",
+                json!({ "docId": doc, "outDir": out, "overwrite": true }),
+            );
+        }
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
     /// The example's Overview report connected to a semantic model in the service
     /// (`byConnection`), as a report downloaded from the service is.
     #[test]

@@ -27,6 +27,10 @@ Update **2026-11-06** (later): report-level measures follow renames and are save
 Desktop) re-scored the `reportExtensions.json` row (§1). Performance scenarios P09–P11 (edit and
 re-render, save, end-to-end refresh) added three rows to §8.
 
+Update **2026-11-07**: editing in the app (M6.8: Save, Save as, Undo and Redo, the editable
+formula bar and Properties fields, the unsaved-changes prompt) re-scored the modeling, Save, undo
+and accessibility rows (§10).
+
 ## How to read it
 
 - **Status**: ✅ done (behaves like Power BI for this capability, within the documented limits) ·
@@ -52,13 +56,13 @@ re-render, save, end-to-end refresh) added three rows to §8.
 | 7 | [Rendering fidelity](#7-rendering-fidelity) | 3.2 | 4 / 0 / 2 | No golden images (Power BI exports of the Acme Outfitters pages); DIN font |
 | 8 | [Performance](#8-performance) | 4.7 | 11 / 0 / 1 | No app-open or webview canvas-latency scenarios; P09–P11 not in the baseline yet |
 | 9 | [Command registry, MCP, AI](#9-command-registry-mcp-ai) | 3.4 | 8 / 3 / 1 | Broader editing commands |
-| 10 | [App UX vs Power BI Desktop](#10-app-ux-vs-power-bi-desktop) | 1.5 | 4 / 11 / 8 | Every editing surface: report, modeling, Power Query, Save, undo |
+| 10 | [App UX vs Power BI Desktop](#10-app-ux-vs-power-bi-desktop) | 2.0 | 6 / 11 / 6 | Report editing, modeling editors (new objects, relationships), Power Query editing |
 | 11 | [Platform and packaging](#11-platform-and-packaging) | 2.7 | 7 / 2 / 4 | Signing and notarization, auto-update, ARM64 Windows/Linux |
 | 12 | [Security and fuzzing](#12-security-and-fuzzing) | 3.3 | 8 / 2 / 2 | Legal review (ADR-0003), staged-file scanning in CI |
 
 Overall: the **viewer** (formats, engines, rendering of the example and sample reports, performance) is at
 3–5 and the automation surface (registry, MCP server, opt-in AI layer) at 4; the **Desktop**
-surface (editing, modeling, Power Query, signing) is at 0–1, which is where most of the remaining
+surface (report and modeling editors, Power Query, signing) is at 0–2, which is where most of the remaining
 work is.
 
 ## 1. File formats
@@ -294,17 +298,17 @@ Source: [app/README.md](../app/README.md), [desktop-ui-reference.md](../app/docs
 
 | Capability | Status | Score | Evidence | Next step |
 |---|---|---|---|---|
-| Shell: ribbon, view rail, panes, status bar, search, recent files | 🟡 | 3 | desktop-ui-reference.md (editing commands shown disabled) | Enable commands as features land |
+| Shell: ribbon, view rail, panes, status bar, search, recent files | 🟡 | 3 | desktop-ui-reference.md (Save, Undo, Redo, File → Save and Save as enabled; the other editing commands shown disabled) | Enable commands as features land |
 | Report view (reading mode, interactive) | ✅ | 3 | §5–§6; app canvas tests | — |
 | Report editing (add, move, resize, format visuals) | 🟡 | 1 | `report.visual.move`/`resize` registry commands (undoable; visual groups move and resize with their visuals as in Power BI Desktop, GT-6), saved by `doc.save` (only the `position` numbers change); no UI | Canvas drag handles, add/format commands |
 | Table view (virtualized grid, SQL filter, column statistics) | ✅ | 3 | `data.page`, `data.columnStats` registry commands through `ops_execute` | Statistics of the filtered rows |
 | Model view (diagram) | 🟡 | 2 | read-only; `diagramLayout.json` or auto-layout | Edit relationships, save layouts |
-| Modeling: new measure/column/table, rename, properties | ❌ | 0 | registry commands create, update, delete and rename (DAX and M follow); no app UI yet | Wire editors to commands (M6.8, M10) |
+| Modeling: new measure/column/table, rename, properties | 🟡 | 2 | registry commands create, update, delete and rename (DAX and M follow); in the app the formula bar edits `Name = expression` of measures, calculated columns and calculated tables (a rename and the new DAX as one undo step) and the Properties pane edits descriptions, display folders and format strings (M6.8, `edits_save_and_close_through_the_registry` in `app/src-tauri/src/lib.rs`, `app/tests/editing.test.ts`) | New measure, column, table and relationship editors (M10) |
 | DAX query view | 🟡 | 3 | editor, run/cancel, results ≤ 1000 rows | IntelliSense, formatter, find/replace |
 | TMDL view | 🟡 | 2 | read-only | Apply |
 | Power Query editor (Transform data) | 🟡 | 1 | read-only queries, parameters, blob map, Load CSV; a PBIT refreshes on open with its saved parameter values (Desktop's "Enter parameters" prompt is missing) | Applied-steps UI, data preview, parameter editing |
-| Save / Save as (PBIP) | 🟡 | 1 | `doc.save` (in-place PBIP save, conflicts, `overwrite`) and `doc.saveAs` (a new PBIP project from PBIX, PBIT, `model.bim` or PBIP; later saves go there) registry commands (`crates/pbi-ops/tests/save.rs`); Desktop opens a saved, edited Acme copy and computes the same values (GT-6, `reference/groundtruth/README.md`); File → Export writes a new PBIP; no Save or Save as button | File → Save, Save as, Ctrl+S, unsaved marker (M6.8) |
-| Undo / redo | ❌ | 0 | `History` exists; buttons disabled | Wire with the first editing command |
+| Save / Save as (PBIP) | ✅ | 4 | `doc.save` (in-place PBIP save, conflicts, `overwrite`) and `doc.saveAs` (a new PBIP project from PBIX, PBIT, `model.bim` or PBIP; later saves go there) registry commands (`crates/pbi-ops/tests/save.rs`); Desktop opens a saved, edited Acme copy and computes the same values (GT-6, `reference/groundtruth/README.md`); the app's Save (Quick Access Toolbar, File, Ctrl+S), Save as (Ctrl+Shift+S), `*` unsaved marker, conflict question and *Unsaved changes* prompt on close, open and window close (M6.8; `scripts/app-checks/editing-smoke.mjs`: a saved formula edit changes one line) | Recovery files (M8); the prompt on macOS Cmd+Q once Tauri can intercept it |
+| Undo / redo | ✅ | 4 | `doc.undo`/`doc.redo` per document (`pbi-model::History`, one step per `doc.applyEdits`); the Quick Access Toolbar's Undo and Redo name the step, Ctrl+Z / Ctrl+Y (text fields keep their own undo) (M6.8) | Undo of report-authoring edits as they land (M9, M18) |
 | Several documents, several models per project | ❌ | 1 | one document; first model only | — |
 | Export from the app (data, PDF, PowerPoint) | 🟡 | 1 | File → Export writes a PBIP project or PBIT template (`convert.pbip`/`convert.pbit`); table data, PDF and PowerPoint: CLI or not at all | `export.table` from the Table view; PDF |
 | Get data / connectors | ❌ | 0 | offline policy; "Load CSV manually…" | — |
@@ -313,7 +317,7 @@ Source: [app/README.md](../app/README.md), [desktop-ui-reference.md](../app/docs
 | Opt-in AI: Options → AI, consent dialog with the exact request, Explain with AI, Suggest a measure | ✅ | 3 | app/README, [AI.md](AI.md#in-the-desktop-app); hostile-input tests of the Markdown renderer (`app/tests/markdown.test.ts`) | AI in the DAX query view |
 | Modeling → View as (RLS roles, other user) | ✅ | 3 | `app/src/components/ViewAsDialog.svelte` over `security.roles` / `security.viewAs` (§4) | — |
 | Keyboard shortcuts | 🟡 | 3 | desktop-ui-reference.md "Keyboard" | — |
-| Accessibility | 🟡 | ? | `aria-*` attributes in components; no audit | Accessibility audit |
+| Accessibility | 🟡 | 2 | the M6 editing surfaces pass A1–A5 (keyboard, focus, names and roles with no checker violation, contrast, reduced motion) on Windows / WebView2 ([accessibility/m6-editing.md](accessibility/m6-editing.md), `scripts/app-checks/editing-a11y.mjs`); the rest of the app is not audited | Screen-reader runs (A6: VoiceOver, Narrator, NVDA, Orca); audit (M31.8) |
 | Localization | ❌ | 0 | English only; no i18n layer found | — |
 | Cancellable open | ❌ | 0 | readers are synchronous | — |
 | Publish to the service | ❌ | n/a | — | Out of scope (v1) |

@@ -7,6 +7,28 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M6 app editing (M6.8)
+
+- **What:** the desktop app edits through the registry. The formula bar edits `Name = expression`
+  of measures, calculated columns and calculated tables (rename + expression as one
+  `doc.applyEdits` step); the Properties pane edits description, display folder and format string
+  (`PropertyField.svelte`); Quick Access Toolbar Save, Undo and Redo name the step from
+  `doc.history`; Ctrl/⌘+S, Ctrl/⌘+Shift+S, Ctrl/⌘+Z, Ctrl/⌘+Y; a `*` marker in the title; File →
+  Save and Save as; an *Unsaved changes* question on close, window close and open
+  (`lib/editing.ts`, `App.svelte`, `app/src-tauri`). `doc.applyEdits` gains an optional `label`
+  (≤ 200 characters) and a `warnings` result, so a measure kept with DAX that does not parse is
+  reported (a warning toast) instead of silently accepted. New scripts in `scripts/app-checks/`
+  drive the built app over the WebView2 DevTools protocol (smoke and A1–A5 accessibility, with the
+  IBM Equal Access checker and the UI Automation tree).
+- **Why:** M6.8 (DESKTOP-PLAN), the GAPS §10 Save, Undo and Modeling rows.
+- **Numbers:** 19 Node tests (`app/tests/editing.test.ts`), app test
+  `edits_save_and_close_through_the_registry`, e2e assertions for the label and the warnings;
+  smoke 23/23, accessibility 17/17 (A1–A5 pass; lowest contrast 5.98:1 text, 6.19:1 icons and
+  input borders; 2 px focus rings), three contrast and focus failures fixed
+  ([accessibility/m6-editing.md](accessibility/m6-editing.md)). GAPS §10: 2.0.
+- **Open:** A6 (screen readers) not run; GT-4 (a Desktop save comparison of an app edit) not run;
+  macOS Cmd+Q is not intercepted (Tauri); Ctrl+S saves without an uncommitted field draft.
+
 ### M6 visual groups move and resize (M6.5)
 
 - **What:** `pbi-model` gains `Page::page_rect`, `parent_group` and `is_group_relative`

@@ -95,10 +95,31 @@ fn tmdl_rank(path: &str) -> (u8, String) {
     (rank, path.to_lowercase())
 }
 
-/// The model as TMDL: the opened `.tmdl` files verbatim when the model came from TMDL,
-/// otherwise canonical TMDL generated from `model`.
-pub(crate) fn tmdl_view(opened: &OpenedDocument, model: &Model) -> TmdlViewDto {
+/// One generated or rewritten TMDL script (path relative to `definition/`).
+fn written_file(path: String, text: String) -> TmdlFileDto {
+    let table = pbi_tmdl::parse_file(&path, &text)
+        .ok()
+        .as_ref()
+        .and_then(declared_table);
+    TmdlFileDto {
+        path,
+        text: cap_bytes(text, MAX_TMDL_BYTES),
+        table,
+    }
+}
+
+/// The model as TMDL: the opened `.tmdl` files verbatim when the model came from TMDL (with the
+/// unsaved edits applied when `dirty`, as Save writes them), otherwise canonical TMDL generated
+/// from `model`.
+pub(crate) fn tmdl_view(opened: &OpenedDocument, model: &Model, dirty: bool) -> TmdlViewDto {
     let (source, mut files) = match &opened.model_source {
+        Some(ModelSource::Tmdl { files, .. }) if !files.is_empty() && dirty => (
+            TmdlSourceDto::Edited,
+            pbi_tmdl::write_model_preserving(model, None, files)
+                .into_iter()
+                .map(|(path, text)| written_file(path, text))
+                .collect(),
+        ),
         Some(ModelSource::Tmdl {
             definition_dir,
             files,
@@ -124,17 +145,7 @@ pub(crate) fn tmdl_view(opened: &OpenedDocument, model: &Model) -> TmdlViewDto {
             TmdlSourceDto::Generated,
             pbi_tmdl::write_model(model, None)
                 .into_iter()
-                .map(|(path, text)| {
-                    let table = pbi_tmdl::parse_file(&path, &text)
-                        .ok()
-                        .as_ref()
-                        .and_then(declared_table);
-                    TmdlFileDto {
-                        path,
-                        text: cap_bytes(text, MAX_TMDL_BYTES),
-                        table,
-                    }
-                })
+                .map(|(path, text)| written_file(path, text))
                 .collect(),
         ),
     };
