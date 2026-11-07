@@ -24,7 +24,8 @@ any source) re-scored the editing-commands row (§9) and the Save row (§10). Th
 tests (M6.11) re-scored the parameter-fuzzing rows (§9, §12).
 
 Update **2026-11-06** (later): report-level measures follow renames and are saved (M6.7, checked in Power BI
-Desktop) re-scored the `reportExtensions.json` row (§1).
+Desktop) re-scored the `reportExtensions.json` row (§1). Performance scenarios P09–P11 (edit and
+re-render, save, end-to-end refresh) added three rows to §8.
 
 ## How to read it
 
@@ -49,7 +50,7 @@ Desktop) re-scored the `reportExtensions.json` row (§1).
 | 5 | [Visuals](#5-visuals) | 2.1 | 15 / 6 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
 | 6 | [Interactions](#6-interactions) | 1.6 | 7 / 2 / 10 | Highlighting, bookmarks, drillthrough, drill-down, synced slicers |
 | 7 | [Rendering fidelity](#7-rendering-fidelity) | 3.2 | 4 / 0 / 2 | No golden images (Power BI exports of the Acme Outfitters pages); DIN font |
-| 8 | [Performance](#8-performance) | 4.9 | 8 / 0 / 1 | No app-open, end-to-end refresh or webview canvas-latency scenarios |
+| 8 | [Performance](#8-performance) | 4.7 | 11 / 0 / 1 | No app-open or webview canvas-latency scenarios; P09–P11 not in the baseline yet |
 | 9 | [Command registry, MCP, AI](#9-command-registry-mcp-ai) | 3.4 | 8 / 3 / 1 | Broader editing commands |
 | 10 | [App UX vs Power BI Desktop](#10-app-ux-vs-power-bi-desktop) | 1.5 | 4 / 11 / 8 | Every editing surface: report, modeling, Power Query, Save, undo |
 | 11 | [Platform and packaging](#11-platform-and-packaging) | 2.7 | 7 / 2 / 4 | Signing and notarization, auto-update, ARM64 Windows/Linux |
@@ -263,7 +264,10 @@ scenarios recorded 2026-10-23 on an idle machine). Score: 5 ≤ half the target 
 | P06 `pbix-data-open` (20 / 100; the Revenue Opportunities sample PBIX, 9 tables) | ✅ | 5 | 4.5 | — |
 | P07 `busy-page-svg` (4 / 16) | ✅ | 5 | 1.6 | — |
 | P08 `example-table-scroll-step` (p95; 16 / 33; the example's Customer Detail table, 29 rows) | ✅ | 5 | 0.34 | — |
-| Scenarios for app open, end-to-end refresh, canvas latency in the webview | ❌ | ? | none | Add `perf_*` scenarios |
+| P09 `edit-measure-requery` (50 / 150; edit `Total Sales`, re-render the Executive Summary page, through `Registry::execute`) | ✅ | 4 | 43.6 on a Windows x86-64 desktop; 53 on the CI runner's quick run, over target (no baseline entry yet) | Record on the baseline machine |
+| P10 `save-pbip-acme` (100 / 300; one edit, `doc.save` of a copy of the example) | ✅ | 4 | 55 on the same desktop | Record on the baseline machine |
+| P11 `refresh-acme-end-to-end` (1000 / 3000; open, refresh 11 tables from the CSVs, first page, fresh process) | ✅ | 5 | 184 on the same desktop | Record on the baseline machine |
+| Scenarios for app open and canvas latency in the webview | ❌ | ? | none (P22 and P21 in [DESKTOP-PLAN.md](DESKTOP-PLAN.md)) | Add with the app milestones |
 
 ## 9. Command registry, MCP, AI
 

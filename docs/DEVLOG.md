@@ -28,6 +28,26 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Open:** derived-column changes (not revisioned) still rebuild the "View as" engine after
   publishing.
 
+### M6 performance scenarios P09–P11 (acceptance 12)
+
+- **What:** `crates/pbi-ops/examples/perf_ops.rs` runs three new `perf/budgets.toml` scenarios
+  through `Registry::execute`, the path the app and agents take: P09 `edit-measure-requery`
+  (`model.measure.update` of Acme's `Total Sales`, alternating text so every step commits, then
+  `canvas.render` of the Executive Summary page), P10 `save-pbip-acme` (one edit, then `doc.save`
+  into a copy of the project under `target/tmp/`) and P11 `refresh-acme-end-to-end` (`doc.open`,
+  `data.refresh`, `canvas.render` of the first page, one process per sample).
+- **Why:** M6 acceptance 12 (DESKTOP-PLAN); GAPS §8 had no end-to-end refresh scenario.
+- **Numbers:** full `cargo xtask perf` on a 12-core x86-64 Windows desktop (no baseline entry, so
+  no regression check there): P09 43.6 ms (target 50; edit 13 ms, re-render 32 ms), P10 55 ms
+  (target 100; one file written), P11 184 ms (target 1000; open 42 ms, refresh of 11 tables
+  91 ms, first page 30 ms). No code outside the new example changed, so P01–P08 cannot regress;
+  on this machine they are all within target except P05 (365 ms against 250; 149 ms on the
+  baseline machine). The CI runner's quick run: P09 53 ms (over its 50 ms target, within the
+  150 ms maximum), P10 33 ms, P11 209 ms. GAPS §8 4.9 → 4.7 (three new rows, the end-to-end
+  refresh gap closed).
+- **Open:** record P09–P11 on the baseline machine; app open (P22) and webview canvas latency
+  (P21) remain.
+
 ### M6 report-level measures follow renames (M6.7, part 3)
 
 - **What:** `pbi-pbir` types `reportExtensions.json` (entities and measures, unknown keys kept);
