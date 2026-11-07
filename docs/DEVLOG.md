@@ -7,6 +7,41 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M7.3a M library catalog and Desktop conformance
+
+- **What:** the ground-truth recorder evaluates M: a corpus with `"language": "m"` runs each
+  expression in Desktop's mashup engine through a temporary hidden table
+  (`Invoke-GtMCases`, an M probe that encodes values as typed JSON, in
+  `scripts/groundtruth/GroundTruth.psm1`). Two suites: `m-library` (`scripts/groundtruth/m-library.m`:
+  every dotted name of `#shared` with kind, parameters, return type, type or constant value) and
+  `m-functions` (177 expressions from `gen_corpus.py`). `pbi_m::service::{catalog, catalog_entry}`
+  read `src/service/library.txt`, generated from the `m-library` recording by
+  `tests/library.rs`, which also checks every implemented name against it. `tests/groundtruth.rs`
+  compares the `m-functions` recording with DashCraft (the DAX side's ledger, report and rules).
+  `value/digits.rs` (decimal digit buffers) gives .NET's number text (R and G layouts, E, F, N, P,
+  D, X and custom formats) and decimal rounding to `Text.From`, `Number.ToText`, `Number.Round*`
+  and error messages. Fixes: error records (`Message.Format` placeholders, `ErrorCode`), splitter
+  quoting (`csvStyle`, `startAtEnd`), `#datetimezone` offsets, text ranges, parameter names,
+  `Number.MaxValue`/`MinValue` removed (not in Desktop). `pbi-ops`' DAX-language test skips M
+  corpora.
+- **Why:** M7.3 (DESKTOP-PLAN): M hover, signature help and completion need Desktop's library, and
+  ADR-0011's ground truth did not cover M yet (GAPS §2).
+- **Desktop check:** Power BI Desktop 2.159. Library: 1,142 names (941 functions, 69 types, 132
+  constants and values); DashCraft's 351 names (266 functions) all match their kind, parameter
+  names and counts, types and constants. `m-functions`: the first comparison had 36 mismatches;
+  now 149 of 177 match, 27 call functions DashCraft lacks
+  (ledgered `unsupported`), 1 by design (Desktop keeps number literals as decimals until
+  arithmetic). Desktop probes settled the number rules: G15 when it round-trips else G17, numbers
+  below 7.9e28 written out from 15 digits, `E` with a signed 3-digit exponent, F/N/P/custom
+  rounded half away from 15 digits, `Number.Round` in decimal with `RoundingMode` breaking ties
+  only.
+- **Numbers:** new tests: `library.rs` 3, `groundtruth.rs` 3, `digits.rs` 2, regression cases in
+  `stdlib.rs` and `eval.rs`; GAPS §2 3.1 → 3.3. Ground truth: 14 suites, 3,366 cases, 29 ledger
+  entries.
+- **Open:** the 27 ledgered functions (`Table.Group`, `Table.Pivot`, `Table.Join`,
+  `Splitter.SplitTextBy*`, `List.Median`, `Date.WeekOfYear`, …), then M7.3b–d (diagnostics, hover
+  and completion, formatter).
+
 ### M7.2 DAX formatter
 
 - **What:** `pbi_dax::service::format` (`formatter.rs`) with `FormatOptions` (line width, indent

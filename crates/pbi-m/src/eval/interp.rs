@@ -13,8 +13,9 @@ use crate::eval::ir::{
     Bindings, Compiler, FieldSpecIr, ListItemIr, NodeKind, NodeRef, SourceText, TryIr, TypeNode,
 };
 use crate::eval::thunk::{Pending, Thunk};
-use crate::merror::{LimitKind, MError};
+use crate::merror::{ErrorFields, LimitKind, MError};
 use crate::span::line_col;
+use crate::stdlib::value_fns::format_error_message;
 use crate::stdlib::{self, Library};
 use crate::value::format::describe;
 use crate::value::ops::{self, Forcer};
@@ -97,6 +98,17 @@ fn npt_name(t: &NullablePrimitiveType) -> String {
         format!("nullable {base}")
     } else {
         base
+    }
+}
+
+/// The character of a one-character text, for `{"a".."z"}` ranges.
+fn single_char(t: &str) -> Result<char, MError> {
+    let mut chars = t.chars();
+    match (chars.next(), chars.next()) {
+        (Some(c), None) => Ok(c),
+        _ => Err(MError::expression(
+            "The value isn't a single-character string.",
+        )),
     }
 }
 
@@ -510,8 +522,23 @@ impl Interp {
             match item {
                 ListItemIr::Single(n) => out.push(self.slot(n, env.clone())),
                 ListItemIr::Range(s, e) => {
-                    let start = integer(&self.eval(s, env)?)?;
-                    let end = integer(&self.eval(e, env)?)?;
+                    let (start, end) = (self.eval(s, env)?, self.eval(e, env)?);
+                    match (start.plain(), end.plain()) {
+                        (Value::Text(a), Value::Text(b)) => {
+                            let (a, b) = (single_char(a)?, single_char(b)?);
+                            let count = usize::try_from(u32::from(b).saturating_sub(u32::from(a)))
+                                .unwrap_or(usize::MAX);
+                            self.check_rows(out.len().saturating_add(count))?;
+                            out.extend((a..=b).map(|c| Lazy::Value(Value::text(c.to_string()))));
+                            continue;
+                        }
+                        (Value::Text(_), _) | (_, Value::Text(_)) => {
+                            return Err(ops::operator_error("..", &start, &end));
+                        }
+                        _ => {}
+                    }
+                    let start = integer(&start)?;
+                    let end = integer(&end)?;
                     if end >= start {
                         let count = usize::try_from(end.saturating_sub(start))
                             .unwrap_or(usize::MAX)
@@ -651,31 +678,75 @@ impl Interp {
         }
     }
 
-    /// Builds the error raised by `error value`.
+    /// Builds the error raised by `error value`. A record gives `Reason` (default
+    /// `Expression.Error`), `Detail` and `ErrorCode`; with a `Message.Format` the message is
+    /// the format with its `#{n}` placeholders filled from `Message.Parameters`, else the
+    /// record's `Message` (and `Message.Parameters` is dropped), as Desktop does.
     fn error_from_value(&self, v: &Value) -> Result<MError, MError> {
         match v.plain() {
             Value::Text(t) => Ok(MError::expression(t.to_string())),
             Value::Record(r) => {
-                let text = |name: &str| -> Result<Option<String>, MError> {
+                let field = |name: &str| -> Result<Value, MError> {
                     match r.get(name) {
-                        Some(slot) => Ok(slot.force(self)?.as_text().map(str::to_owned)),
-                        None => Ok(None),
+                        Some(slot) => Ok(slot.force(self)?.plain().clone()),
+                        None => Ok(Value::Null),
+                    }
+                };
+                let text = |name: &str| -> Result<Option<String>, MError> {
+                    match field(name)? {
+                        Value::Null => Ok(None),
+                        Value::Text(t) => Ok(Some(t.to_string())),
+                        other => Err(convert_error(&other, "Text")),
                     }
                 };
                 let reason = text("Reason")?.unwrap_or_else(|| "Expression.Error".to_owned());
-                let message = text("Message")?.unwrap_or_default();
-                let detail = match r.get("Detail") {
-                    Some(slot) => {
-                        let d = slot.force(self)?;
-                        if d.is_null() { None } else { Some(Box::new(d)) }
+                let (message, fields) = match text("Message.Format")? {
+                    Some(format) => {
+                        let parameters = field("Message.Parameters")?;
+                        let list = match &parameters {
+                            Value::Null => None,
+                            Value::List(l) => Some(l),
+                            other => return Err(convert_error(other, "List")),
+                        };
+                        let message = format_error_message(self, &format, list)?;
+                        (
+                            message,
+                            ErrorFields {
+                                null_message: false,
+                                message_format: Value::text(format),
+                                message_parameters: parameters,
+                                error_code: Value::Null,
+                            },
+                        )
                     }
-                    None => None,
+                    None => {
+                        let message = text("Message")?;
+                        let null_message = message.is_none();
+                        (
+                            message.unwrap_or_default(),
+                            ErrorFields {
+                                null_message,
+                                message_format: Value::Null,
+                                message_parameters: Value::Null,
+                                error_code: Value::Null,
+                            },
+                        )
+                    }
                 };
+                let detail = match field("Detail")? {
+                    Value::Null => None,
+                    d => Some(Box::new(d)),
+                };
+                let error_code = field("ErrorCode")?;
                 Ok(MError::Evaluation {
                     reason,
                     message,
                     detail,
                     location: None,
+                    fields: Some(Box::new(ErrorFields {
+                        error_code,
+                        ..fields
+                    })),
                 })
             }
             other => Err(convert_error(other, "Record")),
@@ -1042,30 +1113,52 @@ impl Interp {
 }
 
 /// The M error record for a caught error: `[Reason, Message, Detail, Message.Format,
-/// Message.Parameters]`.
+/// Message.Parameters, ErrorCode]`.
 pub(crate) fn error_record(e: &MError) -> Result<RecordValue, MError> {
-    let (reason, message, detail) = match e {
+    let (reason, message, detail, fields) = match e {
         MError::Evaluation {
             reason,
             message,
             detail,
+            fields,
             ..
         } => (
             reason.clone(),
             message.clone(),
             detail.as_deref().cloned().unwrap_or(Value::Null),
+            fields.as_deref(),
         ),
         other => (
             "Expression.Error".to_owned(),
             other.to_string(),
             Value::Null,
+            None,
+        ),
+    };
+    let (message, format, parameters, error_code) = match fields {
+        Some(f) => (
+            if f.null_message {
+                Value::Null
+            } else {
+                Value::text(message)
+            },
+            f.message_format.clone(),
+            f.message_parameters.clone(),
+            f.error_code.clone(),
+        ),
+        None => (
+            Value::text(message.clone()),
+            Value::text(message),
+            Value::Null,
+            Value::Null,
         ),
     };
     RecordValue::from_pairs([
         ("Reason", Value::text(reason)),
-        ("Message", Value::text(message.clone())),
+        ("Message", message),
         ("Detail", detail),
-        ("Message.Format", Value::text(message)),
-        ("Message.Parameters", Value::Null),
+        ("Message.Format", format),
+        ("Message.Parameters", parameters),
+        ("ErrorCode", error_code),
     ])
 }

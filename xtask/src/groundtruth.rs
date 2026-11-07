@@ -4,7 +4,8 @@
 //! `deviations.json` (JSON only, no engine) and prints per suite: cases,
 //! recorded cases, cases whose query changed since recording (re-record),
 //! volatile (shape-only) cases, ledger entries, and the Desktop version.
-//! The comparison itself is `cargo test -p pbi-session --test groundtruth`.
+//! The comparison itself is `cargo test -p pbi-session --test groundtruth` (DAX suites) and
+//! `cargo test -p pbi-m --test groundtruth` (M suites).
 //! With `--check`, a missing recording, an unrecorded case or a changed query
 //! fails. See `reference/groundtruth/README.md`.
 
@@ -69,7 +70,9 @@ pub fn main(args: &[String]) -> Result<bool> {
                 .join(", ")
         );
     }
-    println!("compare: cargo test -p pbi-session --test groundtruth");
+    println!(
+        "compare: cargo test -p pbi-session --test groundtruth; cargo test -p pbi-m --test groundtruth"
+    );
     Ok(!check || incomplete.is_empty())
 }
 

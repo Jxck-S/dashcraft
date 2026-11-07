@@ -29,6 +29,7 @@ fn data_format(target: &str, text: &str) -> MError {
         message: format!("We couldn't convert to {target}."),
         detail: Some(Box::new(Value::text(text))),
         location: None,
+        fields: None,
     }
 }
 
@@ -67,24 +68,10 @@ pub(crate) fn parse_number(s: &str) -> Option<f64> {
     Some(n)
 }
 
-/// Rounds half to even at `digits` decimals (M's default `RoundingMode.ToEven`).
+/// Rounds half to even at `digits` decimals (M's default `RoundingMode.ToEven`), in
+/// `System.Decimal` like Power Query.
 pub(crate) fn round_half_even(x: f64, digits: i32) -> f64 {
-    if !x.is_finite() {
-        return x;
-    }
-    let factor = 10f64.powi(digits);
-    let scaled = x * factor;
-    if !scaled.is_finite() {
-        return x;
-    }
-    let r = scaled.round();
-    let result = if (scaled - scaled.trunc()).abs() == 0.5 {
-        let t = scaled.trunc();
-        if t % 2.0 == 0.0 { t } else { r }
-    } else {
-        r
-    };
-    result / factor
+    crate::value::digits::round_number(x, digits, crate::value::digits::Rounding::HalfEven)
 }
 
 const DATE_FORMATS: &[&str] = &[

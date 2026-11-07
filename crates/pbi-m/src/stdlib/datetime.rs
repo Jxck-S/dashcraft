@@ -190,7 +190,7 @@ fn hash_datetime(_: &Interp, args: &[Value]) -> Result<Value, MError> {
 fn offset(hours: i64, minutes: i64) -> Result<FixedOffset, MError> {
     let secs = hours
         .checked_mul(3600)
-        .and_then(|h| h.checked_add(minutes.checked_mul(if hours < 0 { -60 } else { 60 })?))
+        .and_then(|h| h.checked_add(minutes.checked_mul(60)?))
         .and_then(|s| i32::try_from(s).ok())
         .ok_or_else(invalid_date)?;
     FixedOffset::east_opt(secs).ok_or_else(invalid_date)
@@ -325,6 +325,7 @@ fn from_text_with(
             message: format!("We couldn't parse the input provided as a {target} value."),
             detail: Some(Box::new(Value::text(t))),
             location: None,
+            fields: None,
         }),
     }
 }

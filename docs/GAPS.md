@@ -57,6 +57,8 @@ M6 acceptance 14); new evidence in the TMDL, calculation-group and Save rows, no
 M6 is complete apart from the screen-reader runs (A6); data column delete and hierarchy level
 edits moved to M14 and M10 (editing row, no score change).
 
+Update **2026-11-07** (later): M ground truth (M7.3). Power BI Desktop's whole M library catalog and 177 M expressions recorded from its mashup engine; DashCraft's library matches the catalog, and number text and rounding now follow Desktop. Added the number-text and M differential-testing rows (§2: 3.1 → 3.3).
+
 ## How to read it
 
 - **Status**: ✅ done (behaves like Power BI for this capability, within the documented limits) ·
@@ -74,7 +76,7 @@ edits moved to M14 and M10 (editing row, no score change).
 | # | Area | Avg score | Rows ✅ / 🟡 / ❌ | Biggest gaps |
 |---|---|---|---|---|
 | 1 | [File formats](#1-file-formats) | 3.2 | 11 / 8 / 6 | Bookmarks, images, `DataMashup` only kept; report-level measures not evaluated; Fabric remote mode |
-| 2 | [M language and library](#2-m-language-and-library) | 3.1 | 5 / 2 / 3 | Library breadth (349 names), cultures, other data sources |
+| 2 | [M language and library](#2-m-language-and-library) | 3.3 | 7 / 2 / 3 | Library breadth (266 of Desktop's 941 functions), cultures, other data sources |
 | 3 | [DAX](#3-dax) | 3.8 | 5 / 6 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; relationship overrides in `RELATED`/`SUMMARIZE` |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh, drill-down |
 | 5 | [Visuals](#5-visuals) | 2.1 | 15 / 6 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
@@ -131,12 +133,14 @@ Source: `crates/pbi-m`; deviations in the `pbi_m::eval` module docs.
 |---|---|---|---|---|
 | Lexer, parser, printer (full grammar, spans, recovery) | ✅ | 5 | `crates/pbi-m/tests/{parser,roundtrip}.rs`; fuzz `m_parse` | — |
 | Lazy evaluator: closures, `each`, `try`/`otherwise`, `meta`, sections, types | ✅ | 4 | `crates/pbi-m/tests/eval.rs`; fuzz `m_eval` | `table{[key]}?` with several matches; UTF-16 text positions |
-| Standard library: **349 names** from `pbi_m::library_names()` = 261 functions + 32 `*.Type` values + 56 enum constants (plus 7 `#` intrinsics such as `#date`, `#table`). Names by prefix: `Table.*` 46, `List.*` 42, `Text.*` 37, `Number.*` 29, `Date.*` 18, `Record.*` 16, `DateTimeZone.*` 14, `Duration.*` 12, `Value.*` 10, `DateTime.*` 9, `Time.*` 7, others 109 | 🟡 | 3 | `pbi_m::library_names()`; `crates/pbi-m/tests/stdlib.rs` (`library_lists_spec_functions`) | Grow by fixture demand; Power Query's library is several times larger (exact count unknown here) |
+| Standard library: **351 names** from `pbi_m::library_names()` = 266 functions + 31 types + 54 constants (kinds as in Desktop's library; plus 7 `#` intrinsics such as `#date`, `#table`), each one in Power BI Desktop's library with the same kind, parameter names, required-parameter count, type or constant value. Desktop 2.159's library has 1,142 dotted names (941 functions, 69 types, 132 constants and values; `pbi_m::service::catalog`), so DashCraft has 266 of its 941 functions (28%). Names by prefix: `List.*` 47, `Table.*` 46, `Text.*` 37, `Number.*` 27, `Date.*` 18, `Record.*` 16, `DateTimeZone.*` 14, `Duration.*` 12, `Value.*` 10, `DateTime.*` 9, `Time.*` 7, others 108 | 🟡 | 3 | `crates/pbi-m/tests/library.rs` (suite `m-library`), `crates/pbi-m/tests/stdlib.rs`; of the 177 expressions of suite `m-functions`, 149 give Desktop's result, 27 call functions DashCraft lacks (ledgered `unsupported`), 1 differs by design | The 27 ledgered functions (`Table.Group`, `Table.Pivot`, `Table.Join`, `Splitter.SplitTextBy*`, `Date.WeekOfYear`, …), then by fixture demand |
+| Number text and rounding (`Text.From`, `Number.ToText` standard and custom formats, `Number.Round*`, error messages) | ✅ | 4 | .NET's round-trip and `G` layouts, `E`/`F`/`N`/`P`/`D`/`X` and custom formats from 15 significant digits, rounding in decimal with `RoundingMode` breaking ties and `Number.RoundUp`/`RoundDown`/`RoundAwayFromZero`/`RoundTowardZero` directed; the `format/*` and `Number.*` cases of suite `m-functions` match Desktop (`crates/pbi-m/src/value/digits.rs`) | Cultures |
+| Differential testing against Power BI Desktop's mashup engine | ✅ | 4 | 177 expressions (literals, operators, errors, every family of the implemented library) and the whole library catalog recorded from Desktop 2.159 and compared value by value, errors by reason and message; 28 ledger entries (27 unsupported functions, 1 by design) (`crates/pbi-m/tests/{groundtruth,library}.rs`, [reference/groundtruth](../reference/groundtruth/README.md), ADR-0011) | Grow the corpus with the library; the partition queries of the samples |
 | Example partitions load with the expected row counts (Acme Outfitters `expected.json`) | ✅ | 5 | `crates/pbi-m/tests/fixture_eval.rs`, `crates/pbi-session/tests/acceptance.rs` | — |
 | `AzureStorage.Blobs` through the offline blob map | ✅ | 4 | `src/connectors/azure.rs`, `crates/pbi-m/tests/connectors.rs` | Real Azure access behind `BlobResolver` (optional, keychain) |
 | Other data sources (`Sql.*`, `Web.*`, `File.*`, `SharePoint.*`, …) | ❌ | 0 | `DATA_ACCESS_PREFIXES` → "unsupported" + "Load CSV manually…" | Offline by policy; local `File.*` behind the path policy would need an ADR |
 | Cultures (parsing, `Text.From`) | ❌ | 1 | ignored; invariant and en-US forms only | Culture-aware conversions |
-| `Decimal`/`Currency` precision | 🟡 | 2 | numbers are `f64`, rounding emulated | A decimal number type |
+| `Decimal`/`Currency` precision | 🟡 | 2 | numbers are `f64`; `Number.Round*` rounds in decimal like Desktop, but Desktop keeps a number literal as a decimal until arithmetic (`9007199254740993` stays exact; ledgered by design, `m-functions` `literals/decimal-precision`) | A decimal number type |
 | Query folding, streaming | ❌ | n/a | tables materialized, bounded by `Limits::max_rows` | Out of scope (no live sources) |
 | Performance (P05: 100k-row CSV pipeline) | ✅ | 4 | 149 ms vs 250 ms target (`perf/baseline.json`) | — |
 

@@ -78,6 +78,20 @@ fn lists_are_lazy() {
         Value::list([n(1.0), n(2.0), n(3.0), n(5.0)])
     );
     assert_eq!(eval("{3..1}"), Value::list([]));
+    // Single-character text ranges.
+    let t = |c: &str| Value::text(c);
+    assert_eq!(eval(r#"{"a".."c"}"#), Value::list([t("a"), t("b"), t("c")]));
+    assert_eq!(eval(r#"{"c".."a"}"#), Value::list([]));
+    assert!(
+        eval_err(r#"{"ab".."c"}"#)
+            .to_string()
+            .contains("single-character")
+    );
+    assert!(
+        eval_err(r#"{"a"..1}"#)
+            .to_string()
+            .contains("operator .. to types Text and Number")
+    );
 }
 
 #[test]

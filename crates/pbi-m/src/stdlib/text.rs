@@ -11,7 +11,7 @@ use super::Builder;
 use super::args::{
     arg, count_arg, func_arg, int_arg, items, list_arg, req_list, req_text, text_arg,
 };
-use super::csv::{decode_bytes, encode_text, split_csv_line};
+use super::csv::{decode_bytes, encode_text};
 use super::table::is_ignore_case;
 use crate::eval::interp::{Interp, convert_error};
 use crate::merror::MError;
@@ -118,12 +118,12 @@ pub(super) fn register(b: &mut Builder) {
     b.func("Lines.ToText", &["lines", "?lineSeparator"], lines_to_text);
     b.func(
         "Splitter.SplitTextByDelimiter",
-        &["delimiter", "?quoteStyle"],
+        &["delimiter", "?quoteStyle", "?csvStyle"],
         splitter_by_delimiter,
     );
     b.func(
         "Splitter.SplitTextByAnyDelimiter",
-        &["delimiters", "?quoteStyle"],
+        &["delimiters", "?quoteStyle", "?startAtEnd"],
         splitter_by_any_delimiter,
     );
     b.func("Splitter.SplitByNothing", &[], splitter_by_nothing);
@@ -738,29 +738,146 @@ fn dyn_fn(
     ))
 }
 
-fn splitter_by_delimiter(_: &Interp, args: &[Value]) -> Result<Value, MError> {
-    let delim = req_text(args, 0)?.to_owned();
-    let csv = super::args::num_arg(args, 1)? == Some(1.0);
-    Ok(dyn_fn(
-        "Splitter.SplitTextByDelimiter",
-        &[("line", false)],
-        move |_, a| {
-            with_text(a, |t| {
-                let parts: Vec<String> = if csv {
-                    split_csv_line(t, &delim)
-                } else if delim.is_empty() {
-                    vec![t.to_owned()]
+/// How a text splitter treats double quotes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SplitQuotes {
+    /// `QuoteStyle.None`: quotes are data.
+    None,
+    /// `CsvStyle.QuoteAfterDelimiter`: a quote opens a quoted part only at the start of a part.
+    AfterDelimiter,
+    /// `CsvStyle.QuoteAlways`, the default: a quote opens a quoted part anywhere.
+    Always,
+}
+
+/// The quote handling of a splitter from its `quoteStyle` argument (default `QuoteStyle.Csv`)
+/// and, for `Splitter.SplitTextByDelimiter`, its `csvStyle` argument.
+fn split_quotes(
+    args: &[Value],
+    quote_style: usize,
+    csv_style: Option<usize>,
+) -> Result<SplitQuotes, MError> {
+    let csv = match super::args::num_arg(args, quote_style)? {
+        None => true,
+        Some(1.0) => true,
+        Some(0.0) => false,
+        Some(_) => return Err(MError::expression("The specified QuoteStyle is invalid.")),
+    };
+    let style = match csv_style {
+        Some(i) => super::args::num_arg(args, i)?,
+        None => None,
+    };
+    match (csv, style) {
+        (false, None) => Ok(SplitQuotes::None),
+        (false, Some(_)) => Err(MError::expression(
+            "'QuoteStyle.None' and 'CsvStyle' can't be used together.",
+        )),
+        (true, None) => Ok(SplitQuotes::Always),
+        (true, Some(0.0)) => Ok(SplitQuotes::AfterDelimiter),
+        (true, Some(1.0)) => Ok(SplitQuotes::Always),
+        (true, Some(_)) => Err(MError::expression("The specified CsvStyle is invalid.")),
+    }
+}
+
+fn check_delimiter(delimiter: &str) -> Result<(), MError> {
+    if delimiter.is_empty() {
+        return Err(MError::expression(
+            "A delimiter must be text at least 1 character in length.",
+        ));
+    }
+    Ok(())
+}
+
+/// Splits `text` at its delimiters: at each position outside quotes the first of `delimiters`
+/// (in list order) that starts there. Quotes are removed, `""` inside quotes is one quote and
+/// an unclosed quote runs to the end of the text; line breaks are data.
+fn split_quoted(text: &str, delimiters: &[String], quotes: SplitQuotes) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut part = String::new();
+    let mut in_quotes = false;
+    let mut part_start = true;
+    let mut rest = text;
+    while let Some(c) = rest.chars().next() {
+        if in_quotes {
+            if c == '"' {
+                if rest[1..].starts_with('"') {
+                    part.push('"');
+                    rest = &rest[2..];
                 } else {
-                    t.split(delim.as_str()).map(str::to_owned).collect()
-                };
+                    in_quotes = false;
+                    rest = &rest[1..];
+                }
+            } else {
+                part.push(c);
+                rest = &rest[c.len_utf8()..];
+            }
+            continue;
+        }
+        if let Some(d) = delimiters.iter().find(|d| rest.starts_with(d.as_str())) {
+            parts.push(std::mem::take(&mut part));
+            part_start = true;
+            rest = &rest[d.len()..];
+            continue;
+        }
+        let opens = match quotes {
+            SplitQuotes::None => false,
+            SplitQuotes::AfterDelimiter => part_start,
+            SplitQuotes::Always => true,
+        };
+        part_start = false;
+        if c == '"' && opens {
+            in_quotes = true;
+            rest = &rest[1..];
+            continue;
+        }
+        part.push(c);
+        rest = &rest[c.len_utf8()..];
+    }
+    parts.push(part);
+    parts
+}
+
+/// `startAtEnd`: delimiters are matched from the end of the text, which is the forward split
+/// of the reversed text with reversed delimiters.
+fn split_quoted_from_end(text: &str, delimiters: &[String], quotes: SplitQuotes) -> Vec<String> {
+    let reversed: String = text.chars().rev().collect();
+    let delimiters: Vec<String> = delimiters
+        .iter()
+        .map(|d| d.chars().rev().collect())
+        .collect();
+    let mut parts = split_quoted(&reversed, &delimiters, quotes);
+    parts.reverse();
+    parts
+        .into_iter()
+        .map(|p| p.chars().rev().collect())
+        .collect()
+}
+
+/// The function a splitter returns: `null` text gives an empty list.
+fn splitter(name: &str, split: impl Fn(&str) -> Vec<String> + Send + Sync + 'static) -> Value {
+    dyn_fn(name, &[("line", false)], move |it, a| {
+        match text_arg(a, 0, "")? {
+            None => Ok(Value::list([])),
+            Some(t) => {
+                let parts = split(t);
+                it.check_rows(parts.len())?;
                 Ok(Value::list(parts.into_iter().map(Value::text)))
-            })
-        },
-    ))
+            }
+        }
+    })
+}
+
+fn splitter_by_delimiter(_: &Interp, args: &[Value]) -> Result<Value, MError> {
+    let delimiter = req_text(args, 0)?.to_owned();
+    check_delimiter(&delimiter)?;
+    let quotes = split_quotes(args, 1, Some(2))?;
+    let delimiters = vec![delimiter];
+    Ok(splitter("Splitter.SplitTextByDelimiter", move |t| {
+        split_quoted(t, &delimiters, quotes)
+    }))
 }
 
 fn splitter_by_any_delimiter(it: &Interp, args: &[Value]) -> Result<Value, MError> {
-    let delims: Vec<String> = items(it, req_list(args, 0)?)?
+    let delimiters: Vec<String> = items(it, req_list(args, 0)?)?
         .into_iter()
         .map(|v| {
             v.as_text()
@@ -768,34 +885,18 @@ fn splitter_by_any_delimiter(it: &Interp, args: &[Value]) -> Result<Value, MErro
                 .ok_or_else(|| convert_error(&v, "Text"))
         })
         .collect::<Result<_, _>>()?;
-    Ok(dyn_fn(
-        "Splitter.SplitTextByAnyDelimiter",
-        &[("line", false)],
-        move |_, a| {
-            with_text(a, |t| {
-                let mut parts = Vec::new();
-                let mut rest = t;
-                loop {
-                    let next = delims
-                        .iter()
-                        .filter(|d| !d.is_empty())
-                        .filter_map(|d| rest.find(d.as_str()).map(|i| (i, d.len())))
-                        .min();
-                    match next {
-                        Some((i, len)) => {
-                            parts.push(Value::text(&rest[..i]));
-                            rest = &rest[i + len..];
-                        }
-                        None => {
-                            parts.push(Value::text(rest));
-                            break;
-                        }
-                    }
-                }
-                Ok(Value::list(parts))
-            })
-        },
-    ))
+    for d in &delimiters {
+        check_delimiter(d)?;
+    }
+    let quotes = split_quotes(args, 1, None)?;
+    let from_end = super::args::bool_arg(args, 2)?.unwrap_or(false);
+    Ok(splitter("Splitter.SplitTextByAnyDelimiter", move |t| {
+        if from_end {
+            split_quoted_from_end(t, &delimiters, quotes)
+        } else {
+            split_quoted(t, &delimiters, quotes)
+        }
+    }))
 }
 
 fn splitter_by_nothing(_: &Interp, _: &[Value]) -> Result<Value, MError> {

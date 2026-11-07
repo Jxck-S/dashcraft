@@ -100,7 +100,7 @@ Taken from the crates' `Cargo.toml` files (normal dependencies). Every crate exc
 | `pbi-tmsl` | TMSL JSON (`model.bim`, PBIT `DataModelSchema`) ↔ model, layout-preserving | `read_bim`, `read_data_model_schema`, `write_bim`, `write_data_model_schema` |
 | `pbi-pbir` | PBIR, PBIR-Legacy and PBIX `Layout` types (lossless: unknown fields, key order and number spellings kept), report AST conversion, themes and `ThemeDataColor` | `read_pbir`, `write_pbir`, `read_legacy_layout`, `to_report_ast` |
 | `pbi-core` | Detection, containers, readers, redaction, PBIP/PBIT writers, linter | `open_path`, `open_bytes`, `save_as_pbip`, `export_pbit`, `lint` |
-| `pbi-m` | M lexer, parser, printer, lazy evaluator, standard library, connectors | `Engine`, `parse_document`, `BlobResolver`, `library_names` |
+| `pbi-m` | M lexer, parser, printer, lazy evaluator, standard library, connectors, Power BI Desktop's library catalog (language service) | `Engine`, `parse_document`, `BlobResolver`, `library_names`, `service::catalog` |
 | `pbi-engine` | Arrow storage, relationship graph, filter propagation, storage-engine operations, DataFusion SQL | `Engine`, `EngineSnapshot`, `FilterContext` |
 | `pbi-dax` | DAX lexer, parser, printer, formula engine, function library, format strings | `evaluate_measure`, `EvalContext`, `format_value`, `supported_functions` |
 | `pbi-vertipaq` | XPress9 and Xpress (MS-XCA) decompression, ABF container, `metadata.sqlitedb` and legacy XML metadata, VertiPaq column decoding to Arrow | `open_pbix_datamodel`, `load_model`, `open_pbix_data` |

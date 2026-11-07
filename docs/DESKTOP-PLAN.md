@@ -874,6 +874,14 @@ optional language server.
     2,902 reformatted ground-truth queries return Desktop's original results.
 - [ ] **M7.3 M language service and formatter.** In `pbi-m`: completion of library functions,
   queries, steps and parameters (names supplied by the caller), diagnostics, hover, formatting.
+  - [x] M7.3a (2026-11-07) the library catalog and Desktop conformance: Power BI Desktop's whole
+    M standard library recorded from its mashup engine (suite `m-library`: 1,142 names, 941
+    functions with parameters and types) as `pbi_m::service::catalog`, the data hover, signature
+    help and completion will draw on; every name DashCraft implements matches it (kind,
+    parameter names and counts, types, constants). 177 M expressions recorded from Desktop
+    (suite `m-functions`) and compared by `crates/pbi-m/tests/groundtruth.rs`: 149 match, 27
+    call functions DashCraft lacks (ledgered, next), 1 differs by design (decimal literals).
+    Number text and rounding now follow Desktop.
 - [ ] **M7.4 TMDL language service.** In `pbi-tmdl`: structure validation, completion of
   properties and object references, formatting that matches the writer.
 - [ ] **M7.5 Formula bar with IntelliSense** for measures, calculated columns and tables,

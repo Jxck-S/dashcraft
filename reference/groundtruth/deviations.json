@@ -6,6 +6,174 @@
       "case": "measure/sales-scaled",
       "kind": "byDesign",
       "reason": "A floating-point SUM over Orders[Line Amount]: VertiPaq adds the rows in its storage order (rows reordered for compression), DashCraft adds value × count per dictionary entry, so the 15th significant digit differs (894300.500000003 vs 894300.500000001). Adding the rows in Desktop's own storage order reproduces …003 exactly, and the CSV order gives …4999999986, so matching would mean reproducing VertiPaq's row-reordering heuristic. The values agree within 1e-14 relative; FORMAT with General shows all 15 digits."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Splitter.SplitTextByEachDelimiter/basic",
+      "kind": "unsupported",
+      "reason": "`Splitter.SplitTextByEachDelimiter` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Splitter.SplitTextByPositions/basic",
+      "kind": "unsupported",
+      "reason": "`Splitter.SplitTextByPositions` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Splitter.SplitTextByLengths/basic",
+      "kind": "unsupported",
+      "reason": "`Splitter.SplitTextByLengths` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Splitter.SplitTextByCharacterTransition/basic",
+      "kind": "unsupported",
+      "reason": "`Splitter.SplitTextByCharacterTransition` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Text.NewGuid/length",
+      "kind": "unsupported",
+      "reason": "Text.NewGuid is not implemented: it is nondeterministic, and DashCraft's offline refresh is reproducible. A seeded generator may come with the M library growth."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Number.Bitwise/basic",
+      "kind": "unsupported",
+      "reason": "`Number.BitwiseAnd` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "List.Statistics/basic",
+      "kind": "unsupported",
+      "reason": "`List.Median` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "List.Split/basic",
+      "kind": "unsupported",
+      "reason": "`List.Split` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "List.ReplaceValue/basic",
+      "kind": "unsupported",
+      "reason": "`List.ReplaceValue` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Date.AddMonths/end-of-month",
+      "kind": "unsupported",
+      "reason": "`Date.AddWeeks` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Date.StartOfWeek/basic",
+      "kind": "unsupported",
+      "reason": "`Date.StartOfWeek` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Date.DayOfWeek/basic",
+      "kind": "unsupported",
+      "reason": "`Date.WeekOfYear` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Date.Names/basic",
+      "kind": "unsupported",
+      "reason": "`Date.MonthName` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Date.ToRecord/basic",
+      "kind": "unsupported",
+      "reason": "`Date.ToRecord` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Record/transform",
+      "kind": "unsupported",
+      "reason": "`Record.TransformFields` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.Group/basic",
+      "kind": "unsupported",
+      "reason": "`Table.Group` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.Group/local",
+      "kind": "unsupported",
+      "reason": "`Table.Group` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.Unpivot/basic",
+      "kind": "unsupported",
+      "reason": "`Table.UnpivotOtherColumns` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.Pivot/basic",
+      "kind": "unsupported",
+      "reason": "`Table.Pivot` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.NestedJoin/basic",
+      "kind": "unsupported",
+      "reason": "`Table.ExpandTableColumn` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.Join/inner",
+      "kind": "unsupported",
+      "reason": "`Table.Join` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.Transpose/basic",
+      "kind": "unsupported",
+      "reason": "`Table.Transpose` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.SplitColumn/basic",
+      "kind": "unsupported",
+      "reason": "`Table.SplitColumn` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.Max/basic",
+      "kind": "unsupported",
+      "reason": "`Table.Max` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Table.Schema/basic",
+      "kind": "unsupported",
+      "reason": "`Table.Schema` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Binary/basic",
+      "kind": "unsupported",
+      "reason": "`Binary.ToText` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "Json.FromValue/basic",
+      "kind": "unsupported",
+      "reason": "`Json.FromValue` is not in DashCraft's M library yet (M7.3 library growth implements it and removes this entry)."
+    },
+    {
+      "suite": "m-functions",
+      "case": "literals/decimal-precision",
+      "kind": "byDesign",
+      "reason": "Desktop keeps an M number literal as System.Decimal until arithmetic turns it into a double, so `9007199254740993` and `123456789.123456789` print as written; DashCraft's M numbers are f64, so a literal with more than 15-17 significant digits prints its nearest double. Computed values (the third item) agree."
     }
   ]
 }

@@ -201,19 +201,6 @@ fn parse(
     Ok(rows)
 }
 
-/// Splits one line with CSV quoting (`Splitter.SplitTextByDelimiter(d, QuoteStyle.Csv)`).
-pub(crate) fn split_csv_line(line: &str, delimiter: &str) -> Vec<String> {
-    let opts = CsvOptions {
-        delimiter,
-        quoted_newlines: true,
-        quote_always: false,
-    };
-    match parse(line, &opts, |_| Ok(())) {
-        Ok(rows) => rows.into_iter().flatten().collect(),
-        Err(_) => vec![line.to_owned()],
-    }
-}
-
 fn csv_document(it: &Interp, args: &[Value]) -> Result<Value, MError> {
     let source = arg(args, 0);
     let options: Option<&RecordValue> = arg(args, 1).as_record();

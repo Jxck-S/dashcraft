@@ -1013,6 +1013,9 @@ async fn queries_desktop_runs_have_no_errors_or_unknown_names() {
             serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
         };
         let corpus = read(&corpus_path);
+        if corpus["language"] == "m" {
+            continue;
+        }
         let recording_path = root
             .join("recordings")
             .join(corpus_path.file_name().unwrap());
