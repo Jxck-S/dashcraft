@@ -7,6 +7,18 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-07
 
+### M6 complete (docs)
+
+- **What:** M6 ticked in the ROADMAP; the plan, ROADMAP and GAPS say where the last open items
+  went: deleting a data column edits its query's M and comes with the Power Query editor (M14.7,
+  M14.9), editing a hierarchy's levels with the hierarchy editor (M10.5). The screen-reader runs of
+  acceptance 13 (A6) need a person and are listed under *Open items needing a human decision*.
+- **Why:** every M6 scope item (M6.1–M6.11) and acceptance criterion except A6 is done and
+  checked; M7 (language foundation) is next.
+- **Numbers:** docs only.
+- **Open:** A6 with VoiceOver, Narrator, NVDA and Orca
+  ([task](accessibility/m6-editing.md#a6-task-for-each-screen-reader)).
+
 ### M6 renames rewrite KPI and detail-rows DAX (M6.7, GT-6 s25)
 
 - **What:** `pbi-session`'s rename plan rewrites, besides a measure's expression and format
@@ -35,6 +47,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   from line ends and the blank last line the source file did not have.
 - **Open:** report-level measures of PBIR-Legacy and PBIX layouts (not read yet); KPI settings
   editors (M10.4).
+- **Commit:** `7143b52` (PR #46).
 
 ### M6 canvas selections follow renames
 
