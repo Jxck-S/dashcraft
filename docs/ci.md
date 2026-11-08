@@ -375,6 +375,38 @@ sets `-timeout=60 -rss_limit_mb=2048`.
 7. If the crate is owned by someone else at the moment, store the minimized
    input under `fuzz/regressions/<crate>/` with a short note instead.
 
+## `screen-reader.yml`: screen readers, weekly or on app PRs
+
+The screen-reader smoke tests of [ADR-0015](adr/0015-accessibility-target.md) (A6 in the
+[accessibility notes](accessibility/)) run in CI, so they need no person and nothing installed on a
+developer machine. Triggers: a pull request to `main` that touches `app/src/**`, the workflow or
+its script; Mondays at 05:23 UTC; **Run workflow**.
+
+| Job | Runs on | Screen reader | Gate |
+|---|---|---|---|
+| `NVDA (windows-latest)` | windows-latest, WebView2 | NVDA (portable, from `guidepup install`) | Blocking |
+| `VoiceOver (macos-15)` | macos-15, WKWebView | VoiceOver (AppleScript control and the TCC grants from `guidepup setup --ci`) | Blocking |
+| `Orca (ubuntu-26.04)` | ubuntu-26.04, WebKitGTK, under `dbus-run-session` and `xvfb-run` | Orca (the apt packages from `guidepup setup --ci`) | Informational (`continue-on-error`) |
+
+Each job builds the debug app (`npx tauri build --debug --no-bundle`), installs
+[Guidepup](https://github.com/guidepup/guidepup) (MIT; CI only, never bundled or installed by
+DashCraft) into `target/tmp/screen-reader/tools`, runs `guidepup setup --ci` (macOS, Linux) and
+`guidepup install` (the reader's assets in Guidepup's cache), then runs
+`scripts/app-checks/screen-reader.mjs`. The script opens a copy of the Acme Outfitters example,
+brings the window to the front and walks the M6 editing journey (search, measure formula, commit,
+undo and redo) and the M7 formula-bar journey (suggestions, insert, problems, Ctrl+K Ctrl+I, Tab
+mode, the Properties description, the File menu and its "Unsaved changes" question, save), using
+the platform's keys (⌘ and ⌥ on macOS). Each step clears the reader's log, acts, and checks
+what the reader said against a pattern; steps that depend on a reader's verbosity are marked
+informational in the report. The job fails when a required step fails.
+
+`report.md` goes to the job summary; `report.json`, `report.md` and the app log are uploaded as
+`screen-reader-<reader>` (default retention). The script drives the real keyboard and screen
+reader of the machine it runs on: don't run it on a workstation.
+
+Narrator has no automation interface. Its evidence is the UI Automation tree that it reads
+(`scripts/app-checks/uia.ps1`), recorded with each milestone's accessibility notes.
+
 ## Running the same checks locally
 
 ```sh

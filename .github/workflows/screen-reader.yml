@@ -96,17 +96,17 @@ jobs:
           npm init -y > /dev/null
           npm install --no-audit --no-fund "@guidepup/guidepup@$GUIDEPUP_VERSION" "@guidepup/setup@$GUIDEPUP_SETUP_VERSION"
 
-      # macOS: AppleScript control of VoiceOver, the TCC database, no Do Not Disturb. Linux: Orca,
-      # Xvfb, D-Bus and xdotool. Windows: portable NVDA in Guidepup's cache.
+      # setup (macOS, Linux): AppleScript control of VoiceOver, the TCC database, no Do Not
+      # Disturb; Orca, Xvfb, D-Bus and xdotool. install (every OS): the reader's assets in
+      # Guidepup's cache (portable NVDA, VoiceOver and Orca settings), which start() needs.
       - name: Set up the screen reader
         shell: bash
         working-directory: target/tmp/screen-reader/tools
         run: |
-          if [ "$RUNNER_OS" = Windows ]; then
-            npx --no-install guidepup install
-          else
+          if [ "$RUNNER_OS" != Windows ]; then
             npx --no-install guidepup setup --ci
           fi
+          npx --no-install guidepup install
 
       # Tab reaches every control (buttons too), as with Keyboard navigation on in System Settings.
       - name: Full keyboard access (macOS)

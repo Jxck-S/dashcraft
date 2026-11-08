@@ -53,6 +53,12 @@ if (win) writeFileSync(sendKeysVbs, 'CreateObject("WScript.Shell").SendKeys WScr
 const results = []
 let app = null
 
+// Screen readers split the names: NVDA says "Acme Outfitters dot pbip - Dash Craft".
+const DOCUMENT = /Acme ?Outfitters/i
+const TITLE = /Acme ?Outfitters.*Dash ?Craft|Dash ?Craft.*Acme ?Outfitters/i
+const DIRTY = /\*|\bstar\b|asterisk/i
+const INVALID = /invalid entry|invalid data|Error at line|Nope/i
+
 const said = async () =>
   (await sr.spokenPhraseLog())
     .filter(Boolean)
@@ -161,10 +167,10 @@ async function journey() {
     activate()
     await sr.clearSpokenPhraseLog()
     await title().catch(() => {})
-    ready = /AcmeOutfitters/.test(await said())
+    ready = DOCUMENT.test(await said())
     if (!ready) await sleep(3000)
   }
-  await step('S1', 'A1 the window title names the document and DashCraft', 'title', title, /AcmeOutfitters.*DashCraft|DashCraft.*AcmeOutfitters/)
+  await step('S1', 'A1 the window title names the document and DashCraft', 'title', title, TITLE)
 
   // M6: find the measure, edit its formula, hear the edit, undo and redo it.
   await step('S2', 'A2 Alt+Q focuses the search and says its name', SEARCH, () => press(SEARCH), /Search commands and fields/)
@@ -181,7 +187,7 @@ async function journey() {
     await press('Enter')
     await settle(1500)
   }, /Edit measure/)
-  await step('S8', 'A1 the title marks unsaved changes', 'title', title, /\*|\bstar\b|asterisk/i, { required: false })
+  await step('S8', 'A1 the title marks unsaved changes', 'title', title, DIRTY, { required: false })
   await step('S9', 'A2 the quick access Undo button is reachable and named', `${SEARCH}, Shift+Tab ×n`, async () => {
     await press(SEARCH)
     return `${await tabUntil(/Undo/, 5, true)} Shift+Tab presses`
@@ -226,8 +232,9 @@ async function journey() {
     await press(`${MOD}+k`)
     await press(`${MOD}+i`)
     await settle(1500)
-  }, /Nope|unknown/i)
-  await step('S18', 'M7 Shift+Enter and Alt+↑ edit lines', 'Shift+Enter, Alt+ArrowUp', async () => {
+  }, /unknown/i)
+  await step('S18', 'M7 Shift+Enter and Alt+↑ edit lines', `${LINE_END}, Shift+Enter, Alt+ArrowUp`, async () => {
+    await press(LINE_END)
     await press('Shift+Enter')
     await press('Alt+ArrowUp')
     await settle(1000)
@@ -236,13 +243,22 @@ async function journey() {
     await press(`${MOD}+m`)
     await settle(1000)
   }, /Tab now moves focus/)
-  await step('S20', 'M7 Tab then leaves the formula', 'Tab', () => press('Tab'), /Expand the formula bar/)
+  // Shift+Enter expanded the bar, so its button now says Collapse.
+  await step('S20', 'M7 Tab then leaves the formula', 'Tab', () => press('Tab'), /(Expand|Collapse) the formula bar/)
   await step('S21', 'M7 Shift+Tab comes back to the formula', 'Shift+Tab', () => press('Shift+Tab'), /Measure formula/)
+  // A pop-up still open (a description, the list) takes the first Esc.
   await step('S22', 'M7 Esc cancels the formula edit', 'Escape, focus report', async () => {
     await escape()
     await settle(1000)
+    await sr.clearSpokenPhraseLog()
     await focus()
-  }, (heard) => /Measure formula/.test(heard) && !/Nope/.test(heard), { required: false })
+    if (!INVALID.test(await said())) return 'one Escape'
+    await escape()
+    await settle(1000)
+    await sr.clearSpokenPhraseLog()
+    await focus()
+    return 'two Escapes'
+  }, (heard) => /Measure formula/.test(heard) && !INVALID.test(heard), { required: false })
 
   // M6: the Properties pane, the File menu and its question, saving.
   await step('S23', 'A2 the search opens the Properties pane', `${SEARCH}, "Properties", Enter`, async () => {
@@ -278,22 +294,25 @@ async function journey() {
     await press(`${MOD}+s`)
     await settle(3000)
   }, /Saved/)
-  await step('S32', 'A1 the title drops the unsaved mark', 'title', title, (heard) => /AcmeOutfitters/.test(heard) && !/\*|\bstar\b|asterisk/i.test(heard), { required: false })
+  await step('S32', 'A1 the title drops the unsaved mark', 'title', title, (heard) => DOCUMENT.test(heard) && !DIRTY.test(heard), { required: false })
 }
 
 const startedAt = new Date().toISOString()
 let failed = 1
 try {
   console.log(`starting ${reader.name}`)
-  await sr.start()
+  // Guidepup's default capture keeps only the first phrase after each key ("banner landmark",
+  // not the field that follows it).
+  await sr.start({ capture: true })
   const log = openSync(join(out, 'app.log'), 'w')
   const env = { ...process.env, DASHCRAFT_BLOB_MAP: join(copy, 'blob-map.json') }
   if (platform === 'linux') Object.assign(env, { WEBKIT_DISABLE_DMABUF_RENDERER: '1', WEBKIT_DISABLE_COMPOSITING_MODE: '1' })
   app = spawn(exe, [join(copy, 'AcmeOutfitters.pbip')], { env, stdio: ['ignore', log, log] })
   await journey()
 } catch (e) {
-  results.push({ id: 'S0', name: 'the run', keys: '', ok: false, required: true, heard: '', detail: '', error: e?.stack ?? String(e) })
-  console.log(`FAIL S0 the run: ${e?.stack ?? e}`)
+  const error = [e, e?.cause].filter(Boolean).map((x) => x?.stack ?? String(x)).join('\nCaused by: ')
+  results.push({ id: 'S0', name: 'the run', keys: '', ok: false, required: true, heard: '', detail: '', error })
+  console.log(`FAIL S0 the run: ${error}`)
 } finally {
   failed = writeReport(startedAt)
   await sr.stop().catch((e) => console.log(`stop: ${e.message}`))
