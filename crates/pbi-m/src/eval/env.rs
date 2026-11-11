@@ -20,8 +20,16 @@ pub(crate) struct Frame {
     data: RwLock<FrameData>,
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Frames alive on this thread (leak tests).
+    pub(crate) static LIVE: std::cell::Cell<isize> = const { std::cell::Cell::new(0) };
+}
+
 impl Drop for Frame {
     fn drop(&mut self) {
+        #[cfg(test)]
+        LIVE.with(|n| n.set(n.get() - 1));
         let d = self.data.get_mut().unwrap_or_else(PoisonError::into_inner);
         if !d.values.is_empty() {
             defer(Garbage::Slots(std::mem::take(&mut d.values)));
@@ -34,6 +42,8 @@ impl Drop for Frame {
 
 impl Frame {
     pub fn new(names: Arc<[Arc<str>]>, values: Vec<Lazy>, parent: Option<Env>) -> Arc<Frame> {
+        #[cfg(test)]
+        LIVE.with(|n| n.set(n.get() + 1));
         Arc::new(Frame {
             data: RwLock::new(FrameData {
                 names,

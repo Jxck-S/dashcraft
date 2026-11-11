@@ -1,0 +1,1 @@
+let r = [a = @r, b = {@r}] in r
