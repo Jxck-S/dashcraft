@@ -8,6 +8,12 @@
 //! object ids and source origins. A changed object lists the properties that
 //! differ, with both values; an added or removed one lists all of its
 //! properties, children included (its children are not listed separately).
+//!
+//! Each object also carries a text [`Snippet`] per side: model objects as
+//! TMDL, written by the TMDL writer from each side's model (so formatting
+//! never differs, only content), report objects as their properties in
+//! JSON. A changed table or report object leaves out the children compared
+//! on their own; an added or removed one keeps them.
 
 use std::collections::HashMap;
 
@@ -122,7 +128,34 @@ pub struct ObjectDiff {
     pub before: Option<Origin>,
     /// Where the object is in the second document.
     pub after: Option<Origin>,
+    /// The object as text on each side.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub snippet: Option<Snippet>,
 }
+
+/// The language of a [`Snippet`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SnippetLanguage {
+    /// Model objects, as the TMDL writer writes them.
+    Tmdl,
+    /// Report objects: their properties, pretty-printed.
+    Json,
+}
+
+/// An object's text on each side of a diff; a side is absent where the
+/// object is. Long texts are cut after [`MAX_SNIPPET_LINES`] lines, with a
+/// last line saying how many were left out.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Snippet {
+    pub language: SnippetLanguage,
+    pub before: Option<String>,
+    pub after: Option<String>,
+}
+
+/// The most lines a snippet side keeps.
+pub const MAX_SNIPPET_LINES: usize = 200;
 
 /// The objects that differ between two documents, in document order
 /// (model, its tables with their children, relationships, expressions, …,
@@ -155,7 +188,200 @@ pub fn diff_documents(before: &Document, after: &Document) -> DocumentDiff {
     for (b, a) in pair_by(&before.reports, &after.reports, |r| name_key(&r.name)) {
         d.report(b, a);
     }
-    DocumentDiff { objects: d.out }
+    let Differ { mut out, keys } = d;
+    if keys.iter().any(Option::is_some) {
+        let b = before.model.as_ref().map(TmdlIndex::of).unwrap_or_default();
+        let a = after.model.as_ref().map(TmdlIndex::of).unwrap_or_default();
+        for (object, key) in out.iter_mut().zip(&keys) {
+            let Some(key) = key else {
+                continue;
+            };
+            let own = object.change == DiffChange::Changed;
+            let before = if object.change == DiffChange::Added {
+                None
+            } else {
+                b.get(key, own)
+            };
+            let after = if object.change == DiffChange::Removed {
+                None
+            } else {
+                a.get(key, own)
+            };
+            if before.is_some() || after.is_some() {
+                object.snippet = Some(Snippet {
+                    language: SnippetLanguage::Tmdl,
+                    before,
+                    after,
+                });
+            }
+        }
+    }
+    DocumentDiff { objects: out }
+}
+
+// ---------------------------------------------------------------------------
+// Snippets
+
+/// Keeps at most [`MAX_SNIPPET_LINES`] lines, without trailing blank ones.
+fn capped<'a>(lines: impl Iterator<Item = &'a str>) -> String {
+    let mut lines: Vec<&str> = lines.collect();
+    while lines.last().is_some_and(|l| l.trim().is_empty()) {
+        lines.pop();
+    }
+    let more = lines.len().saturating_sub(MAX_SNIPPET_LINES);
+    lines.truncate(MAX_SNIPPET_LINES);
+    let mut text = lines.join("\n");
+    if more > 0 {
+        text.push_str(&format!("\n… ({more} more lines)"));
+    }
+    text
+}
+
+fn json_snippet(properties: Map<String, Value>) -> String {
+    let text = serde_json::to_string_pretty(&Value::Object(properties)).unwrap_or_default();
+    capped(text.lines())
+}
+
+/// The lookup key of a model object in a [`TmdlIndex`].
+fn tmdl_key(kind: DiffKind, name: &str) -> String {
+    format!("{}\u{0}{name}", kind.as_str())
+}
+
+fn member_key(kind: DiffKind, table: &str, member: &str) -> String {
+    tmdl_key(
+        kind,
+        &format!("{}\u{0}{}", name_key(table), name_key(member)),
+    )
+}
+
+/// TMDL keywords of a table's children that are compared as objects of
+/// their own.
+const TABLE_MEMBERS: &[(&str, DiffKind)] = &[
+    ("column", DiffKind::Column),
+    ("measure", DiffKind::Measure),
+    ("partition", DiffKind::Partition),
+    ("hierarchy", DiffKind::Hierarchy),
+];
+
+/// A node's text, with its `///` description but no other leading trivia,
+/// de-indented to its own level.
+fn node_text(node: &pbi_tmdl::Node) -> String {
+    let mut node = node.clone();
+    node.leading.retain(pbi_tmdl::Line::is_description);
+    let indent = node.line.indentation().to_owned();
+    let text = node.to_string();
+    capped(
+        text.lines()
+            .map(|l| l.strip_prefix(indent.as_str()).unwrap_or(l)),
+    )
+}
+
+/// A table or model node without the children compared on their own (and
+/// without `ref` lines).
+fn own_node(node: &pbi_tmdl::Node) -> pbi_tmdl::Node {
+    let mut node = node.clone();
+    node.children.retain(|c| {
+        !c.is_ref()
+            && !TABLE_MEMBERS
+                .iter()
+                .any(|(k, _)| c.keyword().eq_ignore_ascii_case(k))
+    });
+    for c in &mut node.children {
+        if c.keyword().eq_ignore_ascii_case("calculationGroup") {
+            c.children
+                .retain(|i| !i.keyword().eq_ignore_ascii_case("calculationItem"));
+        }
+    }
+    node
+}
+
+/// The TMDL text of every model object, from the TMDL writer's output.
+#[derive(Default)]
+struct TmdlIndex {
+    /// Key → (full text, text without the children compared on their own
+    /// where that differs).
+    texts: HashMap<String, (String, Option<String>)>,
+}
+
+impl TmdlIndex {
+    fn of(model: &Model) -> Self {
+        let mut texts = HashMap::new();
+        for (path, text) in pbi_tmdl::write_model(model, None) {
+            let Ok(file) = pbi_tmdl::parse_file(&path, &text) else {
+                continue;
+            };
+            for node in file.nodes.iter().filter(|n| !n.is_ref()) {
+                let name = node.name().unwrap_or_default();
+                let kind = match node.keyword().to_ascii_lowercase().as_str() {
+                    "model" => DiffKind::Model,
+                    "database" => DiffKind::Database,
+                    "table" => DiffKind::Table,
+                    "relationship" => DiffKind::Relationship,
+                    "expression" => DiffKind::Expression,
+                    "querygroup" => DiffKind::QueryGroup,
+                    "role" => DiffKind::Role,
+                    "cultureinfo" => DiffKind::Culture,
+                    "perspective" => DiffKind::Perspective,
+                    _ => continue,
+                };
+                let key = match kind {
+                    DiffKind::Model | DiffKind::Database => tmdl_key(kind, ""),
+                    DiffKind::Relationship => tmdl_key(kind, &name),
+                    _ => tmdl_key(kind, &name_key(&name)),
+                };
+                let entry = match kind {
+                    DiffKind::Model => (node_text(&own_node(node)), None),
+                    DiffKind::Table => {
+                        Self::members(&mut texts, &name, node);
+                        (node_text(node), Some(node_text(&own_node(node))))
+                    }
+                    _ => (node_text(node), None),
+                };
+                texts.insert(key, entry);
+            }
+        }
+        Self { texts }
+    }
+
+    fn members(
+        texts: &mut HashMap<String, (String, Option<String>)>,
+        table: &str,
+        node: &pbi_tmdl::Node,
+    ) {
+        for child in &node.children {
+            let keyword = child.keyword();
+            let member = TABLE_MEMBERS
+                .iter()
+                .find(|(k, _)| keyword.eq_ignore_ascii_case(k))
+                .map(|(_, kind)| *kind);
+            if let Some(kind) = member {
+                let name = child.name().unwrap_or_default();
+                texts.insert(member_key(kind, table, &name), (node_text(child), None));
+            } else if keyword.eq_ignore_ascii_case("calculationGroup") {
+                for item in child
+                    .children
+                    .iter()
+                    .filter(|i| i.keyword().eq_ignore_ascii_case("calculationItem"))
+                {
+                    let name = item.name().unwrap_or_default();
+                    texts.insert(
+                        member_key(DiffKind::CalculationItem, table, &name),
+                        (node_text(item), None),
+                    );
+                }
+            }
+        }
+    }
+
+    /// The text of an object: without its separately compared children
+    /// when `own` is set.
+    fn get(&self, key: &str, own: bool) -> Option<String> {
+        let (full, without) = self.texts.get(key)?;
+        Some(match without {
+            Some(without) if own => without.clone(),
+            _ => full.clone(),
+        })
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -354,32 +580,52 @@ unlocated!(QueryGroup, Culture, Perspective, ReportMeasure);
 #[derive(Default)]
 struct Differ {
     out: Vec<ObjectDiff>,
+    /// Per entry of `out`, the [`TmdlIndex`] key of a model object.
+    keys: Vec<Option<String>>,
+}
+
+fn is_report_kind(kind: DiffKind) -> bool {
+    matches!(
+        kind,
+        DiffKind::Report | DiffKind::ReportMeasure | DiffKind::Page | DiffKind::Visual
+    )
 }
 
 impl Differ {
     /// Records the difference of one object; returns whether it is in both
-    /// documents (so its children are compared too).
+    /// documents (so its children are compared too). `key` finds a model
+    /// object's TMDL text (unused for report objects, whose snippet is
+    /// their JSON).
     fn object<T: Serialize + Located>(
         &mut self,
         kind: DiffKind,
         path: String,
+        key: String,
         before: Option<&T>,
         after: Option<&T>,
         children: &[&str],
     ) -> bool {
-        let (change, props) = match (before, after) {
+        let report = is_report_kind(kind);
+        let (change, props, snippet) = match (before, after) {
             (Some(b), Some(a)) => {
-                let props = changed_properties(&properties(b, children), &properties(a, children));
+                let (bp, ap) = (properties(b, children), properties(a, children));
+                let props = changed_properties(&bp, &ap);
                 if props.is_empty() {
                     return true;
                 }
-                (DiffChange::Changed, props)
+                let snippet = report.then(|| (Some(json_snippet(bp)), Some(json_snippet(ap))));
+                (DiffChange::Changed, props, snippet)
             }
-            (None, Some(a)) => (DiffChange::Added, all_properties(properties(a, &[]), true)),
-            (Some(b), None) => (
-                DiffChange::Removed,
-                all_properties(properties(b, &[]), false),
-            ),
+            (None, Some(a)) => {
+                let ap = properties(a, &[]);
+                let snippet = report.then(|| (None, Some(json_snippet(ap.clone()))));
+                (DiffChange::Added, all_properties(ap, true), snippet)
+            }
+            (Some(b), None) => {
+                let bp = properties(b, &[]);
+                let snippet = report.then(|| (Some(json_snippet(bp.clone())), None));
+                (DiffChange::Removed, all_properties(bp, false), snippet)
+            }
             (None, None) => return false,
         };
         self.out.push(ObjectDiff {
@@ -389,7 +635,13 @@ impl Differ {
             properties: props,
             before: before.and_then(Located::origin).cloned(),
             after: after.and_then(Located::origin).cloned(),
+            snippet: snippet.map(|(before, after)| Snippet {
+                language: SnippetLanguage::Json,
+                before,
+                after,
+            }),
         });
+        self.keys.push((!report).then_some(key));
         change == DiffChange::Changed
     }
 
@@ -397,7 +649,15 @@ impl Differ {
         let path = after
             .or(before)
             .map_or_else(String::new, |m| m.name.clone());
-        if !self.object(DiffKind::Model, path, before, after, MODEL_CHILDREN) {
+        let model_key = tmdl_key(DiffKind::Model, "");
+        if !self.object(
+            DiffKind::Model,
+            path,
+            model_key,
+            before,
+            after,
+            MODEL_CHILDREN,
+        ) {
             return;
         }
         let (Some(b), Some(a)) = (before, after) else {
@@ -406,6 +666,7 @@ impl Differ {
         self.object(
             DiffKind::Database,
             "database".to_owned(),
+            tmdl_key(DiffKind::Database, ""),
             b.database.as_ref(),
             a.database.as_ref(),
             &[],
@@ -420,7 +681,15 @@ impl Differ {
                     r.from.table, r.from.column, r.to.table, r.to.column
                 )
             });
-            self.object(DiffKind::Relationship, path, br, ar, &[]);
+            let key = ar.or(br).map_or_else(String::new, |r| r.name.clone());
+            self.object(
+                DiffKind::Relationship,
+                path,
+                tmdl_key(DiffKind::Relationship, &key),
+                br,
+                ar,
+                &[],
+            );
         }
         self.named(DiffKind::Expression, &b.expressions, &a.expressions, |e| {
             e.name.as_str()
@@ -453,12 +722,14 @@ impl Differ {
     ) {
         for (b, a) in pair_by(before, after, |x| name_key(name(x))) {
             let path = a.or(b).map(|x| name(x).to_owned()).unwrap_or_default();
-            self.object(kind, path, b, a, &[]);
+            let key = tmdl_key(kind, &name_key(&path));
+            self.object(kind, path, key, b, a, &[]);
         }
     }
 
     fn table(&mut self, before: Option<&Table>, after: Option<&Table>) {
         let table = after.or(before).map_or("", |t| t.name.as_str()).to_owned();
+        let table_key = tmdl_key(DiffKind::Table, &name_key(&table));
         let compared = match (before, after) {
             (Some(b), Some(a)) => {
                 let mut bp = properties(b, TABLE_CHILDREN);
@@ -477,34 +748,50 @@ impl Differ {
                         properties: props,
                         before: b.origin.clone(),
                         after: a.origin.clone(),
+                        snippet: None,
                     });
+                    self.keys.push(Some(table_key));
                 }
                 Some((b, a))
             }
             _ => {
-                self.object(DiffKind::Table, table.clone(), before, after, &[]);
+                self.object(
+                    DiffKind::Table,
+                    table.clone(),
+                    table_key,
+                    before,
+                    after,
+                    &[],
+                );
                 None
             }
         };
         let Some((b, a)) = compared else {
             return;
         };
-        let member = |name: &str| format!("{table}[{name}]");
+        let keyed = |kind: DiffKind, name: String| {
+            let key = member_key(kind, &table, &name);
+            (format!("{table}[{name}]"), key)
+        };
         for (bc, ac) in pair_by(&b.columns, &a.columns, |c| name_key(&c.name)) {
-            let path = member(&ac.or(bc).map_or_else(String::new, |c| c.name.clone()));
-            self.object(DiffKind::Column, path, bc, ac, &[]);
+            let name = ac.or(bc).map_or_else(String::new, |c| c.name.clone());
+            let (path, key) = keyed(DiffKind::Column, name);
+            self.object(DiffKind::Column, path, key, bc, ac, &[]);
         }
         for (bm, am) in pair_by(&b.measures, &a.measures, |m| name_key(&m.name)) {
-            let path = member(&am.or(bm).map_or_else(String::new, |m| m.name.clone()));
-            self.object(DiffKind::Measure, path, bm, am, &[]);
+            let name = am.or(bm).map_or_else(String::new, |m| m.name.clone());
+            let (path, key) = keyed(DiffKind::Measure, name);
+            self.object(DiffKind::Measure, path, key, bm, am, &[]);
         }
         for (bh, ah) in pair_by(&b.hierarchies, &a.hierarchies, |h| name_key(&h.name)) {
-            let path = member(&ah.or(bh).map_or_else(String::new, |h| h.name.clone()));
-            self.object(DiffKind::Hierarchy, path, bh, ah, &[]);
+            let name = ah.or(bh).map_or_else(String::new, |h| h.name.clone());
+            let (path, key) = keyed(DiffKind::Hierarchy, name);
+            self.object(DiffKind::Hierarchy, path, key, bh, ah, &[]);
         }
         for (bp, ap) in pair_by(&b.partitions, &a.partitions, |p| name_key(&p.name)) {
-            let path = member(&ap.or(bp).map_or_else(String::new, |p| p.name.clone()));
-            self.object(DiffKind::Partition, path, bp, ap, &[]);
+            let name = ap.or(bp).map_or_else(String::new, |p| p.name.clone());
+            let (path, key) = keyed(DiffKind::Partition, name);
+            self.object(DiffKind::Partition, path, key, bp, ap, &[]);
         }
         let no_items: &[CalculationItem] = &[];
         let items = |t: &Table| {
@@ -515,8 +802,9 @@ impl Differ {
         };
         let (bi, ai) = (items(b), items(a));
         for (bc, ac) in pair_by(&bi, &ai, |c| name_key(&c.name)) {
-            let path = member(&ac.or(bc).map_or_else(String::new, |c| c.name.clone()));
-            self.object(DiffKind::CalculationItem, path, bc, ac, &[]);
+            let name = ac.or(bc).map_or_else(String::new, |c| c.name.clone());
+            let (path, key) = keyed(DiffKind::CalculationItem, name);
+            self.object(DiffKind::CalculationItem, path, key, bc, ac, &[]);
         }
     }
 
@@ -525,6 +813,7 @@ impl Differ {
         if !self.object(
             DiffKind::Report,
             report.clone(),
+            String::new(),
             before,
             after,
             REPORT_CHILDREN,
@@ -540,7 +829,7 @@ impl Differ {
             let path = am
                 .or(bm)
                 .map_or_else(String::new, |m| format!("{report}/{}[{}]", m.table, m.name));
-            self.object(DiffKind::ReportMeasure, path, bm, am, &[]);
+            self.object(DiffKind::ReportMeasure, path, String::new(), bm, am, &[]);
         }
         for (bp, ap) in pair_by(&b.pages, &a.pages, |p| p.name.clone()) {
             let page = ap.or(bp).map_or_else(String::new, |p| {
@@ -551,7 +840,14 @@ impl Differ {
                 };
                 format!("{report}/{shown}")
             });
-            if !self.object(DiffKind::Page, page.clone(), bp, ap, PAGE_CHILDREN) {
+            if !self.object(
+                DiffKind::Page,
+                page.clone(),
+                String::new(),
+                bp,
+                ap,
+                PAGE_CHILDREN,
+            ) {
                 continue;
             }
             let (Some(bp), Some(ap)) = (bp, ap) else {
@@ -561,7 +857,7 @@ impl Differ {
                 let path = av
                     .or(bv)
                     .map_or_else(String::new, |v| format!("{page}/{}", v.name));
-                self.object(DiffKind::Visual, path, bv, av, &[]);
+                self.object(DiffKind::Visual, path, String::new(), bv, av, &[]);
             }
         }
     }
@@ -687,6 +983,27 @@ mod tests {
                 (Some("a"), Some("a")),
                 (Some("b"), None),
             ]
+        );
+    }
+
+    #[test]
+    fn long_snippets_are_cut_with_a_count() {
+        let mut big = Table::new("Big");
+        for i in 0..150 {
+            big.columns
+                .push(Column::data(format!("C{i}"), DataType::Decimal));
+        }
+        let diff = diff_documents(&doc(model(vec![])), &doc(model(vec![big])));
+        let snippet = diff.objects[0].snippet.as_ref().unwrap();
+        assert_eq!(snippet.before, None);
+        let text = snippet.after.as_ref().unwrap();
+        let lines: Vec<_> = text.lines().collect();
+        assert_eq!(lines.len(), MAX_SNIPPET_LINES + 1);
+        assert_eq!(lines[0], "table Big");
+        assert!(
+            lines[MAX_SNIPPET_LINES].starts_with("… (") && text.ends_with(" more lines)"),
+            "{}",
+            lines[MAX_SNIPPET_LINES]
         );
     }
 }

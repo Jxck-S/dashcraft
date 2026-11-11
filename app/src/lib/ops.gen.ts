@@ -3273,6 +3273,13 @@ export interface ObjectDiffOut {
   before?: OriginOut | null
   /** Where the object is in the document's source files. */
   after?: OriginOut | null
+  /**
+   * The object as text on each side: TMDL for model objects (as DashCraft
+   * writes them, so only content differs), JSON properties for report
+   * objects; a changed table, report or page leaves out its children
+   * listed on their own. Each side is cut after 200 lines.
+   */
+  snippet?: SnippetOut | null
 }
 
 /**
@@ -4243,6 +4250,21 @@ export interface SlicerParam {
   values?: JsonValue[]
   /** Select everything except `values`. */
   invert?: boolean
+}
+
+/** The language of a snippet. */
+export type SnippetLanguageOut = 'tmdl' | 'json'
+
+/**
+ * An object's text on each side of a diff; a side is absent where the
+ * object is.
+ */
+export interface SnippetOut {
+  language: SnippetLanguageOut
+  /** The text in what the document is compared with. */
+  before?: string | null
+  /** The text in the document. */
+  after?: string | null
 }
 
 /** Sort order of `data.page`. */

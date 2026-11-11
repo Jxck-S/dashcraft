@@ -7,6 +7,22 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M8.3: TMDL and JSON snippets in doc.diff and Compare
+
+- **What:** `pbi_core::diff_documents` gives each object a `Snippet` (before and after text):
+  model objects as TMDL, written by `pbi_tmdl::write_model` from each side's model and cut out
+  of the CST (descriptions kept, de-indented; a changed table without its columns, measures,
+  partitions, hierarchies and calculation items), report objects as their JSON properties; at
+  most 200 lines per side. `doc.diff` returns it as `snippet` (`ops.gen.ts` regenerated). The
+  app's Compare shows it with a line diff (`app/src/lib/lineDiff.ts`, a read-only text box with
+  `-`/`+` lines).
+- **Why:** M8.3 scope ("with TMDL and PBIR snippets"). The JSON is DashCraft's view of the
+  report object, not the PBIR file's text: in-memory report objects have no PBIR text until saved.
+- **Numbers:** `crates/pbi-core/tests/diff.rs` asserts the snippets of the six scripted Acme
+  changes; a 150-column table is cut at 200 lines; `npm run check` 48 → 51 tests;
+  `external-changes.mjs` 32 → 34 checks, all passing (IBM checker and contrast included).
+- **Open:** comparing two documents or folders from the app.
+
 ### M8.2 and M8.3 app: external-changes bar, Compare
 
 - **What:** `App.svelte` polls `doc.externalChanges` every 1.5 s while the window is visible

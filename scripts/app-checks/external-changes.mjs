@@ -74,7 +74,7 @@ try {
       const violations = issues.filter((i) => i.level === 'VIOLATION/FAIL')
       check(`A3 checker (WCAG 2.2 A and AA), ${surface}: no violation`, violations.length === 0, violations.map((i) => `${i.rule} on ${i.where}: ${i.msg}`).join('; '))
     }
-    const text = await evaluate(`[...document.querySelectorAll('.bar.external span, .bar.external button, [role="dialog"][aria-label^="Compare "] :is(h2, h3, p, summary, th, td, pre, button, code)')].map((e) => [e.textContent.trim().slice(0, 20), __a11y.ratio(getComputedStyle(e).color, __a11y.bg(e))])`)
+    const text = await evaluate(`[...document.querySelectorAll('.bar.external span, .bar.external button, [role="dialog"][aria-label^="Compare "] :is(h2, h3, p, summary, th, td, pre, button, code, .line)')].map((e) => [e.textContent.trim().slice(0, 20), __a11y.ratio(getComputedStyle(e).color, __a11y.bg(e))])`)
     const low = text.filter(([, r]) => r < 4.5)
     check('A4 text at least 4.5:1', low.length === 0, low.map(([t, r]) => `${t} ${r}:1`).join('; ') || `${text.length} elements`)
   } else console.log(`SKIP: ${aceJs} missing (A3 checker, A4 contrast)`)
@@ -89,6 +89,9 @@ try {
   check('Compare lists the changed measure as different', listed?.includes('Orders[Total Sales]') && listed.includes('Different'), listed?.slice(0, 200) ?? 'no list')
   check('Compare shows both expressions', listed?.includes('SUM(Orders[Line Amount]) * 1') && listed.includes('expression'), listed?.slice(0, 200) ?? '')
   check('Compare names the changed file', listed?.includes('Orders.tmdl'))
+const lines = await evaluate(`[...${compare}.querySelectorAll('.snippet .line')].map((l) => l.textContent)`)
+check('Compare shows the TMDL: the disk line minus, this line plus', lines?.includes("-measure 'Total Sales' = SUM(Orders[Line Amount]) * 1") && lines.includes("+measure 'Total Sales' = SUM(Orders[Line Amount])"), JSON.stringify(lines?.slice(0, 4)))
+check('unchanged TMDL lines are kept once', lines?.some((l) => l.startsWith(' \tformatString')), JSON.stringify(lines?.slice(0, 6)))
   check('Keep mine in Compare', await evaluate(click('[role="dialog"][aria-label^="Compare "] button', 'Keep mine')))
   check('Keep mine closes Compare and the bar', await waitFor(`!${compare} && !${bar}`, 5000))
   await sleep(300)
