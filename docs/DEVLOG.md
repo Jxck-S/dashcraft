@@ -7,6 +7,21 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M6 acceptance 6: the PBIT half
+
+- **What:** `save_as_template_keeps_the_expected_values` in `crates/pbi-ops/tests/e2e.rs`: Acme
+  with `Orders[Line Amount]` renamed, written as a PBIT (`convert.pbit`, the Stores report),
+  opened in a fresh workspace, refreshed from its CSVs through the blob map; every row count and
+  measure of `expected.json` and the Stores page's Total Sales card match. DESKTOP-PLAN: M6's
+  command list drops `doc.status` and `doc.reload`, which were never built and belong to M8.2
+  (external changes, Reload), and M8's list gains them.
+- **Why:** a check of every M6 item after A6 found that only the PBIP half of acceptance 6 had a
+  test, and that the plan still listed the two commands under M6.
+- **Numbers:** the new test passed against the code already on `main`, so it adds coverage
+  without a fix. Both criterion 6 tests pass in 1.6 s.
+- **Open:** P09 is 53 ms on the CI runner's quick run, against a 50 ms target. It is within
+  target on a Windows desktop (acceptance 12).
+
 ### A6: screen readers in CI
 
 - **What:** `.github/workflows/screen-reader.yml` builds `dashcraft-app` on hosted runners and
@@ -23,8 +38,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   (M31.8): its evidence in CI is the UI Automation tree the A1–A5 checks already cover.
 - **Numbers:** NVDA passes all 27 required steps of 32 (about 4.5 minutes); VoiceOver 24 to 26 of 32
   in about 13 minutes; Orca 20 of 32 (runs 4 and 5 on PR #66). `formula-keys.mjs` 44 checks (one new, the Esc case), `editing-a11y.mjs` 21.
-  Commits `b5cdf9d`, `3800ef2`, `6fdf4e9`, `051b99f`, `139f67c` and the docs commit, squashed
-  in PR #66.
+  Commit `633faa8` (PR #66, squashed).
 - **Open:** VoiceOver doesn't read the active suggestion (S14, `aria-activedescendant` on a
   text area), and only sometimes reads the suggestion count (S13) or announces a description's
   apply (S25, likely the `readonly` toggle while saving). No VoiceOver command reads the window title

@@ -613,9 +613,10 @@ carried over (a warning; loaded data stays in memory), and `convert.pbip`/`conve
 write the edited document. Acceptance criterion 5 passes for the model structure (tables,
 columns, measures, partitions, relationships, roles), pages, filters and theme of all four
 committed samples (`samples_save_as_pbip_with_an_equal_structure` in
-`crates/pbi-core/tests/save_in_place.rs`), and the PBIP half of 6 passes (Acme with a rename,
-saved as, reopened and refreshed through the blob map, gives every value of `expected.json`:
-`crates/pbi-ops/tests/e2e.rs::save_as_project_keeps_the_expected_values`); Desktop opens a PBIT
+`crates/pbi-core/tests/save_in_place.rs`), and 6 passes (Acme with a rename, saved as a PBIP and as a PBIT,
+reopened and refreshed through the blob map, gives every value of `expected.json`:
+`save_as_project_keeps_the_expected_values` and `save_as_template_keeps_the_expected_values` in
+`crates/pbi-ops/tests/e2e.rs`); Desktop opens a PBIT
 saved as a PBIP with the same edits and records it identically to the edited PBIP (GT-6). New
 measures get a `lineageTag` from the session's identifier generator (random GUIDs, a fixed
 sequence in tests; ADR-0014) when the model already uses lineage tags, and Desktop reads the
@@ -778,7 +779,7 @@ generator), `pbi-tmdl` and `pbi-pbir` (writers for created objects), `pbi-dax` a
 (reference rewriting), `pbi-ops` (commands, history, transactions, notifications), `dashcraft-cli`,
 `dashcraft-app` (UI only). No new crate or edge.
 
-**New registry commands.** `doc.save`, `doc.saveAs`, `doc.status`, `doc.reload`, `doc.undo`,
+**New registry commands.** `doc.save`, `doc.saveAs`, `doc.undo`,
 `doc.redo`, `doc.history`, `doc.applyEdits`, `model.measure.create`, `model.measure.update`,
 `model.measure.delete`, `model.table.create`, `model.table.update`, `model.table.delete`,
 `model.column.create`,
@@ -786,6 +787,8 @@ generator), `pbi-tmdl` and `pbi-pbir` (writers for created objects), `pbi-dax` a
 `model.relationship.create`, `model.relationship.update`, `model.relationship.delete`,
 `model.object.rename`,
 `model.object.setDescription`, `model.dependencies`, `report.visual.move`, `report.visual.resize`.
+`doc.status` and `doc.reload`, first planned here, belong to the external changes of M8.2 and moved
+there.
 
 **Writers.** In-place PBIP save with per-file change tracking; TMDL emission of new objects per
 ADR-0014; PBIR visual position edits.
@@ -1071,7 +1074,7 @@ version; compare two versions of a project.
 **Crates and layers.** `pbi-ops` (journal, watcher, commands), `pbi-core` (diff), `dashcraft-app`.
 
 **New registry commands.** `doc.recovery.list`, `doc.recovery.restore`, `doc.recovery.discard`,
-`doc.diff`, `doc.externalChanges`.
+`doc.diff`, `doc.externalChanges`, `doc.status`, `doc.reload` (the last two moved from M6).
 
 **Writers.** The recovery journal (internal, versioned).
 

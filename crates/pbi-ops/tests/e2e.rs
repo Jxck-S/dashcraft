@@ -1601,6 +1601,67 @@ async fn save_as_project_keeps_the_expected_values() {
     );
 }
 
+/// The PBIT half of M6 acceptance 6: the example with a column rename, saved as a
+/// template, reopened in a fresh workspace and refreshed through the blob map, gives
+/// every expected value.
+#[tokio::test(flavor = "multi_thread")]
+async fn save_as_template_keeps_the_expected_values() {
+    let (Some(pbip), Some(map), Some(exp)) = (fixture(PBIP), fixture(BLOB_MAP), expected()) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    r.run(
+        "model.object.rename",
+        json!({"docId": doc, "table": "Orders", "column": "Line Amount", "newName": "Line Total"}),
+    )
+    .await;
+    let stores = exp.report("Stores");
+    let dir = tmp_dir("pbi-ops-save-as-pbit-");
+    // A template's one report takes the file's name.
+    let pbit = dir.path().join("Stores.pbit");
+    r.run(
+        "convert.pbit",
+        json!({"docId": doc, "outPath": pbit, "report": stores["report"]}),
+    )
+    .await;
+
+    let fresh = Runner::new();
+    let saved = fresh
+        .open(json!({"path": pbit, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let measures = fresh.run("model.measures", json!({"docId": saved})).await;
+    let text = measures.to_string();
+    assert!(
+        text.contains("[Line Total]") && !text.contains("[Line Amount]"),
+        "the rename is in the template"
+    );
+    let refresh = fresh.run("data.refresh", json!({"docId": saved})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    for (name, rows) in exp.row_counts() {
+        assert_eq!(table(&refresh["tables"], name)["rows"], rows, "{name}");
+    }
+    let all = fresh.run("measures.values", json!({"docId": saved})).await;
+    assert_eq!(all["ok"], true);
+    for (name, _, formatted) in exp.measures() {
+        assert_eq!(measure(&all, name)["formatted"], formatted, "{name}");
+    }
+    let render = fresh
+        .run("render.page", json!({"docId": saved, "report": "Stores"}))
+        .await;
+    assert_eq!(render["ok"], true, "{}", render["visuals"]);
+    let card = exp.card("Stores", "Store Performance", "kpis", "Total Sales");
+    assert!(
+        render["svg"]
+            .as_str()
+            .unwrap()
+            .contains(&format!(">{card}<")),
+        "no {card} on the page"
+    );
+}
+
 async fn expression_names(r: &Runner, doc: &str) -> Vec<String> {
     let inspect = r.run("doc.inspect", json!({"docId": doc})).await;
     inspect["model"]["expressions"]
