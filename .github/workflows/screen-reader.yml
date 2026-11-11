@@ -34,7 +34,7 @@ jobs:
   screen-reader:
     name: ${{ matrix.reader }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     continue-on-error: ${{ matrix.informational }}
     strategy:
       fail-fast: false
@@ -113,8 +113,10 @@ jobs:
         if: runner.os == 'macOS'
         run: defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
 
+      # Its own limit, so a stuck reader still leaves the report to upload.
       - name: Run the screen-reader journey
         shell: bash
+        timeout-minutes: 45
         env:
           GUIDEPUP_DIR: ${{ github.workspace }}/target/tmp/screen-reader/tools
         run: |
@@ -133,4 +135,5 @@ jobs:
             target/tmp/screen-reader/run/report.json
             target/tmp/screen-reader/run/report.md
             target/tmp/screen-reader/run/app.log
+            target/tmp/screen-reader/run/*.png
           if-no-files-found: warn

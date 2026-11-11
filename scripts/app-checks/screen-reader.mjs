@@ -10,7 +10,8 @@
 // GUIDEPUP_DIR is the folder whose node_modules has @guidepup/guidepup (default
 // target/tmp/screen-reader/tools). Works on a copy of Acme Outfitters under
 // target/tmp/screen-reader/run and writes report.json and report.md there (and to the job
-// summary on GitHub). Exits 1 when a required step fails.
+// summary on GitHub), with a screenshot per failed step on macOS. Exits 1 when a required step
+// fails.
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { appendFileSync, cpSync, existsSync, mkdirSync, openSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -26,8 +27,11 @@ const out = join(root, 'target', 'tmp', 'screen-reader', 'run')
 
 const READERS = {
   win32: { name: 'NVDA', title: (sr) => sr.keyboardCommands.reportTitle, focus: (sr) => sr.keyboardCommands.reportCurrentFocus },
-  darwin: { name: 'VoiceOver', title: (sr) => sr.commanderCommands.DESCRIBE_WINDOW, focus: (sr) => sr.keyboardCommands.describeItemWithKeyboardFocus },
-  linux: { name: 'Orca', title: (sr) => sr.keyboardCommands.WhereAmIPresenter.PresentTitle, focus: (sr) => sr.keyboardCommands.WhereAmIPresenter.WhereAmIBasic },
+  // VoiceOver commands through AppleScript, not VO-key chords: after the synthetic VO-F4 chord
+  // VoiceOver went silent in CI.
+  darwin: { name: 'VoiceOver', title: (sr) => sr.commanderCommands.DESCRIBE_WINDOW, focus: (sr) => sr.commanderCommands.DESCRIBE_ITEM_WITH_KEYBOARD_FOCUS },
+  // Orca's basic "where am I" leaves out the description; the detailed one reads it.
+  linux: { name: 'Orca', title: (sr) => sr.keyboardCommands.WhereAmIPresenter.PresentTitle, focus: (sr) => sr.keyboardCommands.WhereAmIPresenter.WhereAmIDetailed },
 }
 const reader = READERS[platform]
 if (!reader) throw new Error(`no screen reader for ${platform}`)
@@ -67,7 +71,7 @@ const said = async () =>
     .trim()
 
 /** Waits `ms` while recording what the screen reader says (live regions, late announcements). */
-const settle = (ms) => sr.capture(() => sleep(ms))
+const settle = (ms) => sr.capture(() => sleep(ms), { capture: true })
 
 const press = (key) => sr.press(key)
 
@@ -114,12 +118,21 @@ async function step(id, name, keys, run, expect, { required = true } = {}) {
   }
   const heard = await said()
   const ok = !error && (expect == null || (typeof expect === 'function' ? expect(heard) : expect.test(heard)))
-  results.push({ id, name, keys, ok, required, heard, detail, error })
+  let screenshot = ''
+  if (!ok && required && mac) {
+    try {
+      execFileSync('screencapture', ['-x', join(out, `${id}.png`)], { timeout: 20000 })
+      screenshot = `${id}.png`
+    } catch (e) {
+      console.log(`screencapture: ${e.message.split('\n')[0]}`)
+    }
+  }
+  results.push({ id, name, keys, ok, required, heard, detail, error, screenshot })
   console.log(`${ok ? 'PASS' : required ? 'FAIL' : 'NOTE'} ${id} ${name}${detail ? ` (${detail})` : ''}${error ? `: ${error}` : ''}\n     heard: ${heard.slice(0, 400)}`)
   return ok
 }
 
-/** Brings the app window to the front so the keys and the screen reader go to it. */
+/** Brings the app window to the front so the keys and the screen reader go to it; false if it can't. */
 function activate() {
   try {
     if (win) {
@@ -132,8 +145,10 @@ function activate() {
       execFileSync('xdotool', ['windowfocus', '--sync', id], { timeout: 20000 })
       execFileSync('xdotool', ['mousemove', '--window', id, '400', '300'], { timeout: 20000 })
     }
+    return true
   } catch (e) {
     console.log(`activate: ${e.message.split('\n')[0]}`)
+    return false
   }
 }
 
@@ -149,7 +164,7 @@ function writeReport(startedAt) {
     '',
     '| Step | Keys | Result | Heard |',
     '|---|---|---|---|',
-    ...results.map((r) => `| ${r.id} ${cell(r.name)}${r.detail ? ` (${cell(r.detail)})` : ''} | ${cell(r.keys)} | ${r.ok ? 'pass' : r.required ? '**FAIL**' : 'note'}${r.error ? `: ${cell(r.error)}` : ''} | ${cell(r.heard) || '(nothing)'} |`),
+    ...results.map((r) => `| ${r.id} ${cell(r.name)}${r.detail ? ` (${cell(r.detail)})` : ''} | ${cell(r.keys)} | ${r.ok ? 'pass' : r.required ? '**FAIL**' : 'note'}${r.error ? `: ${cell(r.error)}` : ''}${r.screenshot ? ` (${r.screenshot})` : ''} | ${cell(r.heard) || '(nothing)'} |`),
     '',
   ].join('\n')
   writeFileSync(join(out, 'report.md'), md)
@@ -161,13 +176,14 @@ async function journey() {
   const title = () => sr.perform(reader.title(sr))
   const focus = () => sr.perform(reader.focus(sr))
 
-  // Wait for the document: the window title names the file once it is open.
+  // Wait for the window (System Events lists the process only once it has one) and the
+  // document: the window title names the file once it is open.
   let ready = false
   for (let i = 0; i < 40 && !ready; i++) {
-    activate()
+    const front = activate()
     await sr.clearSpokenPhraseLog()
     await title().catch(() => {})
-    ready = DOCUMENT.test(await said())
+    ready = front && DOCUMENT.test(await said())
     if (!ready) await sleep(3000)
   }
   await step('S1', 'A1 the window title names the document and DashCraft', 'title', title, TITLE)
@@ -213,7 +229,7 @@ async function journey() {
     await press(LINE_END)
     await type(' + COUNT')
     await settle(1500)
-  }, /suggestions/)
+  }, /suggestions/i)
   await step('S14', 'M7 arrows say the active suggestion', 'ArrowDown', () => press('ArrowDown'), /COUNT/)
   await step('S15', 'M7 Tab inserts the suggestion and says so', '"R", Tab', async () => {
     await type('R')
@@ -301,9 +317,11 @@ const startedAt = new Date().toISOString()
 let failed = 1
 try {
   console.log(`starting ${reader.name}`)
-  // Guidepup's default capture keeps only the first phrase after each key ("banner landmark",
-  // not the field that follows it).
-  await sr.start({ capture: true })
+  // Guidepup's default capture keeps only the first phrase after each key: NVDA and Orca say
+  // "banner landmark" first and the field after it. VoiceOver says both in one phrase, and its
+  // full capture polls AppleScript until the phrase is stable (seconds per key), so it keeps the
+  // first phrase there; settle() captures everything for the late announcements.
+  await sr.start({ capture: mac ? 'initial' : true })
   const log = openSync(join(out, 'app.log'), 'w')
   const env = { ...process.env, DASHCRAFT_BLOB_MAP: join(copy, 'blob-map.json') }
   if (platform === 'linux') Object.assign(env, { WEBKIT_DISABLE_DMABUF_RENDERER: '1', WEBKIT_DISABLE_COMPOSITING_MODE: '1' })
