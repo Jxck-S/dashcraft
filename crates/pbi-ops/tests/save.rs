@@ -424,6 +424,101 @@ async fn documents_without_a_project_track_no_external_changes() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn diff_compares_the_revision_with_disk_and_other_documents() {
+    let dir = tmp_dir("diff-");
+    let pbip = mini_pbip(dir.path());
+    let other_dir = tmp_dir("diff-other-");
+    let other_pbip = mini_pbip(other_dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+    let id = json!({"docId": doc});
+    let out = r.run("doc.diff", id.clone()).await;
+    assert_eq!(
+        (&out["against"], &out["identical"], &out["objects"]),
+        (&json!("disk"), &json!(true), &json!([])),
+        "{out}"
+    );
+
+    let measures = r.run("model.measures", id.clone()).await;
+    let total = measures["measures"][0]["id"].as_u64().unwrap();
+    r.run(
+        "model.object.setDescription",
+        json!({"docId": doc, "objectId": total, "text": "Unsaved"}),
+    )
+    .await;
+    let out = r.run("doc.diff", id.clone()).await;
+    assert_eq!(
+        (&out["identical"], &out["changed"], &out["revision"]),
+        (&json!(false), &json!(1), &json!(1)),
+        "{out}"
+    );
+    let object = &out["objects"][0];
+    assert_eq!(
+        (&object["kind"], &object["path"], &object["change"]),
+        (&json!("measure"), &json!("Sales[Total]"), &json!("changed")),
+        "{out}"
+    );
+    assert_eq!(
+        object["properties"],
+        json!([{"name": "description", "after": "Unsaved"}])
+    );
+    assert_eq!(object["after"]["path"], SALES_TMDL, "{object}");
+
+    // An external change shows up too, as the other side of the property.
+    let sales = dir.path().join(SALES_TMDL);
+    let text = fs::read_to_string(&sales).unwrap().replace(
+        "measure Total = SUM(Sales[Amount])",
+        "measure Total = SUM(Sales[Amount]) * 3",
+    );
+    fs::write(&sales, text).unwrap();
+    let out = r.run("doc.diff", id.clone()).await;
+    let props = &out["objects"][0]["properties"];
+    assert_eq!(
+        props[1],
+        json!({"name": "expression", "before": "SUM(Sales[Amount]) * 3", "after": "SUM(Sales[Amount])"}),
+        "{out}"
+    );
+
+    // Against another open copy, or a copy on disk: only the edit.
+    let other = r
+        .open(json!({"path": other_pbip, "autoRefresh": false}))
+        .await;
+    let want = json!([{"name": "description", "after": "Unsaved"}]);
+    let out = r
+        .run("doc.diff", json!({"docId": doc, "againstDocId": other}))
+        .await;
+    assert_eq!(
+        (
+            &out["against"],
+            &out["againstName"],
+            &out["objects"][0]["properties"]
+        ),
+        (&json!("document"), &json!(other), &want),
+        "{out}"
+    );
+    let out = r
+        .run("doc.diff", json!({"docId": doc, "againstPath": other_pbip}))
+        .await;
+    assert_eq!(
+        (
+            &out["against"],
+            &out["changed"],
+            &out["objects"][0]["properties"]
+        ),
+        (&json!("path"), &json!(1), &want),
+        "{out}"
+    );
+    let err = r
+        .try_run(
+            "doc.diff",
+            json!({"docId": doc, "againstDocId": other, "againstPath": other_pbip}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::InvalidParams, "{err:?}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn only_pbip_projects_save_in_place() {
     let dir = tmp_dir("save-model-");
     mini_pbip(dir.path());

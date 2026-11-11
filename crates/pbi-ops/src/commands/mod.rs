@@ -62,6 +62,7 @@ pub fn catalog() -> Registry {
         .with::<workspace::DocStatus>()
         .with::<workspace::DocExternalChanges>()
         .with::<workspace::DocReload>()
+        .with::<workspace::DocDiff>()
         // inspect
         .with::<inspect::DocInspect>()
         .with::<inspect::ModelTables>()

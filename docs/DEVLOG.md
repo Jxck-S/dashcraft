@@ -7,6 +7,20 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M8.3 headless: semantic diff, doc.diff
+
+- **What:** `pbi-core::diff` (`diff_documents`): matches model and report objects by name
+  (case-insensitive; relationships by name, pages and visuals by their PBIR name) and compares
+  their serialized properties without ids, origins or child collections, so formatting never
+  counts. `doc.diff` (pbi-ops) runs it between the current revision and the files on disk
+  (`Session::read_path`), another open document or a path.
+- **Why:** M8.3, the next step of M8 (ROADMAP "Next"); the Compare view and Keep mine/Compare of
+  M8.2 build on it.
+- **Numbers:** 4 unit tests, `crates/pbi-core/tests/diff.rs` (an Acme copy with six scripted
+  changes and one reformatted visual: exactly six objects), 1 test in `crates/pbi-ops/tests/save.rs`;
+  catalog +1 command.
+- **Open:** TMDL/PBIR text snippets per change and the app's Compare view.
+
 ### M8.2 headless: doc.status, doc.externalChanges, doc.reload
 
 - **What:** three `pbi-ops` workspace commands over new `pbi-session` methods.

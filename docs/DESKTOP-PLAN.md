@@ -1075,6 +1075,11 @@ version; compare two versions of a project.
 - [ ] **M8.3 Semantic diff.** `doc.diff` between the in-memory revision and the files on disk, or
   between two documents or folders: objects added, removed and changed, with TMDL and PBIR
   snippets; the Compare view in the app.
+  *Progress:* headless part done: `pbi_core::diff_documents` and `doc.diff` (against disk,
+  another open document or a path; `crates/pbi-core/tests/diff.rs` finds exactly the six scripted
+  changes in an Acme copy and ignores a reformatted visual; `crates/pbi-ops/tests/save.rs`).
+  Changes carry property values and origins (file, line); next: TMDL and PBIR text snippets and
+  the Compare view in the app.
 
 **Crates and layers.** `pbi-ops` (journal, watcher, commands), `pbi-core` (diff), `dashcraft-app`.
 

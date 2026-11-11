@@ -17,6 +17,8 @@
 //!   sources needed to load data or save later.
 //! - [`save`]: [`save_as_pbip`] (TMDL + PBIR project) and [`export_pbit`]
 //!   (template ZIP) for documents opened by the readers.
+//! - [`diff`]: the semantic diff of two documents ([`diff_documents`]):
+//!   objects added, removed and changed, matched by name.
 //! - [`redact`]: secret redaction applied to every stored metadata part.
 //! - [`lint`]: the broken-reference linter ([`lint()`](lint::lint) over an
 //!   [`OpenedDocument`], [`lint_document`] over a bare document); rules are
@@ -56,6 +58,7 @@
 
 pub mod container;
 pub mod detect;
+pub mod diff;
 mod error;
 pub mod lint;
 pub mod reader;
@@ -63,6 +66,7 @@ pub mod redact;
 pub mod save;
 pub mod save_in_place;
 
+pub use diff::{DiffChange, DiffKind, DocumentDiff, ObjectDiff, PropertyDiff, diff_documents};
 pub use error::CoreError;
 pub use lint::{Finding, LintOptions, LintReport, LintSummary, lint, lint_document};
 /// The TMDL language service (keyword catalog, diagnostics).
