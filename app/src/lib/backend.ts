@@ -42,13 +42,16 @@ import {
   type ConvertPbipOut,
   type ConvertPbitOut,
   type DerivedColumnOut,
+  type DocDiffOut,
   type DocumentEditOut,
   type DocumentHistoryOut,
   type DocumentSaveAsOut,
   type DocumentSaveOut,
   type EditOperation,
+  type FileChangeOut,
   type FilterSpecOut,
   type MeasureValueOut,
+  type ObjectDiffOut,
   type OpsErrorKind,
   type OpsProgress,
   type PeoplePreviewOut,
@@ -238,6 +241,46 @@ export async function restoreRecovery(
 /** Deletes journal `recoveryId` and the unsaved edits it holds (`doc.recovery.discard`). */
 export async function discardRecovery(recoveryId: string): Promise<Outcome<null>> {
   return map(await ops.docRecoveryDiscard({ recoveryId }), () => null)
+}
+
+// ---------------------------------------------------------------------------
+// External changes (project files changed on disk by another program)
+// ---------------------------------------------------------------------------
+
+export type FileChange = FileChangeOut
+export type DocumentDiff = DocDiffOut
+export type ObjectDiff = ObjectDiffOut
+
+/**
+ * The project files of document `docId` (default: the current one) added, changed or removed on
+ * disk since the open or last save (`doc.externalChanges`); `null` when the document does not
+ * track them (only PBIP projects opened from a folder do).
+ */
+export async function externalChanges(docId: string | null = current?.docId ?? null): Promise<Outcome<FileChange[] | null>> {
+  if (!docId) return NO_DOCUMENT
+  return map(await ops.docExternalChanges({ docId }), (r) => (r.tracked ? r.changes : null))
+}
+
+/**
+ * Rereads the current document from disk (`doc.reload`; same `docId`, a new revision) and returns
+ * the panes' data. Unsaved edits are discarded only with `discard` (the caller asked first);
+ * loaded data is dropped: start the refresh `summary.onOpen` says, as after an open.
+ */
+export async function reloadDocument(discard: boolean): Promise<Outcome<LoadedDocument>> {
+  const docId = current?.docId
+  if (!docId) return NO_DOCUMENT
+  // `doc.reload` waits for the document's running mutating command: end a refresh first.
+  if (refreshRequest && refreshDoc === docId) await cancel(refreshRequest)
+  const reloaded = await ops.docReload({ docId, discardChanges: discard })
+  if (!reloaded.ok) return reloaded
+  derived = []
+  return loadViews(docId)
+}
+
+/** The current document, unsaved edits included, compared object by object with its files on disk (`doc.diff`). */
+export function diffWithDisk(): Promise<Outcome<DocumentDiff>> {
+  const docId = current?.docId
+  return docId ? ops.docDiff({ docId }) : Promise.resolve(NO_DOCUMENT)
 }
 
 /**

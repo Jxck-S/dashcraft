@@ -178,6 +178,18 @@
   let recovery = $state.raw<backend.RecoveryJournal[] | null>(null)
   /** The journal being restored or discarded. */
   let recoveryPending = $state<string | null>(null)
+  /** Project files of the open PBIP project changed on disk by another program (the notification bar). */
+  let external = $state.raw<{ docId: string; changes: backend.FileChange[]; key: string } | null>(null)
+  /** The external changes "Keep mine" dismissed (their key); the bar comes back when others appear. */
+  let externalKept = $state<string | null>(null)
+  let reloading = $state(false)
+  /** Compare: the document against its files on disk (`diff` is `null` while it runs). */
+  let compare = $state.raw<{ docId: string; diff: backend.DocumentDiff | null; error: string | null } | null>(null)
+  let externalChecking = false
+  let externalEpoch = 0
+  /** A document that does not track its files (not a PBIP project folder): not polled again. */
+  let externalUntracked: string | null = null
+  const EXTERNAL_POLL_MS = 1500
   let explainTarget = $state.raw<ExplainTarget | null>(null)
   let explainSeq = 0
   let suggestOpen = $state(false)
@@ -369,6 +381,23 @@
     void backend.setWindowTitle(windowTitle)
   })
 
+  // External changes: poll the open project's files (a cheap stat scan in the backend) while the
+  // window is visible, so a change by Git, an editor or Desktop shows within two seconds.
+  $effect(() => {
+    const docId = doc?.summary.docId
+    if (!docId || !backend.hasBackend) return
+    const timer = setInterval(() => {
+      if (!document.hidden) void checkExternal(docId)
+    }, EXTERNAL_POLL_MS)
+    return () => clearInterval(timer)
+  })
+  // A save rewrites the files and the baseline: drop checks that started before it changed.
+  $effect(() => {
+    void saving
+    externalEpoch += 1
+  })
+  const externalBar = $derived(external && external.docId === doc?.summary.docId && external.key !== externalKept ? external : null)
+
   const searchItems = $derived.by((): SearchItem[] => {
     const items: SearchItem[] = [
       { kind: 'command', label: 'Open…', detail: 'File', icon: 'open', enabled: backend.hasBackend, run: () => void pickAndOpen('file') },
@@ -527,6 +556,9 @@
     // The user already chose to save or discard the previous document's edits (`confirmDiscard`).
     if (previous && previous !== summary.docId) void backend.closeDocument(previous, true)
     resetViews()
+    clearExternal()
+    externalUntracked = null
+    compare = null
     history = null
     void refreshHistory()
     run = null
@@ -592,6 +624,8 @@
     doc = null
     history = null
     resetViews()
+    clearExternal()
+    compare = null
     diagnosticsOpen = false
     statuses = []
     security = null
@@ -770,6 +804,7 @@
 
   /** Edits were written to disk: the TMDL view shows the files again, the title loses its `*`. */
   async function documentSaved() {
+    clearExternal()
     tmdl = null
     tmdlError = null
     if (activeView === 'tmdl') void loadTmdl()
@@ -870,6 +905,8 @@
       return false
     }
     const saved = result.value
+    clearExternal()
+    externalUntracked = null
     await afterEdit()
     void refreshRecent()
     status = { message: `Saved as ${saved.pbipFile} in ${saved.projectDir}`, isError: false }
@@ -1314,6 +1351,108 @@
     }
   }
 
+  // ---------------------------------------------------------------------------------------------
+  // External changes (another program changed the open project's files): Reload, Keep mine, Compare
+  // ---------------------------------------------------------------------------------------------
+
+  function clearExternal() {
+    external = null
+    externalKept = null
+    externalEpoch += 1
+  }
+
+  /** Checks the open project's files for external changes and shows or hides the notification bar. */
+  async function checkExternal(docId: string) {
+    if (externalChecking || saving || reloading || externalUntracked === docId || docId !== doc?.summary.docId) return
+    externalChecking = true
+    const epoch = externalEpoch
+    try {
+      const result = await backend.externalChanges(docId)
+      if (epoch !== externalEpoch || docId !== doc?.summary.docId || !result.ok) return
+      if (result.value === null) {
+        externalUntracked = docId
+        return
+      }
+      const changes = result.value
+      if (changes.length === 0) {
+        if (external) clearExternal()
+        return
+      }
+      const key = changes.map((c) => `${c.change}:${c.path}`).join('\n')
+      if (external?.key !== key) external = { docId, changes, key }
+    } finally {
+      externalChecking = false
+    }
+  }
+
+  /** Reload: rereads the project from disk (asking first when unsaved edits would be discarded). */
+  async function reloadFromDisk() {
+    if (!doc || reloading || saving) return
+    const docId = doc.summary.docId
+    const fileName = doc.summary.fileName
+    compare = null
+    const h = await backend.history()
+    if (docId !== doc?.summary.docId) return
+    const dirty = h.ok && h.value.dirty
+    if (dirty) {
+      const choice = await ask(
+        'Reload from disk',
+        [`Reloading rereads ${fileName} from disk and discards your unsaved edits.`, 'Keep mine keeps them instead; Save then asks before overwriting the files on disk.'],
+        [
+          { id: 'reload', label: 'Reload and discard edits' },
+          { id: 'cancel', label: 'Cancel', primary: true },
+        ],
+      )
+      if (choice !== 'reload' || docId !== doc?.summary.docId) return
+    }
+    const seq = ++openSeq
+    reloading = true
+    externalEpoch += 1
+    busy = true
+    busyLabel = `Reloading ${fileName}…`
+    status = { message: busyLabel, isError: false }
+    try {
+      const result = await backend.reloadDocument(dirty)
+      if (seq !== openSeq) return
+      if (!result.ok) {
+        fail(result.error)
+        return
+      }
+      showDocument(result.value)
+      status = { message: `Reloaded ${fileName} from disk`, isError: false }
+      void focusAfterBar()
+    } finally {
+      reloading = false
+      if (seq === openSeq) busy = false
+    }
+  }
+
+  /** Keep mine: hides the bar for these changes; Save asks before overwriting them. */
+  function keepMine() {
+    compare = null
+    externalKept = external?.key ?? null
+    status = { message: 'Kept your version: Save asks before overwriting the files changed on disk', isError: false }
+    void focusAfterBar()
+  }
+
+  /** The bar left with the focused button: focus goes to the ribbon tab before it, not the page. */
+  async function focusAfterBar() {
+    await new Promise((resolve) => setTimeout(resolve))
+    const now = document.activeElement
+    if (now && now !== document.body && now.isConnected) return
+    document.querySelector<HTMLElement>('.ribbon [role="tab"][aria-selected="true"]')?.focus()
+  }
+
+  /** Compare: the document, unsaved edits included, object by object with its files on disk. */
+  async function compareWithDisk() {
+    if (!doc) return
+    const request = { docId: doc.summary.docId, diff: null, error: null }
+    compare = request
+    const result = await backend.diffWithDisk()
+    if (compare !== request) return
+    compare = result.ok ? { ...request, diff: result.value } : { ...request, error: result.error }
+  }
+
   /** Opens the Explain with AI pane for `measure` (a new request each time). */
   function explainMeasure(measure: MeasureDto, table: TableDto) {
     if (!doc) return
@@ -1520,6 +1659,21 @@
   <TitleBar title={windowTitle} items={searchItems} {qat} />
   <Ribbon tabs={ribbonTabs} active={ribbonTab} collapsed={ribbonCollapsed} onselect={(id) => (ribbonTab = id)} onfile={() => openBackstage()} ontogglecollapse={() => (ribbonCollapsed = !ribbonCollapsed)} />
 
+  {#if externalBar && doc}
+    <div class="bar external" role="status" aria-label="Files changed on disk">
+      <Icon name="warning" />
+      <span>
+        <strong>Files changed on disk.</strong>
+        {externalBar.changes.length === 1 ? `${externalBar.changes[0].path} was` : `${externalBar.changes.length} project files were`} changed by another program since {history?.dirty ? 'the last save; you also have unsaved edits' : 'you opened or saved the project'}.
+      </span>
+      <button class="bar-action" onclick={() => void reloadFromDisk()} disabled={reloading || saving} title={history?.dirty ? 'Reread the project from disk (asks first: your unsaved edits are discarded)' : 'Reread the project from disk'}>
+        <Icon name="refresh" size={14} />
+        Reload
+      </button>
+      <button class="bar-action plain" onclick={keepMine} disabled={reloading} title="Keep this version; Save asks before overwriting the files changed on disk">Keep mine</button>
+      <button class="bar-action plain" onclick={() => void compareWithDisk()} disabled={reloading} title="Compare this document with the files on disk, object by object">Compare</button>
+    </div>
+  {/if}
   {#if viewing && doc}
     <div class="bar view-as" role="status" title="Every visual, table, measure and DAX query shows only the rows these roles allow (row-level security). Nothing is saved.">
       <Icon name="viewAs" />
@@ -1783,6 +1937,21 @@
           if (journal) void discardRecovery(journal)
         }}
         onclose={() => (recovery = null)}
+      />
+    {/await}
+  {/if}
+
+  {#if compare && doc && compare.docId === doc.summary.docId}
+    {@const c = compare}
+    {#await import('./components/CompareDialog.svelte') then { default: CompareDialog }}
+      <CompareDialog
+        fileName={doc.summary.fileName}
+        changes={external?.docId === c.docId ? external.changes : []}
+        diff={c.diff}
+        error={c.error}
+        onreload={() => void reloadFromDisk()}
+        onkeep={keepMine}
+        onclose={() => (compare = null)}
       />
     {/await}
   {/if}
