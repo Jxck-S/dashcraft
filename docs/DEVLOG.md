@@ -13,15 +13,17 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   data folder, created `0600`, a cut-short last line tolerated, foreign or newer formats refused).
   `Registry::execute` journals each mutating command that changed the revision, under the
   document's lock, and deletes the journal on `doc.save`, `doc.saveAs`, `doc.reload` and
-  `doc.close`; journal errors only log. `doc.recovery.list`, `doc.recovery.restore` (reopen with
+  `doc.close`; journal errors only log. A journal starts only from a saved document and tracks its
+  undo/redo depth: an undo past its start, or edits made while recovery was off, stop journaling
+  until the next save, so every journal replays from disk. `doc.recovery.list`, `doc.recovery.restore` (reopen with
   the header's `doc.open` parameters and replay through the registry; replay relies on the
   per-document deterministic object ids) and `doc.recovery.discard`. Off unless the host calls
   `Workspace::set_recovery` (ADR-0013 §5). The journal holds commands, not the undo stack; the
   replay makes the restored edits undoable again.
 - **Why:** M8.1, after M8.2 and M8.3 (ROADMAP "Next").
-- **Numbers:** 3 unit tests, `crates/pbi-ops/tests/recovery.rs` (3 tests: seven edits survive a
-  dropped workspace and replay to the same measures, a failed replay keeps the journal, off by
-  default); catalog +3 commands.
+- **Numbers:** 3 unit tests, `crates/pbi-ops/tests/recovery.rs` (4 tests: seven edits survive a
+  dropped workspace and replay to the same measures, a failed replay keeps the journal, untracked
+  edits and undos past the start drop it, off by default); catalog +3 commands.
 - **Open:** the app's opt-in, startup prompt and Options page.
 
 ### M8.3 headless: semantic diff, doc.diff

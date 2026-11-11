@@ -268,8 +268,8 @@ impl Registry {
                 .and_then(Value::as_str)
                 .and_then(|d| ws.find(d))
                 .map(|entry| {
-                    let revision = entry.session().document_history().revision;
-                    (store, entry, revision, params.clone())
+                    let history = entry.session().document_history();
+                    (store, entry, history, params.clone())
                 }),
             _ => None,
         };
@@ -283,8 +283,8 @@ impl Registry {
         if let (Ok(_), Some((store, entry, before, params))) = (&result, journal) {
             match meta.id {
                 "doc.save" | "doc.saveAs" | "doc.reload" | "doc.close" => entry.end_journal(&store),
-                _ if entry.session().document_history().revision != before => {
-                    entry.journal_edit(&store, meta.id, params);
+                _ if entry.session().document_history().revision != before.revision => {
+                    entry.journal_edit(&store, meta.id, params, before.dirty);
                 }
                 _ => {}
             }

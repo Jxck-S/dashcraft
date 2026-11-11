@@ -246,3 +246,51 @@ async fn recovery_is_off_by_default() {
         .unwrap_err();
     assert_eq!(err.code, OpErrorCode::Unsupported, "{err:?}");
 }
+
+async fn describe(r: &Runner, doc: &str, text: &str) {
+    let total = r.run("model.measures", json!({"docId": doc})).await["measures"][0]["id"].clone();
+    r.run(
+        "model.object.setDescription",
+        json!({"docId": doc, "objectId": total, "text": text}),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn only_journals_that_replay_from_the_saved_document_are_kept() {
+    let dir = tmp_dir("recovery-untracked-");
+    let pbip = mini_pbip(dir.path());
+    let store = dir.path().join("store");
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip, "autoRefresh": false})).await;
+
+    // Edits made before recovery was on are in no journal: later ones alone
+    // would not replay, so nothing is journaled until the next save.
+    describe(&r, &doc, "Before").await;
+    r.ws.set_recovery(Some(RecoveryStore::new(&store)));
+    describe(&r, &doc, "After").await;
+    assert_eq!(journal_files(&store), 0);
+    r.run("doc.save", json!({"docId": doc})).await;
+    describe(&r, &doc, "Saved").await;
+    assert_eq!(journal_files(&store), 1);
+
+    // Undoing within the journal keeps it; undoing past its start (an edit
+    // saved before it) drops it.
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(journal_files(&store), 1);
+    r.run("doc.undo", json!({"docId": doc})).await;
+    assert_eq!(
+        journal_files(&store),
+        0,
+        "the undo reached before the journal"
+    );
+    describe(&r, &doc, "Untracked").await;
+    assert_eq!(journal_files(&store), 0);
+
+    // Turning recovery off deletes the journals of open documents.
+    r.run("doc.save", json!({"docId": doc})).await;
+    describe(&r, &doc, "Journaled").await;
+    assert_eq!(journal_files(&store), 1);
+    r.ws.set_recovery(None);
+    assert_eq!(journal_files(&store), 0);
+}

@@ -12,7 +12,7 @@ use super::workspace::{DocSummary, NoParams};
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
 use crate::error::OpError;
-use crate::recovery::RecoveryStore;
+use crate::recovery::{JournalDepth, RecoveryStore};
 use crate::registry::Registry;
 use crate::workspace::Workspace;
 
@@ -191,7 +191,7 @@ pub struct RecoveryRestoreOut {
 /// cancelled.
 struct ReplayGuard {
     entry: std::sync::Arc<crate::workspace::DocEntry>,
-    journal: Option<String>,
+    journal: Option<(String, JournalDepth)>,
 }
 
 impl Drop for ReplayGuard {
@@ -268,7 +268,8 @@ impl Command for RecoveryRestore {
             }
         }
         if failed.is_none() {
-            guard.journal = Some(p.recovery_id.clone());
+            guard.journal =
+                JournalDepth::of(&journal.entries).map(|depth| (p.recovery_id.clone(), depth));
         }
         drop(guard);
         let history = entry.session().document_history();

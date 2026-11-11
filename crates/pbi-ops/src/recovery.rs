@@ -277,6 +277,42 @@ impl RecoveryStore {
 }
 
 /// The time as RFC 3339 (UTC, seconds).
+/// The undo and redo steps a journal holds: an undo past its first edit, or
+/// a redo of a step undone before it, cannot be replayed from the saved
+/// document.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct JournalDepth {
+    undo: u32,
+    redo: u32,
+}
+
+impl JournalDepth {
+    /// The depth after `command`; `None` when it reaches before the journal.
+    pub(crate) fn after(self, command: &str) -> Option<Self> {
+        match command {
+            "doc.undo" => Some(Self {
+                undo: self.undo.checked_sub(1)?,
+                redo: self.redo.saturating_add(1),
+            }),
+            "doc.redo" => Some(Self {
+                undo: self.undo.saturating_add(1),
+                redo: self.redo.checked_sub(1)?,
+            }),
+            _ => Some(Self {
+                undo: self.undo.saturating_add(1),
+                redo: 0,
+            }),
+        }
+    }
+
+    /// The depth after replaying `entries` from the saved document.
+    pub(crate) fn of(entries: &[JournalEntry]) -> Option<Self> {
+        entries
+            .iter()
+            .try_fold(Self::default(), |depth, e| depth.after(&e.command))
+    }
+}
+
 pub(crate) fn rfc3339(t: chrono::DateTime<chrono::Utc>) -> String {
     t.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
