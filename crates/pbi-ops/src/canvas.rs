@@ -553,6 +553,14 @@ impl CanvasStore {
             }
         }
     }
+
+    /// Cancels every running render and forgets the view state of every
+    /// page and the report themes (the document was reloaded).
+    pub fn reset(&self) {
+        self.cancel_all();
+        lock(&self.pages).clear();
+        lock(&self.themes).clear();
+    }
 }
 
 /// The theme of report `index`: a PBIR report's theme files, else (PBIX

@@ -163,6 +163,25 @@ impl DocEntry {
         self.bump_generation();
     }
 
+    /// Rereads the document from its path ([`Session::reload`]): its data,
+    /// canvas state and edit history are dropped. Returns the new revision
+    /// and whether data had been loaded.
+    ///
+    /// # Errors
+    /// `cancelled`, or the reader's error (nothing changed).
+    pub(crate) async fn reload(&self, ctx: &Ctx) -> Result<(u64, bool), pbi_session::SessionError> {
+        let mut loaded = tokio::select! {
+            biased;
+            () = ctx.cancel_token().cancelled() => return Err(pbi_session::SessionError::Cancelled),
+            guard = self.loaded.lock() => guard,
+        };
+        let revision = self.session.reload(self.path()).await?;
+        let was_loaded = std::mem::replace(&mut *loaded, false);
+        self.bump_generation();
+        self.canvas.reset();
+        Ok((revision, was_loaded))
+    }
+
     /// Refreshes the document once if it has a model, was never loaded and
     /// was opened with `autoRefresh`. Returns the refresh report when it
     /// refreshed.

@@ -91,6 +91,9 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`doc.open`](#docopen) | Opens a Power BI file or folder into the workspace (no data loaded yet) and returns its docId and summary. | A |
 | [`doc.close`](#docclose) | Closes an open document and frees its data; unsaved edits require explicit discardChanges. | M A |
 | [`doc.list`](#doclist) | The open documents of the workspace with their summaries. | A |
+| [`doc.status`](#docstatus) | Revision, unsaved edits, undo/redo, whether doc.save can save in place, and the project files changed on disk by other programs since the open or last save. | A |
+| [`doc.externalChanges`](#docexternalchanges) | The project files added, changed or removed on disk by other programs (Git, editors, Power BI Desktop) since the open or last save. | A |
+| [`doc.reload`](#docreload) | Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges. | M |
 | [`doc.inspect`](#docinspect) | The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). | A |
 | [`model.tables`](#modeltables) | Every model table with its columns, measure names, partitions, hierarchies and loaded row count. | A |
 | [`model.measures`](#modelmeasures) | Every measure with its table, DAX, format string, description and display folder. | A |
@@ -376,6 +379,92 @@ Result:
 Examples:
 
 - All open documents: `{}`
+
+### `doc.status`
+
+**Document status.** Revision, unsaved edits, undo/redo, whether doc.save can save in place, and the project files changed on disk by other programs since the open or last save.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id returned by `doc.open` (`d1`, …). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id. |
+| `path` | string | The path as given (moved by a Save As). |
+| `format` | string | Source format (`pbip`, `pbix`, …). |
+| `revision` | integer | The document revision. |
+| `dirty` | boolean | The document has unsaved edits. |
+| `canUndo` | boolean |  |
+| `canRedo` | boolean |  |
+| `canSave` | boolean | `doc.save` can save in place (a PBIP project opened from a folder); otherwise use `doc.saveAs`. |
+| `tracksExternalChanges` | boolean | Project files are tracked for external changes (PBIP projects). |
+| `externalChanges` | FileChangeOut[] | Project files added, changed or removed on disk by another program since the open or last save: `doc.save` refuses them as a conflict without `overwrite`; `doc.reload` rereads them. |
+| `loaded` | boolean | Data was loaded. |
+| `generation` | integer | Data generation (changes after every data change and reload). |
+
+Examples:
+
+- Status of d1: `{"docId":"d1"}`
+
+### `doc.externalChanges`
+
+**External changes.** The project files added, changed or removed on disk by other programs (Git, editors, Power BI Desktop) since the open or last save.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id returned by `doc.open` (`d1`, …). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id. |
+| `tracked` | boolean | Project files are tracked (PBIP projects); other documents report no changes. |
+| `changes` | FileChangeOut[] | Files added, changed or removed on disk by another program since the open or last save, by path. |
+| `conflict` | boolean | `doc.save` without `overwrite` would refuse these changes as a conflict. |
+
+Examples:
+
+- Changes under d1: `{"docId":"d1"}`
+
+### `doc.reload`
+
+**Reload from disk.** Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges.
+
+_mutates the document, not offered to agents; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `discardChanges` (optional) | boolean | Explicitly discard unsaved in-memory edits. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id (unchanged). |
+| `revision` | integer | The new revision: a saved state, newer than any before. |
+| `discardedEdits` | boolean | Unsaved edits were discarded. |
+| `dataUnloaded` | boolean | Loaded data was dropped: data commands load it again on first use (`autoRefresh`), or refresh with `data.refresh`. |
+| `summary` | DocSummary | The reloaded document. |
+
+Examples:
+
+- Reload d1: `{"docId":"d1"}`
+- Discard unsaved edits: `{"docId":"d1","discardChanges":true}`
 
 ## Inspect
 

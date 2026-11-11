@@ -59,6 +59,9 @@ pub fn catalog() -> Registry {
         .with::<workspace::DocOpen>()
         .with::<workspace::DocClose>()
         .with::<workspace::DocList>()
+        .with::<workspace::DocStatus>()
+        .with::<workspace::DocExternalChanges>()
+        .with::<workspace::DocReload>()
         // inspect
         .with::<inspect::DocInspect>()
         .with::<inspect::ModelTables>()

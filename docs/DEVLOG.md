@@ -7,6 +7,21 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M8.2 headless: doc.status, doc.externalChanges, doc.reload
+
+- **What:** three `pbi-ops` workspace commands over new `pbi-session` methods.
+  `Session::external_changes` rescans the PBIP fingerprint against the open/saved baseline;
+  `Session::reload` rereads the document in place (same resolver, clock, reader options) and
+  publishes it only after the read succeeds. `History::reset` (pbi-model) starts a clean history at
+  the next revision, so a reload never rewinds it (ADR-0012). `DocEntry::reload` also forgets the
+  loaded data and the canvas state; `doc/changed` gains `reloaded`. `doc.reload` is not
+  agent-safe (ADR-0012 §6) and refuses unsaved edits without `discardChanges` (ADR-0013 §3).
+- **Why:** M8.2, the first step of M8 (ROADMAP "Next"); `doc.status`/`doc.reload` moved there from M6.
+- **Numbers:** 2 new tests in `crates/pbi-ops/tests/save.rs` and 1 in pbi-model; catalog +3
+  commands.
+- **Open:** the file watcher with notifications, the app's notification bar, the Compare view
+  (M8.3) and recovery (M8.1).
+
 ### M evaluator: free values that contain their own slot
 
 - **What:** `pbi-m` registers every thunk (as a `Weak`, pruned like frames) and

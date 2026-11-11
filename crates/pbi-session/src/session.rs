@@ -77,6 +77,20 @@ struct State {
 }
 
 impl State {
+    /// The state of a freshly opened `model`: nothing loaded.
+    fn fresh(model: Arc<Model>, revision: u64) -> Self {
+        Self {
+            engine: Engine::new(&model),
+            document_revision: revision,
+            model,
+            derived: Vec::new(),
+            tables: HashMap::new(),
+            removed: RemovedData::default(),
+            view: None,
+            recalculated: (revision, Vec::new()),
+        }
+    }
+
     /// The engine queries read: the "View as" engine when one is active.
     fn query_engine(&self) -> &Engine {
         self.view.as_ref().map_or(&self.engine, |v| &v.engine)
@@ -109,6 +123,18 @@ struct SavedState {
 struct OpenedState {
     opened: Arc<OpenedDocument>,
     document: Arc<Document>,
+}
+
+/// The fingerprint of a PBIP project's files, the baseline of save
+/// conflicts and external changes (`None` for other formats, or when the
+/// project cannot be scanned).
+fn project_fingerprint(opened: &OpenedDocument) -> Option<ProjectFingerprint> {
+    if opened.document.source.format != pbi_model::SourceFormat::Pbip {
+        return None;
+    }
+    ProjectFingerprint::scan(opened)
+        .map_err(|e| tracing::warn!("cannot fingerprint the project: {e}"))
+        .ok()
 }
 
 /// What a query reads, captured at one semantic revision
@@ -270,14 +296,8 @@ impl Session {
                 (None, None) => (Arc::new(NoBlobResolver), false),
             };
         let model = Arc::new(opened.document.model.clone().unwrap_or_default());
-        let engine = Engine::new(&model);
         let document = Arc::new(opened.document.clone());
-        let fingerprint = (opened.document.source.format == pbi_model::SourceFormat::Pbip)
-            .then(|| ProjectFingerprint::scan(&opened))
-            .and_then(|scan| {
-                scan.map_err(|e| tracing::warn!("cannot fingerprint the project: {e}"))
-                    .ok()
-            });
+        let fingerprint = project_fingerprint(&opened);
         let opened = Arc::new(opened);
         Ok(Session {
             inner: Arc::new(Inner {
@@ -294,16 +314,7 @@ impl Session {
                     .identifiers
                     .unwrap_or_else(|| Arc::new(RandomIdentifiers)),
                 limits: options.limits,
-                state: RwLock::new(State {
-                    engine,
-                    document_revision: 0,
-                    model,
-                    derived: Vec::new(),
-                    tables: HashMap::new(),
-                    removed: RemovedData::default(),
-                    view: None,
-                    recalculated: (0, Vec::new()),
-                }),
+                state: RwLock::new(State::fresh(model, 0)),
                 refresh_lock: tokio::sync::Mutex::new(()),
                 open_options: options.open,
             }),
@@ -1010,6 +1021,80 @@ impl Session {
             cache_not_copied,
             revision: history.revision(),
         })
+    }
+
+    /// The project files changed on disk by another program since the open
+    /// or the last save: what the next [`save`](Self::save) would refuse as
+    /// a conflict. `None` when nothing is tracked (not a PBIP project
+    /// opened from a folder).
+    ///
+    /// # Errors
+    /// [`SessionError::Open`] when the project cannot be scanned.
+    pub async fn external_changes(&self) -> Result<Option<Vec<FileChange>>, SessionError> {
+        let handle = crate::refresh::runtime()?;
+        let (baseline, fingerprint) = {
+            let saved = self
+                .inner
+                .saved
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            match &saved.fingerprint {
+                Some(f) => (Arc::clone(&saved.opened), f.clone()),
+                None => return Ok(None),
+            }
+        };
+        let now = handle
+            .spawn_blocking(move || ProjectFingerprint::scan(&baseline))
+            .await??;
+        Ok(Some(fingerprint.changes(&now)))
+    }
+
+    /// Rereads the document from `path` (where it was opened from or last
+    /// saved as) in place of the open one, with the same blob resolver,
+    /// clock and reader options. The edits and their undo history are
+    /// dropped, and so are the loaded data, the derived columns and "View
+    /// as" (refresh again); the revision advances to a new saved state, it
+    /// never rewinds. If the document cannot be read nothing changes
+    /// (ADR-0013). Returns the new revision.
+    ///
+    /// # Errors
+    /// [`SessionError::Open`] when `path` cannot be read.
+    pub async fn reload(&self, path: impl AsRef<Path>) -> Result<u64, SessionError> {
+        let handle = crate::refresh::runtime()?;
+        let _refresh = self.inner.refresh_lock.lock().await;
+        let path = path.as_ref().to_path_buf();
+        let options = self.inner.open_options;
+        let (opened, fingerprint) = handle
+            .spawn_blocking(move || {
+                pbi_core::open_path(&path, &options).map(|opened| {
+                    let fingerprint = project_fingerprint(&opened);
+                    (opened, fingerprint)
+                })
+            })
+            .await??;
+        let model = Arc::new(opened.document.model.clone().unwrap_or_default());
+        let document = Arc::new(opened.document.clone());
+        let opened = Arc::new(opened);
+        let mut current = self.write_opened();
+        let mut saved = self
+            .inner
+            .saved
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        let mut history = self
+            .inner
+            .history
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        history.reset();
+        let revision = history.revision();
+        *self.write() = State::fresh(model, revision);
+        *saved = SavedState {
+            opened: Arc::clone(&opened),
+            fingerprint,
+        };
+        *current = Arc::new(OpenedState { opened, document });
+        Ok(revision)
     }
 
     pub(crate) fn refresh_lock(&self) -> &tokio::sync::Mutex<()> {

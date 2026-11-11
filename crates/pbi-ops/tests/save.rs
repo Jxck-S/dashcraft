@@ -1,8 +1,9 @@
 //! `doc.save` through `Registry::execute` on a temporary PBIP project:
 //! only changed files are written, renames follow into the report files
 //! and back byte for byte, a reopen shows the saved document, and files
-//! changed on disk are a conflict until `overwrite`. `doc.saveAs` writes a
-//! new project from any source and moves the document there.
+//! changed on disk are a conflict until `overwrite`, reported by `doc.status`
+//! and `doc.externalChanges` and reread by `doc.reload`. `doc.saveAs` writes
+//! a new project from any source and moves the document there.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -11,13 +12,13 @@ mod common;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use common::{
     ACME, MINI_TOTAL, MS_PBIX, PBIP, Runner, copy_dir, expected, fixture, mini_pbip, ms_expected,
     tmp_dir,
 };
-use pbi_ops::OpErrorCode;
+use pbi_ops::{CallerKind, Ctx, DocChangedEvent, OpErrorCode};
 use pbi_session::{SequentialIdentifiers, SessionOptions};
 use serde_json::{Value, json};
 
@@ -273,6 +274,152 @@ async fn files_changed_on_disk_are_a_conflict_until_overwrite() {
     assert_eq!(
         (&again["written"], &again["overwritten"]),
         (&json!([]), &json!([]))
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn external_changes_are_reported_and_reload_rereads_them() {
+    let dir = tmp_dir("reload-");
+    let pbip = mini_pbip(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let id = json!({"docId": doc});
+    let status = r.run("doc.status", id.clone()).await;
+    assert_eq!(
+        (
+            &status["canSave"],
+            &status["tracksExternalChanges"],
+            &status["externalChanges"],
+            &status["dirty"]
+        ),
+        (&json!(true), &json!(true), &json!([]), &json!(false)),
+        "{status}"
+    );
+    assert_eq!(scalar(&r, &doc, "[Total]").await, json!(MINI_TOTAL));
+    let measures = r.run("model.measures", id.clone()).await;
+    let total = measures["measures"][0]["id"].as_u64().unwrap();
+    r.run(
+        "model.object.setDescription",
+        json!({"docId": doc, "objectId": total, "text": "Unsaved"}),
+    )
+    .await;
+
+    // Another program (a pull) changes the measure.
+    let sales = dir.path().join(SALES_TMDL);
+    let external = fs::read_to_string(&sales).unwrap().replace(
+        "measure Total = SUM(Sales[Amount])",
+        "measure Total = SUM(Sales[Amount]) * 3",
+    );
+    fs::write(&sales, &external).unwrap();
+    let changed = json!([{"path": SALES_TMDL, "change": "modified"}]);
+    let out = r.run("doc.externalChanges", id.clone()).await;
+    assert_eq!(
+        (&out["tracked"], &out["changes"], &out["conflict"]),
+        (&json!(true), &changed, &json!(true)),
+        "{out}"
+    );
+    let status = r.run("doc.status", id.clone()).await;
+    assert_eq!(
+        (&status["externalChanges"], &status["dirty"]),
+        (&changed, &json!(true)),
+        "{status}"
+    );
+    let err = r.try_run("doc.save", id.clone()).await.unwrap_err();
+    assert_eq!(err.code, OpErrorCode::Conflict, "{err:?}");
+
+    // Reload never discards edits implicitly, and agents cannot reload.
+    let err = r.try_run("doc.reload", id.clone()).await.unwrap_err();
+    assert_eq!(err.code, OpErrorCode::Unsupported, "{err:?}");
+    let agent = Ctx::new(CallerKind::Agent);
+    let reload = json!({"docId": doc, "discardChanges": true});
+    let err = r
+        .registry
+        .execute(&r.ws, "doc.reload", reload.clone(), &agent)
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::Unsupported, "{err:?}");
+    let status = r.run("doc.status", id.clone()).await;
+    let before = status["revision"].as_u64().unwrap();
+    assert_eq!(status["dirty"], true, "nothing changed");
+
+    // A reload that cannot read the project changes nothing.
+    let pbip_text = fs::read(&pbip).unwrap();
+    fs::remove_file(&pbip).unwrap();
+    assert!(r.try_run("doc.reload", reload.clone()).await.is_err());
+    fs::write(&pbip, pbip_text).unwrap();
+    let status = r.run("doc.status", id.clone()).await;
+    assert_eq!(
+        (&status["revision"], &status["dirty"], &status["canUndo"]),
+        (&json!(before), &json!(true), &json!(true)),
+        "{status}"
+    );
+
+    let events: Arc<Mutex<Vec<DocChangedEvent>>> = Arc::default();
+    let sink = Arc::clone(&events);
+    let ctx = Ctx::new(CallerKind::Cli).with_doc_changed(move |e| sink.lock().unwrap().push(e));
+    let out = r
+        .registry
+        .execute(&r.ws, "doc.reload", reload, &ctx)
+        .await
+        .unwrap();
+    let revision = out["revision"].as_u64().unwrap();
+    assert!(revision > before, "{out}");
+    assert_eq!(
+        (
+            &out["docId"],
+            &out["discardedEdits"],
+            &out["dataUnloaded"],
+            &out["summary"]["loaded"]
+        ),
+        (&json!(doc), &json!(true), &json!(true), &json!(false)),
+        "{out}"
+    );
+    let events = events.lock().unwrap().clone();
+    assert_eq!(events.len(), 1, "{events:?}");
+    assert!(events[0].reloaded && !events[0].dirty && events[0].revision == revision);
+
+    // The document is the project on disk: clean, no history, the new
+    // measure (data loaded again on first use), and nothing to save.
+    let status = r.run("doc.status", id.clone()).await;
+    assert_eq!(
+        (
+            &status["revision"],
+            &status["dirty"],
+            &status["canUndo"],
+            &status["externalChanges"]
+        ),
+        (&json!(revision), &json!(false), &json!(false), &json!([])),
+        "{status}"
+    );
+    assert_eq!(total_expression(&r, &doc).await, "SUM(Sales[Amount]) * 3");
+    assert_eq!(scalar(&r, &doc, "[Total]").await, json!(3 * MINI_TOTAL));
+    let out = r.run("doc.save", id.clone()).await;
+    assert_eq!(out["written"], json!([]), "{out}");
+    assert_eq!(fs::read_to_string(&sales).unwrap(), external);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn documents_without_a_project_track_no_external_changes() {
+    let dir = tmp_dir("status-model-");
+    mini_pbip(dir.path());
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": dir.path().join("Mini.SemanticModel"), "autoRefresh": false}))
+        .await;
+    let status = r.run("doc.status", json!({"docId": doc})).await;
+    assert_eq!(
+        (
+            &status["canSave"],
+            &status["tracksExternalChanges"],
+            &status["externalChanges"]
+        ),
+        (&json!(false), &json!(false), &json!([])),
+        "{status}"
+    );
+    let out = r.run("doc.externalChanges", json!({"docId": doc})).await;
+    assert_eq!(
+        (&out["tracked"], &out["conflict"]),
+        (&json!(false), &json!(false))
     );
 }
 

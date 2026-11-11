@@ -616,6 +616,34 @@ fn history_tracks_dirty_state_and_labels() {
 }
 
 #[test]
+fn history_reset_starts_clean_at_a_newer_revision() {
+    let mut doc = sample_document();
+    let slicer = doc.reports[0].pages[0].visuals[0].id;
+    let mut history = History::new();
+    history
+        .execute(
+            &mut doc,
+            SetVisualPosition {
+                visual: slicer,
+                position: Position {
+                    x: 1.0,
+                    ..Position::default()
+                },
+            },
+        )
+        .unwrap();
+    history.mark_saved();
+    history.undo(&mut doc).unwrap();
+    assert!(history.is_dirty() && history.can_redo());
+    let before = history.revision();
+
+    history.reset();
+    assert!(history.revision() > before);
+    assert!(!history.is_dirty());
+    assert!(!history.can_undo() && !history.can_redo());
+}
+
+#[test]
 fn history_no_op_does_not_advance_revision_or_clear_redo() {
     let mut doc = sample_document();
     let slicer = doc.reports[0].pages[0].visuals[0].id;

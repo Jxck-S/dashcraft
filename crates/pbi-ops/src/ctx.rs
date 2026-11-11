@@ -48,8 +48,8 @@ pub struct ProgressEvent {
 pub type ProgressSink = Arc<dyn Fn(ProgressEvent) + Send + Sync>;
 
 /// A committed change of an open document (ADR-0012): an edit, undo or
-/// redo that published a new revision, or a save that cleared the dirty
-/// flag or moved the document. Failed and no-op edits report none.
+/// redo that published a new revision, a save that cleared the dirty
+/// flag or moved the document, or a reload. Failed and no-op edits report none.
 /// `dashcraft serve` sends it as a `doc/changed` notification.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -68,6 +68,10 @@ pub struct DocChangedEvent {
     /// The document's new path (Save As only).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
+    /// The whole document was reread from disk (`doc.reload`): object ids
+    /// and everything derived from the document are new.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub reloaded: bool,
 }
 
 /// One object of a [`DocChangedEvent`].

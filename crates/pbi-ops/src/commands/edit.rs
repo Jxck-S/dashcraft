@@ -92,6 +92,7 @@ impl DocumentEditOut {
                 dirty: out.dirty,
                 changes: result.events.iter().map(object_change).collect(),
                 path: None,
+                reloaded: false,
             });
         }
         out
@@ -4308,6 +4309,19 @@ pub struct FileChangeOut {
     pub change: FileChangeKind,
 }
 
+impl From<pbi_core::FileChange> for FileChangeOut {
+    fn from(c: pbi_core::FileChange) -> Self {
+        Self {
+            path: c.path,
+            change: match c.change {
+                pbi_core::ChangeKind::Added => FileChangeKind::Added,
+                pbi_core::ChangeKind::Modified => FileChangeKind::Modified,
+                pbi_core::ChangeKind::Removed => FileChangeKind::Removed,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DocumentSaveOut {
@@ -4382,6 +4396,7 @@ impl Command for DocumentSave {
                 dirty,
                 changes: Vec::new(),
                 path: None,
+                reloaded: false,
             });
         }
         Ok(DocumentSaveOut {
@@ -4391,14 +4406,7 @@ impl Command for DocumentSave {
             overwritten: report
                 .overwritten
                 .into_iter()
-                .map(|c| FileChangeOut {
-                    path: c.path,
-                    change: match c.change {
-                        pbi_core::ChangeKind::Added => FileChangeKind::Added,
-                        pbi_core::ChangeKind::Modified => FileChangeKind::Modified,
-                        pbi_core::ChangeKind::Removed => FileChangeKind::Removed,
-                    },
-                })
+                .map(FileChangeOut::from)
                 .collect(),
             revision: report.revision,
             dirty,
@@ -4510,6 +4518,7 @@ impl Command for DocumentSaveAs {
             dirty,
             changes: Vec::new(),
             path: Some(entry.shown_path()),
+            reloaded: false,
         });
         Ok(DocumentSaveAsOut {
             project_dir: shown_dir(&project_dir),
