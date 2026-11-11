@@ -1,6 +1,7 @@
 # ADR-0015: Accessibility target and verification
 
-- Status: Accepted
+- Status: Accepted; decision 3 (how the screen-reader runs are done) superseded by
+  [ADR-0030](0030-screen-readers-in-ci.md)
 - Date: 2026-11-05
 - Deciders: DashCraft maintainers
 - Related: [ADR-0001](0001-ui-tauri-svelte.md), [ADR-0012](0012-revisioned-document-state.md)

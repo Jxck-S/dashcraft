@@ -3,6 +3,7 @@
   import Icon from './Icon.svelte'
   import QueriesView from './views/QueriesView.svelte'
   import type { ModelTreeDto } from '../lib/bindings'
+  import { modal } from '../lib/modal'
   import { NOT_AVAILABLE } from '../lib/shell'
 
   // Home → Transform data: a read-only stand-in for Desktop's Power Query Editor window — the
@@ -19,11 +20,6 @@
   } = $props()
 
   let selected = $state<number | null>(untrack(() => initial))
-  let root = $state<HTMLDivElement | null>(null)
-
-  $effect(() => {
-    root?.focus()
-  })
 
   function keydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
@@ -33,7 +29,7 @@
   }
 </script>
 
-<div class="pq" role="dialog" aria-modal="true" aria-label="Power Query Editor (read-only)" tabindex="-1" bind:this={root} onkeydown={keydown}>
+<div class="pq" role="dialog" aria-modal="true" aria-label="Power Query Editor (read-only)" tabindex="-1" use:modal onkeydown={keydown}>
   <header>
     <Icon name="transformData" size={18} />
     <h2>Power Query Editor <span class="muted">— read-only</span></h2>

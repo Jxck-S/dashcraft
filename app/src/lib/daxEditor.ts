@@ -629,6 +629,8 @@ export interface KeyLike {
   altKey: boolean
 }
 
+const MODIFIER_KEYS = new Set(['Control', 'Meta', 'Shift', 'Alt', 'AltGraph', 'OS'])
+
 /**
  * The command of a key press, as Microsoft documents Desktop's formula editor ("Formula editor in
  * Power BI Desktop") and its DAX query view: Ctrl+Space suggestions, Ctrl+Shift+Space parameter
@@ -640,6 +642,8 @@ export interface KeyLike {
  * Alt+PgUp PgDn scroll.
  */
 export function editorCommand(event: KeyLike, chord = false): EditorCommand | 'chord' | null {
+  // A modifier on its own (Ctrl released and pressed again between Ctrl+K and Ctrl+I) keeps the chord.
+  if (MODIFIER_KEYS.has(event.key)) return chord ? 'chord' : null
   const mod = event.ctrlKey || event.metaKey
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key
   const code = event.code ?? ''

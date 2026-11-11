@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-  import { onMount, untrack } from 'svelte'
+  import { onMount, tick, untrack } from 'svelte'
   import Icon from './Icon.svelte'
   import Markdown from './ai/Markdown.svelte'
   import type { IconName } from '../lib/icons'
@@ -90,11 +90,13 @@
   const problemId = `dax-problem-${uid}`
   const statusId = `dax-status-${uid}`
   const keysId = `dax-keys-${uid}`
+  const tipId = `dax-tip-${uid}`
 
   let editor = $state<HTMLTextAreaElement | null>(null)
   let gutter = $state<HTMLDivElement | null>(null)
   let layer = $state<HTMLDivElement | null>(null)
   let probe = $state<HTMLSpanElement | null>(null)
+  let tipBox = $state<HTMLDivElement | null>(null)
   let charWidth = 7.2
   let tokens = $state.raw<TokenSpan[]>([])
   let problems = $state.raw<Problem[]>([])
@@ -132,7 +134,7 @@
     return `${problem.severity === 'error' ? 'Error' : 'Warning'} at line ${line + 1}, column ${column + 1}: ${problem.message}${more}`
   })
   const keysText = $derived(readonly ? '' : tabMovesFocus ? 'Tab moves focus; Ctrl+M makes Tab indent.' : 'Tab indents; Ctrl+M makes Tab move focus.')
-  const describedBy = $derived([describedby, problemText ? problemId : null, signature ? signatureId : null, keysText ? keysId : null].filter(Boolean).join(' ') || undefined)
+  const describedBy = $derived([describedby, problemText ? problemId : null, signature ? signatureId : null, tip ? tipId : null, keysText ? keysId : null].filter(Boolean).join(' ') || undefined)
 
   const KIND_ICONS: Record<DaxCompletionKind, IconName> = {
     function: 'code',
@@ -159,9 +161,12 @@
     }
   })
 
-  // An outside change of the text (cancel, a new object): realign and analyse again.
+  // An outside change of the text (cancel, a new object): realign and analyse again. It reads
+  // `value`, the reactive one: the textarea's own value would not re-run the effect, and the
+  // problems of a cancelled draft would stay announced. Typing is not an outside change:
+  // `input` runs in the capture phase, before `bind:value` updates `value`, and realigns first.
   $effect(() => {
-    const text = current()
+    const text = value
     untrack(() => {
       if (text !== aligned) {
         realign(text)
@@ -321,6 +326,12 @@
     }
     const p = point ?? pointOf(offset)
     tip = { x: p.x, y: p.y + LINE, at: offset, problems: here, markdown }
+    // Asked for from the keyboard (Ctrl+K Ctrl+I): a screen reader hears the description too.
+    if (!point) {
+      await tick()
+      const said = tipBox?.innerText.replace(/\s+/g, ' ').trim()
+      if (said) status = said
+    }
   }
 
   /** Replaces `[from, to)` as typing would (the editor's own undo keeps it). */
@@ -663,7 +674,7 @@
       aria-autocomplete="list"
       aria-controls={completion ? listId : undefined}
       aria-activedescendant={completion ? `${listId}-${active}` : undefined}
-      oninput={input}
+      oninputcapture={input}
       onkeydown={keydown}
       onkeyup={keyup}
       onclick={caretMoved}
@@ -710,7 +721,7 @@
 {/if}
 
 {#if tip}
-  <div class="tip" role="tooltip" style:left={`${Math.max(4, tip.x)}px`} style:top={`${tip.y + 2}px`}>
+  <div class="tip" id={tipId} role="tooltip" bind:this={tipBox} style:left={`${Math.max(4, tip.x)}px`} style:top={`${tip.y + 2}px`}>
     {#each tip.problems as message, i (i)}<div class="tip-problem"><Icon name="error" size={14} />{message}</div>{/each}
     {#if tip.markdown}<Markdown text={tip.markdown} />{/if}
   </div>

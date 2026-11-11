@@ -2,13 +2,13 @@
 // on Windows and WebView2: keyboard-only editing, focus order and focus rings, names and roles in
 // the DOM and in UI Automation (what Narrator and NVDA read), the IBM Equal Access checker
 // (Apache-2.0, WCAG 2.2 A and AA rules), text and component contrast, and reduced motion. A6, the
-// screen-reader run, stays manual.
+// screen-reader run, is screen-reader.mjs (CI, .github/workflows/screen-reader.yml).
 //
 //   (cd app && npx tauri build --debug --no-bundle)
 //   npm install --prefix target/tmp/a11y --no-save accessibility-checker-engine
 //   node scripts/app-checks/editing-a11y.mjs [path/to/dashcraft-app.exe]
 import { installChecker, requireChecker } from './a11y.mjs'
-import { launch, openFileMenu, openProperties, reporter, selectTotalSales, sleep, title } from './cdp.mjs'
+import { launch, openProperties, reporter, selectTotalSales, sleep, title } from './cdp.mjs'
 
 requireChecker()
 const field = '.field:has(> [id^="prop-"])'
@@ -87,10 +87,27 @@ try {
   const parts = await evaluate(`[...document.querySelectorAll('.qat button:not(:disabled) svg, .formula-bar .icon-btn:not(:disabled) svg')].map((s) => __a11y.ratio(getComputedStyle(s).color, __a11y.bg(s))).concat([...document.querySelectorAll('${field} input, ${field} textarea, .formula-bar .editor')].map((e) => __a11y.ratio(getComputedStyle(e).borderBottomColor, __a11y.bg(e.parentElement))))`)
   check('A4 icons and input borders at least 3:1', parts.every((r) => r >= 3), `lowest ${Math.min(...parts)}:1`)
 
-  // The File menu and the unsaved-changes question.
-  await openFileMenu(session)
+  // The File menu and the unsaved-changes question, opened from the File button as a keyboard
+  // user does (focus it, press Enter).
+  const fileButton = `[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'File')`
+  const onFile = `document.activeElement === ${fileButton}`
+  const openFile = () => evaluate(`(${fileButton}.focus(), ${fileButton}.click(), true)`).then(() => waitFor(`!!document.querySelector('.backstage')`, 3000))
+  await openFile()
   await checker('File menu')
-  await evaluate(`[...document.querySelectorAll('.backstage button')].find((b) => b.textContent.trim() === 'Close').click(), true`)
+  const inMenu = `document.querySelector('.backstage')?.contains(document.activeElement) ?? false`
+  check('A2 the File menu takes focus', await evaluate(inMenu))
+  const stays = []
+  for (let i = 0; i < 50; i++) {
+    await key('Tab', 'Tab', 9, i < 40 ? 0 : 8)
+    stays.push(await evaluate(inMenu))
+  }
+  check('A2 Tab and Shift+Tab stay in the File menu', stays.every(Boolean), `${stays.filter((s) => !s).length} of 50 presses left it`)
+  await key('Escape', 'Escape', 27)
+  await sleep(300)
+  check('A1 Esc closes the File menu and focus goes back to File', !(await evaluate(`!!document.querySelector('.backstage')`)) && (await evaluate(onFile)))
+  await openFile()
+  await evaluate(`[...document.querySelectorAll('.backstage button')].find((b) => b.textContent.trim() === 'Close').focus(), true`)
+  await evaluate(`document.activeElement.click(), true`)
   const dialog = `document.querySelector('[role="dialog"][aria-label="Unsaved changes"]')`
   await waitFor(`!!${dialog}`, 5000)
   await sleep(300)
@@ -103,6 +120,7 @@ try {
   await key('Escape', 'Escape', 27)
   await sleep(400)
   check('A1 Esc answers Cancel', !(await evaluate(`!!${dialog}`)) && (await evaluate(title)).includes('*'))
+  check('A2 focus goes back to File after the question (the File menu closed with it)', await evaluate(onFile))
 
   // A5: nothing on the new controls moves.
   const moving = await evaluate(`[...document.querySelectorAll('.qat, .qat *, .formula-bar, .formula-bar *, ${field}, ${field} *')].filter((e) => { const s = getComputedStyle(e); return s.animationName !== 'none' || s.transitionDuration.split(',').some((d) => parseFloat(d) > 0) }).map((e) => e.className || e.tagName)`)

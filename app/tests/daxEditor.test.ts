@@ -228,6 +228,11 @@ test('the editor keys are those of Desktop’s formula editor', () => {
   assert.equal(editorCommand(key('k', { ctrlKey: true })), 'chord')
   assert.equal(editorCommand(key('i', { ctrlKey: true }), true), 'hover')
   assert.equal(editorCommand(key('i', { ctrlKey: true })), null)
+  // Releasing Ctrl and pressing it again between the two keys keeps the chord.
+  assert.equal(editorCommand(key('Control', { ctrlKey: true }), true), 'chord')
+  assert.equal(editorCommand(key('Meta', { metaKey: true }), true), 'chord')
+  assert.equal(editorCommand(key('Control', { ctrlKey: true })), null)
+  assert.equal(editorCommand(key('x', { ctrlKey: true }), true), null)
   assert.equal(editorCommand(key(' ')), null)
   assert.equal(editorCommand(key('f', { altKey: true })), null)
   // Line keys, from Microsoft's table for the formula editor.

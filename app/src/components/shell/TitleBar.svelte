@@ -22,6 +22,7 @@
 <script lang="ts">
   import Icon from '../Icon.svelte'
   import { NOT_AVAILABLE } from '../../lib/shell'
+  import { isSearchShortcut } from '../../lib/editing'
 
   // Title bar row: app mark, Quick Access Toolbar (Save, Undo and Redo of the document's edit
   // history), the centered document title and the search box (commands and fields).
@@ -79,7 +80,7 @@
 
   /** Alt+Q focuses the search box, as in Desktop. */
   function globalKey(event: KeyboardEvent) {
-    if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'q') {
+    if (isSearchShortcut(event)) {
       event.preventDefault()
       input?.focus()
     }

@@ -221,6 +221,8 @@ try {
   await evaluate(`${bar}.focus(), true`)
   await key('Escape', 'Escape', 27)
   check('Esc cancels the edit', await waitFor(`${bar}.value === ${JSON.stringify(formula)}`, 5000))
+  const cleared = await waitFor(`(() => { const t = ${bar}; const said = (t.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)?.textContent ?? '').join(' '); return t.getAttribute('aria-invalid') !== 'true' && !/Error at line/.test(said) && !document.querySelector('.formula-bar .highlight .error') })()`, 5000)
+  check('the cancelled draft leaves no problem announced or squiggled', cleared, `aria-invalid=${await evaluate(`${bar}.getAttribute('aria-invalid')`)}`)
 } catch (e) {
   check('no error', false, e.message)
 } finally {

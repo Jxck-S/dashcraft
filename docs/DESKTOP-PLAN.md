@@ -286,6 +286,7 @@ say.
 | [ADR-0015](adr/0015-accessibility-target.md) | Accessibility target and verification | WCAG 2.2 AA target, per-surface checklist, platform/webview screen-reader smoke tests and independent 1.0 audit | M6.1 |
 | Ground-truth decision → [ADR-0011](adr/0011-desktop-ground-truth.md) (accepted) | Ground-truth recordings from Power BI Desktop | The black-box protocol (synthetic inputs only, outputs only, no binaries inspected); what may be committed (values, JSON and text produced from synthetic inputs) and what stays local (images); where recordings live and how they are refreshed per Desktop release | The first ground-truth session (whichever GT-n runs first); every criterion blocked by a GT session waits for it |
 | [ADR-0029](adr/0029-tmdl-reader-ground-truth.md) (accepted) | Ground truth from Microsoft's TMDL reader | TOM's TMDL reader (NuGet `Microsoft.AnalysisServices`) as a black-box oracle for which TMDL loads, under ADR-0011's rules; takes the next free number after the reserved proposals | M7.4 |
+| [ADR-0030](adr/0030-screen-readers-in-ci.md) (accepted) | Screen-reader smoke tests in CI | Guidepup drives NVDA (required), VoiceOver and Orca (informational) along each milestone's A6 journey on hosted runners; Narrator's evidence is the UI Automation tree; a person listens with all four before the 1.0 audit; supersedes ADR-0015 decision 3 | M6, M7 (A6) |
 | ADR-0016 | Local file data sources in M | Generalize `BlobResolver` into a data-source resolver that reads local files through the path policy; per-source permissions and privacy levels; still no network; extends golden rule 5 for local files only | M16.1 |
 | ADR-0017 | Cultures and regional settings | Culture handling in M parsing and formatting, DAX `FORMAT` and typed conversions; model culture versus UI locale versus regional settings; CLDR-derived data and its licence | M16.8 |
 | ADR-0018 | Columnar storage, compression and the local data cache | In-memory encodings (dictionary, value, bit-packing, run-length, segments) under the Arrow-facing API; threading model; memory budgets; a DashCraft-owned cache for PBIP data (format, location, invalidation), never written as `.pbi/cache.abf` | M17.1 |
@@ -394,13 +395,13 @@ acceptance criteria, the surfaces that must pass this checklist:
 | A3 Names and roles | Every control, pane and dialog exposes a name and role; an automated checker with a permissive licence reports no serious or critical violation |
 | A4 Contrast | Text at least 4.5:1 (3:1 for large text), UI components at least 3:1, in every shell theme available at that milestone |
 | A5 Reduced motion | No non-essential animation when the OS asks for reduced motion |
-| A6 Screen-reader smoke test | A scripted task on the new surface completes with VoiceOver on WKWebView (macOS), Narrator and NVDA on WebView2 (Windows) and Orca on WebKitGTK (Linux); results recorded in a checklist file |
+| A6 Screen-reader smoke test | A scripted task on the new surface runs in CI ([ADR-0030](adr/0030-screen-readers-in-ci.md), `scripts/app-checks/screen-reader.mjs`): every required step passes with NVDA on WebView2 (Windows); VoiceOver on WKWebView (macOS) and Orca on WebKitGTK (Linux) complete it, with their misses recorded; Narrator's evidence is the UI Automation tree; results recorded in a checklist file |
 
 The first editing surface (M6: Save, Undo and Redo, the formula bar, Properties edits) is the
 first to meet it. Each milestone records its results in [accessibility/](accessibility/), starting
 with [m6-editing.md](accessibility/m6-editing.md) and
 [m7-formula-bar.md](accessibility/m7-formula-bar.md). The automated part of A1–A5 runs from
-[scripts/app-checks/](../scripts/app-checks/). M25 adds the semantics of the canvas and rendered
+[scripts/app-checks/](../scripts/app-checks/), and A6 from the `Screen readers` workflow ([ci.md](ci.md#screen-readeryml-screen-readers-weekly-or-on-app-prs)). M25 adds the semantics of the canvas and rendered
 visuals; M31.8 is the independent audit.
 
 ### W6. Architecture, layers and dependencies
@@ -544,7 +545,7 @@ their write roots).
   as Save writes them. App test `edits_save_and_close_through_the_registry`, 19 Node tests
   (`app/tests/editing.test.ts`), and the UI smoke and accessibility scripts
   ([scripts/app-checks/](../scripts/app-checks/), results in
-  [accessibility/m6-editing.md](accessibility/m6-editing.md): A1–A5 pass, A6 not run yet).
+  [accessibility/m6-editing.md](accessibility/m6-editing.md): A1–A5 pass, and A6 passes in CI).
   Not covered: macOS Cmd+Q and Dock Quit, which Tauri does not let an app intercept yet.
 - [x] **M6.9 Agent editing over MCP.** The `agent_safe` editing set decided in ADR-0012 is exposed
   as MCP tools in a new `edit` category (`--allow edit`), saves only inside write roots,
@@ -766,8 +767,8 @@ from the model's previous names to its current ones (matched by `ObjectId`,
 `pbi_model::renames_between`) after a rename, its undo and its redo, so a cross-filter keeps
 filtering (`canvas_selections_follow_renames`). Renames rewrite KPI and detail-rows DAX, saved
 in Desktop's form; Desktop opens the renamed model with every KPI and detail rows valid and
-saves the same `Orders.tmdl` (GT-6 s25). M6 is complete apart from the screen-reader runs of
-acceptance 13 (A6), which need a person ([accessibility/m6-editing.md](accessibility/m6-editing.md#a6-task-for-each-screen-reader));
+saves the same `Orders.tmdl` (GT-6 s25). M6 is complete; the screen-reader runs of acceptance 13
+(A6) run in CI ([accessibility/m6-editing.md](accessibility/m6-editing.md#a6-screen-reader-runs));
 data column delete moved to M14.7 and M14.9 (it edits the query's M) and hierarchy level edits to
 M10.5.
 
@@ -963,7 +964,7 @@ optional language server.
     themselves; each saved file with its layout damaged (respaced lines, trailing white space,
     doubled and removed blank lines, expression blocks indented further, LF for CRLF) formats
     back to Desktop's bytes, and to four spaces and back.
-- [x] **M7.5 Formula bar with IntelliSense** (2026-11-07; A6 waits for a person, as for M6) for
+- [x] **M7.5 Formula bar with IntelliSense** (2026-11-07; A6 in CI since 2026-11-11, as for M6) for
   measures, calculated columns and tables, calculation items, format string expressions and RLS
   filters; commit and cancel; multi-line.
   The editor is one component (`app/src/components/DaxEditor.svelte`) that takes where the DAX
@@ -992,8 +993,8 @@ optional language server.
     each edit is one step of the editor's own undo. Not done: extra cursors, column selection,
     Ctrl+G and Ctrl+U (the editor has one caret). Accessibility A1–A5 pass with the suggestion
     list, parameter info, a description and squiggles open
-    ([accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md)); A6 waits for a person.
-    Checked in the app by `scripts/app-checks/formula-keys.mjs` (43 checks on Windows /
+    ([accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md)); A6 runs in CI.
+    Checked in the app by `scripts/app-checks/formula-keys.mjs` (44 checks on Windows /
     WebView2) and by 10 new tests in `app/tests/daxEditor.test.ts`.
 - [x] **M7.6 Optional `dashcraft lsp`** (2026-11-07). A Language Server Protocol adapter over the
   same commands for `.dax`, `.m` and `.tmdl` files in external editors.
@@ -1011,8 +1012,8 @@ optional language server.
   tests; what it serves is the commands checked against Desktop and Microsoft's TMDL reader in
   M7.1 to M7.4.
 
-**Status.** M7 is complete (2026-11-07) apart from the screen-reader runs of acceptance 5 (A6),
-which need a person ([accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md)). The
+**Status.** M7 is complete (2026-11-07); the screen-reader runs of acceptance 5 (A6) run in CI
+since 2026-11-11 ([accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md#a6-screen-reader-runs)). The
 language services analyse the whole text on each request (incremental document sync in the LSP,
 P12 well within its target); the LSP drops cancelled requests before running them. Acceptance 4:
 a manual run of the `Fuzz` workflow on `main` (60 s per target) found nothing in `dax_service`,
@@ -2291,7 +2292,7 @@ to the pilot language.
 **Tests.** Accessibility tree tests per visual type; keyboard navigation tests; localization key
 tests; recorded screen-reader walkthroughs.
 
-**Depends on.** M24; ADR-0022. **Blocked by.** none (screen-reader runs need a person on each OS).
+**Depends on.** M24; ADR-0022. **Blocked by.** none (screen-reader runs in CI, ADR-0030; Narrator by a person before 1.0).
 **Size.** L.
 
 **Risks and unknowns.** Accessibility differences between WKWebView, WebView2 and WebKitGTK;

@@ -35,7 +35,7 @@ reimplementation of Power BI Desktop ([ADR-0004](docs/adr/0004-desktop-ready-arc
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Milestones M0–M5, the "Next" list, open human decisions |
 | [docs/GAPS.md](docs/GAPS.md) | Gaps scorecard: what is missing, scored 0–5 per area |
 | [docs/DEVLOG.md](docs/DEVLOG.md) | What changed per wave, why, and the numbers |
-| [docs/adr/](docs/adr/README.md) | Decisions 0001–0015 and 0029; new decisions get a new ADR |
+| [docs/adr/](docs/adr/README.md) | Decisions 0001–0015, 0029 and 0030; new decisions get a new ADR |
 | [reference/README.md](reference/README.md) | Test fixtures: the synthetic Acme Outfitters example, the Microsoft samples, optional local data (§7) |
 
 ## 2. Layer map and where things live
@@ -179,7 +179,7 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
   deviations and injectable identifiers.
 - **Accessibility** (ADR-0015): new and changed app surfaces target WCAG 2.2 AA with keyboard,
   focus, names, contrast, reduced-motion and platform/webview screen-reader checks; independent
-  audit before 1.0.
+  audit before 1.0. The screen-reader runs are CI smoke tests through Guidepup (ADR-0030).
 - **TMDL ground truth** (ADR-0029): Microsoft's TMDL reader (TOM, from NuGet, never committed) is
   the black-box oracle for which TMDL loads; its verdicts generate the TMDL language service's
   keyword catalog. Numbers 0016 to 0028 are reserved for the proposals in `docs/DESKTOP-PLAN.md`.

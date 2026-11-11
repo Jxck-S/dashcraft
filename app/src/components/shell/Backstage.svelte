@@ -6,6 +6,7 @@
   import Icon, { type IconName } from '../Icon.svelte'
   import type { BlobMapDto, RecentFileDto } from '../../lib/bindings'
   import { baseName } from '../../lib/format'
+  import { modal } from '../../lib/modal'
   import { NOT_AVAILABLE } from '../../lib/shell'
 
   // File menu (backstage), as in Desktop: a left command column and a content page. Save writes
@@ -123,7 +124,7 @@
   {/if}
 {/snippet}
 
-<div class="backstage" role="dialog" aria-modal="true" aria-label="File" tabindex="-1" onkeydown={keydown}>
+<div class="backstage" role="dialog" aria-modal="true" aria-label="File" tabindex="-1" use:modal onkeydown={keydown}>
   <nav class="side">
     <button class="back" onclick={onback} title="Back (Esc)" aria-label="Back"><Icon name="back" size={20} /></button>
     {#each nav as n, i (n?.id ?? `sep-${i}`)}

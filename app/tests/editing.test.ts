@@ -12,6 +12,7 @@ import {
   formulaText,
   historyTitles,
   isEditableTarget,
+  isSearchShortcut,
   needsSaveAs,
   parseFormula,
   windowTitle,
@@ -102,6 +103,15 @@ test('shortcuts map to document commands', () => {
   assert.equal(editShortcut(key('z')), null)
   assert.equal(editShortcut(key('z', { ctrl: true, alt: true })), null)
   assert.equal(editShortcut(key('c', { ctrl: true })), null)
+})
+
+test('Alt+Q focuses search, also as macOS Option+Q (which types œ)', () => {
+  assert.equal(isSearchShortcut({ ...key('q', { alt: true }), code: 'KeyQ' }), true)
+  assert.equal(isSearchShortcut({ ...key('œ', { alt: true }), code: 'KeyQ' }), true)
+  assert.equal(isSearchShortcut({ ...key('Q', { alt: true }) }), true)
+  assert.equal(isSearchShortcut({ ...key('q'), code: 'KeyQ' }), false)
+  assert.equal(isSearchShortcut({ ...key('q', { alt: true, ctrl: true }), code: 'KeyQ' }), false)
+  assert.equal(isSearchShortcut({ ...key('ø', { alt: true }), code: 'KeyO' }), false)
 })
 
 test('text fields keep their own undo; Save works everywhere', () => {

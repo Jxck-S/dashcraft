@@ -101,13 +101,14 @@ Calculations, Security (**View as** ✅, Manage roles ⛔), Sensitivity, Share.
 
 Ctrl/⌘+O open, Ctrl/⌘+Shift+O open folder, Ctrl/⌘+S save, Ctrl/⌘+Shift+S save as, Ctrl/⌘+Z
 undo, Ctrl/⌘+Y or Ctrl/⌘+Shift+Z redo (in a text field these undo and redo its typing), Ctrl+F1
-collapse / pin the ribbon, Alt+Q search,
+collapse / pin the ribbon, Alt+Q (⌥Q on macOS) search,
 Ctrl/⌘+Page Up / Page Down previous / next page, Ctrl/⌘+wheel zoom (canvas, diagram), F5 or
 Ctrl/⌘+Enter run a DAX query, Ctrl/⌘+/ comment lines, Esc closes menus, File and dialogs.
 
 In the formula bar (M7.5, as Desktop's formula editor): Enter commits, Esc cancels, Shift+Enter
 new line (keeps the indentation), Ctrl+Shift+Enter line above; Ctrl+Space suggestions,
-Ctrl+Shift+Space parameter info, Ctrl+K Ctrl+I describe, Shift+Alt+F format; Tab and Shift+Tab,
+Ctrl+Shift+Space parameter info, Ctrl+K Ctrl+I describe (the description is also announced),
+Shift+Alt+F format; Tab and Shift+Tab,
 Ctrl+] and Ctrl+[ indent and outdent, Ctrl+M makes Tab move focus (and back); Alt+↑ ↓ move
 lines, Shift+Alt+↑ ↓ copy lines, Ctrl+Shift+K delete lines, Ctrl+L select line, Ctrl+X and
 Ctrl+C without a selection cut and copy the line, Ctrl+Shift+\\ matching bracket, Shift+Alt+→ ←

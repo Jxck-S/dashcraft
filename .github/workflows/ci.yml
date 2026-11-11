@@ -212,7 +212,7 @@ jobs:
           echo "$PWD/target/tmp/actionlint" >> "$GITHUB_PATH"
       - name: Validate CI workflow and change selection
         run: |
-          actionlint .github/workflows/ci.yml
+          actionlint .github/workflows/ci.yml .github/workflows/screen-reader.yml
           python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
       - id: detect
         env:
