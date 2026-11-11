@@ -55,7 +55,7 @@ node scripts/app-checks/editing-a11y.mjs      # 21 passed, 0 failed
 | A3 Names and roles | ✅ Pass | Every new control has a name: Save, Undo, Redo, Cancel, Commit, Measure formula, Explain with AI, Expand the formula bar, Description, Display folder and Format string. The checker finds no violation on the toolbar, formula bar, Properties fields, File menu or question. UI Automation shows the toolbar as a ToolBar; the buttons as Button, with their enabled state; the formula and fields as Edit, with their values; and the question as a Window with its buttons. The status bar message, which reports each edit, undo, redo and save, is a polite live region. |
 | A4 Contrast | ✅ Pass | The lowest ratios are 5.98:1 for text, 6.19:1 for icons and input borders, and 5.39:1 for the question's text and buttons. The checks found three failures, all now fixed. The gutter line numbers were 3.34:1 and now use the muted text colour. The input borders were 1.53:1 and now have a `--color-border-accessible` bottom border (#616161), as Fluent 2 inputs do. The focus rings were 1 px and are now 2 px. |
 | A5 Reduced motion | ✅ Pass | The new controls have no animation and no transition. |
-| A6 Screen readers | ✅ Pass (ADR-0030) | Run in CI with each change to the app ([A6 below](#a6-screen-reader-runs)). NVDA (Windows, WebView2) passes every step and gates the job. VoiceOver (macOS, WKWebView) and Orca (Linux, WebKitGTK) complete the journey and are informational; their misses are listed below. Narrator has no automation interface, so its evidence is the UI Automation tree (A3). |
+| A6 Screen readers | ✅ Pass (ADR-0030) | Run in CI with each change to the app ([A6 below](#a6-screen-reader-runs)). NVDA (Windows, WebView2) passes every required step and gates the job. VoiceOver (macOS, WKWebView) and Orca (Linux, WebKitGTK) complete the journey and are informational; their misses are listed below. Narrator has no automation interface, so its evidence is the UI Automation tree (A3). |
 
 ### Left for review by hand
 
@@ -78,8 +78,8 @@ S23–S32 are this milestone's; S12–S22 are the M7 formula bar's
 
 | Screen reader | Platform, webview | Gate | Result |
 |---|---|---|---|
-| NVDA | Windows (`windows-latest`), WebView2 | Required | ✅ All 32 steps pass. |
-| VoiceOver | macOS 15, WKWebView | Informational | ⚠️ The journey completes and 24 of 32 steps pass. For M6: no VoiceOver command reads the window title, so the `*` of unsaved changes is not checked (S1, S8, S32); the first phrase after start is said but not captured (S2); applying the description is not announced, and the field is read again instead (S25). |
+| NVDA | Windows (`windows-latest`), WebView2 | Required | ✅ All 27 required steps pass (runs 4 and 5 on PR #66); the 5 optional steps are recorded as notes. |
+| VoiceOver | macOS 15, WKWebView | Informational | ⚠️ The journey completes and 24 to 26 of 32 steps pass (runs 4 and 5). For M6: no VoiceOver command reads the window title, so the `*` of unsaved changes is not checked (S1, S8, S32); the first phrase after start is said but not captured (S2); applying the description is not always announced, and the field is read again instead (S25 failed in run 4, passed in run 5). |
 | Orca | Ubuntu 26.04, WebKitGTK under Xvfb | Informational | ⚠️ The journey completes and 20 of 32 steps pass. Names, focus, the File menu, the question and the title are read. The polite status messages (edit, undo, redo, description, save) are not heard (S7, S10, S11, S25, S31), and Orca's "where am I" leaves out the field's description (S6). |
 | Narrator | Windows, WebView2 | Not automated | Narrator has no automation interface. Its evidence is the UI Automation tree that it reads (A3); a person listens before the 1.0 audit (M31.8). |
 

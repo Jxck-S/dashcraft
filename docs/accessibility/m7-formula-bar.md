@@ -61,7 +61,7 @@ node scripts/app-checks/editing-smoke.mjs          # 23 passed, 0 failed
 | A3 Names and roles | ✅ Pass | The checker finds no violation with the suggestion list and a squiggle open, with parameter info open, or with a description open. UI Automation shows the editor as *Measure formula*, Edit, with its value, and the list as *Suggestions*, List. The status live region announces the number of suggestions, the inserted suggestion, formatting and the Tab mode. The problem at the caret, the parameter info (a `tooltip`) and the Tab mode are part of the editor's accessible description, and `aria-invalid` is set while there is an error. |
 | A4 Contrast | ✅ Pass | Suggestion text at least 5.4:1, the selected suggestion included; the selected suggestion's outline 5.39:1; the error squiggle 5.86:1 and the warning squiggle 5.73:1 on the editor background; parameter info text 6.19:1; description text 6.07:1. Token colours are at least 4.5:1 (M7.5a); the lowest text in the formula bar is 5.98:1. |
 | A5 Reduced motion | ✅ Pass | No animation or transition in the formula bar or its pop-ups. |
-| A6 Screen readers | ✅ Pass (ADR-0030) | Run in CI with each change to the app ([A6 below](#a6-screen-reader-runs)). NVDA (Windows, WebView2) passes every step and gates the job. VoiceOver (macOS, WKWebView) and Orca (Linux, WebKitGTK) complete the journey and are informational; their misses are listed below. Narrator has no automation interface, so its evidence is the UI Automation tree (A3). |
+| A6 Screen readers | ✅ Pass (ADR-0030) | Run in CI with each change to the app ([A6 below](#a6-screen-reader-runs)). NVDA (Windows, WebView2) passes every required step and gates the job. VoiceOver (macOS, WKWebView) and Orca (Linux, WebKitGTK) complete the journey and are informational; their misses are listed below. Narrator has no automation interface, so its evidence is the UI Automation tree (A3). |
 
 ### Left for review by hand
 
@@ -112,12 +112,12 @@ S12–S22 of `scripts/app-checks/screen-reader.mjs` (method, readers and the M6 
 
 | Screen reader | Platform, webview | Gate | Result |
 |---|---|---|---|
-| NVDA | Windows (`windows-latest`), WebView2 | Required | ✅ All 32 steps pass, M7's S12–S22 included. For example, it says "15 suggestions: Up and Down to choose, Enter or Tab to insert", "COUNTA function, 2 of 15", "Inserted COUNTROWS" and "Tab now moves focus". |
-| VoiceOver | macOS 15, WKWebView | Informational | ⚠️ The journey completes. Of M7's steps, everything passes except two. The suggestion count is not heard: VoiceOver echoes the typing instead (S13). The active suggestion is not read as ↓ moves, so VoiceOver does not follow `aria-activedescendant` on the text area (S14). Insertion, problems, Ctrl+K Ctrl+I, the Tab mode and Esc are heard. |
+| NVDA | Windows (`windows-latest`), WebView2 | Required | ✅ All 27 required steps pass (runs 4 and 5 on PR #66), M7's S12–S22 included. For example, it says "15 suggestions: Up and Down to choose, Enter or Tab to insert", "COUNTA function, 2 of 15", "Inserted COUNTROWS" and "Tab now moves focus". |
+| VoiceOver | macOS 15, WKWebView | Informational | ⚠️ The journey completes. Of M7's steps, everything passes except one or two. The suggestion count is not always heard: VoiceOver echoed the typing instead in run 4 and read it in run 5 (S13). The active suggestion is not read as ↓ moves, so VoiceOver does not follow `aria-activedescendant` on the text area (S14). Insertion, problems, Ctrl+K Ctrl+I, the Tab mode and Esc are heard. |
 | Orca | Ubuntu 26.04, WebKitGTK under Xvfb | Informational | ⚠️ The journey completes. Suggestions and the active suggestion are read (S13, S14), and so is the problem in the description when focus comes back (S21). The polite announcements (Inserted, the description of Ctrl+K Ctrl+I, the Tab mode) are not heard (S15, S17, S19), and Orca's "where am I" leaves out the description (S6, S16, S22). |
 | Narrator | Windows, WebView2 | Not automated | Its evidence is the UI Automation tree (A3); a person listens before the 1.0 audit (M31.8). |
 
-A6 passes for M7 by ADR-0030's rule. The VoiceOver misses S13 and S14 are open
+A6 passes for M7 by ADR-0030's rule. The VoiceOver misses S14 and the intermittent S13 are open
 ([GAPS.md](../GAPS.md), Accessibility row).
 
 Steps (Ctrl and Alt are ⌘ and ⌥ on macOS; End is ⌘→):

@@ -21,13 +21,13 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Why:** A6 was the last open criterion of M6 and M7; it needed a person on each OS until
   Guidepup could drive the readers on CI runners. Narrator stays by hand before the 1.0 audit
   (M31.8): its evidence in CI is the UI Automation tree the A1–A5 checks already cover.
-- **Numbers:** NVDA 32 of 32 steps (about 4.5 minutes); VoiceOver 24 of 32 in about 13 minutes;
-  Orca 20 of 32. `formula-keys.mjs` 44 checks (one new, the Esc case), `editing-a11y.mjs` 21.
+- **Numbers:** NVDA passes all 27 required steps of 32 (about 4.5 minutes); VoiceOver 24 to 26 of 32
+  in about 13 minutes; Orca 20 of 32 (runs 4 and 5 on PR #66). `formula-keys.mjs` 44 checks (one new, the Esc case), `editing-a11y.mjs` 21.
   Commits `b5cdf9d`, `3800ef2`, `6fdf4e9`, `051b99f`, `139f67c` and the docs commit, squashed
   in PR #66.
-- **Open:** VoiceOver doesn't read the suggestion count (S13) or the active suggestion
-  (S14, `aria-activedescendant` on a text area), or announce a description's apply (S25,
-  likely the `readonly` toggle while saving). No VoiceOver command reads the window title
+- **Open:** VoiceOver doesn't read the active suggestion (S14, `aria-activedescendant` on a
+  text area), and only sometimes reads the suggestion count (S13) or announces a description's
+  apply (S25, likely the `readonly` toggle while saving). No VoiceOver command reads the window title
   (S1). Orca under Xvfb doesn't voice polite live regions. Narrator still needs a person
   before M31.8.
 
