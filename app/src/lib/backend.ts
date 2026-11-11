@@ -17,6 +17,7 @@ import {
   commands,
   events,
   type AppError,
+  type AutoRecoveryDto,
   type BlobMapDto,
   type ColumnDto,
   type DocumentViewsDto,
@@ -51,6 +52,9 @@ import {
   type OpsErrorKind,
   type OpsProgress,
   type PeoplePreviewOut,
+  type RecoveryJournalOut,
+  type RecoveryListOut,
+  type ReplayFailureOut,
   type RefreshOut,
   type ResultColumnOut,
   type SecurityRoleOut,
@@ -186,6 +190,54 @@ export async function currentDocument(): Promise<LoadedDocument | null> {
   if (!last) return null
   const views = await loadViews(last.docId)
   return views.ok ? views.value : null
+}
+
+// ---------------------------------------------------------------------------
+// Auto recovery (unsaved edits journaled for recovery after a crash)
+// ---------------------------------------------------------------------------
+
+export type RecoveryJournal = RecoveryJournalOut
+export type ReplayFailure = ReplayFailureOut
+
+/** File → Options → Auto recovery. */
+export function autoRecovery(): Promise<Outcome<AutoRecoveryDto>> {
+  return call(() => commands.autoRecovery())
+}
+
+/** Turns Auto recovery on or off (off deletes the journals of open documents). */
+export function setAutoRecovery(enabled: boolean): Promise<Outcome<AutoRecoveryDto>> {
+  return call(() => commands.setAutoRecovery(enabled))
+}
+
+/** Unsaved edits left by a session that ended without saving (`doc.recovery.list`). */
+export function recoverableEdits(): Promise<Outcome<RecoveryListOut>> {
+  return ops.docRecoveryList({})
+}
+
+/**
+ * Reopens the document of journal `recoveryId` with its unsaved edits (`doc.recovery.restore`)
+ * and returns the panes' data; `failed` names the edit that could not be replayed (the document
+ * keeps the edits before it). The caller makes it current and closes the previous one.
+ */
+export async function restoreRecovery(
+  recoveryId: string,
+): Promise<Outcome<{ views: LoadedDocument; failed: ReplayFailure | null; replayed: number; edits: number }>> {
+  const restored = await ops.docRecoveryRestore({ recoveryId })
+  if (!restored.ok) return restored
+  const { docId, failed, replayed, edits } = restored.value
+  const views = await loadViews(docId)
+  if (!views.ok) {
+    void ops.docClose({ docId, discardChanges: true })
+    return views
+  }
+  const path = restored.value.document.path
+  if (path) void call(() => commands.addRecentFile(path))
+  return { ok: true, value: { views: views.value, failed: failed ?? null, replayed, edits } }
+}
+
+/** Deletes journal `recoveryId` and the unsaved edits it holds (`doc.recovery.discard`). */
+export async function discardRecovery(recoveryId: string): Promise<Outcome<null>> {
+  return map(await ops.docRecoveryDiscard({ recoveryId }), () => null)
 }
 
 /**

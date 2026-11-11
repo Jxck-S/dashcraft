@@ -354,7 +354,8 @@ try {
   // first phrase there; settle() captures everything for the late announcements.
   await startReader({ capture: mac ? 'initial' : true })
   const log = openSync(join(out, 'app.log'), 'w')
-  const env = { ...process.env, DASHCRAFT_BLOB_MAP: join(copy, 'blob-map.json') }
+  // A fresh data folder: no Auto recovery journals of an earlier run (Document recovery dialog).
+  const env = { ...process.env, DASHCRAFT_BLOB_MAP: join(copy, 'blob-map.json'), DASHCRAFT_DATA_DIR: join(out, 'data') }
   if (platform === 'linux') Object.assign(env, { WEBKIT_DISABLE_DMABUF_RENDERER: '1', WEBKIT_DISABLE_COMPOSITING_MODE: '1' })
   app = spawn(exe, [join(copy, 'AcmeOutfitters.pbip')], { env, stdio: ['ignore', log, log] })
   await journey()

@@ -799,6 +799,18 @@ pub struct VisualFormatDto {
     pub layout: Vec<PropertyDto>,
 }
 
+/// File → Options → Auto recovery.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AutoRecoveryDto {
+    /// Unsaved edits are journaled for recovery after a crash.
+    pub enabled: bool,
+    /// There is a per-user data folder to journal to.
+    pub available: bool,
+    /// The folder of the recovery files.
+    pub location: Option<String>,
+}
+
 /// A recently opened file or folder (File → Recent).
 #[derive(Debug, Clone, PartialEq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]

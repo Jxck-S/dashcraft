@@ -274,9 +274,17 @@ results and DTOs. Locations below refer to the Desktop shell above.
   - **Unsaved edits**: `*` in the title. Closing the document or the window, or opening another
     file, asks *Save*, *Don't save* or *Cancel* first.
   - The TMDL view shows a project's files with the unsaved edits, as Save would write them.
+  - **Auto recovery** (on by default; File → Options and settings → Options → Auto recovery):
+    every edit of an unsaved document is journaled in the per-user data folder
+    (`DASHCRAFT_DATA_DIR`, else `%LOCALAPPDATA%\dashcraft\recovery` and its macOS and Linux
+    equivalents), never in the project. When DashCraft stops before a save, the next start shows
+    *Document recovery*: Restore reopens the file with the edits (unsaved, undoable), Discard
+    deletes them, Decide later asks again next time. The choice is kept in the app config
+    folder's `auto-recovery.json`.
   - Checks: `cargo test -p dashcraft-app` (`edits_save_and_close_through_the_registry`),
     `npm run check` (`tests/editing.test.ts`, `tests/daxEditor.test.ts`), and on Windows the UI
-    smoke, IntelliSense (`formula-intellisense.mjs`), editor keys (`formula-keys.mjs`) and
+    smoke, IntelliSense (`formula-intellisense.mjs`), editor keys (`formula-keys.mjs`), Auto
+    recovery (`recovery.mjs`: edit, crash, restore, crash, discard) and
     accessibility scripts of [`scripts/app-checks/`](../scripts/app-checks/) against a debug
     build (results: [M6](../docs/accessibility/m6-editing.md),
     [M7](../docs/accessibility/m7-formula-bar.md)).

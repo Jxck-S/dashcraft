@@ -1,6 +1,6 @@
 //! Managed state: the command registry (the core catalog plus the opt-in `ai.*` commands) and
 //! the workspace (shared with the CLI and agents through `pbi-ops`), plus app-only settings
-//! (blob map, File → Recent) and the running `ops_execute` requests.
+//! (blob map, File → Recent, Auto recovery) and the running `ops_execute` requests.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use pbi_ops::{OpError, Registry, Workspace};
 use pbi_session::{CancellationToken, SessionOptions};
 
+use crate::auto_recovery::AutoRecovery;
 use crate::blob::BlobMap;
 use crate::events::OpsProgress;
 use crate::recent::RecentFiles;
@@ -66,6 +67,8 @@ pub struct AppState {
     pub blob_map: BlobMap,
     /// File → Recent (persisted once `run()` names the store).
     pub recent: RecentFiles,
+    /// File → Options → Auto recovery (off until `run()` installs it).
+    pub auto_recovery: AutoRecovery,
     requests: Mutex<HashMap<String, Request>>,
     progress: OnceLock<ProgressSink>,
 }
@@ -95,6 +98,7 @@ impl AppState {
             workspace: Arc::new(workspace),
             blob_map,
             recent: RecentFiles::default(),
+            auto_recovery: AutoRecovery::default(),
             requests: Mutex::new(HashMap::new()),
             progress: OnceLock::new(),
         }

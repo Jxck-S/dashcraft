@@ -11,15 +11,28 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 export const CTRL = 2
 export const ALT = 1
 
-/** Copies Acme, starts the app on it with DevTools on `port` and connects to the page. */
-export async function launch(port, exe = process.argv[2] ?? join(root, 'target', 'debug', 'dashcraft-app.exe')) {
+/**
+ * Copies Acme, starts the app on it with DevTools on `port` and connects to the page. `keep`
+ * starts again on the copy and data folder of the previous launch (a restart after a crash).
+ */
+export async function launch(port, exe = process.argv[2] ?? join(root, 'target', 'debug', 'dashcraft-app.exe'), { keep = false } = {}) {
   if (process.platform !== 'win32') throw new Error('the app checks drive WebView2 and run on Windows only')
   if (!existsSync(exe)) throw new Error(`${exe} missing: build it with (cd app && npx tauri build --debug --no-bundle)`)
   const copy = join(root, 'target', 'tmp', 'app-checks', 'acme-outfitters')
-  rmSync(copy, { recursive: true, force: true })
-  cpSync(join(root, 'reference', 'examples', 'acme-outfitters'), copy, { recursive: true })
+  // A fresh data folder too: no Auto recovery journals of an earlier run (Document recovery dialog).
+  const data = join(root, 'target', 'tmp', 'app-checks', 'data')
+  if (!keep) {
+    rmSync(copy, { recursive: true, force: true })
+    rmSync(data, { recursive: true, force: true })
+    cpSync(join(root, 'reference', 'examples', 'acme-outfitters'), copy, { recursive: true })
+  }
   const app = spawn(exe, [join(copy, 'AcmeOutfitters.pbip')], {
-    env: { ...process.env, DASHCRAFT_BLOB_MAP: join(copy, 'blob-map.json'), WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` },
+    env: {
+      ...process.env,
+      DASHCRAFT_BLOB_MAP: join(copy, 'blob-map.json'),
+      DASHCRAFT_DATA_DIR: data,
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
+    },
     stdio: 'ignore',
   })
   let target
@@ -78,7 +91,7 @@ export async function launch(port, exe = process.argv[2] ?? join(root, 'target',
     app.kill()
   }
   await send('Runtime.enable')
-  return { app, copy, send, evaluate, waitFor, key, type, uia, close }
+  return { app, copy, data, send, evaluate, waitFor, key, type, uia, close }
 }
 
 /** The window title as the title bar shows it. */

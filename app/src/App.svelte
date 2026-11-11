@@ -173,6 +173,11 @@
   let aiStatus = $state.raw<AiStatusOut | null>(null)
   let aiDemo = $state(false)
   let optionsOpen = $state(false)
+  let optionsPage = $state<'ai' | 'autoRecovery'>('ai')
+  /** Unsaved edits of an earlier session that ended without saving (Document recovery). */
+  let recovery = $state.raw<backend.RecoveryJournal[] | null>(null)
+  /** The journal being restored or discarded. */
+  let recoveryPending = $state<string | null>(null)
   let explainTarget = $state.raw<ExplainTarget | null>(null)
   let explainSeq = 0
   let suggestOpen = $state(false)
@@ -1245,7 +1250,68 @@
 
   function openAiOptions() {
     backstage = null
+    optionsPage = 'ai'
     optionsOpen = true
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Document recovery (Auto recovery journals of a session that ended without saving)
+  // ---------------------------------------------------------------------------------------------
+
+  /** Shows Document recovery when an earlier session left unsaved edits; hides it when none are left. */
+  async function checkRecovery() {
+    if (!backend.hasBackend) return
+    const listed = await backend.recoverableEdits()
+    recovery = listed.ok && listed.value.journals.length > 0 ? listed.value.journals : null
+  }
+
+  async function restoreRecovery(id: string) {
+    if (!(await confirmDiscard())) return
+    const seq = ++openSeq
+    recoveryPending = id
+    busy = true
+    busyLabel = 'Restoring unsaved edits…'
+    status = { message: busyLabel, isError: false }
+    try {
+      const restored = await backend.restoreRecovery(id)
+      if (seq !== openSeq) {
+        if (restored.ok) void backend.closeDocument(restored.value.views.summary.docId, true)
+        return
+      }
+      if (!restored.ok) {
+        fail(restored.error)
+        return
+      }
+      const { views, failed, replayed, edits } = restored.value
+      showDocument(views)
+      const name = views.summary.fileName
+      if (failed) {
+        toast('warning', `Restored ${replayed} of ${plural(edits, 'edit')} of ${name}: ${failed.command} failed (${failed.message}). Its recovery file is kept until you discard it.`)
+      } else {
+        status = { message: `Restored ${plural(edits, 'unsaved edit')} of ${name}: save to keep them`, isError: false }
+      }
+    } finally {
+      recoveryPending = null
+      if (seq === openSeq) busy = false
+      await checkRecovery()
+    }
+  }
+
+  async function discardRecovery(journal: backend.RecoveryJournal) {
+    const name = journal.path ? baseName(journal.path) : 'this file'
+    const choice = await ask('Discard unsaved edits', [`Delete the ${plural(journal.edits, 'unsaved edit')} of ${name}?`, 'They cannot be restored afterwards.'], [
+      { id: 'discard', label: 'Discard', primary: true },
+      { id: 'cancel', label: 'Cancel' },
+    ])
+    if (choice !== 'discard') return
+    recoveryPending = journal.recoveryId
+    try {
+      const discarded = await backend.discardRecovery(journal.recoveryId)
+      if (!discarded.ok) fail(discarded.error)
+    } finally {
+      recoveryPending = null
+      await checkRecovery()
+    }
   }
 
   /** Opens the Explain with AI pane for `measure` (a new request each time). */
@@ -1379,10 +1445,12 @@
         if (current) {
           ++openSeq
           showDocument(current)
-          return
+        } else {
+          const startup = await backend.startupPath()
+          if (startup && !disposed) await openPath(startup)
         }
-        const startup = await backend.startupPath()
-        if (startup && !disposed) await openPath(startup)
+        // Unsaved edits left by a session that ended without saving (Auto recovery).
+        if (!disposed) await checkRecovery()
       } catch (e) {
         fail(`Startup failed: ${String(e)}`)
       }
@@ -1699,7 +1767,23 @@
 
   {#if optionsOpen}
     {#await import('./components/ai/OptionsDialog.svelte') then { default: OptionsDialog }}
-      <OptionsDialog status={aiStatus} demo={aiDemo} onstatus={(s) => (aiStatus = s)} onclose={() => (optionsOpen = false)} />
+      <OptionsDialog status={aiStatus} demo={aiDemo} page={optionsPage} onstatus={(s) => (aiStatus = s)} onclose={() => (optionsOpen = false)} />
+    {/await}
+  {/if}
+
+  {#if recovery}
+    {@const journals = recovery}
+    {#await import('./components/RecoveryDialog.svelte') then { default: RecoveryDialog }}
+      <RecoveryDialog
+        {journals}
+        pending={recoveryPending}
+        onrestore={(id) => void restoreRecovery(id)}
+        ondiscard={(id) => {
+          const journal = journals.find((j) => j.recoveryId === id)
+          if (journal) void discardRecovery(journal)
+        }}
+        onclose={() => (recovery = null)}
+      />
     {/await}
   {/if}
 

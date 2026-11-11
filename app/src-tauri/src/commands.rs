@@ -7,7 +7,8 @@
 //! - UI projections of an open registry document (by `docId`): the Data pane tree with object
 //!   ids, the report outline, diagnostics and detection, the Properties pane, the TMDL view,
 //!   the Model view layout and the Format pane;
-//! - app settings: the blob map (`DASHCRAFT_BLOB_MAP`, Data source settings) and File → Recent.
+//! - app settings: the blob map (`DASHCRAFT_BLOB_MAP`, Data source settings), File → Recent
+//!   and Auto recovery.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -19,9 +20,9 @@ use tauri::State;
 
 use crate::blob::BlobMapSetting;
 use crate::dto::{
-    BlobMapDto, CacheInfoDto, DocumentSummary, DocumentViewsDto, EntryKind, ModelAvailability,
-    ModelDiagramDto, ObjectDetailsDto, ObjectIdDto, OpenLoad, RecentFileDto, TmdlViewDto,
-    VisualFormatDto,
+    AutoRecoveryDto, BlobMapDto, CacheInfoDto, DocumentSummary, DocumentViewsDto, EntryKind,
+    ModelAvailability, ModelDiagramDto, ObjectDetailsDto, ObjectIdDto, OpenLoad, RecentFileDto,
+    TmdlViewDto, VisualFormatDto,
 };
 use crate::error::AppError;
 use crate::mapping::{self, PathInfo};
@@ -270,6 +271,25 @@ pub async fn remove_recent_file(
 ) -> Result<Vec<RecentFileDto>, AppError> {
     state.recent.remove(path.as_deref());
     Ok(state.recent.list())
+}
+
+/// File → Options → Auto recovery: whether unsaved edits are journaled for recovery after a
+/// crash (`doc.recovery.*` lists and restores them) and where.
+#[tauri::command]
+#[specta::specta]
+pub async fn auto_recovery(state: State<'_, AppState>) -> Result<AutoRecoveryDto, AppError> {
+    Ok(state.auto_recovery.get(&state.workspace))
+}
+
+/// Turns Auto recovery on or off and remembers the choice. Turning it off deletes the recovery
+/// files of open documents; existing ones of earlier sessions stay listed.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_auto_recovery(
+    enabled: bool,
+    state: State<'_, AppState>,
+) -> Result<AutoRecoveryDto, AppError> {
+    state.auto_recovery.set(&state.workspace, enabled)
 }
 
 /// Validates `path` and gathers filesystem facts (absolute path, name, kind, size).
