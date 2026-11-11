@@ -11,6 +11,7 @@ pub mod inspect;
 pub mod lint;
 pub mod m;
 pub mod meta;
+pub mod recovery;
 pub mod render;
 pub mod security;
 pub mod tmdl;
@@ -63,6 +64,9 @@ pub fn catalog() -> Registry {
         .with::<workspace::DocExternalChanges>()
         .with::<workspace::DocReload>()
         .with::<workspace::DocDiff>()
+        .with::<recovery::RecoveryList>()
+        .with::<recovery::RecoveryRestore>()
+        .with::<recovery::RecoveryDiscard>()
         // inspect
         .with::<inspect::DocInspect>()
         .with::<inspect::ModelTables>()

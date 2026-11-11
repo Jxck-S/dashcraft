@@ -95,6 +95,9 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`doc.externalChanges`](#docexternalchanges) | The project files added, changed or removed on disk by other programs (Git, editors, Power BI Desktop) since the open or last save. | A |
 | [`doc.reload`](#docreload) | Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges. | M |
 | [`doc.diff`](#docdiff) | Semantic diff of a document against its files on disk, another open document or a path: the objects added, removed and changed, with the differing properties. | A |
+| [`doc.recovery.list`](#docrecoverylist) | The recovery journals of unsaved edits left by documents that were not saved or closed (e.g. after a crash). |  |
+| [`doc.recovery.restore`](#docrecoveryrestore) | Reopens the document of a recovery journal and replays its unsaved edits; the result is unsaved until doc.save. |  |
+| [`doc.recovery.discard`](#docrecoverydiscard) | Deletes a recovery journal and the unsaved edits it holds. | W |
 | [`doc.inspect`](#docinspect) | The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). | A |
 | [`model.tables`](#modeltables) | Every model table with its columns, measure names, partitions, hierarchies and loaded row count. | A |
 | [`model.measures`](#modelmeasures) | Every measure with its table, DAX, format string, description and display folder. | A |
@@ -500,6 +503,80 @@ Examples:
 - Unsaved and external changes of d1: `{"docId":"d1"}`
 - Against another open document: `{"docId":"d2","againstDocId":"d1"}`
 - Against another copy of the project: `{"docId":"d1","againstPath":"examples/acme-outfitters/AcmeOutfitters.pbip"}`
+
+### `doc.recovery.list`
+
+**List recoverable edits.** The recovery journals of unsaved edits left by documents that were not saved or closed (e.g. after a crash).
+
+_not offered to agents; since 0.2.0._
+
+Parameters:
+
+object
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Recovery is on in this workspace. |
+| `location`? | string \| null | The journal folder (in the per-user data folder, never in a project). |
+| `journals` | RecoveryJournalOut[] | Journals not held by an open document, oldest first. |
+
+Examples:
+
+- Recoverable edits: `{}`
+
+### `doc.recovery.restore`
+
+**Restore recoverable edits.** Reopens the document of a recovery journal and replays its unsaved edits; the result is unsaved until doc.save.
+
+_not offered to agents; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `recoveryId` | string | A recovery id from `doc.recovery.list`. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `recoveryId` | string |  |
+| `docId` | string | The reopened document with the recovered edits (unsaved). |
+| `document` | DocSummary | Summary of an open document. |
+| `edits` | integer | Journaled commands. |
+| `replayed` | integer | Commands replayed; fewer than `edits` when one failed. |
+| `failed`? | ReplayFailureOut \| null | The command that failed; the document keeps the edits before it and the journal is kept (discard it explicitly). |
+| `revision` | integer | The document revision after the replay. |
+| `dirty` | boolean | The document has unsaved edits. |
+
+Examples:
+
+- Restore a journal: `{"recoveryId":"4f1c2a9e0b7d3e65-4242-1762898400000-0"}`
+
+### `doc.recovery.discard`
+
+**Discard recoverable edits.** Deletes a recovery journal and the unsaved edits it holds.
+
+_not offered to agents, writes files; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `recoveryId` | string | A recovery id from `doc.recovery.list`. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `recoveryId` | string |  |
+| `discarded` | boolean | `false` when there was no such journal. |
+
+Examples:
+
+- Discard a journal: `{"recoveryId":"4f1c2a9e0b7d3e65-4242-1762898400000-0"}`
 
 ## Inspect
 

@@ -1064,6 +1064,13 @@ version; compare two versions of a project.
 - [ ] **M8.1 Autosave and recovery.** A periodic journal of unsaved transactions in the user data
   folder (never in the project); on the next open, a recovery prompt (restore, open saved,
   discard); Options, Auto recovery settings (interval, location shown, off).
+  *Progress:* headless part done: `pbi_ops::recovery` journals every revision-changing command of
+  an unsaved document (JSON lines in the user data folder, opt-in per workspace; save, reload and
+  close delete it) and `doc.recovery.list`, `doc.recovery.restore` (reopen and replay, stopping at
+  a step that no longer applies) and `doc.recovery.discard` (`crates/pbi-ops/tests/recovery.rs`: a
+  dropped workspace's seven edits replay to the same measures). The journal is written per
+  command rather than on an interval. Next: the app turns it on, prompts on startup (restore, open
+  saved, discard) and shows it in Options.
 - [ ] **M8.2 External changes.** Watch the open project's files; a notification bar offers Reload,
   Keep mine or Compare; `doc.status` reports changes for headless callers; Save refuses to
   overwrite newer external changes unless forced.

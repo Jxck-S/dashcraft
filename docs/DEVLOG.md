@@ -7,6 +7,22 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M8.1 headless: recovery journals, doc.recovery.*
+
+- **What:** `pbi_ops::recovery` (`RecoveryStore`: versioned JSON-lines journals in the per-user
+  data folder, created `0600`, a cut-short last line tolerated, foreign or newer formats refused).
+  `Registry::execute` journals each mutating command that changed the revision, under the
+  document's lock, and deletes the journal on `doc.save`, `doc.saveAs`, `doc.reload` and
+  `doc.close`; journal errors only log. `doc.recovery.list`, `doc.recovery.restore` (reopen with
+  the header's `doc.open` parameters and replay through the registry; replay relies on the
+  per-document deterministic object ids) and `doc.recovery.discard`. Off unless the host calls
+  `Workspace::set_recovery` (ADR-0013 §5).
+- **Why:** M8.1, after M8.2 and M8.3 (ROADMAP "Next").
+- **Numbers:** 3 unit tests, `crates/pbi-ops/tests/recovery.rs` (3 tests: seven edits survive a
+  dropped workspace and replay to the same measures, a failed replay keeps the journal, off by
+  default); catalog +3 commands.
+- **Open:** the app's opt-in, startup prompt and Options page.
+
 ### M8.3 headless: semantic diff, doc.diff
 
 - **What:** `pbi-core::diff` (`diff_documents`): matches model and report objects by name
