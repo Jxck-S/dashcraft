@@ -314,6 +314,17 @@ impl History {
         self.redo.clear();
     }
 
+    /// Starts over from a document replaced as a whole (a reload from
+    /// disk): drops all steps and publishes a new, saved state at the next
+    /// revision, so the revision never rewinds.
+    pub fn reset(&mut self) {
+        self.clear();
+        self.revision = self.revision.saturating_add(1);
+        self.current_state = self.next_state;
+        self.next_state = self.next_state.saturating_add(1);
+        self.saved_state = Some(self.current_state);
+    }
+
     fn trim(&mut self) {
         let Some(limit) = self.limit else { return };
         if self.undo.len() > limit {

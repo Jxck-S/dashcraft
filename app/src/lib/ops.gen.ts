@@ -1788,6 +1788,26 @@ export interface DocCloseParams {
   discardChanges?: boolean
 }
 
+export interface DocExternalChangesOut {
+  /** The document id. */
+  docId: string
+  /**
+   * Project files are tracked (PBIP projects); other documents report
+   * no changes.
+   */
+  tracked: boolean
+  /**
+   * Files added, changed or removed on disk by another program since
+   * the open or last save, by path.
+   */
+  changes: FileChangeOut[]
+  /**
+   * `doc.save` without `overwrite` would refuse these changes as a
+   * conflict.
+   */
+  conflict: boolean
+}
+
 export interface DocInspectParams {
   /** The document id from `doc.open` (`d1`, …). */
   docId: string
@@ -1854,6 +1874,62 @@ export interface DocOpenParams {
 export interface DocParams {
   /** The document id returned by `doc.open` (`d1`, …). */
   docId: string
+}
+
+export interface DocReloadOut {
+  /** The document id (unchanged). */
+  docId: string
+  /** The new revision: a saved state, newer than any before. */
+  revision: number
+  /** Unsaved edits were discarded. */
+  discardedEdits: boolean
+  /**
+   * Loaded data was dropped: data commands load it again on first use
+   * (`autoRefresh`), or refresh with `data.refresh`.
+   */
+  dataUnloaded: boolean
+  /** The reloaded document. */
+  summary: DocSummary
+}
+
+export interface DocReloadParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Explicitly discard unsaved in-memory edits. */
+  discardChanges?: boolean
+}
+
+/** The state of an open document. */
+export interface DocStatusOut {
+  /** The document id. */
+  docId: string
+  /** The path as given (moved by a Save As). */
+  path: string
+  /** Source format (`pbip`, `pbix`, …). */
+  format: string
+  /** The document revision. */
+  revision: number
+  /** The document has unsaved edits. */
+  dirty: boolean
+  canUndo: boolean
+  canRedo: boolean
+  /**
+   * `doc.save` can save in place (a PBIP project opened from a folder);
+   * otherwise use `doc.saveAs`.
+   */
+  canSave: boolean
+  /** Project files are tracked for external changes (PBIP projects). */
+  tracksExternalChanges: boolean
+  /**
+   * Project files added, changed or removed on disk by another program
+   * since the open or last save: `doc.save` refuses them as a conflict
+   * without `overwrite`; `doc.reload` rereads them.
+   */
+  externalChanges: FileChangeOut[]
+  /** Data was loaded. */
+  loaded: boolean
+  /** Data generation (changes after every data change and reload). */
+  generation: number
 }
 
 /** Summary of an open document. */
@@ -4657,6 +4733,12 @@ export interface OpsCommands {
   'doc.close': { params: DocCloseParams; output: DocCloseOut }
   /** The open documents of the workspace with their summaries. */
   'doc.list': { params: NoParams; output: DocListOut }
+  /** Revision, unsaved edits, undo/redo, whether doc.save can save in place, and the project files changed on disk by other programs since the open or last save. */
+  'doc.status': { params: DocParams; output: DocStatusOut }
+  /** The project files added, changed or removed on disk by other programs (Git, editors, Power BI Desktop) since the open or last save. */
+  'doc.externalChanges': { params: DocParams; output: DocExternalChangesOut }
+  /** Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges. */
+  'doc.reload': { params: DocReloadParams; output: DocReloadOut }
   /** The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). */
   'doc.inspect': { params: DocInspectParams; output: Inspect }
   /** Every model table with its columns, measure names, partitions, hierarchies and loaded row count. */
@@ -4854,6 +4936,9 @@ export const OPS_META = {
   'doc.open': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.close': { category: 'workspace', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.list': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'doc.status': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'doc.externalChanges': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'doc.reload': { category: 'workspace', mutatesDocument: true, longRunning: false, agentSafe: false, writesFiles: false },
   'doc.inspect': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'model.tables': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'model.measures': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -4970,6 +5055,12 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     docClose: (params: DocCloseParams, options?: O) => run('doc.close', params, options),
     /** The open documents of the workspace with their summaries. */
     docList: (params: NoParams = {}, options?: O) => run('doc.list', params, options),
+    /** Revision, unsaved edits, undo/redo, whether doc.save can save in place, and the project files changed on disk by other programs since the open or last save. */
+    docStatus: (params: DocParams, options?: O) => run('doc.status', params, options),
+    /** The project files added, changed or removed on disk by other programs (Git, editors, Power BI Desktop) since the open or last save. */
+    docExternalChanges: (params: DocParams, options?: O) => run('doc.externalChanges', params, options),
+    /** Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges. */
+    docReload: (params: DocReloadParams, options?: O) => run('doc.reload', params, options),
     /** The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). */
     docInspect: (params: DocInspectParams, options?: O) => run('doc.inspect', params, options),
     /** Every model table with its columns, measure names, partitions, hierarchies and loaded row count. */

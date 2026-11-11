@@ -1,4 +1,5 @@
-//! `doc.detect`, `doc.open`, `doc.close`, `doc.list`.
+//! `doc.detect`, `doc.open`, `doc.close`, `doc.list`, `doc.status`,
+//! `doc.externalChanges`, `doc.reload`.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -11,9 +12,10 @@ use pbi_session::{Clock, FixedClock, RefreshSource, Session, SessionError, Sessi
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::{BASE, doc};
+use super::edit::FileChangeOut;
+use super::{BASE, DocParams, doc};
 use crate::command::{Category, Command, CommandMeta};
-use crate::ctx::Ctx;
+use crate::ctx::{Ctx, DocChangedEvent};
 use crate::detect_model::{DetectOut, detect_out};
 use crate::error::{OpError, open_error};
 use crate::inspect_model::detection_out;
@@ -405,5 +407,231 @@ impl Command for DocList {
             documents.push(summary(&entry).await);
         }
         Ok(DocListOut { documents })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// The project files changed on disk since the open or last save, `None`
+/// when the document does not track them.
+async fn external_changes(entry: &DocEntry) -> Result<Option<Vec<FileChangeOut>>, OpError> {
+    let changes = entry.session().external_changes().await.map_err(|e| {
+        OpError::from(e).context(format!("cannot check {} for changes", entry.shown_path()))
+    })?;
+    Ok(changes.map(|c| c.into_iter().map(FileChangeOut::from).collect()))
+}
+
+/// `doc.status`.
+#[derive(Debug)]
+pub struct DocStatus;
+
+/// The state of an open document.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DocStatusOut {
+    /// The document id.
+    pub doc_id: String,
+    /// The path as given (moved by a Save As).
+    pub path: String,
+    /// Source format (`pbip`, `pbix`, …).
+    pub format: String,
+    /// The document revision.
+    pub revision: u64,
+    /// The document has unsaved edits.
+    pub dirty: bool,
+    pub can_undo: bool,
+    pub can_redo: bool,
+    /// `doc.save` can save in place (a PBIP project opened from a folder);
+    /// otherwise use `doc.saveAs`.
+    pub can_save: bool,
+    /// Project files are tracked for external changes (PBIP projects).
+    pub tracks_external_changes: bool,
+    /// Project files added, changed or removed on disk by another program
+    /// since the open or last save: `doc.save` refuses them as a conflict
+    /// without `overwrite`; `doc.reload` rereads them.
+    pub external_changes: Vec<FileChangeOut>,
+    /// Data was loaded.
+    pub loaded: bool,
+    /// Data generation (changes after every data change and reload).
+    pub generation: u64,
+}
+
+impl Command for DocStatus {
+    type Params = DocParams;
+    type Output = DocStatusOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "doc.status",
+            title: "Document status",
+            summary: "Revision, unsaved edits, undo/redo, whether doc.save can save in place, and the project files changed on disk by other programs since the open or last save.",
+            category: Category::Workspace,
+            examples: &[("Status of d1", r#"{"docId": "d1"}"#)],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &p.doc_id)?;
+        let session = entry.session();
+        let history = session.document_history();
+        let opened = session.opened();
+        let can_save = opened.document.source.format == pbi_model::SourceFormat::Pbip
+            && opened.container.root_dir().is_some();
+        let changes = external_changes(&entry).await?;
+        Ok(DocStatusOut {
+            doc_id: entry.id().to_owned(),
+            path: entry.shown_path(),
+            format: opened.document.source.format.as_str().to_owned(),
+            revision: history.revision,
+            dirty: history.dirty,
+            can_undo: history.can_undo,
+            can_redo: history.can_redo,
+            can_save,
+            tracks_external_changes: changes.is_some(),
+            external_changes: changes.unwrap_or_default(),
+            loaded: entry.is_loaded().await,
+            generation: entry.generation(),
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `doc.externalChanges`.
+#[derive(Debug)]
+pub struct DocExternalChanges;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DocExternalChangesOut {
+    /// The document id.
+    pub doc_id: String,
+    /// Project files are tracked (PBIP projects); other documents report
+    /// no changes.
+    pub tracked: bool,
+    /// Files added, changed or removed on disk by another program since
+    /// the open or last save, by path.
+    pub changes: Vec<FileChangeOut>,
+    /// `doc.save` without `overwrite` would refuse these changes as a
+    /// conflict.
+    pub conflict: bool,
+}
+
+impl Command for DocExternalChanges {
+    type Params = DocParams;
+    type Output = DocExternalChangesOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "doc.externalChanges",
+            title: "External changes",
+            summary: "The project files added, changed or removed on disk by other programs (Git, editors, Power BI Desktop) since the open or last save.",
+            category: Category::Workspace,
+            examples: &[("Changes under d1", r#"{"docId": "d1"}"#)],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &p.doc_id)?;
+        let changes = external_changes(&entry).await?;
+        let tracked = changes.is_some();
+        let changes = changes.unwrap_or_default();
+        Ok(DocExternalChangesOut {
+            doc_id: entry.id().to_owned(),
+            tracked,
+            conflict: !changes.is_empty(),
+            changes,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `doc.reload`.
+#[derive(Debug)]
+pub struct DocReload;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DocReloadParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Explicitly discard unsaved in-memory edits.
+    #[serde(default)]
+    pub discard_changes: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DocReloadOut {
+    /// The document id (unchanged).
+    pub doc_id: String,
+    /// The new revision: a saved state, newer than any before.
+    pub revision: u64,
+    /// Unsaved edits were discarded.
+    pub discarded_edits: bool,
+    /// Loaded data was dropped: data commands load it again on first use
+    /// (`autoRefresh`), or refresh with `data.refresh`.
+    pub data_unloaded: bool,
+    /// The reloaded document.
+    pub summary: DocSummary,
+}
+
+impl Command for DocReload {
+    type Params = DocReloadParams;
+    type Output = DocReloadOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "doc.reload",
+            title: "Reload from disk",
+            summary: "Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges.",
+            category: Category::Workspace,
+            mutates_document: true,
+            agent_safe: false,
+            examples: &[
+                ("Reload d1", r#"{"docId": "d1"}"#),
+                (
+                    "Discard unsaved edits",
+                    r#"{"docId": "d1", "discardChanges": true}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &p.doc_id)?;
+        let dirty = entry.session().is_document_dirty();
+        if dirty && !p.discard_changes {
+            return Err(OpError::unsupported(
+                "document has unsaved edits; pass \"discardChanges\": true to reload and discard them, or save them first",
+            ));
+        }
+        let (revision, data_unloaded) = entry.reload(ctx).await.map_err(|e| match e {
+            SessionError::Open(e) => {
+                let path = entry.path();
+                open_error(&path, &path, e).context("cannot reload; the open document is unchanged")
+            }
+            e => OpError::from(e),
+        })?;
+        ctx.doc_changed(DocChangedEvent {
+            doc_id: entry.id().to_owned(),
+            command: ctx.command().unwrap_or_default().to_owned(),
+            revision,
+            dirty: false,
+            changes: Vec::new(),
+            path: None,
+            reloaded: true,
+        });
+        Ok(DocReloadOut {
+            doc_id: entry.id().to_owned(),
+            revision,
+            discarded_edits: dirty,
+            data_unloaded,
+            summary: summary(&entry).await,
+        })
     }
 }

@@ -1067,6 +1067,11 @@ version; compare two versions of a project.
 - [ ] **M8.2 External changes.** Watch the open project's files; a notification bar offers Reload,
   Keep mine or Compare; `doc.status` reports changes for headless callers; Save refuses to
   overwrite newer external changes unless forced.
+  *Progress:* headless part done: `doc.status`, `doc.externalChanges` and `doc.reload`
+  (`crates/pbi-ops/tests/save.rs`: an external TMDL edit is reported, Save refuses it, Reload
+  rereads it under the same `docId` at a newer revision; a failed reload changes nothing).
+  Next: the file watcher, `doc/changed`-style notifications of external changes, and the app's
+  notification bar.
 - [ ] **M8.3 Semantic diff.** `doc.diff` between the in-memory revision and the files on disk, or
   between two documents or folders: objects added, removed and changed, with TMDL and PBIR
   snippets; the Compare view in the app.
