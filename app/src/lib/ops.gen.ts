@@ -1775,6 +1775,15 @@ export interface DiagnosticOut {
   origin?: OriginOut | null
 }
 
+/** What a document was compared with. */
+export type DiffAgainst = 'disk' | 'document' | 'path'
+
+/** How an object differs. */
+export type DiffChangeOut = 'added' | 'removed' | 'changed'
+
+/** The kind of a compared object. */
+export type DiffKindOut = 'model' | 'database' | 'table' | 'column' | 'measure' | 'partition' | 'hierarchy' | 'calculationItem' | 'relationship' | 'expression' | 'queryGroup' | 'role' | 'culture' | 'perspective' | 'report' | 'reportMeasure' | 'page' | 'visual'
+
 export interface DocCloseOut {
   /** The document id. */
   docId: string
@@ -1786,6 +1795,49 @@ export interface DocCloseParams {
   docId: string
   /** Explicitly discard unsaved in-memory edits. */
   discardChanges?: boolean
+}
+
+export interface DocDiffOut {
+  /** The document id. */
+  docId: string
+  /** The compared revision of the document. */
+  revision: number
+  against: DiffAgainst
+  /**
+   * The other document's id or the path compared with (for `disk`, the
+   * document's path).
+   */
+  againstName: string
+  /** No object differs. */
+  identical: boolean
+  added: number
+  removed: number
+  changed: number
+  /**
+   * The objects that differ, in document order (model, tables with
+   * their columns, measures, hierarchies, partitions and calculation
+   * items, relationships, expressions, …, then reports with their
+   * measures, pages and visuals).
+   */
+  objects: ObjectDiffOut[]
+}
+
+export interface DocDiffParams {
+  /**
+   * The document id (`d1`, …): its current revision, unsaved edits
+   * included, is the "after" side.
+   */
+  docId: string
+  /**
+   * Compare with another open document's current revision instead of
+   * the document's own files on disk.
+   */
+  againstDocId?: string | null
+  /**
+   * Compare with a file or folder instead of the document's own files
+   * on disk (read with the document's reader options).
+   */
+  againstPath?: string | null
 }
 
 export interface DocExternalChangesOut {
@@ -3202,6 +3254,27 @@ export interface ObjectDeleteOut {
   warnings: string[]
 }
 
+/** One added, removed or changed object. */
+export interface ObjectDiffOut {
+  kind: DiffKindOut
+  /**
+   * A readable path: `Orders`, `Orders[Total Sales]`,
+   * `Orders[Store ID] -> Stores[Store ID]`, `<report>/<page>`,
+   * `<report>/<page>/<visual name>`, …
+   */
+  path: string
+  change: DiffChangeOut
+  /**
+   * The differing properties (changed), or all of them (added, removed;
+   * children included).
+   */
+  properties: PropertyDiffOut[]
+  /** Where the object is in what the document is compared with. */
+  before?: OriginOut | null
+  /** Where the object is in the document's source files. */
+  after?: OriginOut | null
+}
+
 /**
  * The error of a command: a stable [`code`](OpErrorCode), a user-facing
  * message and optional structured details.
@@ -3381,6 +3454,19 @@ export interface PreviewPeopleParams {
   column: string
   /** Distinct samples returned (default 50, at most 200). */
   limit?: number
+}
+
+/**
+ * One property of a compared object, as serialized by `inspect --json`
+ * style outputs; a side is absent where the property (or the object) is.
+ */
+export interface PropertyDiffOut {
+  /** camelCase property name (`expression`, `formatString`, `position`, …). */
+  name: string
+  /** The value in what the document is compared with. */
+  before?: JsonValue
+  /** The value in the document. */
+  after?: JsonValue
 }
 
 /** The kind of a provider (which adapter talks to it). */
@@ -4739,6 +4825,8 @@ export interface OpsCommands {
   'doc.externalChanges': { params: DocParams; output: DocExternalChangesOut }
   /** Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges. */
   'doc.reload': { params: DocReloadParams; output: DocReloadOut }
+  /** Semantic diff of a document against its files on disk, another open document or a path: the objects added, removed and changed, with the differing properties. */
+  'doc.diff': { params: DocDiffParams; output: DocDiffOut }
   /** The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). */
   'doc.inspect': { params: DocInspectParams; output: Inspect }
   /** Every model table with its columns, measure names, partitions, hierarchies and loaded row count. */
@@ -4939,6 +5027,7 @@ export const OPS_META = {
   'doc.status': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.externalChanges': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.reload': { category: 'workspace', mutatesDocument: true, longRunning: false, agentSafe: false, writesFiles: false },
+  'doc.diff': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.inspect': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'model.tables': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'model.measures': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -5061,6 +5150,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     docExternalChanges: (params: DocParams, options?: O) => run('doc.externalChanges', params, options),
     /** Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges. */
     docReload: (params: DocReloadParams, options?: O) => run('doc.reload', params, options),
+    /** Semantic diff of a document against its files on disk, another open document or a path: the objects added, removed and changed, with the differing properties. */
+    docDiff: (params: DocDiffParams, options?: O) => run('doc.diff', params, options),
     /** The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). */
     docInspect: (params: DocInspectParams, options?: O) => run('doc.inspect', params, options),
     /** Every model table with its columns, measure names, partitions, hierarchies and loaded row count. */

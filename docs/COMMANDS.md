@@ -94,6 +94,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`doc.status`](#docstatus) | Revision, unsaved edits, undo/redo, whether doc.save can save in place, and the project files changed on disk by other programs since the open or last save. | A |
 | [`doc.externalChanges`](#docexternalchanges) | The project files added, changed or removed on disk by other programs (Git, editors, Power BI Desktop) since the open or last save. | A |
 | [`doc.reload`](#docreload) | Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges. | M |
+| [`doc.diff`](#docdiff) | Semantic diff of a document against its files on disk, another open document or a path: the objects added, removed and changed, with the differing properties. | A |
 | [`doc.inspect`](#docinspect) | The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). | A |
 | [`model.tables`](#modeltables) | Every model table with its columns, measure names, partitions, hierarchies and loaded row count. | A |
 | [`model.measures`](#modelmeasures) | Every measure with its table, DAX, format string, description and display folder. | A |
@@ -465,6 +466,40 @@ Examples:
 
 - Reload d1: `{"docId":"d1"}`
 - Discard unsaved edits: `{"docId":"d1","discardChanges":true}`
+
+### `doc.diff`
+
+**Compare documents.** Semantic diff of a document against its files on disk, another open document or a path: the objects added, removed and changed, with the differing properties.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id (`d1`, …): its current revision, unsaved edits included, is the "after" side. |
+| `againstDocId` (optional) | string \| null | Compare with another open document's current revision instead of the document's own files on disk. |
+| `againstPath` (optional) | string \| null | Compare with a file or folder instead of the document's own files on disk (read with the document's reader options). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id. |
+| `revision` | integer | The compared revision of the document. |
+| `against` | `"disk"` \| `"document"` \| `"path"` | What a document was compared with. |
+| `againstName` | string | The other document's id or the path compared with (for `disk`, the document's path). |
+| `identical` | boolean | No object differs. |
+| `added` | integer |  |
+| `removed` | integer |  |
+| `changed` | integer |  |
+| `objects` | ObjectDiffOut[] | The objects that differ, in document order (model, tables with their columns, measures, hierarchies, partitions and calculation items, relationships, expressions, …, then reports with their measures, pages and visuals). |
+
+Examples:
+
+- Unsaved and external changes of d1: `{"docId":"d1"}`
+- Against another open document: `{"docId":"d2","againstDocId":"d1"}`
+- Against another copy of the project: `{"docId":"d1","againstPath":"examples/acme-outfitters/AcmeOutfitters.pbip"}`
 
 ## Inspect
 

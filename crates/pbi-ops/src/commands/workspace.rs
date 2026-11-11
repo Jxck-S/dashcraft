@@ -1,5 +1,5 @@
 //! `doc.detect`, `doc.open`, `doc.close`, `doc.list`, `doc.status`,
-//! `doc.externalChanges`, `doc.reload`.
+//! `doc.externalChanges`, `doc.reload`, `doc.diff`.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -18,7 +18,7 @@ use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::{Ctx, DocChangedEvent};
 use crate::detect_model::{DetectOut, detect_out};
 use crate::error::{OpError, open_error};
-use crate::inspect_model::detection_out;
+use crate::inspect_model::{OriginOut, detection_out};
 use crate::workspace::{DocEntry, DocOptions, Workspace};
 
 /// Where a document's data comes from.
@@ -632,6 +632,286 @@ impl Command for DocReload {
             discarded_edits: dirty,
             data_unloaded,
             summary: summary(&entry).await,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `doc.diff`.
+#[derive(Debug)]
+pub struct DocDiff;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DocDiffParams {
+    /// The document id (`d1`, …): its current revision, unsaved edits
+    /// included, is the "after" side.
+    pub doc_id: String,
+    /// Compare with another open document's current revision instead of
+    /// the document's own files on disk.
+    #[serde(default)]
+    pub against_doc_id: Option<String>,
+    /// Compare with a file or folder instead of the document's own files
+    /// on disk (read with the document's reader options).
+    #[serde(default)]
+    pub against_path: Option<PathBuf>,
+}
+
+/// The kind of a compared object.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DiffKindOut {
+    Model,
+    Database,
+    Table,
+    Column,
+    Measure,
+    Partition,
+    Hierarchy,
+    CalculationItem,
+    Relationship,
+    Expression,
+    QueryGroup,
+    Role,
+    Culture,
+    Perspective,
+    Report,
+    ReportMeasure,
+    Page,
+    Visual,
+}
+
+impl From<pbi_core::DiffKind> for DiffKindOut {
+    fn from(k: pbi_core::DiffKind) -> Self {
+        use pbi_core::DiffKind as K;
+        match k {
+            K::Model => Self::Model,
+            K::Database => Self::Database,
+            K::Table => Self::Table,
+            K::Column => Self::Column,
+            K::Measure => Self::Measure,
+            K::Partition => Self::Partition,
+            K::Hierarchy => Self::Hierarchy,
+            K::CalculationItem => Self::CalculationItem,
+            K::Relationship => Self::Relationship,
+            K::Expression => Self::Expression,
+            K::QueryGroup => Self::QueryGroup,
+            K::Role => Self::Role,
+            K::Culture => Self::Culture,
+            K::Perspective => Self::Perspective,
+            K::Report => Self::Report,
+            K::ReportMeasure => Self::ReportMeasure,
+            K::Page => Self::Page,
+            K::Visual => Self::Visual,
+        }
+    }
+}
+
+/// How an object differs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DiffChangeOut {
+    /// Only in the document (`docId`).
+    Added,
+    /// Only in what it is compared with.
+    Removed,
+    /// In both, with different properties.
+    Changed,
+}
+
+impl From<pbi_core::DiffChange> for DiffChangeOut {
+    fn from(c: pbi_core::DiffChange) -> Self {
+        match c {
+            pbi_core::DiffChange::Added => Self::Added,
+            pbi_core::DiffChange::Removed => Self::Removed,
+            pbi_core::DiffChange::Changed => Self::Changed,
+        }
+    }
+}
+
+/// One property of a compared object, as serialized by `inspect --json`
+/// style outputs; a side is absent where the property (or the object) is.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PropertyDiffOut {
+    /// camelCase property name (`expression`, `formatString`, `position`, …).
+    pub name: String,
+    /// The value in what the document is compared with.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before: Option<serde_json::Value>,
+    /// The value in the document.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<serde_json::Value>,
+}
+
+/// One added, removed or changed object.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectDiffOut {
+    pub kind: DiffKindOut,
+    /// A readable path: `Orders`, `Orders[Total Sales]`,
+    /// `Orders[Store ID] -> Stores[Store ID]`, `<report>/<page>`,
+    /// `<report>/<page>/<visual name>`, …
+    pub path: String,
+    pub change: DiffChangeOut,
+    /// The differing properties (changed), or all of them (added, removed;
+    /// children included).
+    pub properties: Vec<PropertyDiffOut>,
+    /// Where the object is in what the document is compared with.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before: Option<OriginOut>,
+    /// Where the object is in the document's source files.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<OriginOut>,
+}
+
+/// What a document was compared with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DiffAgainst {
+    /// The document's own files on disk (its saved state, plus any external
+    /// changes).
+    Disk,
+    /// Another open document (`againstDocId`).
+    Document,
+    /// A file or folder (`againstPath`).
+    Path,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DocDiffOut {
+    /// The document id.
+    pub doc_id: String,
+    /// The compared revision of the document.
+    pub revision: u64,
+    pub against: DiffAgainst,
+    /// The other document's id or the path compared with (for `disk`, the
+    /// document's path).
+    pub against_name: String,
+    /// No object differs.
+    pub identical: bool,
+    pub added: usize,
+    pub removed: usize,
+    pub changed: usize,
+    /// The objects that differ, in document order (model, tables with
+    /// their columns, measures, hierarchies, partitions and calculation
+    /// items, relationships, expressions, …, then reports with their
+    /// measures, pages and visuals).
+    pub objects: Vec<ObjectDiffOut>,
+}
+
+fn origin_out(o: pbi_model::Origin) -> OriginOut {
+    OriginOut {
+        path: o.path,
+        line: o.line,
+        pointer: o.pointer,
+    }
+}
+
+impl Command for DocDiff {
+    type Params = DocDiffParams;
+    type Output = DocDiffOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "doc.diff",
+            title: "Compare documents",
+            summary: "Semantic diff of a document against its files on disk, another open document or a path: the objects added, removed and changed, with the differing properties.",
+            category: Category::Workspace,
+            examples: &[
+                ("Unsaved and external changes of d1", r#"{"docId": "d1"}"#),
+                (
+                    "Against another open document",
+                    r#"{"docId": "d2", "againstDocId": "d1"}"#,
+                ),
+                (
+                    "Against another copy of the project",
+                    r#"{"docId": "d1", "againstPath": "examples/acme-outfitters/AcmeOutfitters.pbip"}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &p.doc_id)?;
+        let session = entry.session();
+        let (revision, after) = {
+            let snapshot = session.document_revision();
+            (snapshot, session.document())
+        };
+        let (against, against_name, before) = match (&p.against_doc_id, &p.against_path) {
+            (Some(_), Some(_)) => {
+                return Err(OpError::invalid_params(
+                    "pass at most one of againstDocId and againstPath",
+                ));
+            }
+            (Some(other), None) => {
+                let other = doc(ws, other)?;
+                (
+                    DiffAgainst::Document,
+                    other.id().to_owned(),
+                    other.session().document(),
+                )
+            }
+            (None, Some(path)) => {
+                let checked = ws.policy().check_read(path)?;
+                let document = session.read_path(&checked).await.map_err(|e| match e {
+                    SessionError::Open(e) => open_error(path, &checked, e),
+                    e => OpError::from(e),
+                })?;
+                (
+                    DiffAgainst::Path,
+                    path.to_string_lossy().into_owned(),
+                    Arc::new(document),
+                )
+            }
+            (None, None) => {
+                let path = entry.path();
+                let document = session.read_path(&path).await.map_err(|e| match e {
+                    SessionError::Open(e) => open_error(&path, &path, e)
+                        .context(format!("cannot read {} from disk", entry.shown_path())),
+                    e => OpError::from(e),
+                })?;
+                (DiffAgainst::Disk, entry.shown_path(), Arc::new(document))
+            }
+        };
+        let diff =
+            tokio::task::spawn_blocking(move || pbi_core::diff_documents(&before, &after)).await?;
+        let added = diff.count(pbi_core::DiffChange::Added);
+        let removed = diff.count(pbi_core::DiffChange::Removed);
+        let changed = diff.count(pbi_core::DiffChange::Changed);
+        Ok(DocDiffOut {
+            doc_id: entry.id().to_owned(),
+            revision,
+            against,
+            against_name,
+            identical: diff.is_empty(),
+            added,
+            removed,
+            changed,
+            objects: diff
+                .objects
+                .into_iter()
+                .map(|o| ObjectDiffOut {
+                    kind: o.kind.into(),
+                    path: o.path,
+                    change: o.change.into(),
+                    properties: o
+                        .properties
+                        .into_iter()
+                        .map(|p| PropertyDiffOut {
+                            name: p.name,
+                            before: p.before,
+                            after: p.after,
+                        })
+                        .collect(),
+                    before: o.before.map(origin_out),
+                    after: o.after.map(origin_out),
+                })
+                .collect(),
         })
     }
 }

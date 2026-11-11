@@ -1097,6 +1097,22 @@ impl Session {
         Ok(revision)
     }
 
+    /// Reads the document at `path` with this session's reader options,
+    /// without opening it: e.g. the files on disk to compare with the
+    /// current revision ([`pbi_core::diff_documents`]).
+    ///
+    /// # Errors
+    /// [`SessionError::Open`] when `path` cannot be read.
+    pub async fn read_path(&self, path: impl AsRef<Path>) -> Result<Document, SessionError> {
+        let handle = crate::refresh::runtime()?;
+        let path = path.as_ref().to_path_buf();
+        let options = self.inner.open_options;
+        let opened = handle
+            .spawn_blocking(move || pbi_core::open_path(&path, &options))
+            .await??;
+        Ok(opened.document)
+    }
+
     pub(crate) fn refresh_lock(&self) -> &tokio::sync::Mutex<()> {
         &self.inner.refresh_lock
     }
