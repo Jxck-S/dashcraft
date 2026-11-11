@@ -313,6 +313,35 @@ async function journey() {
   await step('S32', 'A1 the title drops the unsaved mark', 'title', title, (heard) => DOCUMENT.test(heard) && !DIRTY.test(heard), { required: false })
 }
 
+/**
+ * Starts the screen reader. On the macOS runners VoiceOver's start request sometimes fails for a
+ * while (Guidepup retries twice within seconds), so wait and try again, and log why it failed.
+ */
+async function startReader(options) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await sr.start(options)
+    } catch (e) {
+      const chain = []
+      for (let x = e; x; x = x.cause) chain.push(x.message ?? String(x))
+      console.log(`start attempt ${attempt}: ${chain.join(' <- ')}`)
+      if (mac) {
+        try {
+          execFileSync('/usr/bin/osascript', ['-l', 'JavaScript', '-e', 'ObjC.bindFunction("dlopen", ["void *", ["char *", "int"]]); $.dlopen("/usr/lib/libScreenReader.dylib", 1) ? "libScreenReader loads" : "libScreenReader missing"'], { encoding: 'utf8', timeout: 20000 })
+            .split('\n')
+            .filter(Boolean)
+            .forEach((line) => console.log(`osascript: ${line}`))
+        } catch (d) {
+          console.log(`osascript: ${String(d.stderr || d.message).trim()}`)
+        }
+      }
+      if (attempt >= 3) throw e
+      await sr.stop().catch(() => {})
+      await sleep(20000)
+    }
+  }
+}
+
 const startedAt = new Date().toISOString()
 let failed = 1
 try {
@@ -321,7 +350,7 @@ try {
   // "banner landmark" first and the field after it. VoiceOver says both in one phrase, and its
   // full capture polls AppleScript until the phrase is stable (seconds per key), so it keeps the
   // first phrase there; settle() captures everything for the late announcements.
-  await sr.start({ capture: mac ? 'initial' : true })
+  await startReader({ capture: mac ? 'initial' : true })
   const log = openSync(join(out, 'app.log'), 'w')
   const env = { ...process.env, DASHCRAFT_BLOB_MAP: join(copy, 'blob-map.json') }
   if (platform === 'linux') Object.assign(env, { WEBKIT_DISABLE_DMABUF_RENDERER: '1', WEBKIT_DISABLE_COMPOSITING_MODE: '1' })
