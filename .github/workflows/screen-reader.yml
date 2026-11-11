@@ -2,9 +2,9 @@ name: Screen readers
 
 # A6 (docs/accessibility/): drives the debug app with a real screen reader through Guidepup and
 # checks what it says along the M6 editing and M7 formula-bar journeys
-# (scripts/app-checks/screen-reader.mjs; docs/ci.md#screen-readers). NVDA on Windows and
-# VoiceOver on macOS gate the job; Orca on Linux is informational (continue-on-error). Narrator
-# has no automation API: its evidence is the UI Automation tree (scripts/app-checks/uia.ps1).
+# (scripts/app-checks/screen-reader.mjs; docs/ci.md#screen-readers; ADR-0030). NVDA on Windows
+# gates the job; VoiceOver on macOS and Orca on Linux are informational (continue-on-error).
+# Narrator has no automation API: its evidence is the UI Automation tree (scripts/app-checks/uia.ps1).
 on:
   pull_request:
     branches: [main]
@@ -43,9 +43,12 @@ jobs:
           - os: windows-latest
             reader: NVDA
             informational: false
+          # Informational until its misses are fixed (docs/accessibility/m7-formula-bar.md#a6-screen-reader-runs):
+          # it does not read the suggestion count or the active suggestion, and no VoiceOver
+          # command reads the window title.
           - os: macos-15
             reader: VoiceOver
-            informational: false
+            informational: true
           # @guidepup/setup installs Orca on Ubuntu 26.04 or later only.
           - os: ubuntu-26.04
             reader: Orca

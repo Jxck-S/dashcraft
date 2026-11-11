@@ -5,6 +5,32 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-11
+
+### A6: screen readers in CI
+
+- **What:** `.github/workflows/screen-reader.yml` builds `dashcraft-app` on hosted runners and
+  runs `scripts/app-checks/screen-reader.mjs` through Guidepup with NVDA (Windows), VoiceOver
+  (macOS) and Orca (Linux, Xvfb). The script walks the M6 editing journey and
+  the M7 formula bar journey (S6 and S12–S22), records what the reader says at each step, and uploads the
+  spoken log, a report written after every step, and screenshots. NVDA gates; VoiceOver and Orca
+  are informational ([ADR-0030](adr/0030-screen-readers-in-ci.md), which supersedes ADR-0015
+  decision 3). The app fixes it found: the File backstage traps focus (`use:modal`), Option+Q
+  reaches the formula bar on macOS, the Ctrl+K Ctrl+I chord survives a released Ctrl and is
+  announced, and Esc clears a cancelled draft's problems (`DaxEditor.svelte`).
+- **Why:** A6 was the last open criterion of M6 and M7; it needed a person on each OS until
+  Guidepup could drive the readers on CI runners. Narrator stays by hand before the 1.0 audit
+  (M31.8): its evidence in CI is the UI Automation tree the A1–A5 checks already cover.
+- **Numbers:** NVDA 32 of 32 steps (about 4.5 minutes); VoiceOver 24 of 32 in about 13 minutes;
+  Orca 20 of 32. `formula-keys.mjs` 44 checks (one new, the Esc case), `editing-a11y.mjs` 21.
+  Commits `b5cdf9d`, `3800ef2`, `6fdf4e9`, `051b99f`, `139f67c` and the docs commit, squashed
+  in PR #66.
+- **Open:** VoiceOver doesn't read the suggestion count (S13) or the active suggestion
+  (S14, `aria-activedescendant` on a text area), or announce a description's apply (S25,
+  likely the `readonly` toggle while saving). No VoiceOver command reads the window title
+  (S1). Orca under Xvfb doesn't voice polite live regions. Narrator still needs a person
+  before M31.8.
+
 ## 2026-11-07
 
 ### TMDL writer: case variants of `calculationGroup`

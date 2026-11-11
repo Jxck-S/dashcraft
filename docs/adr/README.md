@@ -16,7 +16,8 @@
 | [0012](0012-revisioned-document-state.md) | Revisioned document state and edit transactions | Accepted |
 | [0013](0013-save-conflicts-and-recovery.md) | Save, external changes and recovery | Accepted |
 | [0014](0014-serialization-contract.md) | Serialization contract and generated identifiers | Accepted |
-| [0015](0015-accessibility-target.md) | Accessibility target and verification | Accepted |
+| [0015](0015-accessibility-target.md) | Accessibility target and verification | Accepted (decision 3, how the screen-reader runs are done, superseded by ADR-0030) |
 | [0029](0029-tmdl-reader-ground-truth.md) | Ground truth from Microsoft's TMDL reader: TOM's `TmdlSerializer` as a black-box oracle for TMDL validity, under ADR-0011's rules (0016 to 0028 are reserved for the proposals in DESKTOP-PLAN) | Accepted |
+| [0030](0030-screen-readers-in-ci.md) | Screen-reader smoke tests in CI: Guidepup drives NVDA, VoiceOver and Orca on hosted runners along each milestone's journey; Narrator's evidence is the UI Automation tree; a person listens before the 1.0 audit | Accepted |
 
 New ADRs use the next number and the sections Status, Context, Decision, Alternatives considered, Consequences. To change a decision, write a new ADR and mark the old one "Superseded by ADR-NNNN". Don't rewrite history.

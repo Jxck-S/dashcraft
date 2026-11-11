@@ -129,6 +129,8 @@ async function step(id, name, keys, run, expect, { required = true } = {}) {
   }
   results.push({ id, name, keys, ok, required, heard, detail, error, screenshot })
   console.log(`${ok ? 'PASS' : required ? 'FAIL' : 'NOTE'} ${id} ${name}${detail ? ` (${detail})` : ''}${error ? `: ${error}` : ''}\n     heard: ${heard.slice(0, 400)}`)
+  // So a reader that hangs until the job's time limit still leaves the steps so far.
+  writeReport(startedAt, false)
   return ok
 }
 
@@ -152,15 +154,15 @@ function activate() {
   }
 }
 
-function writeReport(startedAt) {
+function writeReport(startedAt, final = true) {
   const failed = results.filter((r) => !r.ok && r.required)
-  const report = { reader: reader.name, platform, startedAt, finishedAt: new Date().toISOString(), passed: results.filter((r) => r.ok).length, failed: failed.length, notes: results.filter((r) => !r.ok && !r.required).length, results }
+  const report = { reader: reader.name, platform, startedAt, finishedAt: final ? new Date().toISOString() : null, passed: results.filter((r) => r.ok).length, failed: failed.length, notes: results.filter((r) => !r.ok && !r.required).length, results }
   writeFileSync(join(out, 'report.json'), `${JSON.stringify(report, null, 2)}\n`)
   const cell = (s) => s.replace(/\|/g, '\\|').replace(/\s+/g, ' ').slice(0, 300)
   const md = [
     `## A6 screen reader: ${reader.name} on ${platform}`,
     '',
-    `${report.passed} passed, ${report.failed} failed, ${report.notes} notes (informational steps that did not match).`,
+    `${report.passed} passed, ${report.failed} failed, ${report.notes} notes (informational steps that did not match).${final ? '' : ' Unfinished: the run stopped after the last step below.'}`,
     '',
     '| Step | Keys | Result | Heard |',
     '|---|---|---|---|',
@@ -168,7 +170,7 @@ function writeReport(startedAt) {
     '',
   ].join('\n')
   writeFileSync(join(out, 'report.md'), md)
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, md)
+  if (final && process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, md)
   return failed.length
 }
 
@@ -274,7 +276,7 @@ async function journey() {
     await sr.clearSpokenPhraseLog()
     await focus()
     return 'two Escapes'
-  }, (heard) => /Measure formula/.test(heard) && !INVALID.test(heard), { required: false })
+  }, (heard) => /Measure formula/.test(heard) && !INVALID.test(heard))
 
   // M6: the Properties pane, the File menu and its question, saving.
   await step('S23', 'A2 the search opens the Properties pane', `${SEARCH}, "Properties", Enter`, async () => {

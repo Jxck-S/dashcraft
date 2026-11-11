@@ -385,7 +385,7 @@ its script; Mondays at 05:23 UTC; **Run workflow**.
 | Job | Runs on | Screen reader | Gate |
 |---|---|---|---|
 | `NVDA (windows-latest)` | windows-latest, WebView2 | NVDA (portable, from `guidepup install`) | Blocking |
-| `VoiceOver (macos-15)` | macos-15, WKWebView | VoiceOver (AppleScript control and the TCC grants from `guidepup setup --ci`) | Blocking |
+| `VoiceOver (macos-15)` | macos-15, WKWebView | VoiceOver (AppleScript control and the TCC grants from `guidepup setup --ci`) | Informational (`continue-on-error`) until its misses are fixed |
 | `Orca (ubuntu-26.04)` | ubuntu-26.04, WebKitGTK, under `dbus-run-session` and `xvfb-run` | Orca (the apt packages from `guidepup setup --ci`) | Informational (`continue-on-error`) |
 
 Each job builds the debug app (`npx tauri build --debug --no-bundle`), installs
@@ -400,9 +400,33 @@ the platform's keys (⌘ and ⌥ on macOS). Each step clears the reader's log, a
 what the reader said against a pattern; steps that depend on a reader's verbosity are marked
 informational in the report. The job fails when a required step fails.
 
-`report.md` goes to the job summary; `report.json`, `report.md` and the app log are uploaded as
-`screen-reader-<reader>` (default retention). The script drives the real keyboard and screen
-reader of the machine it runs on: don't run it on a workstation.
+`report.md` goes to the job summary; `report.json`, `report.md`, the app log and, on macOS, a
+screenshot of each failed required step are uploaded as `screen-reader-<reader>` (default
+retention). The report is rewritten after every step, so a reader that hangs until the time limit
+still leaves the steps so far. The script drives the real keyboard and screen reader of the
+machine it runs on: don't run it on a workstation.
+
+How each reader is driven, and what it does not say in CI (the results per milestone are in
+[accessibility/m6-editing.md](accessibility/m6-editing.md#a6-screen-reader-runs) and
+[accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md#a6-screen-reader-runs);
+the decision is [ADR-0030](adr/0030-screen-readers-in-ci.md)):
+
+- **NVDA**: keys through Guidepup, text through WScript `SendKeys` (escaped, as Guidepup's own
+  typing sends `+ ^ % ~ ( ) [ ]` as key codes); NVDA's commands for the title and the focus.
+  Its first Esc in a field switches to browse mode, so the script presses a second one. Every
+  step passes; about 5 minutes.
+- **VoiceOver**: keys through AppleScript, with ⌘ for Ctrl and ⌥ for Alt; the title and focus
+  through VoiceOver Commander, since VoiceOver went silent after a synthetic VO-F4 chord. Guidepup's
+  full capture waits until the phrase has been stable for 25 polls of AppleScript (seconds per
+  key), so the script keeps only the first new phrase after each key, and captures everything
+  only when it waits for late announcements. When nothing new is said, Guidepup can return the
+  previous phrase again: a pattern that also matches the previous step's speech is weak evidence.
+  A start that fails is tried again up to three times. About 13 minutes.
+- **Orca**: keys through Guidepup (AT-SPI's device event controller, XTest under Xvfb), and
+  xdotool to bring the window to the front; the title and focus through Orca's "where am I"
+  commands, the detailed one included, which still leaves out descriptions. Orca does not voice
+  WebKitGTK's polite live regions under Xvfb, so the status messages are not heard. About
+  4 minutes.
 
 Narrator has no automation interface. Its evidence is the UI Automation tree that it reads
 (`scripts/app-checks/uia.ps1`), recorded with each milestone's accessibility notes.

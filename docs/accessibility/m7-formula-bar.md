@@ -32,20 +32,23 @@ fields) are in [m6-editing.md](m6-editing.md); their checks still pass.
 protocol, as for M6. Keys and text go in as input events, so the browser's own commands (cut,
 copy, undo) run as they do for a user.
 
-- `formula-intellisense.mjs` checks the IntelliSense of M7.5a (20 checks).
+- `formula-intellisense.mjs` checks the IntelliSense of M7.5a (22 checks).
 - `formula-keys.mjs` checks Desktop's editor keys of M7.5b and runs A1–A5 on the formula bar with
-  the suggestion list, parameter info, a description and a squiggle open (43 checks). It uses the
+  the suggestion list, parameter info, a description and a squiggle open (44 checks). It uses the
   IBM Equal Access checker (`accessibility-checker-engine` 4.0.34, Apache-2.0, `WCAG_2_2`
   policy), computed styles and `uia.ps1` (the UI Automation tree), through the shared helpers in
   `a11y.mjs`.
-- `editing-a11y.mjs` and `editing-smoke.mjs` (M6) run again unchanged in what they check.
+- `editing-a11y.mjs` and `editing-smoke.mjs` (M6) run again; `editing-a11y.mjs` now also checks
+  the focus fixes that A6 needed (21 checks).
+- `screen-reader.mjs` runs A6 in CI with NVDA, VoiceOver and Orca
+  ([A6 below](#a6-screen-reader-runs); 2026-11-11, GitHub-hosted runners).
 
 ```sh
 (cd app && npx tauri build --debug --no-bundle)
 npm install --prefix target/tmp/a11y --no-save accessibility-checker-engine
-node scripts/app-checks/formula-intellisense.mjs   # 20 passed, 0 failed
-node scripts/app-checks/formula-keys.mjs           # 43 passed, 0 failed
-node scripts/app-checks/editing-a11y.mjs           # 17 passed, 0 failed
+node scripts/app-checks/formula-intellisense.mjs   # 22 passed, 0 failed
+node scripts/app-checks/formula-keys.mjs           # 44 passed, 0 failed
+node scripts/app-checks/editing-a11y.mjs           # 21 passed, 0 failed
 node scripts/app-checks/editing-smoke.mjs          # 23 passed, 0 failed
 ```
 
@@ -58,7 +61,7 @@ node scripts/app-checks/editing-smoke.mjs          # 23 passed, 0 failed
 | A3 Names and roles | ✅ Pass | The checker finds no violation with the suggestion list and a squiggle open, with parameter info open, or with a description open. UI Automation shows the editor as *Measure formula*, Edit, with its value, and the list as *Suggestions*, List. The status live region announces the number of suggestions, the inserted suggestion, formatting and the Tab mode. The problem at the caret, the parameter info (a `tooltip`) and the Tab mode are part of the editor's accessible description, and `aria-invalid` is set while there is an error. |
 | A4 Contrast | ✅ Pass | Suggestion text at least 5.4:1, the selected suggestion included; the selected suggestion's outline 5.39:1; the error squiggle 5.86:1 and the warning squiggle 5.73:1 on the editor background; parameter info text 6.19:1; description text 6.07:1. Token colours are at least 4.5:1 (M7.5a); the lowest text in the formula bar is 5.98:1. |
 | A5 Reduced motion | ✅ Pass | No animation or transition in the formula bar or its pop-ups. |
-| A6 Screen readers | ⚠️ Incomplete | Not run yet with any of the four screen readers; the Windows evidence is the UI Automation tree (A3), not a spoken run. The task is below. Per ADR-0015, this is a documented incomplete gate, not a pass. |
+| A6 Screen readers | ✅ Pass (ADR-0030) | Run in CI with each change to the app ([A6 below](#a6-screen-reader-runs)). NVDA (Windows, WebView2) passes every step and gates the job. VoiceOver (macOS, WKWebView) and Orca (Linux, WebKitGTK) complete the journey and are informational; their misses are listed below. Narrator has no automation interface, so its evidence is the UI Automation tree (A3). |
 
 ### Left for review by hand
 
@@ -101,26 +104,44 @@ The formula bar supports those that a single caret can do:
 The editor is a text field with one caret, so extra cursors and column selection are out of reach
 without a different editor component; they are listed as a gap in [GAPS.md](../GAPS.md).
 
-## A6 task (for each screen reader)
+## A6 screen-reader runs
 
-Run it on a copy of Acme Outfitters with VoiceOver on macOS (WKWebView), Narrator and NVDA on
-Windows (WebView2) and Orca on Linux (WebKitGTK):
+The task runs in CI with the M6 one, per [ADR-0030](../adr/0030-screen-readers-in-ci.md): steps
+S12–S22 of `scripts/app-checks/screen-reader.mjs` (method, readers and the M6 steps in
+[m6-editing.md](m6-editing.md#a6-screen-reader-runs)).
 
-1. Select **Total Sales** in the Data pane and move to the formula bar. Expected: "Measure
-   formula, edit", the formula, and "Tab indents; Ctrl+M makes Tab move focus."
-2. Go to the end and type ` + COUNTR`. Expected: the number of suggestions, then the selected
-   suggestion as ↓ moves through the list.
-3. Press Tab. Expected: "Inserted COUNTROWS" and the parameter info.
-4. Type `Orders) + [Nope]`. Expected: the formula is reported invalid, with "unknown measure or
-   column" in its description.
-5. Press Ctrl+K Ctrl+I with the caret on `Nope`. Expected: the description is read.
-6. Press Shift+Enter, then Alt+↑. Expected: the new line moves up; the text is read again.
+| Screen reader | Platform, webview | Gate | Result |
+|---|---|---|---|
+| NVDA | Windows (`windows-latest`), WebView2 | Required | ✅ All 32 steps pass, M7's S12–S22 included. For example, it says "15 suggestions: Up and Down to choose, Enter or Tab to insert", "COUNTA function, 2 of 15", "Inserted COUNTROWS" and "Tab now moves focus". |
+| VoiceOver | macOS 15, WKWebView | Informational | ⚠️ The journey completes. Of M7's steps, everything passes except two. The suggestion count is not heard: VoiceOver echoes the typing instead (S13). The active suggestion is not read as ↓ moves, so VoiceOver does not follow `aria-activedescendant` on the text area (S14). Insertion, problems, Ctrl+K Ctrl+I, the Tab mode and Esc are heard. |
+| Orca | Ubuntu 26.04, WebKitGTK under Xvfb | Informational | ⚠️ The journey completes. Suggestions and the active suggestion are read (S13, S14), and so is the problem in the description when focus comes back (S21). The polite announcements (Inserted, the description of Ctrl+K Ctrl+I, the Tab mode) are not heard (S15, S17, S19), and Orca's "where am I" leaves out the description (S6, S16, S22). |
+| Narrator | Windows, WebView2 | Not automated | Its evidence is the UI Automation tree (A3); a person listens before the 1.0 audit (M31.8). |
+
+A6 passes for M7 by ADR-0030's rule. The VoiceOver misses S13 and S14 are open
+([GAPS.md](../GAPS.md), Accessibility row).
+
+Steps (Ctrl and Alt are ⌘ and ⌥ on macOS; End is ⌘→):
+
+1. Find **Total Sales** with Alt+Q, press Enter and Tab to the formula bar. Expected: "Measure
+   formula, edit", the formula, and "Tab indents; Ctrl+M makes Tab move focus." (S5, S6, S12).
+2. Press End and type ` + COUNT`. Expected: the number of suggestions and "Suggestions, list"
+   (S13); ↓ says the selected suggestion, such as "COUNTA function, 2 of 15" (S14).
+3. Type `R` and press Tab. Expected: "Inserted COUNTROWS" (S15).
+4. Type `Orders) * [Nope]`. Expected: the field is reported invalid, with "unknown measure or
+   column Nope" in its description (S16).
+5. Press ← twice, then Ctrl+K Ctrl+I. Expected: the description at the caret is read (S17).
+6. Press End, Shift+Enter, then Alt+↑. Expected: the new line moves up (S18, informational).
 7. Press Ctrl+M, then Tab. Expected: "Tab now moves focus", then the *Collapse the formula bar*
-   button. Shift+Tab back, press Ctrl+M again.
-8. Press Esc. Expected: the edit is cancelled and the formula read as before.
+   button; Shift+Tab comes back to the formula (S19–S21).
+8. Press Esc (twice if a pop-up is open). Expected: the edit is cancelled, and the formula is read
+   as before, with no problem (S22, informational).
 
-For each screen reader, record whether the task completed and any announcement that was missing
-or wrong.
+The runs found three faults, all fixed with tests. Ctrl+K Ctrl+I failed when Ctrl was released
+between the two keys; it now works either way. The description it opens was shown but not
+announced; it is now announced and part of the field's description. After Esc cancelled a draft
+with an error, the field still said "invalid entry" with the old problem, because the editor did
+not notice the outside change of its text. It now does, and `formula-keys.mjs` checks that a
+cancelled draft leaves no problem announced or underlined.
 
 ## Known limits
 
