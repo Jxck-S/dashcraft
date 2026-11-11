@@ -35,7 +35,7 @@
 //! * A cell holding an error fails [`arrow::table_to_record_batch`] (Power BI Desktop loads
 //!   such cells as blanks and reports an error count).
 //! * Function values in a returned result cannot be invoked after the engine call ends (their
-//!   environments are released to break reference cycles).
+//!   environments and lazy slots are released to break reference cycles).
 
 pub mod arrow;
 pub(crate) mod env;
@@ -311,5 +311,65 @@ impl Engine {
             };
             arrow::table_to_record_batch(table, (!expected.is_empty()).then_some(expected))
         })
+    }
+}
+
+#[cfg(test)]
+mod leak_tests {
+    use super::*;
+
+    /// Evaluates and resolves `src` on this thread and returns how many thunks and frames are
+    /// still alive after the result and the interpreter are dropped.
+    fn leaked(src: &str, shared: &[&str]) -> (isize, isize) {
+        let shared: IndexMap<String, String> = shared
+            .iter()
+            .enumerate()
+            .map(|(i, q)| (format!("Q{i}"), (*q).to_owned()))
+            .collect();
+        let count = || (thunk::LIVE.with(|n| n.get()), env::LIVE.with(|n| n.get()));
+        let run = || {
+            let it = Interp::new(EvalOptions::default());
+            let v = eval_source(&it, src, &shared).and_then(|v| it.resolve(v));
+            drop(v);
+            drop(it);
+        };
+        // Library values are created once per process; create them before counting.
+        run();
+        let before = count();
+        run();
+        let after = count();
+        (after.0 - before.0, after.1 - before.1)
+    }
+
+    #[test]
+    fn values_that_contain_their_own_slot_are_freed() {
+        // The resolver recurses up to the depth limit: run on an evaluator-sized stack.
+        let handle = std::thread::Builder::new()
+            .stack_size(EVAL_STACK_BYTES)
+            .spawn(|| {
+                let cases: [(&str, &[&str]); 9] = [
+                    // The nightly fuzz findings: a shared query that returns `#shared`.
+                    ("#shared", &["#shared"]),
+                    ("#shared", &["Time", "reacL _", "#shared", "Time"]),
+                    ("let r = [a = @r] in r", &[]),
+                    ("let r = {@r} in r", &[]),
+                    ("let r = [a = @r] in r[a][a]", &[]),
+                    ("Q0", &["[a = Q0]"]),
+                    ("Q0", &["Q1", "{Q0}"]),
+                    ("let x = 1, y = [z = x] in [p = y, q = y]", &[]),
+                    ("#sections", &[]),
+                ];
+                cases
+                    .iter()
+                    .map(|(src, shared)| (*src, leaked(src, shared)))
+                    .filter(|(_, n)| *n != (0, 0))
+                    .map(|(src, n)| format!("{src}: {n:?}"))
+                    .collect::<Vec<_>>()
+            });
+        let leaks = handle.map(|h| h.join());
+        assert!(
+            matches!(&leaks, Ok(Ok(l)) if l.is_empty()),
+            "leaked (thunks, frames): {leaks:?}"
+        );
     }
 }

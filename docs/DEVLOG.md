@@ -7,6 +7,24 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M evaluator: free values that contain their own slot
+
+- **What:** `pbi-m` registers every thunk (as a `Weak`, pruned like frames) and
+  `Interp::release` releases them: a released thunk drops its memoized value and reads as
+  "released". Values that contain their own lazy slot (`let r = [a = @r] in r`, `{@r}`, a shared
+  query that refers to itself in a record or list, or returns `#shared`) formed a thunk → value →
+  thunk `Arc` cycle that clearing frames never broke. A `cfg(test)` count of live thunks and frames
+  backs a new test over these shapes (`leak_tests` in `crates/pbi-m/src/eval/mod.rs`); two
+  `regression-*` seeds under `fuzz/seeds/m_eval/`.
+- **Why:** the nightly Fuzz job failed on 2026-11-10 and 11-11 with `m_eval` leaks (a shared
+  query `#shared`); a red `main` comes first (AGENTS.md §8).
+- **Numbers:** the test finds 7 leaks across 9 cases without the fix and 0 with it; `pbi-m` and
+  `pbi-session` tests pass. P05 357 ms with the fix against 359 ms without it, and P11 184 ms, on
+  the same Windows machine (AMD, 12 cores).
+- **Open:** P05 is over its 250 ms target on that machine both with and without the fix. The
+  only committed baseline is a macOS M4 Pro at 149 ms, so this is the hardware, not a
+  regression; a Windows baseline would make that visible.
+
 ### M6 acceptance 6: the PBIT half
 
 - **What:** `save_as_template_keeps_the_expected_values` in `crates/pbi-ops/tests/e2e.rs`: Acme

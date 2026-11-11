@@ -29,9 +29,20 @@ use crate::value::{
 struct Registry {
     frames: Vec<Weak<Frame>>,
     next_prune: usize,
+    thunks: Vec<Weak<Thunk>>,
+    next_thunk_prune: usize,
 }
 
 const PRUNE_MIN: usize = 1024;
+
+/// Adds `item` to `list`, dropping dead entries whenever the list doubles.
+fn track<T>(list: &mut Vec<Weak<T>>, next_prune: &mut usize, item: Weak<T>) {
+    list.push(item);
+    if list.len() >= *next_prune {
+        list.retain(|w| w.strong_count() > 0);
+        *next_prune = (list.len() * 2).max(PRUNE_MIN);
+    }
+}
 
 /// Evaluation state for one engine call. Lives on the evaluator thread only.
 pub(crate) struct Interp {
@@ -152,6 +163,8 @@ impl Interp {
             registry: RefCell::new(Registry {
                 frames: Vec::new(),
                 next_prune: PRUNE_MIN,
+                thunks: Vec::new(),
+                next_thunk_prune: PRUNE_MIN,
             }),
             root: RefCell::new(None),
             sections: RefCell::new(Vec::new()),
@@ -231,21 +244,37 @@ impl Interp {
     // -----------------------------------------------------------------------------------------
 
     fn register(&self, frame: &Arc<Frame>) {
-        let mut r = self.registry.borrow_mut();
-        r.frames.push(Arc::downgrade(frame));
-        if r.frames.len() >= r.next_prune {
-            r.frames.retain(|w| w.strong_count() > 0);
-            r.next_prune = (r.frames.len() * 2).max(PRUNE_MIN);
-        }
+        let r = &mut *self.registry.borrow_mut();
+        track(&mut r.frames, &mut r.next_prune, Arc::downgrade(frame));
     }
 
-    /// Clears every registered frame, breaking reference cycles. Values reachable from the
-    /// result stay valid as long as they were resolved first.
+    /// A registered lazy slot.
+    fn thunk(&self, pending: Pending) -> Lazy {
+        let thunk = Thunk::new(pending);
+        let r = &mut *self.registry.borrow_mut();
+        track(
+            &mut r.thunks,
+            &mut r.next_thunk_prune,
+            Arc::downgrade(&thunk),
+        );
+        Lazy::Thunk(thunk)
+    }
+
+    /// Clears every registered frame and thunk, breaking reference cycles. Values reachable
+    /// from the result stay valid as long as they were resolved first.
     pub(crate) fn release(&self) {
-        let frames = std::mem::take(&mut self.registry.borrow_mut().frames);
+        let (frames, thunks) = {
+            let mut r = self.registry.borrow_mut();
+            (std::mem::take(&mut r.frames), std::mem::take(&mut r.thunks))
+        };
         for w in frames {
             if let Some(f) = w.upgrade() {
                 f.clear();
+            }
+        }
+        for w in thunks {
+            if let Some(t) = w.upgrade() {
+                t.release();
             }
         }
         self.root.borrow_mut().take();
@@ -258,7 +287,7 @@ impl Interp {
             NodeKind::Function(def) => {
                 Lazy::Value(Value::Function(FunctionValue::closure(def.clone(), env)))
             }
-            _ => Lazy::Thunk(Thunk::new(Pending::Expr(env, node.clone()))),
+            _ => self.thunk(Pending::Expr(env, node.clone())),
         }
     }
 
@@ -282,10 +311,10 @@ impl Interp {
         let values = shared
             .iter()
             .map(|(name, source)| {
-                Lazy::Thunk(Thunk::new(Pending::Shared {
+                self.thunk(Pending::Shared {
                     name: Arc::from(name.as_str()),
                     source: Arc::from(source.as_str()),
-                }))
+                })
             })
             .collect();
         let frame = Frame::new(names, values, None);
