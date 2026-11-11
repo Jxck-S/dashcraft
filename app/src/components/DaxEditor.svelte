@@ -161,9 +161,12 @@
     }
   })
 
-  // An outside change of the text (cancel, a new object): realign and analyse again.
+  // An outside change of the text (cancel, a new object): realign and analyse again. It reads
+  // `value`, the reactive one: the textarea's own value would not re-run the effect, and the
+  // problems of a cancelled draft would stay announced. Typing is not an outside change:
+  // `input` runs in the capture phase, before `bind:value` updates `value`, and realigns first.
   $effect(() => {
-    const text = current()
+    const text = value
     untrack(() => {
       if (text !== aligned) {
         realign(text)
@@ -671,7 +674,7 @@
       aria-autocomplete="list"
       aria-controls={completion ? listId : undefined}
       aria-activedescendant={completion ? `${listId}-${active}` : undefined}
-      oninput={input}
+      oninputcapture={input}
       onkeydown={keydown}
       onkeyup={keyup}
       onclick={caretMoved}
