@@ -169,6 +169,8 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.click`](#canvasclick) | Applies a click on a hit region (slicer item, data point, button, dropdown) and returns the re-rendered page and any button action. | M L A |
 | [`canvas.scroll`](#canvasscroll) | Scrolls a table, matrix or slicer list by a delta (clamped to its range) and returns the re-rendered page. | M A |
 | [`canvas.setSlicer`](#canvassetslicer) | Replaces a slicer's selection by value (no hit ids needed) and returns the re-rendered page. | M L A |
+| [`canvas.setRange`](#canvassetrange) | Filters a numeric or date range slicer to a lower and/or upper bound (a date includes the whole day) and returns the re-rendered page. | M L A |
+| [`canvas.setRelativeDate`](#canvassetrelativedate) | Filters a date slicer to a relative period ("Last 3 months", "This year", "Next 2 hours") of the session clock and returns the re-rendered page. | M L A |
 | [`canvas.clearSelections`](#canvasclearselections) | Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page. | M L A |
 | [`canvas.setSlicerSearch`](#canvassetslicersearch) | Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page. | M L A |
 | [`canvas.toggleMatrixRow`](#canvastogglematrixrow) | Expands or collapses the matrix row of a cell hit and returns the re-rendered page. | M L A |
@@ -1944,6 +1946,102 @@ Examples:
 
 - Only the West region: `{"docId":"d1","field":"Region","values":["West"]}`
 - Clear a slicer: `{"docId":"d1","field":"Region","values":[]}`
+
+### `canvas.setRange`
+
+**Set a range slicer.** Filters a numeric or date range slicer to a lower and/or upper bound (a date includes the whole day) and returns the re-rendered page.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` (optional) | string \| null | The slicer's visual name… |
+| `field` (optional) | string \| null | …or its field (display name, column, `Table[Column]`). |
+| `low` (optional) | RangeBound \| null | Lower bound (inclusive): a number, or for dates `YYYY-MM-DD` or an OADate day number. Absent: open. |
+| `high` (optional) | RangeBound \| null | Upper bound (inclusive; a date includes the whole day). Absent: open. Both absent clear the slicer. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string |  |
+| `report` | string | Report name. |
+| `page` | string | Page internal name. |
+| `pageDisplayName` | string |  |
+| `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
+| `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
+| `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
+| `width` | number |  |
+| `height` | number |  |
+| `hitRegions` | HitRegionOut[] | Hit regions in paint order (hit-test from the end). |
+| `overlayHitRegions` | HitRegionOut[] | Hit regions of the overlay (above every page region). |
+| `visuals` | CanvasVisualOut[] | Every visual of the page (hidden ones included), in page order. |
+| `interactions` | CanvasInteractionOut[] |  |
+| `selections` | SelectionOut[] | Slicer selections and the cross-filter. |
+| `effectiveFilters` | FilterSpecOut | Report + page filters + selections as a filter spec (what cards are evaluated in, ignoring per-visual interactions). |
+| `isDefault` | boolean | The state equals the report's saved state. |
+| `warnings` | string[] | Unreadable saved slicer selections. |
+| `durationMs` | integer | Query + render wall time. |
+
+Examples:
+
+- Orders in the first quarter of 2025: `{"docId":"d1","field":"Date","low":"2025-01-01","high":"2025-03-31"}`
+- Quantity of at least 5: `{"docId":"d1","field":"Quantity","low":5}`
+
+### `canvas.setRelativeDate`
+
+**Set a relative date slicer.** Filters a date slicer to a relative period ("Last 3 months", "This year", "Next 2 hours") of the session clock and returns the re-rendered page.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` (optional) | string \| null | The slicer's visual name… |
+| `field` (optional) | string \| null | …or its field (display name, column, `Table[Column]`). |
+| `anchor` (optional) | `"last"` \| `"next"` \| `"this"` \| null | `last`, `next` or `this`; absent clears the slicer. |
+| `duration` (optional) | integer | Number of periods (not for `this`). Default 1. |
+| `period` (optional) | `"minutes"` \| `"hours"` \| `"days"` \| `"weeks"` \| `"calendarWeeks"` \| `"months"` \| `"calendarMonths"` \| `"years"` \| `"calendarYears"` | `minutes`, `hours`, `days`, `weeks`, `calendarWeeks`, `months`, `calendarMonths`, `years` or `calendarYears`. Default `days`. |
+| `includeToday` (optional) | boolean | Count today as one of the days (non-calendar date periods). Default `true`. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string |  |
+| `report` | string | Report name. |
+| `page` | string | Page internal name. |
+| `pageDisplayName` | string |  |
+| `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
+| `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
+| `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
+| `width` | number |  |
+| `height` | number |  |
+| `hitRegions` | HitRegionOut[] | Hit regions in paint order (hit-test from the end). |
+| `overlayHitRegions` | HitRegionOut[] | Hit regions of the overlay (above every page region). |
+| `visuals` | CanvasVisualOut[] | Every visual of the page (hidden ones included), in page order. |
+| `interactions` | CanvasInteractionOut[] |  |
+| `selections` | SelectionOut[] | Slicer selections and the cross-filter. |
+| `effectiveFilters` | FilterSpecOut | Report + page filters + selections as a filter spec (what cards are evaluated in, ignoring per-visual interactions). |
+| `isDefault` | boolean | The state equals the report's saved state. |
+| `warnings` | string[] | Unreadable saved slicer selections. |
+| `durationMs` | integer | Query + render wall time. |
+
+Examples:
+
+- The last 3 calendar months: `{"docId":"d1","field":"Date","anchor":"last","duration":3,"period":"calendarMonths"}`
+- Clear a relative slicer: `{"docId":"d1","field":"Date"}`
 
 ### `canvas.clearSelections`
 

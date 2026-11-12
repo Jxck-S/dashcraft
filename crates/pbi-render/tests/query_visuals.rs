@@ -830,15 +830,16 @@ fn failing_measures_report_their_dax() {
 fn report_page_and_visual_filters_with_warnings() {
     let env = env();
     let mut page = page();
+    let this_month = pbi_render::query::relative::RelativeDateSpec {
+        anchor: pbi_render::query::relative::RelativeAnchor::This,
+        period: pbi_render::query::relative::RelativePeriod::Months,
+        ..Default::default()
+    };
     page.filters = vec![Filter {
         name: "pf".into(),
         kind: FilterKind::RelativeDate,
         field: Some(col("Stores", "Opened")),
-        condition: Some(Condition::Comparison {
-            kind: ComparisonKind::GreaterThan,
-            left: col("Stores", "Opened"),
-            right: lit("datetime'2026-01-01T00:00:00'"),
-        }),
+        condition: Some(this_month.condition(&col("Stores", "Opened"))),
         ..Filter::default()
     }];
     let mut report = report(page);
@@ -864,6 +865,15 @@ fn report_page_and_visual_filters_with_warnings() {
         single(&query(&env, &report, "sessions", &InteractionState::new())),
         "2"
     );
+    // With a current date the relative page filter applies: only store 2
+    // opened in February 2026.
+    let now = chrono::NaiveDate::from_ymd_opt(2026, 2, 15)
+        .and_then(|d| d.and_hms_opt(9, 30, 0))
+        .unwrap();
+    let dated = env.clone().with_now(now);
+    let dv = query(&dated, &report, "total", &InteractionState::new());
+    assert_eq!(single(&dv), "1");
+    assert!(dv.warnings.is_empty(), "{:?}", dv.warnings);
 }
 
 #[test]

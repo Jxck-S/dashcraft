@@ -1243,3 +1243,186 @@ async fn cross_report_drillthrough_goes_to_another_report() {
         mini["selections"]
     );
 }
+#[tokio::test(flavor = "multi_thread")]
+async fn range_slicers_filter_between_bounds() {
+    let dir = tmp_dir("pbi-ops-range-");
+    let pbip = mini_pbip(dir.path());
+    write_visual(
+        dir.path(),
+        "overview",
+        "amount",
+        false,
+        json!({"visualType": "slicer", "query": {"queryState": {"Values": {"projections": [{
+            "field": {"Column": {"Expression": {"SourceRef": {"Entity": "Sales"}}, "Property": "Amount"}},
+            "queryRef": "Sales.Amount", "nativeQueryRef": "Amount", "active": true
+        }]}}}}),
+    );
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+
+    // A numeric slicer without a mode is a range over the data.
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    let slicer = page["interactions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["visual"] == "amount")
+        .unwrap();
+    assert_eq!(slicer["slicerMode"], "range", "{slicer}");
+    let range = &slicer["range"];
+    assert_eq!(
+        (range["min"].as_f64(), range["max"].as_f64()),
+        (Some(1.0), Some(60.0))
+    );
+    assert!(
+        range["track"].is_object() && range["lowBox"].is_object(),
+        "{range}"
+    );
+
+    // 1 to 10: the total is 55.
+    let set = r
+        .run(
+            "canvas.setRange",
+            json!({"docId": doc, "visual": "amount", "low": 1, "high": "10"}),
+        )
+        .await;
+    assert_eq!(
+        set["selections"][0]["summary"], "is between 1 and 10",
+        "{set}"
+    );
+    assert!(set["svg"].as_str().unwrap().contains(">55<"));
+    let slicer = set["interactions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["visual"] == "amount")
+        .unwrap();
+    assert_eq!(slicer["range"]["high"].as_f64(), Some(10.0), "{slicer}");
+
+    // Open upper bound; bad bounds; clear.
+    let open = r
+        .run(
+            "canvas.setRange",
+            json!({"docId": doc, "field": "Amount", "low": 59}),
+        )
+        .await;
+    assert_eq!(open["selections"][0]["summary"], "is at least 59", "{open}");
+    assert!(open["svg"].as_str().unwrap().contains(">119<"));
+    for bad in [json!({"low": 5, "high": 4}), json!({"low": "x"})] {
+        let mut params = json!({"docId": doc, "visual": "amount"});
+        params
+            .as_object_mut()
+            .unwrap()
+            .extend(bad.as_object().unwrap().clone());
+        let err = r.try_run("canvas.setRange", params).await.unwrap_err();
+        assert_eq!(err.code, OpErrorCode::InvalidParams, "{err:?}");
+    }
+    let err = r
+        .try_run(
+            "canvas.setRelativeDate",
+            json!({"docId": doc, "visual": "amount", "anchor": "last"}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::InvalidParams, "{err:?}");
+    let cleared = r
+        .run("canvas.setRange", json!({"docId": doc, "visual": "amount"}))
+        .await;
+    assert!(cleared["selections"].as_array().unwrap().is_empty());
+    assert!(
+        cleared["svg"]
+            .as_str()
+            .unwrap()
+            .contains(&format!(">{MINI_TOTAL}<"))
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn relative_date_slicers_follow_the_session_clock() {
+    let Some(pbip) = common::fixture(common::PBIP) else {
+        println!("SKIP: {} missing", common::PBIP);
+        return;
+    };
+    let blob_map = common::fixture(common::BLOB_MAP).unwrap();
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": blob_map, "now": "2026-01-15T09:30:00Z"}))
+        .await;
+    let at = json!({"docId": doc, "report": "Overview", "page": "Time Intelligence"});
+    let with = |extra: Value| {
+        let mut p = at.clone();
+        p.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        p
+    };
+    let relative = |page: &Value| {
+        page["interactions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["visual"] == "398b24904a1feb7d0755")
+            .unwrap()
+            .clone()
+    };
+
+    // The saved "last 10 years" setting reads back into the controls and
+    // applies (no "not supported" warning).
+    let page = r.run("canvas.render", at.clone()).await;
+    let slicer = relative(&page);
+    assert_eq!(slicer["slicerMode"], "relative", "{slicer}");
+    assert_eq!(slicer["relative"]["anchor"], "last");
+    assert_eq!(slicer["relative"]["duration"], 10);
+    assert_eq!(slicer["relative"]["period"], "years");
+    assert!(
+        !page["warnings"].to_string().contains("RelativeDate"),
+        "{}",
+        page["warnings"]
+    );
+
+    let set = r
+        .run(
+            "canvas.setRelativeDate",
+            with(json!({"visual": "398b24904a1feb7d0755", "anchor": "last", "duration": 3, "period": "calendarMonths"})),
+        )
+        .await;
+    let summaries: Vec<&str> = set["selections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|s| s["summary"].as_str())
+        .collect();
+    assert!(
+        summaries.contains(&"is in the last 3 months (calendar)"),
+        "{summaries:?}"
+    );
+    let slicer = relative(&set);
+    assert_eq!(slicer["relative"]["period"], "calendarMonths", "{slicer}");
+    let this = r
+        .run(
+            "canvas.setRelativeDate",
+            with(json!({"field": "Date", "anchor": "this", "period": "years"})),
+        )
+        .await;
+    assert_eq!(relative(&this)["relative"]["anchor"], "this");
+    let err = r
+        .try_run(
+            "canvas.setRelativeDate",
+            with(json!({"field": "Date", "anchor": "next", "duration": 0})),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::InvalidParams, "{err:?}");
+    let cleared = r
+        .run("canvas.setRelativeDate", with(json!({"field": "Date"})))
+        .await;
+    assert!(
+        cleared["selections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|s| s["visual"] != "398b24904a1feb7d0755"),
+        "{}",
+        cleared["selections"]
+    );
+}

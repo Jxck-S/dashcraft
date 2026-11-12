@@ -150,6 +150,8 @@ pub struct RevisionSnapshot {
     pub model: Arc<Model>,
     /// The engine snapshot queries read ("View as" applied).
     pub snapshot: Arc<EngineSnapshot>,
+    /// The session clock (relative date filters; `--now` in the CLI).
+    pub clock: Arc<dyn Clock>,
 }
 
 impl RevisionSnapshot {
@@ -161,6 +163,13 @@ impl RevisionSnapshot {
             .clone()
             .filter(|c| !c.trim().is_empty())
             .unwrap_or_else(|| "en-US".to_owned())
+    }
+
+    /// The current local date and time of the session clock.
+    #[must_use]
+    pub fn local_now(&self) -> chrono::NaiveDateTime {
+        let offset = self.clock.local_offset();
+        self.clock.now_utc().with_timezone(&offset).naive_local()
     }
 }
 
@@ -377,6 +386,7 @@ impl Session {
             document: Arc::clone(&opened.document),
             model: Arc::clone(&state.model),
             snapshot: state.query_engine().snapshot(),
+            clock: Arc::clone(&self.inner.clock),
         }
     }
 

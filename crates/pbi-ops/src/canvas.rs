@@ -37,13 +37,14 @@ use std::time::Instant;
 use pbi_core::{OpenedDocument, ReportSource};
 use pbi_engine::{CancellationToken, EngineSnapshot, Value};
 use pbi_model::{
-    Document, FieldExpr, Literal, LiteralValue, Model, Page, Rename, Report, ResourceRef, Visual,
-    renames_between,
+    ComparisonKind, Condition, DataType, Document, FieldExpr, Literal, LiteralValue, Model, Page,
+    Rename, Report, ResourceRef, Visual, renames_between,
 };
 use pbi_render::dataview::{
     BLANK_LABEL, CellValue, ColumnMeta, DataView, FieldRefKind, ValueColumn,
 };
 use pbi_render::layout::{FrameOptions, auto_title};
+use pbi_render::query::relative::{RelativeAnchor, RelativeDateSpec, RelativePeriod};
 use pbi_render::query::{
     DrillAction, DrillthroughPage, InteractionState, PointField, PointSelection, QueryEnv,
     QueryLimits, SlicerSelection, allows_cross_report_drillthrough, cross_report_targets,
@@ -198,7 +199,7 @@ pub struct CanvasInteractionOut {
     /// `slicer`, `table` or `matrix`.
     pub kind: String,
     pub scroll: Option<ScrollOut>,
-    /// Slicers: `dropdown`, `list`, `tile` or `range`.
+    /// Slicers: `dropdown`, `list`, `tile`, `range` or `relative`.
     pub slicer_mode: Option<String>,
     /// Slicer header band.
     pub header: Option<RectOut>,
@@ -212,6 +213,145 @@ pub struct CanvasInteractionOut {
     pub search_text: String,
     /// The slicer filters something (not "All").
     pub has_selection: bool,
+    /// Range slicers: value boxes, slider and bounds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub range: Option<RangeOut>,
+    /// Relative date / time slicers: controls and setting.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relative: Option<RelativeOut>,
+}
+
+/// A range slicer's geometry and bounds; values are numbers, or OADate days
+/// (days since 1899-12-30) for dates.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RangeOut {
+    /// Lower bound box (not in "Before" mode).
+    pub low_box: Option<RectOut>,
+    /// Upper bound box (not in "After" mode).
+    pub high_box: Option<RectOut>,
+    /// Slider track; the handles sit on its vertical middle.
+    pub track: Option<RectOut>,
+    /// The field's smallest and largest value.
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    /// The current bounds (the data range when unset).
+    pub low: Option<f64>,
+    pub high: Option<f64>,
+    pub low_text: String,
+    pub high_text: String,
+    /// A date field: values are OADate days.
+    pub is_date: bool,
+    /// A whole-number field.
+    pub integer: bool,
+}
+
+/// Last, next or this period of a relative date slicer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum RelativeAnchorArg {
+    #[default]
+    Last,
+    Next,
+    This,
+}
+
+/// The period of a relative date slicer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum RelativePeriodArg {
+    Minutes,
+    Hours,
+    #[default]
+    Days,
+    Weeks,
+    CalendarWeeks,
+    Months,
+    CalendarMonths,
+    Years,
+    CalendarYears,
+}
+
+impl From<RelativeAnchor> for RelativeAnchorArg {
+    fn from(a: RelativeAnchor) -> Self {
+        match a {
+            RelativeAnchor::Last => Self::Last,
+            RelativeAnchor::Next => Self::Next,
+            RelativeAnchor::This => Self::This,
+        }
+    }
+}
+
+impl From<RelativeAnchorArg> for RelativeAnchor {
+    fn from(a: RelativeAnchorArg) -> Self {
+        match a {
+            RelativeAnchorArg::Last => Self::Last,
+            RelativeAnchorArg::Next => Self::Next,
+            RelativeAnchorArg::This => Self::This,
+        }
+    }
+}
+
+impl From<RelativePeriod> for RelativePeriodArg {
+    fn from(p: RelativePeriod) -> Self {
+        match p {
+            RelativePeriod::Minutes => Self::Minutes,
+            RelativePeriod::Hours => Self::Hours,
+            RelativePeriod::Days => Self::Days,
+            RelativePeriod::Weeks => Self::Weeks,
+            RelativePeriod::CalendarWeeks => Self::CalendarWeeks,
+            RelativePeriod::Months => Self::Months,
+            RelativePeriod::CalendarMonths => Self::CalendarMonths,
+            RelativePeriod::Years => Self::Years,
+            RelativePeriod::CalendarYears => Self::CalendarYears,
+        }
+    }
+}
+
+impl From<RelativePeriodArg> for RelativePeriod {
+    fn from(p: RelativePeriodArg) -> Self {
+        match p {
+            RelativePeriodArg::Minutes => Self::Minutes,
+            RelativePeriodArg::Hours => Self::Hours,
+            RelativePeriodArg::Days => Self::Days,
+            RelativePeriodArg::Weeks => Self::Weeks,
+            RelativePeriodArg::CalendarWeeks => Self::CalendarWeeks,
+            RelativePeriodArg::Months => Self::Months,
+            RelativePeriodArg::CalendarMonths => Self::CalendarMonths,
+            RelativePeriodArg::Years => Self::Years,
+            RelativePeriodArg::CalendarYears => Self::CalendarYears,
+        }
+    }
+}
+
+/// A relative date slicer's controls and setting.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RelativeOut {
+    /// The Last / Next / This box.
+    pub anchor_box: RectOut,
+    /// The number box (not for "This").
+    pub duration_box: Option<RectOut>,
+    /// The period box.
+    pub period_box: RectOut,
+    pub anchor: RelativeAnchorArg,
+    /// The number of periods, when set.
+    pub duration: Option<u32>,
+    pub period: RelativePeriodArg,
+    pub include_today: bool,
+    /// Relative time: only minutes and hours.
+    pub time: bool,
+    /// A relative condition filters the page.
+    pub active: bool,
+}
+
+/// A bound of `canvas.setRange`: a number, or an ISO date (`2025-03-01`)
+/// or OADate day number for date fields.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum RangeBound {
+    Number(f64),
+    Text(String),
 }
 
 /// Kind of a Filters pane selection card.
@@ -1070,6 +1210,7 @@ fn interaction_out(i: &VisualInteraction, job: &Job) -> CanvasInteractionOut {
                 SlicerMode::List => "list",
                 SlicerMode::Tile => "tile",
                 SlicerMode::Range => "range",
+                SlicerMode::Relative => "relative",
             }
             .to_owned()
         }),
@@ -1090,6 +1231,32 @@ fn interaction_out(i: &VisualInteraction, job: &Job) -> CanvasInteractionOut {
             .slicer_selections
             .get(&i.name)
             .is_some_and(|s| !s.is_all()),
+        range: slicer.and_then(|s| s.range.as_ref()).map(|r| RangeOut {
+            low_box: r.low_box.as_ref().map(rect_out),
+            high_box: r.high_box.as_ref().map(rect_out),
+            track: r.track.as_ref().map(rect_out),
+            min: r.min.filter(|v| v.is_finite()),
+            max: r.max.filter(|v| v.is_finite()),
+            low: r.low.filter(|v| v.is_finite()),
+            high: r.high.filter(|v| v.is_finite()),
+            low_text: r.low_text.clone(),
+            high_text: r.high_text.clone(),
+            is_date: r.is_date,
+            integer: r.integer,
+        }),
+        relative: slicer
+            .and_then(|s| s.relative.as_ref())
+            .map(|r| RelativeOut {
+                anchor_box: rect_out(&r.anchor_box),
+                duration_box: r.duration_box.as_ref().map(rect_out),
+                period_box: rect_out(&r.period_box),
+                anchor: r.anchor.into(),
+                duration: r.duration,
+                period: r.period.into(),
+                include_today: r.include_today,
+                time: r.time,
+                active: r.active,
+            }),
     }
 }
 
@@ -1653,6 +1820,286 @@ pub async fn set_slicer(
     })??;
     target.sync_slicer(&name)?;
     render(target).await
+}
+
+/// `canvas.setRange`: filters a numeric or date slicer to `[low, high]`
+/// (either open; both `None` clears it). Dates select whole days:
+/// `>= low` and `< high + 1 day`.
+///
+/// # Errors
+/// `invalidParams` for a slicer over several fields, unreadable bounds or
+/// `low > high`.
+pub async fn set_range(
+    target: &Target,
+    visual: Option<&str>,
+    field: Option<&str>,
+    low: Option<RangeBound>,
+    high: Option<RangeBound>,
+) -> Result<CanvasPageOut, OpError> {
+    let model = target.entry.session().revision_snapshot().model;
+    let name = target.update(|entry, _, page| {
+        let slicer = resolve::slicer(page, visual, field)?;
+        let field = single_field(slicer)?;
+        let data_type = field_type(&model, &field);
+        let condition = range_condition(&field, data_type.as_ref(), low, high)?;
+        let mut state = entry.state.clone();
+        match condition {
+            Some(condition) => state.select(
+                slicer.name.clone(),
+                SlicerSelection {
+                    values: Vec::new(),
+                    inverted: false,
+                    condition: Some(condition),
+                },
+            ),
+            None => state.clear_slicer(&slicer.name),
+        };
+        entry.set_state(state);
+        Ok::<String, OpError>(slicer.name.clone())
+    })??;
+    target.sync_slicer(&name)?;
+    render(target).await
+}
+
+/// `canvas.setRelativeDate`: filters a date slicer to a relative period
+/// ("Last 3 months"); `None` clears it.
+///
+/// # Errors
+/// `invalidParams` for a slicer over several fields, a field that is not a
+/// date or a duration of 0.
+pub async fn set_relative_date(
+    target: &Target,
+    visual: Option<&str>,
+    field: Option<&str>,
+    spec: Option<RelativeDateSpec>,
+) -> Result<CanvasPageOut, OpError> {
+    if let Some(s) = &spec
+        && s.anchor != RelativeAnchor::This
+        && !(1..=MAX_RELATIVE_DURATION).contains(&s.duration)
+    {
+        return Err(OpError::invalid_params(format!(
+            "duration must be 1 to {MAX_RELATIVE_DURATION}"
+        )));
+    }
+    let model = target.entry.session().revision_snapshot().model;
+    let name = target.update(|entry, _, page| {
+        let slicer = resolve::slicer(page, visual, field)?;
+        let field = single_field(slicer)?;
+        if spec.is_some() && field_type(&model, &field).is_some_and(|t| t != DataType::DateTime) {
+            return Err(OpError::invalid_params(format!(
+                "slicer '{}' does not filter a date field",
+                slicer.name
+            )));
+        }
+        let mut state = entry.state.clone();
+        match spec {
+            Some(spec) => state.select(
+                slicer.name.clone(),
+                SlicerSelection {
+                    values: Vec::new(),
+                    inverted: false,
+                    condition: Some(spec.normalized().condition(&field)),
+                },
+            ),
+            None => state.clear_slicer(&slicer.name),
+        };
+        entry.set_state(state);
+        Ok::<String, OpError>(slicer.name.clone())
+    })??;
+    target.sync_slicer(&name)?;
+    render(target).await
+}
+
+/// Largest number of periods of a relative date setting.
+const MAX_RELATIVE_DURATION: u32 = 100_000;
+
+fn single_field(slicer: &Visual) -> Result<FieldExpr, OpError> {
+    match slicer_fields(slicer).as_slice() {
+        [field] => Ok(field.clone()),
+        _ => Err(OpError::invalid_params(format!(
+            "slicer '{}' does not filter exactly one field",
+            slicer.name
+        ))),
+    }
+}
+
+fn field_type(model: &Model, field: &FieldExpr) -> Option<DataType> {
+    let (table, column) = match field {
+        FieldExpr::HierarchyLevel {
+            entity,
+            hierarchy,
+            level,
+            ..
+        } => {
+            let column = model
+                .table(entity)?
+                .hierarchy(hierarchy)?
+                .level(level)?
+                .column
+                .clone();
+            (entity.as_str(), column)
+        }
+        other => (other.entity()?, other.property()?.to_owned()),
+    };
+    model.column(table, &column).map(|c| c.data_type.clone())
+}
+
+/// The calendar day of a date bound: an ISO date or date-time, or an
+/// OADate day number.
+fn bound_date(b: &RangeBound) -> Option<chrono::NaiveDate> {
+    let epoch = chrono::NaiveDate::from_ymd_opt(1899, 12, 30)?;
+    match b {
+        RangeBound::Number(n) if n.is_finite() && n.abs() < 3_000_000.0 => {
+            epoch.checked_add_signed(chrono::TimeDelta::try_days(n.floor() as i64)?)
+        }
+        RangeBound::Number(_) => None,
+        RangeBound::Text(t) => {
+            let t = t.trim();
+            let day = t.get(..10).unwrap_or(t);
+            chrono::NaiveDate::parse_from_str(day, "%Y-%m-%d").ok()
+        }
+    }
+}
+
+fn bound_number(b: &RangeBound) -> Option<f64> {
+    match b {
+        RangeBound::Number(n) => Some(*n),
+        RangeBound::Text(t) => t.trim().parse().ok(),
+    }
+    .filter(|n: &f64| n.is_finite())
+}
+
+/// The condition of a range selection (see [`set_range`]).
+fn range_condition(
+    field: &FieldExpr,
+    data_type: Option<&DataType>,
+    low: Option<RangeBound>,
+    high: Option<RangeBound>,
+) -> Result<Option<Condition>, OpError> {
+    let cmp = |kind, right: Literal| Condition::Comparison {
+        kind,
+        left: field.clone(),
+        right: FieldExpr::Literal(right),
+    };
+    let mut parts = Vec::new();
+    if data_type == Some(&DataType::DateTime) {
+        let date = |b: &RangeBound| {
+            bound_date(b).ok_or_else(|| {
+                OpError::invalid_params(format!("'{b:?}' is not a date (use YYYY-MM-DD)"))
+            })
+        };
+        let lo = low.as_ref().map(date).transpose()?;
+        let hi = high.as_ref().map(date).transpose()?;
+        if let (Some(l), Some(h)) = (lo, hi)
+            && l > h
+        {
+            return Err(OpError::invalid_params("low is after high"));
+        }
+        let literal = |d: chrono::NaiveDate| Literal::datetime(&format!("{d}T00:00:00"));
+        if let Some(l) = lo {
+            parts.push(cmp(ComparisonKind::GreaterThanOrEqual, literal(l)));
+        }
+        if let Some(h) = hi {
+            let next = h
+                .succ_opt()
+                .ok_or_else(|| OpError::invalid_params("high is out of range"))?;
+            parts.push(cmp(ComparisonKind::LessThan, literal(next)));
+        }
+    } else {
+        let number = |b: &RangeBound| {
+            bound_number(b)
+                .ok_or_else(|| OpError::invalid_params(format!("'{b:?}' is not a number")))
+        };
+        let lo = low.as_ref().map(number).transpose()?;
+        let hi = high.as_ref().map(number).transpose()?;
+        if let (Some(l), Some(h)) = (lo, hi)
+            && l > h
+        {
+            return Err(OpError::invalid_params("low is greater than high"));
+        }
+        let integer = data_type == Some(&DataType::Int64);
+        let literal = |v: f64| {
+            if integer && v.fract() == 0.0 && v.abs() < 9.0e15 {
+                Literal::integer(v as i64)
+            } else {
+                Literal::double(v)
+            }
+        };
+        if let Some(l) = lo {
+            parts.push(cmp(ComparisonKind::GreaterThanOrEqual, literal(l)));
+        }
+        if let Some(h) = hi {
+            parts.push(cmp(ComparisonKind::LessThanOrEqual, literal(h)));
+        }
+    }
+    Ok(Condition::and_all(parts))
+}
+
+/// Filters pane text of a range or relative slicer condition: `is in the
+/// last 3 months`, `is between 2025-01-01 and 2025-03-31`, `is at least 10`.
+fn condition_summary(c: &Condition) -> Option<String> {
+    if let Some(spec) = RelativeDateSpec::from_condition(c) {
+        let d = spec.describe();
+        return Some(if spec.anchor == RelativeAnchor::This {
+            format!("is in {d}")
+        } else {
+            format!("is in the {d}")
+        });
+    }
+    let text = |f: &FieldExpr, exclusive_end: bool| -> Option<String> {
+        let FieldExpr::Literal(l) = f else {
+            return None;
+        };
+        Some(match l.value().ok()? {
+            LiteralValue::DateTime(iso) => {
+                let day = chrono::NaiveDate::parse_from_str(iso.get(..10)?, "%Y-%m-%d").ok()?;
+                let midnight = iso.get(10..).is_none_or(|t| {
+                    t.trim_start_matches('T')
+                        .trim_start_matches(['0', ':', '.'])
+                        .is_empty()
+                });
+                if exclusive_end && midnight {
+                    day.pred_opt()?.to_string()
+                } else {
+                    day.to_string()
+                }
+            }
+            LiteralValue::Integer(n) => n.to_string(),
+            LiteralValue::Double(v) | LiteralValue::Decimal(v) => v.to_string(),
+            LiteralValue::Text(t) => t,
+            _ => return None,
+        })
+    };
+    let mut lo = None;
+    let mut hi = None;
+    let mut stack = vec![c];
+    while let Some(c) = stack.pop() {
+        match c {
+            Condition::And(a, b) => {
+                stack.push(b);
+                stack.push(a);
+            }
+            Condition::Between { lower, upper, .. } => {
+                lo = Some(text(lower, false)?);
+                hi = Some(text(upper, false)?);
+            }
+            Condition::Comparison { kind, right, .. } => match kind {
+                ComparisonKind::GreaterThanOrEqual | ComparisonKind::GreaterThan => {
+                    lo = Some(text(right, false)?);
+                }
+                ComparisonKind::LessThan => hi = Some(text(right, true)?),
+                ComparisonKind::LessThanOrEqual => hi = Some(text(right, false)?),
+                ComparisonKind::Equal => return Some(format!("is {}", text(right, false)?)),
+            },
+            _ => return None,
+        }
+    }
+    match (lo, hi) {
+        (Some(l), Some(h)) => Some(format!("is between {l} and {h}")),
+        (Some(l), None) => Some(format!("is at least {l}")),
+        (None, Some(h)) => Some(format!("is at most {h}")),
+        (None, None) => None,
+    }
 }
 
 /// A slicer selection of JSON values (`null` = BLANK).
@@ -2711,11 +3158,14 @@ fn selections(
         } else {
             format!("is {}", list_summary(&texts))
         };
-        if sel.condition.is_some() {
+        if let Some(condition) = &sel.condition {
             if !summary.is_empty() {
                 summary.push_str("; ");
             }
-            summary.push_str("has a range or advanced condition");
+            summary.push_str(
+                &condition_summary(condition)
+                    .unwrap_or_else(|| "has a range or advanced condition".to_owned()),
+            );
             spec.unsupported.push(unsupported(
                 "range and advanced slicer conditions are not translated",
             ));

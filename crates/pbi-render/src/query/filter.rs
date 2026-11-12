@@ -35,6 +35,7 @@
 //! as [`FilterPlan::value_conditions`] for the query engine to apply to the
 //! visual's rows. Top N filters are returned as [`FilterPlan::top_n`].
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -48,6 +49,7 @@ use pbi_model::{
     ComparisonKind, Condition, DataType, FieldExpr, Filter, FilterKind, LiteralValue, Model,
 };
 
+use super::relative;
 use super::semantic::{TopNSpec, top_n};
 
 /// Cap on the rows scanned for one multi-column filter.
@@ -101,11 +103,36 @@ impl FilterPlan {
 pub struct FilterBuilder<'a> {
     model: &'a Model,
     snapshot: &'a EngineSnapshot,
+    now: Option<chrono::NaiveDateTime>,
 }
 
 impl<'a> FilterBuilder<'a> {
     pub fn new(model: &'a Model, snapshot: &'a EngineSnapshot) -> Self {
-        Self { model, snapshot }
+        Self {
+            model,
+            snapshot,
+            now: None,
+        }
+    }
+
+    /// The current local date and time that relative date conditions
+    /// resolve against; without it they are skipped.
+    #[must_use]
+    pub fn with_now(mut self, now: Option<chrono::NaiveDateTime>) -> Self {
+        self.now = now;
+        self
+    }
+
+    /// `condition` with relative date bounds resolved (see
+    /// [`super::relative`]).
+    fn resolved<'c>(&self, condition: &'c Condition) -> Result<Cow<'c, Condition>, String> {
+        if !relative::is_relative(condition) {
+            return Ok(Cow::Borrowed(condition));
+        }
+        let now = self
+            .now
+            .ok_or("relative date filters need the current date, which is not set")?;
+        relative::resolve(condition, now).map(Cow::Owned)
     }
 
     /// Resolves a column or (non-variation) hierarchy-level field.
@@ -171,28 +198,16 @@ impl<'a> FilterBuilder<'a> {
     /// Plans a report/page/visual filter card.
     pub fn plan(&self, filter: &Filter) -> FilterPlan {
         let mut plan = FilterPlan::default();
-        match filter.kind {
-            FilterKind::RelativeDate | FilterKind::RelativeTime => {
-                if filter.condition.is_some() {
-                    plan.skipped.push(format!(
-                        "{} filters are not supported yet",
-                        filter.kind.as_str()
-                    ));
-                }
-                return plan;
+        if matches!(filter.kind, FilterKind::TopN) {
+            let def = filter.raw.get("filter");
+            match def.and_then(top_n) {
+                Some(spec) => plan.top_n = Some(spec),
+                None if def.is_some() => plan
+                    .skipped
+                    .push("the Top N filter definition could not be read".into()),
+                None => {}
             }
-            FilterKind::TopN => {
-                let def = filter.raw.get("filter");
-                match def.and_then(top_n) {
-                    Some(spec) => plan.top_n = Some(spec),
-                    None if def.is_some() => plan
-                        .skipped
-                        .push("the Top N filter definition could not be read".into()),
-                    None => {}
-                }
-                return plan;
-            }
-            _ => {}
+            return plan;
         }
         let Some(condition) = &filter.condition else {
             return plan;
@@ -203,8 +218,15 @@ impl<'a> FilterBuilder<'a> {
 
     /// Plans a bare condition (adds to `plan`).
     pub fn plan_condition(&self, condition: &Condition, plan: &mut FilterPlan) {
+        let condition = match self.resolved(condition) {
+            Ok(c) => c,
+            Err(reason) => {
+                plan.skipped.push(reason);
+                return;
+            }
+        };
         let mut conjuncts = Vec::new();
-        flatten_and(condition, &mut conjuncts);
+        flatten_and(&condition, &mut conjuncts);
         for c in conjuncts {
             match classify(c) {
                 Operands::Columns => match self.condition_filters(c) {
@@ -228,8 +250,9 @@ impl<'a> FilterBuilder<'a> {
     /// # Errors
     /// A user-facing reason when the condition cannot be translated.
     pub fn condition(&self, condition: &Condition) -> Result<Vec<EngineFilter>, String> {
+        let condition = self.resolved(condition)?;
         let mut conjuncts = Vec::new();
-        flatten_and(condition, &mut conjuncts);
+        flatten_and(&condition, &mut conjuncts);
         let mut out = Vec::new();
         for c in conjuncts {
             match classify(c) {

@@ -11,6 +11,8 @@
   import type { IconName } from '../../lib/icons'
   import type { MenuItem } from '../../lib/shell'
   import { visualKind } from '../../lib/visuals'
+  import { handleX, parseRangeInput, periodFor, rangeBound, rangeText, relativePeriods, step, valueAt } from '../../lib/slicerRange'
+  import type { RangeBound, RangeOut, RelativeAnchorArg, RelativeOut, RelativePeriodArg } from '../../lib/ops'
 
   /*
    * ReportCanvas — the report page surface of the Report view: the page rendered by the Rust
@@ -577,6 +579,100 @@
   }
 
   // ---------------------------------------------------------------------------------------------
+  // Range ("Between") and relative date slicers
+  // ---------------------------------------------------------------------------------------------
+
+  const rangeSlicers = $derived((rendered?.interactions ?? []).flatMap((i) => (i.range ? [{ visual: i.visual, range: i.range }] : [])))
+  const relativeSlicers = $derived((rendered?.interactions ?? []).flatMap((i) => (i.relative ? [{ visual: i.visual, rel: i.relative }] : [])))
+  /** A handle being dragged (or stepped with the keyboard) and its value. */
+  let drag = $state<{ visual: string; which: 'low' | 'high'; value: number } | null>(null)
+
+  const bound = (r: RangeOut, which: 'low' | 'high') => (which === 'low' ? (r.low ?? r.min) : (r.high ?? r.max))
+  const handleValue = (visual: string, r: RangeOut, which: 'low' | 'high') => (drag?.visual === visual && drag.which === which ? drag.value : bound(r, which))
+
+  async function setRange(visual: string, low: RangeBound | null, high: RangeBound | null) {
+    if (!rendered) return
+    const { id: reportId } = report
+    const { id: pageId } = page
+    accept(await run(() => backend.setRange(reportId, pageId, visual, low, high)))
+  }
+
+  function commitRange(visual: string, r: RangeOut, which: 'low' | 'high', value: number) {
+    const other = which === 'low' ? r.high : r.low
+    const otherBound = other == null ? null : rangeBound(r, other)
+    const v = rangeBound(r, value)
+    void setRange(visual, which === 'low' ? v : otherBound, which === 'low' ? otherBound : v)
+  }
+
+  /** The value of a dragged handle, kept between the other handle and the data range. */
+  function clampHandle(r: RangeOut, which: 'low' | 'high', v: number): number {
+    const lo = which === 'low' ? (r.min ?? v) : (bound(r, 'low') ?? r.min ?? v)
+    const hi = which === 'high' ? (r.max ?? v) : (bound(r, 'high') ?? r.max ?? v)
+    return Math.min(hi, Math.max(lo, v))
+  }
+
+  function handleDown(event: PointerEvent, visual: string, which: 'low' | 'high', r: RangeOut) {
+    event.stopPropagation()
+    const value = bound(r, which)
+    if (value == null) return
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+    drag = { visual, which, value }
+  }
+
+  function handleMove(event: PointerEvent, r: RangeOut) {
+    if (!drag) return
+    event.stopPropagation()
+    const v = valueAt(r, toPage(event).x)
+    if (v != null) drag.value = clampHandle(r, drag.which, v)
+  }
+
+  function handleUp(event: PointerEvent, r: RangeOut) {
+    const d = drag
+    drag = null
+    if (!d) return
+    event.stopPropagation()
+    if (d.value !== bound(r, d.which)) commitRange(d.visual, r, d.which, d.value)
+  }
+
+  function handleKey(event: KeyboardEvent, visual: string, which: 'low' | 'high', r: RangeOut) {
+    const value = bound(r, which)
+    if (value == null) return
+    const delta = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[event.key]
+    let next: number | undefined
+    if (delta) next = value + delta * step(r)
+    else if (event.key === 'Home') next = r.min ?? undefined
+    else if (event.key === 'End') next = r.max ?? undefined
+    if (next == null) return
+    event.preventDefault()
+    event.stopPropagation()
+    next = clampHandle(r, which, next)
+    if (next !== value) commitRange(visual, r, which, next)
+  }
+
+  function boxChange(event: Event, visual: string, which: 'low' | 'high', r: RangeOut) {
+    const input = event.currentTarget as HTMLInputElement
+    const text = input.value.trim()
+    const v = text === '' ? null : parseRangeInput(r, text)
+    if (text !== '' && v == null) {
+      input.value = which === 'low' ? r.lowText : r.highText
+      return
+    }
+    const other = which === 'low' ? r.high : r.low
+    const otherBound = other == null ? null : rangeBound(r, other)
+    void setRange(visual, which === 'low' ? v : otherBound, which === 'low' ? otherBound : v)
+  }
+
+  async function setRelative(visual: string, rel: RelativeOut, change: { anchor?: RelativeAnchorArg; duration?: number; period?: RelativePeriodArg }) {
+    if (!rendered) return
+    const anchor = change.anchor ?? rel.anchor
+    const duration = Math.max(1, Math.min(100_000, Math.round(change.duration ?? rel.duration ?? 1)))
+    const period = periodFor(anchor, rel.time, change.period ?? rel.period)
+    const { id: reportId } = report
+    const { id: pageId } = page
+    accept(await run(() => backend.setRelativeDate(reportId, pageId, visual, { anchor, duration, period, includeToday: rel.includeToday })))
+  }
+
+  // ---------------------------------------------------------------------------------------------
   // Keyboard
   // ---------------------------------------------------------------------------------------------
 
@@ -739,6 +835,101 @@
           onclick={(e) => e.stopPropagation()}
         />
       {/if}
+      {#each rangeSlicers as { visual, range: r } (visual)}
+        {#each [['low', r.lowBox], ['high', r.highBox]] as const as [which, box] (which)}
+          {#if box}
+            {@const v = handleValue(visual, r, which)}
+            <input
+              class="chrome-control range-box"
+              type="text"
+              aria-label={which === 'low' ? 'Start of the range' : 'End of the range'}
+              style:left={px(box.x)}
+              style:top={px(box.y)}
+              style:width={px(box.width)}
+              style:height={px(box.height)}
+              value={drag?.visual === visual && drag.which === which && v != null ? rangeText(r, v) : which === 'low' ? r.lowText : r.highText}
+              onchange={(e) => boxChange(e, visual, which, r)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
+              }}
+              onclick={(e) => e.stopPropagation()}
+            />
+            {@const t = r.track}
+            {#if t && v != null && r.min != null && r.max != null}
+              <div
+                class="chrome-control range-handle"
+                class:dragging={drag?.visual === visual && drag.which === which}
+                role="slider"
+                tabindex="0"
+                aria-label={which === 'low' ? 'Range start' : 'Range end'}
+                aria-valuemin={r.min}
+                aria-valuemax={r.max}
+                aria-valuenow={v}
+                aria-valuetext={rangeText(r, v)}
+                style:left={px(handleX(r, v) - 7)}
+                style:top={px(t.y + t.height / 2 - 7)}
+                onpointerdown={(e) => handleDown(e, visual, which, r)}
+                onpointermove={(e) => handleMove(e, r)}
+                onpointerup={(e) => handleUp(e, r)}
+                onpointercancel={() => (drag = null)}
+                onkeydown={(e) => handleKey(e, visual, which, r)}
+                onclick={(e) => e.stopPropagation()}
+              ></div>
+            {/if}
+          {/if}
+        {/each}
+      {/each}
+      {#each relativeSlicers as { visual, rel } (visual)}
+        <select
+          class="chrome-control relative-box"
+          aria-label="Relative date anchor"
+          style:left={px(rel.anchorBox.x)}
+          style:top={px(rel.anchorBox.y)}
+          style:width={px(rel.anchorBox.width)}
+          style:height={px(rel.anchorBox.height)}
+          value={rel.anchor}
+          onchange={(e) => void setRelative(visual, rel, { anchor: (e.currentTarget as HTMLSelectElement).value as RelativeAnchorArg })}
+          onclick={(e) => e.stopPropagation()}
+        >
+          <option value="last">Last</option>
+          <option value="next">Next</option>
+          <option value="this">This</option>
+        </select>
+        {#if rel.durationBox}
+          <input
+            class="chrome-control relative-box"
+            type="number"
+            min="1"
+            max="100000"
+            aria-label="Number of periods"
+            style:left={px(rel.durationBox.x)}
+            style:top={px(rel.durationBox.y)}
+            style:width={px(rel.durationBox.width)}
+            style:height={px(rel.durationBox.height)}
+            value={rel.duration ?? ''}
+            onchange={(e) => {
+              const n = Number((e.currentTarget as HTMLInputElement).value)
+              if (Number.isFinite(n) && n >= 1) void setRelative(visual, rel, { duration: n })
+            }}
+            onclick={(e) => e.stopPropagation()}
+          />
+        {/if}
+        <select
+          class="chrome-control relative-box"
+          aria-label="Relative date period"
+          style:left={px(rel.periodBox.x)}
+          style:top={px(rel.periodBox.y)}
+          style:width={px(rel.periodBox.width)}
+          style:height={px(rel.periodBox.height)}
+          value={periodFor(rel.anchor, rel.time, rel.period)}
+          onchange={(e) => void setRelative(visual, rel, { period: (e.currentTarget as HTMLSelectElement).value as RelativePeriodArg })}
+          onclick={(e) => e.stopPropagation()}
+        >
+          {#each relativePeriods(rel.anchor, rel.time) as o (o.value)}
+            <option value={o.value}>{o.label}</option>
+          {/each}
+        </select>
+      {/each}
     </div>
 
     {#if !rendered && pending > 0}
@@ -947,6 +1138,44 @@
     background: #fff;
     color: #252423;
     font-family: Selawik, 'Segoe UI', sans-serif;
+  }
+
+  .range-box,
+  .relative-box {
+    box-sizing: border-box;
+    padding: 0 4px;
+    border: 1px solid #c8c6c4;
+    border-radius: 0;
+    background: #fff;
+    color: #252423;
+    font-family: Selawik, 'Segoe UI', sans-serif;
+    font-size: 12px;
+  }
+
+  .range-box:focus,
+  .relative-box:focus {
+    border-color: var(--color-brand);
+    outline: none;
+  }
+
+  .range-handle {
+    box-sizing: border-box;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #605e5c;
+    border-radius: 50%;
+    background: #fff;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .range-handle.dragging {
+    cursor: grabbing;
+  }
+
+  .range-handle:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 1px;
   }
 
   .shimmer {

@@ -145,6 +145,8 @@ pub fn catalog() -> Registry {
         .with::<canvas::CanvasClick>()
         .with::<canvas::CanvasScroll>()
         .with::<canvas::CanvasSetSlicer>()
+        .with::<canvas::CanvasSetRange>()
+        .with::<canvas::CanvasSetRelativeDate>()
         .with::<canvas::CanvasClearSelections>()
         .with::<canvas::CanvasSetSlicerSearch>()
         .with::<canvas::CanvasToggleMatrixRow>()

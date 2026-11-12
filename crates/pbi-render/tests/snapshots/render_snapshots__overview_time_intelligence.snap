@@ -3,7 +3,7 @@ source: crates/pbi-render/tests/render_snapshots.rs
 expression: text
 ---
 Acme Outfitters - Overview / Time Intelligence (FitToPage, 1280×720, 12 visuals)
-page svg: 49916 bytes, fnv1a 89015e1b82dac772
+page svg: 50013 bytes, fnv1a 7a3a3135900ac67b
 
 73a4b46ae84c53908089 shape 1280×64 at (0, 0): svg 0418e473b7439a2b, 0 data points
 
@@ -15,10 +15,11 @@ b41d675081c224f256ea slicer 220×64 at (24, 76): svg 6a878bf9cfde2cde, 0 data po
   | Month
   | 2025-06
 
-398b24904a1feb7d0755 slicer 320×64 at (260, 76): svg d5e0a6481b220339, 0 data points
+398b24904a1feb7d0755 slicer 320×64 at (260, 76): svg fb7113fe7bf267b8, 0 data points
   | Order date (relative)
-  | 2025-06-01
-  | 2025-06-30
+  | Last
+  | 10
+  | Years
 
 e2ec1886bb9df4e1d51a cardVisual 300×100 at (24, 152): svg 5de07937fececcbd, 0 data points
   | Total Sales - Current
@@ -79,7 +80,6 @@ c507b8509ba0b970a4ee cardVisual 284×100 at (972, 152): svg 6c05e94d55183ef9, 0 
   | $829,629.00
 
 cfa6b3b57d4eab8e6066 lineChart 616×220 at (24, 484): svg b38049ac9f90133b, 36 data points
-  warning: filter not applied: RelativeDate filters are not supported yet
   | Sales by month (last 10 years)
   | Total Sales
   | Sales PY

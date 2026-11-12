@@ -151,6 +151,7 @@ mod exec;
 pub mod filter;
 pub mod interaction;
 mod plan;
+pub mod relative;
 mod semantic;
 pub mod tooltip;
 
@@ -310,6 +311,10 @@ pub struct QueryEnv {
     pub model: Arc<Model>,
     /// Culture used to format values (`en-US`, …).
     pub culture: String,
+    /// The current local date and time for relative date filters and
+    /// slicers; `None` skips them with a warning (no wall clock is read
+    /// here, so renders stay deterministic).
+    pub now: Option<chrono::NaiveDateTime>,
 }
 
 impl QueryEnv {
@@ -322,7 +327,15 @@ impl QueryEnv {
             snapshot,
             model,
             culture: culture.into(),
+            now: None,
         }
+    }
+
+    /// Sets the current local date and time (see [`QueryEnv::now`]).
+    #[must_use]
+    pub fn with_now(mut self, now: chrono::NaiveDateTime) -> Self {
+        self.now = Some(now);
+        self
     }
 
     /// The session's current snapshot, model and culture, all of one
@@ -340,11 +353,12 @@ impl QueryEnv {
             Arc::clone(&revision.model),
             revision.culture(),
         )
+        .with_now(revision.local_now())
     }
 
     /// A [`FilterBuilder`] on this model and snapshot.
     pub fn builder(&self) -> FilterBuilder<'_> {
-        FilterBuilder::new(&self.model, &self.snapshot)
+        FilterBuilder::new(&self.model, &self.snapshot).with_now(self.now)
     }
 
     /// See [`query_visual`].

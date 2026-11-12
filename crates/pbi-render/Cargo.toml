@@ -26,11 +26,11 @@ tiny-skia = { workspace = true }
 cosmic-text = { workspace = true }
 image = { workspace = true }
 tracing = { workspace = true }
+chrono = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
 arrow = { workspace = true }
-chrono = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 pbi-core = { workspace = true }
 insta = { workspace = true }

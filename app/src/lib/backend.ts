@@ -59,10 +59,13 @@ import {
   type OpsErrorKind,
   type OpsProgress,
   type PeoplePreviewOut,
+  type RangeBound,
   type RecoveryJournalOut,
   type RecoveryListOut,
   type ReplayFailureOut,
   type RefreshOut,
+  type RelativeAnchorArg,
+  type RelativePeriodArg,
   type ResultColumnOut,
   type SecurityRoleOut,
   type SecurityRolesOut,
@@ -814,6 +817,21 @@ export function clearSelections(reportId: number, pageId: number, visual: string
 
 export function setSlicerSearch(reportId: number, pageId: number, visual: string, text: string): Promise<Outcome<RenderedPage>> {
   return onPage(reportId, pageId, (t) => ops.canvasSetSlicerSearch({ ...t, visual, text }))
+}
+
+/** Filters a range slicer to `[low, high]` (either `null`: open; both: clear). */
+export function setRange(reportId: number, pageId: number, visual: string, low: RangeBound | null, high: RangeBound | null): Promise<Outcome<RenderedPage>> {
+  return onPage(reportId, pageId, (t) => ops.canvasSetRange({ ...t, visual, low, high }))
+}
+
+/** Filters a relative date slicer ("Last 3 months"); `null` clears it. */
+export function setRelativeDate(
+  reportId: number,
+  pageId: number,
+  visual: string,
+  spec: { anchor: RelativeAnchorArg; duration: number; period: RelativePeriodArg; includeToday: boolean } | null,
+): Promise<Outcome<RenderedPage>> {
+  return onPage(reportId, pageId, (t) => ops.canvasSetRelativeDate({ ...t, visual, ...(spec ?? {}) }))
 }
 
 /** Closes the open slicer dropdowns; `null` if none was open. */
