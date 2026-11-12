@@ -31,6 +31,10 @@
    *   in its header while hovered or selected and drill items in its right-click menu
    *   (`canvas.drill`): drill up, drill mode (a click on a data point drills down), show next
    *   level, expand to next level.
+   * - Every visual's header (hovered or selected) has Focus mode (`canvas.focus`; "Back to report"
+   *   ends it) and "More options": Show as a table, Spotlight, Sort axis (`canvas.sortVisual`)
+   *   and Export data (`export.visualData`). Right-click on a data point also copies its value
+   *   or the selection (`canvas.contextMenu`).
    * - Wheel over a table, matrix, slicer list or open popup scrolls it; hovering data points
    *   shows a tooltip; Esc closes popups, then clears the cross-filter.
    * - Every render is reported with `onrendered` (selections and effective filters for the
@@ -273,7 +277,12 @@
     void click(hit?.id ?? null, modifiers(event))
   }
 
-  let menu = $state<{ items: MenuItem[]; x: number; y: number } | null>(null)
+  let menu = $state<{ items: MenuItem[]; x: number; y: number; label: string } | null>(null)
+
+  const SEPARATOR: MenuItem = { label: '', separator: true }
+
+  /** Joins menu sections with separators, dropping empty ones. */
+  const sections = (...parts: MenuItem[][]): MenuItem[] => parts.filter((p) => p.length > 0).flatMap((p, i) => (i > 0 ? [SEPARATOR, ...p] : p))
 
   async function oncontextmenu(event: MouseEvent) {
     if (!rendered || wireframe) return
@@ -281,7 +290,8 @@
     if (!hit) return
     const onPoint = hit.kind === 'dataPoint'
     const levels = visualInfo.get(hit.visual)?.drill
-    if (!onPoint && !levels) return
+    const options = visualOptions(hit.visual)
+    if (!onPoint && !levels && options.length === 0) return
     event.preventDefault()
     tip = null
     const { id: reportId } = report
@@ -289,19 +299,135 @@
     const at = { x: event.clientX, y: event.clientY }
     const drillItems: MenuItem[] = drillMenu(levels, onPoint, (a) => void drillAct(reportId, pageId, hit.visual, a, onPoint ? hit.id : null))
     if (!onPoint) {
-      menu = { ...at, items: drillItems }
+      menu = { ...at, label: 'Visual', items: sections(drillItems, options) }
       return
     }
-    const targets = await run(() => backend.drillthroughTargets(reportId, pageId, hit.id))
+    const [targets, copy] = await Promise.all([
+      run(() => backend.drillthroughTargets(reportId, pageId, hit.id)),
+      run(() => backend.contextMenu(reportId, pageId, hit.id)),
+    ])
     if (!targets || report.id !== reportId || page.id !== pageId) return
+    const copyItems: MenuItem[] = [
+      { label: 'Copy value', icon: 'copy', enabled: copy?.copyValue != null, onclick: () => void copyText(copy?.copyValue) },
+      { label: 'Copy selection', enabled: copy?.copySelection != null, onclick: () => void copyText(copy?.copySelection) },
+    ]
     menu = {
       ...at,
-      items: [
-        ...drillItems,
-        ...(drillItems.length > 0 ? [{ label: '', separator: true }] : []),
-        ...drillthroughMenu(targets, (t) => void drill(reportId, pageId, hit.id, t.page, t.report ?? null)),
-      ],
+      label: 'Data point',
+      items: sections(
+        copyItems,
+        drillItems,
+        drillthroughMenu(targets, (t) => void drill(reportId, pageId, hit.id, t.page, t.report ?? null)),
+        options,
+      ),
     }
+  }
+
+  async function copyText(text: string | null | undefined) {
+    if (text == null) return
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch (e) {
+      onerror?.(`Copy failed: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Visual header: focus mode, spotlight, sort, show as a table, export data (M9.8)
+  // ---------------------------------------------------------------------------------------------
+
+  /** The visual has a header: shown, not a group, not the data table of focus mode. */
+  function hasHeader(name: string | null): boolean {
+    const info = name ? visualInfo.get(name) : undefined
+    return !!info?.rect && !info.hidden && !byName.get(info.name)?.isGroup && !info.name.endsWith('~table')
+  }
+
+  /** The "More options" items of `visual` (empty when it has no header). */
+  function visualOptions(visual: string): MenuItem[] {
+    if (!rendered || !hasHeader(visual)) return []
+    const info = visualInfo.get(visual)
+    const { id: reportId } = report
+    const { id: pageId } = page
+    const focus = rendered.focus
+    const tableShown = focus?.visual === visual && focus.showAsTable
+    const items: MenuItem[] = [
+      {
+        label: tableShown ? 'Show as a visual' : 'Show as a table',
+        icon: 'table',
+        onclick: () => void pageOp(() => backend.focusVisual(reportId, pageId, visual, !tableShown)),
+      },
+      {
+        label: 'Spotlight',
+        checked: rendered.spotlight === visual,
+        onclick: () => void pageOp(() => backend.setSpotlight(reportId, pageId, rendered?.spotlight === visual ? null : visual)),
+      },
+    ]
+    const sort = info?.sort
+    if (sort && sort.fields.length > 0) {
+      const current = sort.current[0]
+      items.push(
+        SEPARATOR,
+        { label: 'Sort axis', header: true },
+        {
+          label: 'Sort descending',
+          icon: 'sortDesc',
+          checked: current?.direction === 'descending',
+          enabled: !!current,
+          onclick: () => void pageOp(() => backend.sortVisual(reportId, pageId, visual, null, 'descending')),
+        },
+        {
+          label: 'Sort ascending',
+          icon: 'sortAsc',
+          checked: current?.direction === 'ascending',
+          enabled: !!current,
+          onclick: () => void pageOp(() => backend.sortVisual(reportId, pageId, visual, null, 'ascending')),
+        },
+        ...sort.fields.map(
+          (f): MenuItem => ({
+            label: f.label,
+            checked: current?.queryRef === f.queryRef,
+            onclick: () => void pageOp(() => backend.sortVisual(reportId, pageId, visual, f.queryRef, null)),
+          }),
+        ),
+      )
+      if (sort.changed) items.push({ label: 'Reset to saved sort', onclick: () => void pageOp(() => backend.sortVisual(reportId, pageId, visual, null, null)) })
+    }
+    items.push(
+      SEPARATOR,
+      { label: 'Export data (summarized)', icon: 'export', onclick: () => void exportData(visual, 'summarized') },
+      { label: 'Export data (underlying)', onclick: () => void exportData(visual, 'underlying') },
+    )
+    return items
+  }
+
+  async function pageOp(op: () => Promise<backend.Outcome<RenderedPage>>) {
+    if (!rendered) return
+    tip = null
+    accept(await run(op))
+  }
+
+  async function exportData(visual: string, mode: 'summarized' | 'underlying') {
+    const { id: reportId } = report
+    const { id: pageId } = page
+    const name = visualInfo.get(visual)?.title || visual
+    const path = await backend.pickSavePath('Export data', `${name.replace(/[\\/:*?"<>|]/g, '_')}.csv`, [{ name: 'CSV', extensions: ['csv'] }])
+    if (!path) return
+    const out = await run(() => backend.exportVisualData(reportId, pageId, visual, mode, path))
+    if (out?.truncated) onerror?.(`Exported the first ${out.rows} rows of ${name}; the rest was cut at the row limit.`)
+  }
+
+  function openOptions(event: MouseEvent, visual: string) {
+    event.stopPropagation()
+    const r = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    tip = null
+    menu = { x: r.left, y: r.bottom, label: 'More options', items: visualOptions(visual) }
+  }
+
+  function toggleFocus(visual: string) {
+    const { id: reportId } = report
+    const { id: pageId } = page
+    const on = rendered?.focus?.visual === visual
+    void pageOp(() => backend.focusVisual(reportId, pageId, on ? null : visual))
   }
 
   /** Visuals in drill mode: a click on a data point drills down. */
@@ -312,13 +438,16 @@
     accept(await run(() => backend.drillVisual(reportId, pageId, visual, action, hitId)))
   }
 
-  /** The drill buttons of the hovered (else selected) visual with drill levels, top right of its box. */
-  const drillHeader = $derived.by(() => {
+  /**
+   * The header of the hovered (else selected) visual, top right of its box: drill buttons for
+   * visuals with drill levels, then Focus mode and More options.
+   */
+  const header = $derived.by(() => {
     for (const name of [hoverVisual, selectedName]) {
       const info = name ? visualInfo.get(name) : undefined
-      if (!info?.drill || !info.rect || info.hidden) continue
-      const w = DRILL_BUTTONS.length * 22
-      return { visual: info.name, drill: info.drill, x: info.rect.x + info.rect.width - w - 4, y: info.rect.y + 2 }
+      if (!info?.rect || !hasHeader(info.name)) continue
+      const w = ((info.drill ? DRILL_BUTTONS.length : 0) + 2) * 22
+      return { visual: info.name, drill: info.drill ?? null, x: info.rect.x + info.rect.width - w - 4, y: info.rect.y + 2 }
     }
     return null
   })
@@ -793,28 +922,61 @@
           <Icon name="close" size={12} />
         </button>
       {/if}
-      {#if drillHeader}
-        {@const h = drillHeader}
-        <div class="chrome-control drill-header" role="toolbar" aria-label="Drill" style:left={px(h.x)} style:top={px(h.y)}>
-          {#each DRILL_BUTTONS as b (b.action)}
-            {@const on = b.action === 'mode' && drillMode.includes(h.visual)}
-            <button
-              class="drill-button"
-              class:on
-              title={b.label}
-              aria-label={b.label}
-              aria-pressed={b.action === 'mode' ? on : undefined}
-              disabled={b.action === 'mode' ? !h.drill.canDrillDown && !on : !canDrill(h.drill, b.action, false)}
-              onclick={(e) => {
-                e.stopPropagation()
-                if (b.action === 'mode') toggleDrillMode(h.visual)
-                else void drillAct(report.id, page.id, h.visual, b.action)
-              }}
-            >
-              <Icon name={b.icon} size={12} />
-            </button>
-          {/each}
+      {#if header}
+        {@const h = header}
+        {@const focused = rendered?.focus?.visual === h.visual}
+        <div class="chrome-control drill-header" role="toolbar" aria-label="Visual header" style:left={px(h.x)} style:top={px(h.y)}>
+          {#if h.drill}
+            {@const levels = h.drill}
+            {#each DRILL_BUTTONS as b (b.action)}
+              {@const on = b.action === 'mode' && drillMode.includes(h.visual)}
+              <button
+                class="drill-button"
+                class:on
+                title={b.label}
+                aria-label={b.label}
+                aria-pressed={b.action === 'mode' ? on : undefined}
+                disabled={b.action === 'mode' ? !levels.canDrillDown && !on : !canDrill(levels, b.action, false)}
+                onclick={(e) => {
+                  e.stopPropagation()
+                  if (b.action === 'mode') toggleDrillMode(h.visual)
+                  else void drillAct(report.id, page.id, h.visual, b.action)
+                }}
+              >
+                <Icon name={b.icon} size={12} />
+              </button>
+            {/each}
+          {/if}
+          <button
+            class="drill-button"
+            class:on={focused}
+            title={focused ? 'Back to report' : 'Focus mode'}
+            aria-label={focused ? 'Back to report' : 'Focus mode'}
+            aria-pressed={focused}
+            onclick={(e) => {
+              e.stopPropagation()
+              toggleFocus(h.visual)
+            }}
+          >
+            <Icon name="fitPage" size={12} />
+          </button>
+          <button class="drill-button" title="More options" aria-label="More options" aria-haspopup="menu" onclick={(e) => openOptions(e, h.visual)}>
+            <Icon name="more" size={12} />
+          </button>
         </div>
+      {/if}
+      {#if rendered?.focus}
+        <button
+          class="chrome-control back-to-report"
+          style:left={px(4)}
+          style:top={px(2)}
+          onclick={(e) => {
+            e.stopPropagation()
+            void pageOp(() => backend.focusVisual(report.id, page.id, null))
+          }}
+        >
+          <Icon name="back" size={12} /> Back to report
+        </button>
       {/if}
       {#if searchEdit && searchRect}
         <input
@@ -970,7 +1132,7 @@
 {/if}
 
 {#if menu}
-  <Menu items={menu.items} x={menu.x} y={menu.y} label="Data point" onclose={() => (menu = null)} />
+  <Menu items={menu.items} x={menu.x} y={menu.y} label={menu.label} onclose={() => (menu = null)} />
 {/if}
 
 <style>
@@ -1122,6 +1284,25 @@
   .drill-button.on {
     background: var(--color-brand);
     color: #fff;
+  }
+
+  .back-to-report {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 8px;
+    border: none;
+    border-radius: 2px;
+    background: rgb(255 255 255 / 0.9);
+    color: #252423;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .back-to-report:hover {
+    background: #f3f2f1;
   }
 
   .drill-button:disabled {

@@ -29,6 +29,7 @@
 //! - **Clicks** read the DataViews of the last completed render (what the
 //!   caller saw); a page that was never rendered is rendered first.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -38,7 +39,7 @@ use pbi_core::{OpenedDocument, ReportSource};
 use pbi_engine::{CancellationToken, EngineSnapshot, Value};
 use pbi_model::{
     ComparisonKind, Condition, DataType, Document, FieldExpr, Literal, LiteralValue, Model, Page,
-    Rename, Report, ResourceRef, Visual, renames_between,
+    Rename, Report, ResourceRef, SortDirection, SortItem, Visual, renames_between,
 };
 use pbi_render::dataview::{
     BLANK_LABEL, CellValue, ColumnMeta, DataView, FieldRefKind, ValueColumn,
@@ -46,10 +47,10 @@ use pbi_render::dataview::{
 use pbi_render::layout::{FrameOptions, auto_title};
 use pbi_render::query::relative::{RelativeAnchor, RelativeDateSpec, RelativePeriod};
 use pbi_render::query::{
-    DrillAction, DrillthroughPage, InteractionState, PointField, PointSelection, QueryEnv,
-    QueryLimits, SlicerSelection, allows_cross_report_drillthrough, cross_report_targets,
-    drill_through, drillthrough_page, is_slicer_type, slicer_fields, synced_slicers, tooltip_state,
-    visual_tooltip_page,
+    DATA_TABLE_SUFFIX, DrillAction, DrillthroughPage, FocusState, InteractionState, PointField,
+    PointSelection, QueryEnv, QueryLimits, SlicerSelection, VisualTable,
+    allows_cross_report_drillthrough, cross_report_targets, drill_through, drillthrough_page,
+    is_slicer_type, slicer_fields, source_name, synced_slicers, tooltip_state, visual_tooltip_page,
 };
 use pbi_render::scene::{HitId, HitKind, HitRegion, Rect};
 use pbi_render::svg::{SvgOptions, to_svg};
@@ -157,6 +158,95 @@ pub struct CanvasVisualOut {
     /// has fewer than two levels to drill on.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drill: Option<DrillOut>,
+    /// The fields the visual can be sorted by and its current sort
+    /// (`canvas.sortVisual`); absent for visuals that do not sort.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sort: Option<VisualSortOut>,
+}
+
+/// Sort direction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum SortOrder {
+    Ascending,
+    Descending,
+}
+
+impl From<SortDirection> for SortOrder {
+    fn from(d: SortDirection) -> Self {
+        match d {
+            SortDirection::Ascending => Self::Ascending,
+            SortDirection::Descending => Self::Descending,
+        }
+    }
+}
+
+impl From<SortOrder> for SortDirection {
+    fn from(d: SortOrder) -> Self {
+        match d {
+            SortOrder::Ascending => Self::Ascending,
+            SortOrder::Descending => Self::Descending,
+        }
+    }
+}
+
+/// A field a visual can be sorted by.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SortFieldOut {
+    /// The projection's `queryRef` (`canvas.sortVisual`'s `field`).
+    pub query_ref: String,
+    /// Display name.
+    pub label: String,
+    /// A measure or an aggregated column (sorted descending by default).
+    pub is_value: bool,
+}
+
+/// One key of a visual's current sort.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SortKeyOut {
+    /// `queryRef` of the field (`None` when it is not on the visual).
+    pub query_ref: Option<String>,
+    pub label: String,
+    pub direction: SortOrder,
+}
+
+/// The sort of a visual (the visual header's "Sort axis").
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct VisualSortOut {
+    pub fields: Vec<SortFieldOut>,
+    /// Current sort keys, first first (empty: the visual's default order).
+    pub current: Vec<SortKeyOut>,
+    /// Sorted differently from the saved report (by `canvas.sortVisual` or
+    /// a bookmark).
+    pub changed: bool,
+}
+
+/// A visual in focus mode.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FocusOut {
+    pub visual: String,
+    /// Its data is shown as a table below it (the table is the visual
+    /// named `<visual>~table`).
+    pub show_as_table: bool,
+}
+
+/// What a data point's context menu offers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextMenuOut {
+    /// The visual (a data table's source visual).
+    pub visual: String,
+    /// "Copy value": the value under the pointer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy_value: Option<String>,
+    /// "Copy selection": the point's fields and values as tab-separated
+    /// header and value rows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy_selection: Option<String>,
 }
 
 /// The drill levels of a visual (an axis, or a matrix's rows, with two or
@@ -419,6 +509,12 @@ pub struct CanvasPageOut {
     pub warnings: Vec<String>,
     /// Query + render wall time.
     pub duration_ms: u32,
+    /// The visual in focus mode (`canvas.focus`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus: Option<FocusOut>,
+    /// The spotlighted visual (`canvas.setSpotlight`, bookmarks).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spotlight: Option<String>,
 }
 
 /// What a click on an action button asks the caller to do.
@@ -1061,14 +1157,20 @@ fn run_job(
     };
     let rendered =
         render_interactive_page(report, page, theme, &job.state, &opts, &job.view, &data);
-    let mut dto = page_dto(entry, report, page, theme, job, &data, &rendered, started);
+    // Focus mode moves visuals and adds a data table: clicks and titles
+    // read the page as shown.
+    let shown = match job.state.page_with_visibility(page) {
+        Cow::Borrowed(_) => Arc::clone(page),
+        Cow::Owned(p) => Arc::new(p),
+    };
+    let mut dto = page_dto(entry, report, &shown, theme, job, &data, &rendered, started);
     dto.document_revision = revision;
     let last = LastRender {
         generation: job.generation,
         state_version: job.state_version,
         snapshot: env.snapshot,
         model: env.model,
-        page: Arc::clone(page),
+        page: shown,
         data,
         interactions: rendered.interactions,
     };
@@ -1149,6 +1251,9 @@ fn page_dto(
                     can_drill_up: d.can_drill_up,
                     can_drill_down: d.can_drill_down,
                 }),
+            sort: page
+                .visual(&v.name)
+                .and_then(|visual| visual_sort(visual, &job.state)),
         })
         .collect();
     let interactions = rendered
@@ -1180,7 +1285,68 @@ fn page_dto(
         is_default: job.is_default,
         warnings: job.problems.clone(),
         duration_ms: ms(started),
+        focus: job.state.focus.as_ref().map(|f| FocusOut {
+            visual: f.visual.clone(),
+            show_as_table: f.show_as_table,
+        }),
+        spotlight: job.state.spotlight.clone(),
     }
+}
+
+/// Visual types that show a single value (nothing to sort).
+const UNSORTED_TYPES: &[&str] = &["card", "cardVisual", "kpi", "gauge"];
+
+/// The sortable fields and current sort of `visual` (`None` for groups,
+/// slicers, single-value visuals, data tables and visuals without fields).
+fn visual_sort(visual: &Visual, state: &InteractionState) -> Option<VisualSortOut> {
+    if visual.is_group()
+        || is_slicer_type(&visual.visual_type)
+        || UNSORTED_TYPES.contains(&visual.visual_type.as_str())
+        || visual.name.ends_with(DATA_TABLE_SUFFIX)
+    {
+        return None;
+    }
+    let mut fields: Vec<SortFieldOut> = Vec::new();
+    for p in &visual.projections {
+        let Some(query_ref) = p.field.query_ref() else {
+            continue;
+        };
+        if fields.iter().any(|f| f.query_ref == query_ref) {
+            continue;
+        }
+        fields.push(SortFieldOut {
+            query_ref,
+            label: p.label().to_owned(),
+            is_value: is_value_field(&p.field),
+        });
+    }
+    if fields.is_empty() {
+        return None;
+    }
+    let changed = state.sort.contains_key(&visual.name);
+    let current = state
+        .sort
+        .get(&visual.name)
+        .unwrap_or(&visual.sort)
+        .iter()
+        .map(|item| {
+            let projection = visual.projections.iter().find(|p| p.field == item.field);
+            SortKeyOut {
+                query_ref: projection.map(|p| p.query_ref.clone()),
+                label: projection.map_or_else(|| field_name(&item.field), |p| p.label().to_owned()),
+                direction: item.direction.into(),
+            }
+        })
+        .collect();
+    Some(VisualSortOut {
+        fields,
+        current,
+        changed,
+    })
+}
+
+fn is_value_field(field: &FieldExpr) -> bool {
+    field.is_measure() || matches!(field, FieldExpr::Aggregation { .. })
 }
 
 fn interaction_out(i: &VisualInteraction, job: &Job) -> CanvasInteractionOut {
@@ -1913,6 +2079,254 @@ pub async fn set_relative_date(
 /// Largest number of periods of a relative date setting.
 const MAX_RELATIVE_DURATION: u32 = 100_000;
 
+/// `canvas.focus`: shows `visual` in focus mode (filling the page, with its
+/// data as a table below it when `show_as_table`); `None` goes back to the
+/// report.
+///
+/// # Errors
+/// `notFound`, `invalidParams` for a group.
+pub async fn focus(
+    target: &Target,
+    visual: Option<&str>,
+    show_as_table: bool,
+) -> Result<CanvasPageOut, OpError> {
+    target.update(|entry, _, page| {
+        let focus = match visual {
+            Some(name) => {
+                let v = viewable_visual(page, name)?;
+                Some(FocusState {
+                    visual: v.name.clone(),
+                    show_as_table,
+                })
+            }
+            None => None,
+        };
+        let mut state = entry.state.clone();
+        state.focus = focus;
+        entry.set_state(state);
+        Ok::<(), OpError>(())
+    })??;
+    render(target).await
+}
+
+/// `canvas.setSpotlight`: spotlights `visual` (the other visuals fade);
+/// `None` ends the spotlight.
+///
+/// # Errors
+/// `notFound`, `invalidParams` for a group.
+pub async fn set_spotlight(
+    target: &Target,
+    visual: Option<&str>,
+) -> Result<CanvasPageOut, OpError> {
+    target.update(|entry, _, page| {
+        let spotlight = match visual {
+            Some(name) => Some(viewable_visual(page, name)?.name.clone()),
+            None => None,
+        };
+        let mut state = entry.state.clone();
+        state.spotlight = spotlight;
+        entry.set_state(state);
+        Ok::<(), OpError>(())
+    })??;
+    render(target).await
+}
+
+/// A visual focus mode or the spotlight can show: not a group (a data
+/// table's name resolves to its visual).
+fn viewable_visual<'a>(page: &'a Page, name: &str) -> Result<&'a Visual, OpError> {
+    let v = resolve::visual(page, source_name(name))?;
+    if v.is_group() {
+        return Err(OpError::invalid_params(format!(
+            "{} is a group; pick one of its visuals",
+            v.name
+        )));
+    }
+    Ok(v)
+}
+
+/// `canvas.sortVisual`: sorts `visual` by `field` (`queryRef`, display
+/// name or `Table[Column]`; default direction: descending for values,
+/// ascending for categories). Without `field`, `direction` changes the
+/// direction of the current sort; without either the saved sort returns.
+///
+/// # Errors
+/// `notFound` for an unknown visual or field, `invalidParams` for a visual
+/// that does not sort or a direction without a current sort.
+pub async fn sort_visual(
+    target: &Target,
+    visual: &str,
+    field: Option<&str>,
+    direction: Option<SortOrder>,
+) -> Result<CanvasPageOut, OpError> {
+    target.update(|entry, _, page| {
+        let v = resolve::visual(page, source_name(visual))?;
+        let Some(info) = visual_sort(v, &entry.state) else {
+            return Err(OpError::invalid_params(format!(
+                "{} ({}) cannot be sorted",
+                v.name, v.visual_type
+            )));
+        };
+        let sort =
+            match (field, direction) {
+                (Some(field), direction) => {
+                    let wanted = field.trim();
+                    let projection =
+                        v.projections
+                            .iter()
+                            .filter(|p| p.field.query_ref().is_some())
+                            .find(|p| {
+                                p.query_ref.eq_ignore_ascii_case(wanted)
+                                    || p.label().eq_ignore_ascii_case(wanted)
+                                    || p.field.entity().zip(p.field.property()).is_some_and(
+                                        |(t, c)| format!("{t}[{c}]").eq_ignore_ascii_case(wanted),
+                                    )
+                            })
+                            .ok_or_else(|| {
+                                OpError::not_found(format!("{} has no field '{wanted}'", v.name))
+                                    .with_data(serde_json::json!({ "fields": info.fields }))
+                            })?;
+                    let direction = direction.map_or_else(
+                        || {
+                            if is_value_field(&projection.field) {
+                                SortDirection::Descending
+                            } else {
+                                SortDirection::Ascending
+                            }
+                        },
+                        SortDirection::from,
+                    );
+                    Some(vec![SortItem {
+                        field: projection.field.clone(),
+                        direction,
+                    }])
+                }
+                (None, Some(direction)) => {
+                    let current = entry.state.sort.get(&v.name).unwrap_or(&v.sort);
+                    if current.is_empty() {
+                        return Err(OpError::invalid_params(format!(
+                            "{} has no sort to change; pass a field",
+                            v.name
+                        )));
+                    }
+                    Some(
+                        current
+                            .iter()
+                            .map(|item| SortItem {
+                                field: item.field.clone(),
+                                direction: direction.into(),
+                            })
+                            .collect(),
+                    )
+                }
+                (None, None) => None,
+            };
+        let mut state = entry.state.clone();
+        state.set_sort(page, &v.name, sort);
+        entry.set_state(state);
+        Ok(())
+    })??;
+    render(target).await
+}
+
+/// `export.visualData`: the data of `visual` with its page's filters,
+/// slicers and selections, summarized (as the visual shows it) or its
+/// underlying rows.
+///
+/// # Errors
+/// `notFound`, `query` when the data cannot be evaluated.
+pub async fn visual_data(
+    target: &Target,
+    visual: &str,
+    underlying: bool,
+    cancel: CancellationToken,
+) -> Result<VisualTable, OpError> {
+    let revision = target.entry.session().revision_snapshot();
+    let (report, page) = locate(&revision.document, target.report, target.page)?;
+    let name = resolve::visual(&page, source_name(visual))?.name.clone();
+    let state = target.update(|entry, _, _| entry.state.clone())?;
+    let env = QueryEnv::from_revision(&revision);
+    tokio::task::spawn_blocking(move || {
+        let Some(v) = page.visual(&name) else {
+            return Err(OpError::not_found(format!("no visual '{name}'")));
+        };
+        let limits = QueryLimits {
+            cancel,
+            ..QueryLimits::default()
+        };
+        let result = if underlying {
+            env.underlying_data(&report, &page, v, &state, &limits)
+        } else {
+            env.summarized_data(&report, &page, v, &state, &limits)
+        };
+        result.map_err(|e| {
+            if e.info().cancelled {
+                OpError::cancelled()
+            } else {
+                OpError::query(e.to_string())
+            }
+        })
+    })
+    .await?
+}
+
+/// `canvas.contextMenu`: what the context menu of hit `hit` can copy, from
+/// the last render's data.
+///
+/// # Errors
+/// `invalidParams` for a malformed hit id or a page never rendered,
+/// `notFound`.
+pub fn context_menu(target: &Target, hit: &str) -> Result<ContextMenuOut, OpError> {
+    let hit = decode_hit(hit)?;
+    let theme = target.theme();
+    target.update(|entry, _, page| {
+        let last = entry.last()?;
+        let visual = match page.visual(&hit.visual) {
+            Some(v) => v,
+            None => last.page.visual(&hit.visual).ok_or_else(|| {
+                OpError::not_found(format!("no visual '{}' on the page", hit.visual))
+            })?,
+        };
+        let mut out = ContextMenuOut {
+            visual: source_name(&visual.name).to_owned(),
+            copy_value: None,
+            copy_selection: None,
+        };
+        let (HitKind::DataPoint { series, index }, Some(dv)) =
+            (&hit.kind, last.dataview(&hit.visual))
+        else {
+            return Ok(out);
+        };
+        let interaction = last.interaction(&hit.visual);
+        let lines = tooltip_lines(visual, &theme, dv, interaction, *series, *index);
+        if lines.is_empty() {
+            return Ok(out);
+        }
+        out.copy_value = match visual.visual_type.as_str() {
+            "tableEx" | "table" => lines.get(*series).map(|l| l.value.clone()),
+            "pivotTable" | "matrix" => {
+                let path = interaction
+                    .and_then(|i| i.matrix_rows.get(*index))
+                    .map_or(0, |r| r.path.len());
+                if lines.len() > path {
+                    lines.last().map(|l| l.value.clone())
+                } else {
+                    lines.get(*series).map(|l| l.value.clone())
+                }
+            }
+            t if charts::handles(t) => ChartData::from_dataview(dv)
+                .series
+                .get(*series)
+                .map(|s| s.formatted(*index).to_owned()),
+            _ => None,
+        };
+        let clean = |s: &str| s.replace(['\t', '\r', '\n'], " ");
+        let header: Vec<String> = lines.iter().map(|l| clean(&l.label)).collect();
+        let values: Vec<String> = lines.iter().map(|l| clean(&l.value)).collect();
+        out.copy_selection = Some(format!("{}\n{}", header.join("\t"), values.join("\t")));
+        Ok(out)
+    })?
+}
+
 fn single_field(slicer: &Visual) -> Result<FieldExpr, OpError> {
     match slicer_fields(slicer).as_slice() {
         [field] => Ok(field.clone()),
@@ -2166,7 +2580,10 @@ pub fn tooltip(target: &Target, hit: &str) -> Result<Vec<TooltipLineOut>, OpErro
     let theme = target.theme();
     target.update(|entry, _, page| {
         let last = entry.last()?;
-        let Some(visual) = page.visual(&hit.visual) else {
+        let Some(visual) = page
+            .visual(&hit.visual)
+            .or_else(|| last.page.visual(&hit.visual))
+        else {
             return Ok(Vec::new());
         };
         let (HitKind::DataPoint { series, index }, Some(dv)) =
@@ -2309,6 +2726,10 @@ fn apply_click(
         changed |= entry.set_state(state);
         return Ok((changed, action));
     };
+    // The data table of focus mode's "Show as a table" does not select.
+    if hit.visual.ends_with(DATA_TABLE_SUFFIX) {
+        return Ok((changed, action));
+    }
     let visual = resolve::visual(page, &hit.visual)?;
     let slicer = is_slicer_type(&visual.visual_type);
     // Any click outside a slicer closes its dropdown.

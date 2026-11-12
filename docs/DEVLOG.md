@@ -7,6 +7,21 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.8 visual header and context menus
+
+- **What**: `pbi-render` focus mode (`InteractionState.focus`, the visual fills the page within
+  `FOCUS_MARGIN`, "Show as a table" adds a `<name>~table` table visual of its data below it;
+  bookmarks in focus mode set it), `query::export` (summarized data from the visual's query,
+  underlying rows of its base table with related columns, row-capped); `pbi-ops` commands
+  `canvas.focus`, `canvas.showAsTable`, `canvas.setSpotlight`, `canvas.sortVisual`,
+  `canvas.contextMenu`, `export.visualData`, and `sort` / `focus` / `spotlight` in
+  `canvas.render`; the app's visual header (Focus mode, More options) and right-click copy items.
+- **Why**: DESKTOP-PLAN M9.8, GAPS "Visual header menus" (0 → 3).
+- **Numbers**: 3 new tests (`visual_header_focus_sort_spotlight_copy_and_export`,
+  `maximize_bookmarks_and_focus_mode_fill_the_page`, `export_summarized_and_underlying_data`);
+  no render snapshot changes. Open: Include / Exclude, XLSX export, the base-table heuristic of
+  underlying data.
+
 - **M9.7 range and relative slicers.** `pbi_render::query::relative` reads, resolves (against the
   session clock: `RevisionSnapshot::local_now`, `QueryEnv.now`) and writes Power BI's relative
   date/time conditions; `FilterBuilder` applies them at every level (no clock: skipped with a

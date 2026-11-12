@@ -40,6 +40,8 @@ import {
   type CanvasAction,
   type CanvasBookmarkOut,
   type CanvasPageOut,
+  type ContextMenuOut,
+  type ExportVisualDataOut,
   type ColumnFilterOut,
   type ConvertPbipOut,
   type ConvertPbitOut,
@@ -70,11 +72,13 @@ import {
   type SecurityRoleOut,
   type SecurityRolesOut,
   type SecurityViewAsOut,
+  type SortOrder,
   type SourceParam,
   type TableRefreshOut,
   type TooltipLineOut,
   type TooltipPageOut,
   type ViewAsOut,
+  type VisualDataMode,
 } from './ops'
 import type { RefreshEvent } from './data'
 import type { DaxService } from './daxEditor'
@@ -869,6 +873,35 @@ export function drillthrough(reportId: number, pageId: number, hitId: string, ta
       (r): CanvasAction => ({ kind: 'drillthrough', page: r.page, displayName: r.displayName, report: r.report, notApplied: r.notApplied }),
     ),
   )
+}
+
+/** Focus mode on `visual` (`showAsTable`: with a table of its data below it); `null` returns to the report. */
+export function focusVisual(reportId: number, pageId: number, visual: string | null, showAsTable = false): Promise<Outcome<RenderedPage>> {
+  return onPage(reportId, pageId, (t) => ops.canvasFocus({ ...t, visual, showAsTable }))
+}
+
+/** Spotlight on `visual` (the others dimmed); `null` turns it off. */
+export function setSpotlight(reportId: number, pageId: number, visual: string | null): Promise<Outcome<RenderedPage>> {
+  return onPage(reportId, pageId, (t) => ops.canvasSetSpotlight({ ...t, visual }))
+}
+
+/**
+ * Sorts `visual` by `field` (query ref) and / or `direction`; neither restores the saved sort
+ * (`canvas.sortVisual`).
+ */
+export function sortVisual(reportId: number, pageId: number, visual: string, field: string | null, direction: SortOrder | null): Promise<Outcome<RenderedPage>> {
+  return onPage(reportId, pageId, (t) => ops.canvasSortVisual({ ...t, visual, field, direction }))
+}
+
+/** "Copy value" / "Copy selection" texts of a data point (`canvas.contextMenu`). */
+export function contextMenu(reportId: number, pageId: number, hitId: string): Promise<Outcome<ContextMenuOut>> {
+  return onPage(reportId, pageId, (t) => ops.canvasContextMenu({ ...t, hitId }))
+}
+
+/** "Export data": writes the summarized data or the underlying rows of `visual` as CSV (`export.visualData`). */
+export function exportVisualData(reportId: number, pageId: number, visual: string, mode: VisualDataMode, path: string): Promise<Outcome<ExportVisualDataOut>> {
+  // The save dialog already asked before replacing an existing file.
+  return onPage(reportId, pageId, (t) => ops.exportVisualData({ ...t, visual, mode, path, formatted: true, excelSafe: true, overwrite: true }))
 }
 
 /** Id of the report named `name` in the open document. */

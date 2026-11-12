@@ -13,7 +13,9 @@ use pbi_render::dataview::{
     CellValue, ColumnMeta, DataView, DataViewKind, FieldRef, FieldRefKind, TableData,
 };
 use pbi_render::layout::{FrameOptions, PageLayout, render_page_with};
-use pbi_render::query::{InteractionState, VisualQueryError, apply_bookmark};
+use pbi_render::query::{
+    FOCUS_MARGIN, FocusState, InteractionState, VisualQueryError, apply_bookmark, data_table_name,
+};
 use pbi_render::scene::{
     Color, Group, HitId, HitKind, Node, PathNode, Rect, Scene, TextAnchor, TextNode,
 };
@@ -827,6 +829,89 @@ fn spotlight_bookmarks_fade_the_other_visuals() {
     let plain = json!({"a": {"singleVisual": {"visualType": "card"}}});
     let effect = apply_bookmark(&report, &bookmark(plain), &|_| state.clone());
     assert_eq!(effect.states["p"].spotlight, None);
+}
+
+#[test]
+fn maximize_bookmarks_and_focus_mode_fill_the_page() {
+    let env = env();
+    let card = |name: &str, x: f64| {
+        let mut v = card_visual(name, 100.0);
+        v.position.x = x;
+        v.projections = vec![projection("Data", measure("Store Count"))];
+        v
+    };
+    let page = page_of(vec![card("a", 0.0), card("b", 200.0)]);
+    let report = Report {
+        pages: vec![page.clone()],
+        ..Report::default()
+    };
+    let bookmark = |containers: Json| Bookmark {
+        name: "bm".into(),
+        exploration_state: json!({"activeSection": "p", "sections": {"p": {"visualContainers": containers}}}),
+        ..Bookmark::default()
+    };
+    let saved = |p: &Page| InteractionState::from_page(p).0;
+    let max =
+        json!({"b": {"singleVisual": {"visualType": "card", "display": {"mode": "maximize"}}}});
+    let effect = apply_bookmark(&report, &bookmark(max), &saved);
+    assert!(effect.not_applied.is_empty(), "{:?}", effect.not_applied);
+    let mut state = effect.states["p"].clone();
+    assert_eq!(
+        state.focus,
+        Some(FocusState {
+            visual: "b".into(),
+            show_as_table: false
+        })
+    );
+
+    let focused = state.page_with_visibility(&page);
+    let a = focused.visual("a").unwrap();
+    let b = focused.visual("b").unwrap();
+    assert!(a.is_hidden && !b.is_hidden);
+    let m = FOCUS_MARGIN;
+    assert_eq!(
+        (
+            b.position.x,
+            b.position.y,
+            b.position.width,
+            b.position.height
+        ),
+        (m, m, 1280.0 - 2.0 * m, 720.0 - 2.0 * m)
+    );
+    let render = |state: &InteractionState| {
+        render_report_page(
+            &env,
+            &report,
+            &page,
+            &ThemeResolver::default(),
+            state,
+            &PageRenderOptions::default(),
+        )
+    };
+    let r = render(&state);
+    assert!(find_group(&r.scene.root, &HitId::visual("a")).is_none());
+    assert!(find_group(&r.scene.root, &HitId::visual("b")).is_some());
+
+    // "Show as a table": the visual on top, its data as a table below.
+    state.focus = Some(FocusState {
+        visual: "b".into(),
+        show_as_table: true,
+    });
+    let focused = state.page_with_visibility(&page);
+    let b = focused.visual("b").unwrap();
+    let table = focused.visual(&data_table_name("b")).unwrap();
+    assert_eq!(table.visual_type, "tableEx");
+    assert_eq!(table.projections.len(), 1);
+    assert!(table.position.y >= b.position.y + b.position.height);
+    let r = render(&state);
+    assert!(find_group(&r.scene.root, &HitId::visual(data_table_name("b"))).is_some());
+    let info = r.visuals.iter().find(|v| v.name == data_table_name("b"));
+    assert_eq!(info.map(|v| v.error.clone()), Some(None));
+
+    // An "All visuals" bookmark without a maximized visual ends focus mode.
+    let plain = json!({"a": {"singleVisual": {"visualType": "card"}}});
+    let effect = apply_bookmark(&report, &bookmark(plain), &|_| state.clone());
+    assert_eq!(effect.states["p"].focus, None);
 }
 
 // ------------------------------------------------------------------ cards

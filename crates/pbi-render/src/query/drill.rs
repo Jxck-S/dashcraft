@@ -316,6 +316,7 @@ pub(crate) fn drill_paths(
     state: &InteractionState,
 ) -> Vec<PointSelection> {
     let mut out = Vec::new();
+    let target = super::export::source_name(&visual.name);
     for (name, d) in &state.drill {
         if d.path.is_empty() {
             continue;
@@ -323,9 +324,9 @@ pub(crate) fn drill_paths(
         let Some(source) = page.visuals.iter().find(|v| &v.name == name) else {
             continue;
         };
-        if source.name != visual.name
+        if source.name != target
             && (!drill_filters_others(report, source)
-                || page.interaction(&source.name, &visual.name) == Some(&InteractionKind::NoFilter))
+                || page.interaction(&source.name, target) == Some(&InteractionKind::NoFilter))
         {
             continue;
         }
