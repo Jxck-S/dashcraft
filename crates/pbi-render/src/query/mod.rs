@@ -152,8 +152,8 @@ pub use filter::{
     ColumnRef, FilterBuilder, FilterPlan, coerce_literal, coerce_value, parse_datetime,
 };
 pub use interaction::{
-    InteractionState, PointField, PointSelection, SlicerSelection, is_slicer_type,
-    persisted_selection, slicer_fields,
+    FilterLevel, FilterOverrides, InteractionState, PointField, PointSelection, SlicerSelection,
+    is_slicer_type, persisted_selection, slicer_fields,
 };
 pub use semantic::TopNSpec;
 

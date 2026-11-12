@@ -579,8 +579,8 @@ pub struct CanvasBookmarkOut {
     /// Pages whose slicer or cross-filter state the bookmark changed
     /// (internal names).
     pub changed_pages: Vec<String>,
-    /// Parts of the bookmark DashCraft does not apply yet (filter pane,
-    /// drill state, spotlight, formatting, …).
+    /// Parts of the bookmark DashCraft does not apply yet (Top N filter
+    /// changes, drill state, spotlight, formatting, …).
     pub not_applied: Vec<String>,
     /// The page the bookmark shows (else `page`), rendered.
     pub rendered: CanvasPageOut,
@@ -594,7 +594,7 @@ impl Command for CanvasApplyBookmark {
         CommandMeta {
             id: "canvas.applyBookmark",
             title: "Apply a bookmark",
-            summary: "Applies a report bookmark to the canvas (its page, slicer selections, hidden visuals and sort orders, all or only its target visuals) and renders the page it shows; lists the parts not applied yet.",
+            summary: "Applies a report bookmark to the canvas (page, slicers, filters, visibility and sort; all or only its target visuals) and renders the page it shows; lists the parts not applied yet.",
             long_running: true,
             examples: &[
                 (

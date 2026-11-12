@@ -1,5 +1,6 @@
-//! Applying a bookmark: the page it shows, the slicer selections it
-//! captures and the visuals it hides or sorts, as [`InteractionState`]s.
+//! Applying a bookmark: the page it shows, the slicer selections and
+//! filter cards it captures and the visuals it hides or sorts, as
+//! [`InteractionState`]s.
 //!
 //! # What a PBIR bookmark holds
 //!
@@ -19,6 +20,15 @@
 //! does not capture keep their saved `isHidden`
 //! ([`InteractionState::visibility`] holds the differences).
 //!
+//! Filters: `explorationState.filters` (report),
+//! `sections.<page>.filters` (page) and
+//! `visualContainers.<visual>.filters` (visual) are `FiltersState`s; each
+//! container in `byName` (by filter name) or `byExpr` (by name, else by
+//! field) replaces its card's condition with its `filter` (none: the card
+//! does not filter; [`InteractionState::filters`]). Report filters are
+//! set on each page the bookmark captures; "Selected visuals" bookmarks
+//! set only their targets' visual filters.
+//!
 //! Sort: a captured visual's `singleVisual.orderBy` (semantic-query sort
 //! clauses) replaces its `sortDefinition`; without one it keeps its saved
 //! order ([`InteractionState::sort`]).
@@ -35,18 +45,20 @@
 //! - `suppressActiveSection` ("Current page" unchecked): the page does not
 //!   change.
 //!
-//! Not applied yet (reported in [`BookmarkEffect::not_applied`]): filter
-//! pane state, the spotlight, focus and elevation display modes, drill
+//! Not applied yet (reported in [`BookmarkEffect::not_applied`]): changed
+//! Top N filters, `byType` and transient filters, filter containers not
+//! in the report, the spotlight, focus and elevation display modes, drill
 //! and expansion state, projection changes, cross-highlights and
 //! formatting of other visuals.
 
 use indexmap::IndexMap;
-use pbi_model::{Bookmark, Page, Report};
+use pbi_model::{Bookmark, Filter, FilterKind, Page, Report};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
-use super::interaction::{InteractionState, is_slicer_type, persisted_selection};
-use super::semantic::sort_clauses;
+use super::interaction::{FilterLevel, InteractionState, is_slicer_type, persisted_selection};
+use super::plan::same_field;
+use super::semantic::{Aliases, field, sort_clauses, where_condition};
 
 /// The result of applying a bookmark.
 #[derive(Debug, Clone, PartialEq, Default, Serialize)]
@@ -97,9 +109,7 @@ pub fn apply_bookmark(
         .get("sections")
         .and_then(Value::as_object)
         .unwrap_or(&empty);
-    if !flag("suppressData") && has_filters(state.get("filters")) {
-        note(&mut effect, "report filters".into());
-    }
+
     for (section, captured) in sections {
         let Some(page) = report.pages.iter().find(|p| &p.name == section) else {
             note(&mut effect, format!("page {section} is not in the report"));
@@ -168,24 +178,45 @@ pub fn apply_bookmark(
                     ),
                 }
             }
-            if has_filters(captured.get("filters")) {
-                note(&mut effect, format!("{label}: page filters"));
+            if !target_only {
+                let mut cx = FilterCx {
+                    state: &mut new_state,
+                    effect: &mut effect,
+                    label,
+                };
+                cx.apply(
+                    FilterLevel::Report,
+                    &report.filters,
+                    state.get("filters"),
+                    "report",
+                );
+                cx.apply(
+                    FilterLevel::Page,
+                    &page.filters,
+                    captured.get("filters"),
+                    "page",
+                );
             }
-            let mut visual_filters = false;
             let mut highlights = false;
-            for c in containers
-                .iter()
-                .filter(|(n, _)| applies_to(n))
-                .map(|(_, c)| c)
-            {
-                visual_filters |= has_filters(c.get("filters"));
+            for (name, c) in containers.iter().filter(|(n, _)| applies_to(n)) {
+                if let Some(visual) = page.visuals.iter().find(|v| &v.name == name) {
+                    new_state.filters.visuals.shift_remove(name);
+                    FilterCx {
+                        state: &mut new_state,
+                        effect: &mut effect,
+                        label,
+                    }
+                    .apply(
+                        FilterLevel::Visual(name),
+                        &visual.filters,
+                        c.get("filters"),
+                        "visual",
+                    );
+                }
                 highlights |= c
                     .get("singleVisual")
                     .is_some_and(|s| s.get("highlight").is_some())
                     || c.get("highlight").is_some();
-            }
-            if visual_filters {
-                note(&mut effect, format!("{label}: visual filters"));
             }
             if highlights {
                 note(&mut effect, format!("{label}: cross-highlights"));
@@ -248,6 +279,91 @@ pub fn apply_bookmark(
     effect
 }
 
+/// Applies a captured `filters` state (`FiltersState`) to filter cards.
+struct FilterCx<'a> {
+    state: &'a mut InteractionState,
+    effect: &'a mut BookmarkEffect,
+    label: &'a str,
+}
+
+impl FilterCx<'_> {
+    /// Each captured container (`byName`, matched by name; `byExpr`, by
+    /// name or field) sets its card's condition from its `filter`. Top N
+    /// cards that differ, unmatched containers and `byType` /
+    /// `byTransientState` are listed as not applied.
+    fn apply(
+        &mut self,
+        level: FilterLevel<'_>,
+        cards: &[Filter],
+        captured: Option<&Value>,
+        what: &str,
+    ) {
+        let Some(captured) = captured.and_then(Value::as_object) else {
+            return;
+        };
+        let by_name = captured
+            .get("byName")
+            .and_then(Value::as_object)
+            .into_iter()
+            .flatten()
+            .map(|(name, c)| {
+                (
+                    Some(c.get("name").and_then(Value::as_str).unwrap_or(name)),
+                    c,
+                )
+            });
+        let by_expr = captured
+            .get("byExpr")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .map(|c| (c.get("name").and_then(Value::as_str), c));
+        let aliases = Aliases::default();
+        for (name, c) in by_name.chain(by_expr) {
+            let card = match name {
+                Some(name) => cards.iter().find(|f| f.name == name),
+                None => {
+                    let expr = c.get("expression").map(|e| field(e, &aliases));
+                    cards.iter().find(|f| {
+                        f.field
+                            .as_ref()
+                            .zip(expr.as_ref())
+                            .is_some_and(|(a, b)| same_field(a, b))
+                    })
+                }
+            };
+            let Some(card) = card else {
+                if name.is_none() {
+                    self.note(format!("{}: a {what} filter not in the report", self.label));
+                }
+                continue;
+            };
+            let def = c.get("filter");
+            if card.kind == FilterKind::TopN {
+                if def != card.raw.get("filter") {
+                    self.note(format!("{}: Top N {what} filter {}", self.label, card.name));
+                }
+                continue;
+            }
+            self.state
+                .set_filter(level, card, def.and_then(where_condition));
+        }
+        for key in ["byType", "byTransientState"] {
+            if captured
+                .get(key)
+                .and_then(Value::as_array)
+                .is_some_and(|a| !a.is_empty())
+            {
+                self.note(format!("{}: {what} filters {key}", self.label));
+            }
+        }
+    }
+
+    fn note(&mut self, message: String) {
+        note(self.effect, message);
+    }
+}
+
 /// Deepest `visualContainerGroups.*.children` nesting followed.
 const MAX_GROUP_DEPTH: usize = 32;
 
@@ -279,19 +395,6 @@ fn set_group_visibility(
 fn note(effect: &mut BookmarkEffect, message: String) {
     if !effect.not_applied.contains(&message) {
         effect.not_applied.push(message);
-    }
-}
-
-/// `filters` (`{byExpr: [...], byName: {...}, ...}`) holds any filter.
-fn has_filters(filters: Option<&Value>) -> bool {
-    match filters {
-        Some(Value::Object(map)) => map.values().any(|v| match v {
-            Value::Array(a) => !a.is_empty(),
-            Value::Object(o) => !o.is_empty(),
-            _ => false,
-        }),
-        Some(Value::Array(a)) => !a.is_empty(),
-        _ => false,
     }
 }
 

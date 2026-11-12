@@ -439,6 +439,111 @@ fn bookmarks_sort_visuals() {
 }
 
 #[test]
+fn bookmarks_set_filter_cards() {
+    let env = env();
+    let mut page = page();
+    let card = |name: &str| Filter {
+        name: name.into(),
+        kind: FilterKind::Categorical,
+        field: Some(col("Stores", "Format")),
+        ..Filter::default()
+    };
+    page.filters = vec![card("pf")];
+    let total = page.visuals.iter_mut().find(|v| v.name == "total").unwrap();
+    total.filters = vec![card("vf")];
+    let mut report = report(page);
+    report.filters = vec![Filter {
+        condition: Some(Condition::In {
+            exprs: vec![col("Stores", "Format")],
+            values: vec![
+                vec![Literal::text("Flagship")],
+                vec![Literal::text("Pop-up")],
+            ],
+        }),
+        ..card("rf")
+    }];
+    let count = |state: &InteractionState| single(&query(&env, &report, "total", state));
+    assert_eq!(count(&InteractionState::new()), "3");
+
+    let format =
+        json!({"Column": {"Expression": {"SourceRef": {"Source": "s"}}, "Property": "Format"}});
+    let values = |v: &[&str]| -> serde_json::Value {
+        v.iter()
+            .map(|s| json!([{"Literal": {"Value": format!("'{s}'")}}]))
+            .collect()
+    };
+    let def = |condition: serde_json::Value| {
+        json!({"Version": 2, "From": [{"Name": "s", "Entity": "Stores", "Type": 0}],
+               "Where": [{"Condition": condition}]})
+    };
+    let is_in = |v: &[&str]| json!({"In": {"Expressions": [format], "Values": values(v)}});
+    let bookmark = |options: serde_json::Value, state: serde_json::Value| Bookmark {
+        name: "bm".into(),
+        options,
+        exploration_state: state,
+        ..Bookmark::default()
+    };
+    let saved = |_: &Page| InteractionState::new();
+
+    // Report card cleared (no `filter`), visual card set by name.
+    let all = bookmark(
+        json!({}),
+        json!({
+            "filters": {"byName": {"rf": {"type": "Categorical"}}},
+            "sections": {"p1": {"visualContainers": {"total": {"filters": {"byName": {
+                "vf": {"filter": def(json!({"Not": {"Expression": is_in(&["Flagship", "Pop-up"])}}))}
+            }}}}}}
+        }),
+    );
+    let effect = apply_bookmark(&report, &all, &saved);
+    assert!(effect.not_applied.is_empty(), "{:?}", effect.not_applied);
+    let state = effect.states["p1"].clone();
+    assert_eq!(state.filters.report["rf"], None);
+    assert_eq!(count(&state), "2");
+
+    // A page card matched by its field; the same filter as a slicer.
+    let by_expr = bookmark(
+        json!({}),
+        json!({"sections": {"p1": {"visualContainers": {}, "filters": {"byExpr": [
+            {"expression": {"Column": {"Expression": {"SourceRef": {"Entity": "Stores"}}, "Property": "Format"}},
+             "filter": def(is_in(&["Outlet"]))},
+            {"expression": {"Column": {"Expression": {"SourceRef": {"Entity": "Stores"}}, "Property": "Store Name"}}}
+        ], "byType": [{"type": "Advanced"}]}}}}),
+    );
+    let effect = apply_bookmark(&report, &by_expr, &|_| state.clone());
+    assert_eq!(
+        effect.not_applied,
+        [
+            "Page 1: a page filter not in the report",
+            "Page 1: page filters byType"
+        ]
+    );
+    // "All visuals" starts from the saved cards: only the page card differs.
+    let outlet = &effect.states["p1"];
+    assert_eq!(outlet.filters.report.len(), 0);
+    assert_eq!(outlet.filters.visuals.len(), 0);
+    let mut slicer = InteractionState::new();
+    slicer.select("format", SlicerSelection::values(["Outlet"]));
+    slicer.filters.report.insert("rf".into(), None);
+    let mut cleared = outlet.clone();
+    cleared.filters.report.insert("rf".into(), None);
+    assert_ne!(count(&cleared), "5");
+    assert_eq!(count(&cleared), count(&slicer));
+
+    // "Selected visuals": the target's cards go back to their saved state,
+    // the report card keeps its current override.
+    let target = bookmark(
+        json!({"applyOnlyToTargetVisuals": true, "targetVisualNames": ["total"]}),
+        json!({"sections": {"p1": {"visualContainers": {"total": {}}}}}),
+    );
+    let effect = apply_bookmark(&report, &target, &|_| state.clone());
+    let reset = &effect.states["p1"];
+    assert!(reset.filters.visuals.is_empty());
+    assert_eq!(reset.filters.report["rf"], None);
+    assert_eq!(count(reset), "5");
+}
+
+#[test]
 fn row_limits_truncate() {
     let env = env();
     let report = report(page());

@@ -1,6 +1,6 @@
 //! Report interaction state: slicer selections, the selected data points
-//! of one visual (cross-filtering) and the visuals a bookmark shows, hides or
-//! sorts.
+//! of one visual (cross-filtering) and what a bookmark changes: visuals it
+//! shows, hides or sorts and filter cards it sets.
 //!
 //! # Where slicer selections live in PBIR
 //!
@@ -41,7 +41,7 @@ use std::borrow::Cow;
 
 use indexmap::IndexMap;
 use pbi_engine::Value;
-use pbi_model::{Condition, FieldExpr, LiteralValue, Page, SortItem, Visual};
+use pbi_model::{Condition, FieldExpr, Filter, LiteralValue, Page, SortItem, Visual};
 use serde::{Deserialize, Serialize};
 
 use crate::dataview::value_serde;
@@ -161,6 +161,69 @@ pub struct InteractionState {
     /// where a bookmark changed it (see [`InteractionState::set_sort`]).
     #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub sort: IndexMap<String, Vec<SortItem>>,
+    /// Filter cards whose condition a bookmark changed (see
+    /// [`InteractionState::set_filter`]).
+    #[serde(skip_serializing_if = "FilterOverrides::is_empty")]
+    pub filters: FilterOverrides,
+}
+
+/// Where a filter card lives.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FilterLevel<'a> {
+    Report,
+    Page,
+    /// A filter of the named visual.
+    Visual(&'a str),
+}
+
+/// Filter name → the condition that replaces the saved one (`None`: the
+/// card does not filter), per level.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FilterOverrides {
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub report: IndexMap<String, Option<Condition>>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub page: IndexMap<String, Option<Condition>>,
+    /// Visual name → its filters' overrides.
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub visuals: IndexMap<String, IndexMap<String, Option<Condition>>>,
+}
+
+impl FilterOverrides {
+    /// No filter is overridden.
+    pub fn is_empty(&self) -> bool {
+        self.report.is_empty() && self.page.is_empty() && self.visuals.is_empty()
+    }
+
+    /// The override of filter `name` at `level`, if any.
+    pub fn get(&self, level: FilterLevel<'_>, name: &str) -> Option<&Option<Condition>> {
+        match level {
+            FilterLevel::Report => self.report.get(name),
+            FilterLevel::Page => self.page.get(name),
+            FilterLevel::Visual(v) => self.visuals.get(v)?.get(name),
+        }
+    }
+
+    /// Every overridden condition, for renaming fields.
+    pub fn conditions_mut(&mut self) -> impl Iterator<Item = &mut Condition> {
+        self.report
+            .values_mut()
+            .chain(self.page.values_mut())
+            .chain(self.visuals.values_mut().flat_map(IndexMap::values_mut))
+            .flatten()
+    }
+
+    /// `filter` as it applies: its condition replaced by the override.
+    pub fn apply<'a>(&self, level: FilterLevel<'_>, filter: &'a Filter) -> Cow<'a, Filter> {
+        match self.get(level, &filter.name) {
+            Some(condition) if *condition != filter.condition => Cow::Owned(Filter {
+                condition: condition.clone(),
+                ..filter.clone()
+            }),
+            _ => Cow::Borrowed(filter),
+        }
+    }
 }
 
 impl InteractionState {
@@ -229,6 +292,39 @@ impl InteractionState {
                     self.sort.shift_remove(name);
                 }
             }
+        }
+        self
+    }
+
+    /// Replaces the condition of `filter` (a filter card at `level`) by
+    /// `condition`; only a change from its saved condition is kept.
+    pub fn set_filter(
+        &mut self,
+        level: FilterLevel<'_>,
+        filter: &Filter,
+        condition: Option<Condition>,
+    ) -> &mut Self {
+        let differs = condition != filter.condition;
+        let map = match level {
+            FilterLevel::Report => &mut self.filters.report,
+            FilterLevel::Page => &mut self.filters.page,
+            FilterLevel::Visual(v) => {
+                if !differs {
+                    if let Some(m) = self.filters.visuals.get_mut(v) {
+                        m.shift_remove(&filter.name);
+                        if m.is_empty() {
+                            self.filters.visuals.shift_remove(v);
+                        }
+                    }
+                    return self;
+                }
+                self.filters.visuals.entry(v.to_owned()).or_default()
+            }
+        };
+        if differs {
+            map.insert(filter.name.clone(), condition);
+        } else {
+            map.shift_remove(&filter.name);
         }
         self
     }

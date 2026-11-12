@@ -7,6 +7,23 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M9.5: bookmarks set filter cards
+
+- **What:** `InteractionState::filters` (`FilterOverrides`: report, page and per-visual filter
+  name → condition, kept only where it differs from the saved card; `set_filter`,
+  `FilterLevel`); `context::visual_filters` plans each card with its override, so every query
+  path follows it. `apply_bookmark`'s data part reads the `FiltersState` of
+  `explorationState.filters`, `sections.<page>.filters` and `visualContainers.<visual>.filters`:
+  `byName` containers match cards by name, `byExpr` ones by name or field, and their `filter`
+  (none: not filtering) replaces the card's condition. "All visuals" starts from the saved
+  cards; "Selected visuals" resets and sets only its targets' visual cards. Changed Top N
+  filters, `byType`/`byTransientState` and unmatched containers are listed as not applied.
+  `pbi-ops` renames the overridden conditions with the model.
+- **Why:** M9.5 data part; GAPS Bookmarks rows (next steps drill state, spotlight,
+  cross-highlights).
+- **Numbers:** 1 new query test (report clear, visual set, page by field, target reset, notes);
+  the Acme bookmark tests are unchanged (no filter state).
+
 ### M9.5: bookmarks sort visuals
 
 - **What:** `InteractionState::sort` (visual → sort order replacing its `sortDefinition`, kept
