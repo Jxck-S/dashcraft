@@ -151,6 +151,7 @@ pub mod filter;
 pub mod interaction;
 mod plan;
 mod semantic;
+pub mod tooltip;
 
 use std::sync::Arc;
 
@@ -174,6 +175,7 @@ pub use interaction::{
     is_slicer_type, persisted_selection, slicer_fields, sync_group, synced_slicers,
 };
 pub use semantic::TopNSpec;
+pub use tooltip::{TooltipPage, tooltip_page, tooltip_state, visual_tooltip_page};
 
 use filter::ColumnRef as Col;
 

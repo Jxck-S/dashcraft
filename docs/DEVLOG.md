@@ -7,6 +7,19 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.3: report-page tooltips
+
+- **What:** `pbi-render` `query::tooltip` (tooltip pages, the page of a hovered point through
+  `visualTooltip` or the field match, its filter state on top of the drillthrough context);
+  `pbi-ops` `canvas.tooltipPage` (stateless query + render); the app's hover card shows the page's
+  SVG at its size. The generator records the Seattle Flagship × Camping hover
+  (`expected.json` `tooltipPages`). Fix in `query/filter.rs`: a single tuple across tables filters
+  per column (TREATAS-like) instead of the common fact table's rows, which also narrowed Date and
+  changed Target Attainment (43.6 % instead of 10.0 %).
+- **Why:** M9.3 and the GAPS "Report-page tooltips" row (❌ 0 → 🟡 3).
+- **Numbers:** 2 unit tests, 1 e2e test; new perf scenario P13 `tooltip-page-render`: p95
+  1.55 ms (target 16 ms) on the Windows desktop.
+
 ### M9.1: highlights on pies, donuts, treemaps, funnels and combos
 
 - **What:** `pbi-render`'s filter context now highlights (instead of filtering) combo, pie,

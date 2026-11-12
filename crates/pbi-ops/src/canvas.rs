@@ -47,7 +47,7 @@ use pbi_render::layout::{FrameOptions, auto_title};
 use pbi_render::query::{
     DrillthroughPage, InteractionState, PointField, PointSelection, QueryEnv, QueryLimits,
     SlicerSelection, drill_through, drillthrough_page, is_slicer_type, slicer_fields,
-    synced_slicers,
+    synced_slicers, tooltip_state, visual_tooltip_page,
 };
 use pbi_render::scene::{HitId, HitKind, HitRegion, Rect};
 use pbi_render::svg::{SvgOptions, to_svg};
@@ -302,6 +302,27 @@ pub enum CanvasAction {
 pub struct TooltipLineOut {
     pub label: String,
     pub value: String,
+}
+
+/// A report-page tooltip rendered for a hovered data point.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TooltipPageOut {
+    /// Internal name of the tooltip page.
+    pub page: String,
+    pub display_name: String,
+    /// Page size (page units).
+    pub width: f64,
+    pub height: f64,
+    /// The rendered page.
+    pub svg: String,
+    /// Parts of the hovered point's filter context not applied.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub not_applied: Vec<String>,
+    /// Visuals of the tooltip page that failed, as `visual: message`.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub errors: Vec<String>,
+    pub duration_ms: u32,
 }
 
 /// Modifier keys of a click (`ctrl` is Ctrl, or ⌘ on macOS).
@@ -1552,6 +1573,85 @@ pub fn tooltip(target: &Target, hit: &str) -> Result<Vec<TooltipLineOut>, OpErro
         lines.truncate(MAX_TOOLTIP_LINES);
         Ok(lines)
     })?
+}
+
+/// `canvas.tooltipPage`: the report-page tooltip of data point `hit`,
+/// rendered with the point's filter context (`None` when the visual shows
+/// no report-page tooltip for it). The tooltip page's own canvas state is
+/// neither used nor changed.
+///
+/// # Errors
+/// `invalidParams` for a malformed hit id, `notFound`.
+pub async fn tooltip_page(target: &Target, hit: &str) -> Result<Option<TooltipPageOut>, OpError> {
+    let hit = decode_hit(hit)?;
+    let HitKind::DataPoint { series, index } = hit.kind else {
+        return Ok(None);
+    };
+    ensure_rendered(target).await?;
+    let (point, source_state) = target.update(|entry, _, page| {
+        let visual = resolve::visual(page, &hit.visual)?;
+        let point = data_point(entry, visual, series, index)?.flatten();
+        Ok::<_, OpError>((point, entry.state.clone()))
+    })??;
+    let Some(point) = point else {
+        return Ok(None);
+    };
+    let revision = target.entry.session().revision_snapshot();
+    let report = resolve::report_in(&revision.document, target.report)?;
+    let Some(tip) = visual_tooltip_page(&report, target.page, &hit.visual, &point) else {
+        return Ok(None);
+    };
+    let (state, not_applied) = tooltip_state(
+        &report,
+        target.page,
+        &source_state,
+        &hit.visual,
+        &point,
+        &tip,
+    );
+    let page = report
+        .pages
+        .get(tip.index)
+        .cloned()
+        .ok_or_else(|| OpError::not_found("the tooltip page is gone"))?;
+    let env = QueryEnv::from_revision(&revision);
+    let theme = target.theme();
+    tokio::task::spawn_blocking(move || {
+        let started = Instant::now();
+        let limits = QueryLimits::default();
+        let data = query_page_data(&env, &report, &page, &state, &limits);
+        let opts = PageRenderOptions {
+            frames: FrameOptions::default(),
+            limits,
+            active_bookmark: None,
+        };
+        let rendered = render_interactive_page(
+            &report,
+            &page,
+            &theme,
+            &state,
+            &opts,
+            &PageViewState::new(),
+            &data,
+        );
+        let scene = &rendered.page.scene;
+        Ok(Some(TooltipPageOut {
+            page: page.name.clone(),
+            display_name: page.display_name.clone(),
+            width: finite(scene.width),
+            height: finite(scene.height),
+            svg: to_svg(scene, &SvgOptions::default()),
+            not_applied,
+            errors: rendered
+                .page
+                .visuals
+                .iter()
+                .filter_map(|v| v.error.as_ref().map(|e| format!("{}: {e}", v.name)))
+                .collect(),
+            duration_ms: ms(started),
+        }))
+    })
+    .await?
 }
 
 /// The page's interaction and view state, as JSON.

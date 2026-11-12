@@ -69,6 +69,7 @@ import {
   type SourceParam,
   type TableRefreshOut,
   type TooltipLineOut,
+  type TooltipPageOut,
   type ViewAsOut,
 } from './ops'
 import type { RefreshEvent } from './data'
@@ -768,6 +769,7 @@ export const daxService: DaxService = {
 export type RenderedPage = CanvasPageOut
 export type { BookmarkOut, CanvasAction, CanvasBookmarkOut, DrillthroughTargetOut }
 export type TooltipLine = TooltipLineOut
+export type TooltipPage = TooltipPageOut
 
 export interface ClickResult {
   /** The re-rendered page, `null` when nothing changed. */
@@ -825,6 +827,11 @@ export function resetPage(reportId: number, pageId: number): Promise<Outcome<Ren
 
 export function visualTooltip(reportId: number, pageId: number, hitId: string): Promise<Outcome<{ lines: TooltipLine[] }>> {
   return onPage(reportId, pageId, (t) => ops.canvasTooltip({ ...t, hitId }))
+}
+
+/** The report-page tooltip of a data point, rendered for it; `null` when the visual has none. */
+export function tooltipPage(reportId: number, pageId: number, hitId: string): Promise<Outcome<TooltipPage | null>> {
+  return onPage(reportId, pageId, async (t) => map(await ops.canvasTooltipPage({ ...t, hitId }), (r) => r.tooltip ?? null))
 }
 
 /** The drillthrough pages a data point can drill through to. */

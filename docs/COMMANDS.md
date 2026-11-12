@@ -176,6 +176,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.reset`](#canvasreset) | Back to the report's saved slicer selections, no cross-filter, scroll and dropdowns reset; returns the re-rendered page. | M L A |
 | [`canvas.applyBookmark`](#canvasapplybookmark) | Applies a report bookmark to the canvas (page, slicers, filters, visibility and sort; all or only its target visuals) and renders the page it shows; lists the parts not applied yet. | M L A |
 | [`canvas.tooltip`](#canvastooltip) | The hover tooltip (category, series, values) of a data point hit, from the last render. | A |
+| [`canvas.tooltipPage`](#canvastooltippage) | Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. | A |
 | [`canvas.drillthroughTargets`](#canvasdrillthroughtargets) | The drillthrough pages a data point hit can drill through to (the "Drill through" menu). | A |
 | [`canvas.drillthrough`](#canvasdrillthrough) | Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. | M L A |
 | [`canvas.state`](#canvasstate) | The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. | A |
@@ -2198,6 +2199,31 @@ Result:
 Examples:
 
 - A bar's tooltip: `{"docId":"d1","hitId":"1f2e3d|dataPoint|0|2"}`
+
+### `canvas.tooltipPage`
+
+**Report-page tooltip.** Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `hitId` | string | A hit id from the last render. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `tooltip`? | TooltipPageOut \| null | The rendered report-page tooltip; absent when the visual shows none for this hit. |
+
+Examples:
+
+- Hover a column: `{"docId":"d1","report":"Stores","page":"Store Performance","hitId":"1f2e3d|dataPoint|0|2"}`
 
 ### `canvas.drillthroughTargets`
 

@@ -41,7 +41,7 @@ regressed, `2` for usage or build errors.
    | `crates/pbi-dax/examples/perf_dax.rs` | P04, P12 |
    | `crates/pbi-m/examples/perf_m.rs` | P05 |
    | `crates/pbi-vertipaq/examples/perf_vertipaq.rs` | P06 |
-| `crates/pbi-ops/examples/perf_ops.rs` | P09, P10, P11 (through `Registry::execute`, like the app) |
+| `crates/pbi-ops/examples/perf_ops.rs` | P09, P10, P11, P13 (through `Registry::execute`, like the app) |
 
 2. **Build.** `xtask` builds all perf examples with one `cargo build --release` (same
    feature unification on every run; the shared `target/release`). `xtask` itself depends on
@@ -96,6 +96,7 @@ without it.
 | P10 | `save-pbip-acme` | through `Registry::execute`: one `model.measure.update`, then `doc.save` into a copy of the example under `target/tmp/` (compares the saved and current state, writes the one changed TMDL file atomically) | committed | median | 100 / 300 |
 | P11 | `refresh-acme-end-to-end` | in a fresh process, through `Registry::execute`: `doc.open` of the example, `data.refresh` of its 11 tables from the CSVs (M, calculated columns and tables), `canvas.render` of the first page | committed | median | 1000 / 3000 |
 | P12 | `dax-complete` | `complete` (the language service behind `dax.complete`) at the end of one of six texts (a measure in brackets, a table argument, a variable in scope, a qualified column, a column argument, a query-defined measure), with the schema built from a model of 20 tables × 20 columns and 2 000 measures, at most 100 items | synthetic | p95 | 20 / 50 |
+| P13 | `tooltip-page-render` | through `Registry::execute`: `canvas.tooltipPage` on the next segment of the Store Performance stacked column chart of the example (refreshed offline from its CSVs): the Store Tooltip page (320 × 240, one card) filtered by the point and the page's slicers, queried and rendered | committed | p95 | 16 / 33 |
 
 Reproduce one scenario by hand (prints its JSON line; progress on stderr):
 

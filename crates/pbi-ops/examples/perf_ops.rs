@@ -7,6 +7,8 @@
 //!   `target/tmp/`.
 //! - P11 `refresh-acme-end-to-end`: open the example, refresh it from its CSVs and render the
 //!   first page of the first report.
+//! - P13 `tooltip-page-render`: hover the segments of the Store Performance stacked chart in
+//!   turn; `canvas.tooltipPage` queries and renders the Store Tooltip page for each.
 
 #[path = "../../../perf/harness.rs"]
 mod harness;
@@ -31,6 +33,7 @@ fn main() -> ExitCode {
             ("P09", edit_measure_requery),
             ("P10", save_pbip_acme),
             ("P11", refresh_acme_end_to_end),
+            ("P13", tooltip_page_render),
         ],
     )
 }
@@ -220,6 +223,50 @@ fn refresh_acme_end_to_end(args: &Args) -> Result<Outcome, String> {
         .with("last_open_ms", open_ms)
         .with("last_refresh_ms", refresh_ms)
         .with("last_render_ms", render_ms))
+}
+
+fn tooltip_page_render(args: &Args) -> Result<Outcome, String> {
+    let (pbip, blob_map) = match acme(args) {
+        Ok(paths) => paths,
+        Err(skip) => return Ok(skip),
+    };
+    let ops = Ops::new()?;
+    let doc = ops.open(&pbip, Some(&blob_map))?;
+    ops.refresh(&doc)?;
+    let at = json!({ "docId": doc, "report": "Stores", "page": "Store Performance" });
+    let page = ops.run("canvas.render", at.clone())?;
+    let chart = page["visuals"]
+        .as_array()
+        .and_then(|v| v.iter().find(|v| v["visualType"] == "stackedColumnChart"))
+        .and_then(|v| v["name"].as_str())
+        .ok_or("no stacked column chart on Store Performance")?
+        .to_owned();
+    let prefix = format!("{chart}|dataPoint|");
+    let hits: Vec<String> = page["hitRegions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|h| h["id"].as_str())
+        .filter(|id| id.starts_with(&prefix))
+        .map(str::to_owned)
+        .collect();
+    if hits.is_empty() {
+        return Err("the stacked chart has no data points".to_owned());
+    }
+    let mut svg_bytes = 0;
+    let samples = sample(args.warmup, args.iterations, |i| {
+        let mut params = at.clone();
+        params["hitId"] = json!(hits[i % hits.len()]);
+        let out = ops.run("canvas.tooltipPage", params)?;
+        svg_bytes = out["tooltip"]["svg"]
+            .as_str()
+            .map(str::len)
+            .ok_or("canvas.tooltipPage: no tooltip page")?;
+        Ok(())
+    })?;
+    Ok(Outcome::ok(samples)
+        .with("points", hits.len())
+        .with("svg_bytes", svg_bytes))
 }
 
 fn copy_dir(from: &Path, to: &Path) -> Result<(), String> {

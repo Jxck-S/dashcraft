@@ -214,6 +214,18 @@ with "Keep all filters", the source page's filters and slicers apply too.
   - Reason Not As Described, Returns Count 2, Refunds $339.60
   - Reason Wrong Size, Returns Count 7, Refunds $1,059.20
 
+## Report-page tooltips
+
+Hovering a data point of a visual with a report-page tooltip shows that page, filtered by the
+point's values and the source page's filters and slicers.
+
+**Store Performance → Store Tooltip** (Acme Outfitters - Stores, 320 × 240): hover `stacked` (Store Name Seattle Flagship, Category Camping); kept: 'Stores'[Region] in ['West']; 'Date'[Date] >= 2025-01-01 and < 2026-01-01.
+
+| Visual | Type | Measure | Expected |
+|---|---|---|---|
+| tip | cardVisual | Total Sales | $10,250.30 |
+| tip | cardVisual | Target Attainment % | 10.0% |
+
 ## Calculation group
 
 `'Time Calc'[Time Calculation]` applied to [Total Sales]; Acme Outfitters - Overview, page Time Intelligence: report filter + Year Month = 2025-06.

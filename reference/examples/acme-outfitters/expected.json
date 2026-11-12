@@ -2163,5 +2163,48 @@
       ]
     }
   ],
+  "tooltipPages": [
+    {
+      "report": "Acme Outfitters - Stores",
+      "sourcePage": "Store Performance",
+      "sourcePageId": "ef3ce6b6fadf22960137",
+      "sourceVisual": "05ac8028fb6e14374ec7",
+      "sourceVisualKey": "stacked",
+      "point": {
+        "Store Name": "Seattle Flagship",
+        "Category": "Camping"
+      },
+      "page": "Store Tooltip",
+      "pageId": "58db5b3f75d059fec1fb",
+      "width": 320,
+      "height": 240,
+      "pointFilters": [
+        "'Stores'[Store Name] in ['Seattle Flagship']",
+        "'Products'[Category] in ['Camping']"
+      ],
+      "keptFilters": [
+        "'Stores'[Region] in ['West']",
+        "'Date'[Date] >= 2025-01-01 and < 2026-01-01"
+      ],
+      "cards": [
+        {
+          "visual": "c649a1da0227ceeffc35",
+          "visualKey": "tip",
+          "visualType": "cardVisual",
+          "measure": "Total Sales",
+          "value": 10250.3,
+          "formatted": "$10,250.30"
+        },
+        {
+          "visual": "c649a1da0227ceeffc35",
+          "visualKey": "tip",
+          "visualType": "cardVisual",
+          "measure": "Target Attainment %",
+          "value": 0.1000029268,
+          "formatted": "10.0%"
+        }
+      ]
+    }
+  ],
   "knownEngineGaps": []
 }

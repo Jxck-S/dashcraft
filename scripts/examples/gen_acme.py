@@ -2417,6 +2417,37 @@ def drillthrough_expectations(e: Engine, rep: Report) -> list[dict]:
     return out
 
 
+def tooltip_expectations(e: Engine, rep: Report) -> list[dict]:
+    """Hovering the largest segment (store and category) of the stacked chart on Store Performance:
+    its report-page tooltip, Store Tooltip, is filtered by the point and the source page's filters
+    and slicer selections."""
+    if rep.key != "stores":
+        return []
+    src, tip = rep.page_by("performance"), rep.page_by("tooltip")
+    vis = src.v("stacked")
+    sales: dict[tuple[str, str], Decimal] = {}
+    for o in e.orders(src.ctx("stacked")):
+        if o["_product"]:
+            k = (o["_store"]["Store Name"], o["_product"]["Category"])
+            sales[k] = sales.get(k, Decimal(0)) + o["Line Amount"]
+    ranked = sorted(sales.items(), key=lambda kv: (-kv[1], kv[0]))
+    assert len(ranked) > 1 and ranked[0][1] != ranked[1][1], "tooltip point tie"
+    (store, category), _ = ranked[0]
+    point = [F("Stores", "Store Name", "in", [store]), F("Products", "Category", "in", [category])]
+    carried = list(src.filters) + [v.selection for v in src.visuals if v.selection is not None]
+    saved = tip.filters
+    tip.filters = point + carried
+    try:
+        cards = page_expectations(e, rep, tip)["cards"]
+    finally:
+        tip.filters = saved
+    return [{"report": rep.name, "sourcePage": src.display, "sourcePageId": src.id, "sourceVisual": vis.id,
+             "sourceVisualKey": "stacked", "point": {"Store Name": store, "Category": category},
+             "page": tip.display, "pageId": tip.id, "width": tip.width, "height": tip.height,
+             "pointFilters": [f.describe() for f in point], "keptFilters": [f.describe() for f in carried],
+             "cards": cards}]
+
+
 def page_expectations(e: Engine, rep: Report, pg: Page) -> dict:
     cards: list[dict] = []
     visuals: list[dict] = []
@@ -2653,6 +2684,7 @@ def build_expected(e: Engine, tables: dict, targets: list[dict], reports: list[R
                      "pages": [page_expectations(e, r, p) for p in r.pages]} for r in reports],
         "bookmarks": [b for r in reports for b in bookmark_expectations(e, r)],
         "drillthrough": [d for r in reports for d in drillthrough_expectations(e, r)],
+        "tooltipPages": [t for r in reports for t in tooltip_expectations(e, r)],
     }
 
 
@@ -2866,6 +2898,17 @@ def write_expected_md(out: Path, exp: dict) -> None:
                     lines.append("  - " + ", ".join(
                         f"{k} {x['formatted'] if isinstance(x, dict) else x}" for k, x in row.items()))
             lines.append("")
+    if exp["tooltipPages"]:
+        lines += ["## Report-page tooltips", "",
+                  "Hovering a data point of a visual with a report-page tooltip shows that page, filtered by the",
+                  "point's values and the source page's filters and slicers.", ""]
+        for t in exp["tooltipPages"]:
+            point = ", ".join(f"{k} {v}" for k, v in t["point"].items())
+            lines += [f"**{t['sourcePage']} → {t['page']}** ({t['report']}, {t['width']} × {t['height']}): "
+                      f"hover `{t['sourceVisualKey']}` ({point}); kept: {'; '.join(t['keptFilters']) or 'none'}.", "",
+                      md_table(["Visual", "Type", "Measure", "Expected"],
+                               [[c["visualKey"], c["visualType"], c["measure"], c["formatted"]] for c in t["cards"]]),
+                      ""]
     cg = exp["calculationGroup"]
     lines += ["## Calculation group", "", f"`'{cg['table']}'[{cg['column']}]` applied to [{cg['measure']}]; "
               + cg["context"] + ".", "",

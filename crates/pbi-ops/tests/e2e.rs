@@ -4194,3 +4194,92 @@ async fn drillthrough_on_the_example_report() {
         .collect();
     assert!(kinds.contains(&&json!("drillthrough")), "{kinds:?}");
 }
+
+/// Report-page tooltip on the example's Stores report: hovering a segment of Store Performance's
+/// stacked chart renders Store Tooltip filtered by the point and the page's slicers; its card
+/// shows the values of `expected.json`, and the tooltip page's own canvas state is untouched.
+#[tokio::test(flavor = "multi_thread")]
+async fn report_page_tooltip_on_the_example_report() {
+    let (Some(pbip), Some(map), Some(exp)) = (fixture(PBIP), fixture(BLOB_MAP), expected()) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let report = exp.report_name("Stores");
+    let wanted = exp.0["tooltipPages"].as_array().unwrap();
+    assert_eq!(wanted.len(), 1);
+    let want = &wanted[0];
+    let src = want["sourcePageId"].as_str().unwrap();
+    let chart = want["sourceVisual"].as_str().unwrap();
+    let store = want["point"]["Store Name"].as_str().unwrap();
+    let category = want["point"]["Category"].as_str().unwrap();
+    let at = |page: &str, extra: Value| {
+        let mut body = json!({"docId": doc, "report": report, "page": page});
+        body.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        body
+    };
+
+    let page = r.run("canvas.render", at(src, json!({}))).await;
+    let tip_page = want["pageId"].as_str().unwrap();
+    let before = r.run("canvas.state", at(tip_page, json!({}))).await;
+    let mut segment = None;
+    for id in ids(&page, "hitRegions") {
+        if !id.starts_with(&format!("{chart}|dataPoint|")) {
+            continue;
+        }
+        let tip = r.run("canvas.tooltip", at(src, json!({"hitId": id}))).await;
+        let lines = tip["lines"].as_array().unwrap();
+        if lines.iter().any(|l| l["value"] == store) && lines.iter().any(|l| l["value"] == category)
+        {
+            segment = Some(id);
+            break;
+        }
+    }
+    let segment = segment.unwrap_or_else(|| panic!("no {store} / {category} segment"));
+    let out = r
+        .run("canvas.tooltipPage", at(src, json!({"hitId": segment})))
+        .await;
+    let tooltip = &out["tooltip"];
+    assert_eq!(tooltip["page"], want["pageId"], "{out}");
+    assert_eq!(tooltip["displayName"], want["page"]);
+    assert_eq!(tooltip["width"], want["width"].as_f64().unwrap());
+    assert_eq!(tooltip["height"], want["height"].as_f64().unwrap());
+    assert!(tooltip.get("notApplied").is_none(), "{out}");
+    assert!(tooltip.get("errors").is_none(), "{out}");
+    let svg = tooltip["svg"].as_str().unwrap();
+    for card in want["cards"].as_array().unwrap() {
+        let texts = group_texts(svg, &format!("{}|visual", card["visual"].as_str().unwrap()));
+        let text = card["formatted"].as_str().unwrap();
+        assert!(
+            texts.iter().any(|t| t == text),
+            "{}: no {text} in {texts:?}",
+            card["measure"]
+        );
+    }
+    let after = r.run("canvas.state", at(tip_page, json!({}))).await;
+    assert_eq!(before, after, "the tooltip page's state is unchanged");
+
+    // A hit that is not a data point, and a visual without a report-page tooltip.
+    let none = r
+        .run(
+            "canvas.tooltipPage",
+            at(src, json!({"hitId": format!("{chart}|visual")})),
+        )
+        .await;
+    assert!(none.get("tooltip").is_none(), "{none}");
+    let table = exp.0["drillthrough"][0]["sourceVisual"].as_str().unwrap();
+    let row = ids(&page, "hitRegions")
+        .into_iter()
+        .find(|id| id.starts_with(&format!("{table}|dataPoint|")))
+        .unwrap();
+    let none = r
+        .run("canvas.tooltipPage", at(src, json!({"hitId": row})))
+        .await;
+    assert!(none.get("tooltip").is_none(), "{none}");
+}
