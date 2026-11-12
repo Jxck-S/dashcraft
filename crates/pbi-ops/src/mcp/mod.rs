@@ -31,7 +31,11 @@
 //!   for calls with `_meta.progressToken`, `logging/setLevel` and
 //!   `notifications/message` (committed document edits, undos, redos and
 //!   saves at level `info`, `data.event` = `doc/changed`, see
-//!   [`DocChangedEvent`](crate::DocChangedEvent)). Stateless 2026-07-28 clients are served too:
+//!   [`DocChangedEvent`](crate::DocChangedEvent); files another program
+//!   changed under an open project at level `notice`, `data.event` =
+//!   `doc/externalChanged`, see
+//!   [`ExternalChangedEvent`](crate::watch::ExternalChangedEvent), once the
+//!   session's level lets them through). Stateless 2026-07-28 clients are served too:
 //!   `server/discover`, the per-request `_meta` protocol version
 //!   (`-32022` for unknown versions), `resultType`, `ttlMs`/`cacheScope`.
 //!

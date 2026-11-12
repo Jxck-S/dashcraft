@@ -7,6 +7,20 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M8.2: external changes pushed to serve and MCP clients
+
+- **What:** `pbi-ops` gets a `watch` module: every `external_poll` (default 1.5 s, new in
+  `RpcOptions` and `McpOptions`) each open document's project is scanned as `doc.externalChanges`
+  does, and a change of its set of changed files is pushed: `doc/externalChanged {docId,
+  changes}` in `serve`, a `notice` log message (`data.event: "doc/externalChanged"`) in `mcp`,
+  resent later when the client's log level drops it. Each scan enters the per-document queue of
+  mutating requests (now an `Arc<DocQueue>` shared by the watcher), at most one pending per
+  document, so a save, reload or refresh of the server is never scanned halfway and its own
+  writes are not reported. At end of input the watcher stops before the writer closes.
+- **Why:** the last headless part of M8.2; clients no longer have to poll `doc.externalChanges`.
+- **Numbers:** two new tests (`rpc.rs`: pushed once per set, empty after `doc.reload`; `mcp.rs`:
+  held back below `notice`, sent after `logging/setLevel`), each under a second; `pbi-ops` and
+  `dashcraft-cli` suites pass; `docs/COMMANDS.md` regenerated.
 ### M8.3: File → Compare with another file or folder
 
 - **What:** a File → Compare page (`Backstage.svelte`) compares the document, unsaved edits

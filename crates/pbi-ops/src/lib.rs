@@ -63,6 +63,7 @@ pub mod recovery;
 mod registry;
 pub mod resolve;
 pub mod rpc;
+pub mod watch;
 mod workspace;
 
 pub use command::{
