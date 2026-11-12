@@ -83,6 +83,16 @@ export const commands = {
 	addRecentFile: (path: string) => typedError<RecentFileDto[], AppError>(__TAURI_INVOKE("add_recent_file", { path })),
 	/**  Removes one entry from File → Recent (`null`: clears the list). Returns the new list. */
 	removeRecentFile: (path: string | null) => typedError<RecentFileDto[], AppError>(__TAURI_INVOKE("remove_recent_file", { path })),
+	/**
+	 *  File → Options → Auto recovery: whether unsaved edits are journaled for recovery after a
+	 *  crash (`doc.recovery.*` lists and restores them) and where.
+	 */
+	autoRecovery: () => typedError<AutoRecoveryDto, AppError>(__TAURI_INVOKE("auto_recovery")),
+	/**
+	 *  Turns Auto recovery on or off and remembers the choice. Turning it off deletes the recovery
+	 *  files of open documents; existing ones of earlier sessions stay listed.
+	 */
+	setAutoRecovery: (enabled: boolean) => typedError<AutoRecoveryDto, AppError>(__TAURI_INVOKE("set_auto_recovery", { enabled })),
 };
 
 /** Events */
@@ -119,6 +129,16 @@ export type AppError =
 { kind: "busy"; message: string } | 
 /**  A bug or an unexpected failure in the backend (e.g. a crashed worker). */
 { kind: "internal"; message: string };
+
+/**  File → Options → Auto recovery. */
+export type AutoRecoveryDto = {
+	/**  Unsaved edits are journaled for recovery after a crash. */
+	enabled: boolean,
+	/**  There is a per-user data folder to journal to. */
+	available: boolean,
+	/**  The folder of the recovery files. */
+	location: string | null,
+};
 
 /**  The offline blob map used by `AzureStorage.Blobs` sources (local files only). */
 export type BlobMapDto = {

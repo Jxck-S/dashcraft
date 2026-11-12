@@ -7,6 +7,23 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M8.1 app: Auto recovery, Document recovery
+
+- **What:** `app/src-tauri/src/auto_recovery.rs` turns recovery on at startup (journals in
+  `RecoveryStore::default_location()`, the choice in the config folder's `auto-recovery.json`, on
+  by default as in Desktop) and the `auto_recovery` / `set_auto_recovery` app commands. The UI
+  lists the journals after startup (`RecoveryDialog.svelte`: Restore, Discard after a question,
+  Decide later) and has an Options → Auto recovery page. `build.rs` embeds the Common Controls v6
+  manifest through linker arguments instead of tauri-build, so the app's test binary runs on
+  Windows (it died at load with `STATUS_ENTRYPOINT_NOT_FOUND`, tauri-apps/tauri#13419); the
+  shipped binary's manifest is unchanged. The app checks use a fresh `DASHCRAFT_DATA_DIR`.
+- **Why:** M8.1 (ROADMAP "Next"); the headless part had no host turning it on.
+- **Numbers:** `cargo test -p dashcraft-app` 31 → 32, now passing on Windows too;
+  `scripts/app-checks/recovery.mjs` 16 of 16 (edit, crash, restore with undo, crash, discard);
+  `editing-smoke.mjs` 23 of 23.
+- **Open:** a per-file Auto recovery switch (Current file) and an "open saved" choice beyond
+  Discard; M8.2's notification bar and M8.3's Compare view.
+
 ### M8.1 headless: recovery journals, doc.recovery.*
 
 - **What:** `pbi_ops::recovery` (`RecoveryStore`: versioned JSON-lines journals in the per-user
@@ -24,7 +41,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Numbers:** 3 unit tests, `crates/pbi-ops/tests/recovery.rs` (4 tests: seven edits survive a
   dropped workspace and replay to the same measures, a failed replay keeps the journal, untracked
   edits and undos past the start drop it, off by default); catalog +3 commands.
-- **Open:** the app's opt-in, startup prompt and Options page.
+- **Open:** the app's opt-in, startup prompt and Options page (done above).
 
 ### M8.3 headless: semantic diff, doc.diff
 

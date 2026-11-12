@@ -14,11 +14,12 @@
 //!
 //! The remaining Tauri commands are app-only: UI projections of an open document with object
 //! ids (Data pane tree, report outline, Properties / Format panes, TMDL and Model views), the
-//! blob map and File → Recent settings, and window plumbing. IPC is typed with tauri-specta:
+//! blob map, File → Recent and Auto recovery settings, and window plumbing. IPC is typed with tauri-specta:
 //! every command and event is listed in [`specta_builder`], and the `export_bindings` test
 //! writes the matching TypeScript client to `app/src/lib/bindings.ts`.
 
 mod ai;
+mod auto_recovery;
 mod blob;
 mod commands;
 pub mod dto;
@@ -110,6 +111,8 @@ pub fn specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             commands::recent_files,
             commands::add_recent_file,
             commands::remove_recent_file,
+            commands::auto_recovery,
+            commands::set_auto_recovery,
         ])
         .events(tauri_specta::collect_events![
             events::OpsProgress,
@@ -168,6 +171,13 @@ pub fn run() -> Result<(), tauri::Error> {
     }
     // The AI settings (`ai.json`, off by default) live there too; keys stay in the OS keychain.
     ai::install(config_dir.as_deref());
+    // Auto recovery (on unless turned off): journals in the per-user data folder.
+    let state = app.state::<AppState>();
+    state.auto_recovery.install(
+        &state.workspace,
+        config_dir.map(|dir| dir.join("auto-recovery.json")),
+        pbi_ops::recovery::RecoveryStore::default_location(),
+    );
     app.run(handle_run_event);
     Ok(())
 }
@@ -236,6 +246,8 @@ mod tests {
             "visualFormat",
             "recentFiles",
             "addRecentFile",
+            "autoRecovery",
+            "setAutoRecovery",
             "ReportThemeDto",
         ] {
             assert!(generated.contains(name), "bindings are missing `{name}`");
@@ -352,6 +364,72 @@ mod tests {
         value[key]
             .as_array()
             .unwrap_or_else(|| panic!("`{key}` is not an array in {value}"))
+    }
+
+    /// Auto recovery: off until `run()` installs it (tests never touch the user's journals),
+    /// then unsaved edits are journaled; turning it off deletes the open document's journal
+    /// and the choice persists.
+    #[test]
+    fn auto_recovery_journals_unsaved_edits_and_remembers_the_choice() {
+        let Some(pbip) = fixture(&format!("{ACME}/AcmeOutfitters.pbip")) else {
+            return;
+        };
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+            "../../target/tmp/app-auto-recovery-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        let (app, webview) = mock_app(StartupPath::default());
+        assert_eq!(
+            invoke(&webview, "auto_recovery", json!({})),
+            Ok(json!({ "enabled": false, "available": false, "location": null }))
+        );
+        let setting = dir.join("auto-recovery.json");
+        let journals = dir.join("recovery");
+        let state = app.state::<AppState>();
+        let install = || {
+            state.auto_recovery.install(
+                &state.workspace,
+                Some(setting.clone()),
+                Some(journals.clone()),
+            );
+        };
+        install();
+        let on = invoke(&webview, "auto_recovery", json!({})).unwrap();
+        assert_eq!(
+            (&on["enabled"], &on["available"]),
+            (&json!(true), &json!(true))
+        );
+
+        let doc = run(
+            &webview,
+            "doc.open",
+            json!({ "path": pbip, "autoRefresh": false }),
+        )["docId"]
+            .clone();
+        let measures = run(&webview, "model.measures", json!({ "docId": doc }));
+        run(
+            &webview,
+            "model.object.setDescription",
+            json!({ "docId": doc, "objectId": measures["measures"][0]["id"], "text": "Unsaved" }),
+        );
+        let count = || std::fs::read_dir(&journals).map_or(0, Iterator::count);
+        assert_eq!(count(), 1);
+
+        let off = invoke(&webview, "set_auto_recovery", json!({ "enabled": false })).unwrap();
+        assert_eq!(off["enabled"], false);
+        assert_eq!(
+            count(),
+            0,
+            "turning it off deletes the open document's journal"
+        );
+        install();
+        assert_eq!(
+            invoke(&webview, "auto_recovery", json!({})).unwrap()["enabled"],
+            false,
+            "the choice persists"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// Guards the wire contract that `bindings.ts` and `ops.gen.ts` promise: argument names,

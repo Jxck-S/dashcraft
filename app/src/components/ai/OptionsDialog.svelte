@@ -1,17 +1,28 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import Icon from '../Icon.svelte'
   import Modal from '../Modal.svelte'
   import AiOptionsPage from './AiOptionsPage.svelte'
+  import AutoRecoveryOptionsPage from '../AutoRecoveryOptionsPage.svelte'
   import { NOT_AVAILABLE } from '../../lib/shell'
   import type { AiStatusOut } from '../../lib/ops'
 
   // File → Options and settings → Options, as in Power BI Desktop: a dialog with the pages in a
-  // left column (GLOBAL, CURRENT FILE). DashCraft has one page, AI; Desktop's other pages are
-  // listed disabled. AI settings apply as soon as they are changed (each change is one registry
-  // command), so the dialog has a single Close button.
-  let { status, demo, onstatus, onclose }: { status: AiStatusOut | null; demo: boolean; onstatus: (s: AiStatusOut) => void; onclose: () => void } = $props()
+  // left column (GLOBAL, CURRENT FILE). DashCraft has two pages, Auto recovery (Global) and AI;
+  // Desktop's other pages are listed disabled. Settings apply as soon as they are changed, so the
+  // dialog has a single Close button.
+  type Page = 'ai' | 'autoRecovery'
+  let {
+    status,
+    demo,
+    page: initial = 'ai',
+    onstatus,
+    onclose,
+  }: { status: AiStatusOut | null; demo: boolean; page?: Page; onstatus: (s: AiStatusOut) => void; onclose: () => void } = $props()
 
-  const GLOBAL = ['Data Load', 'Power Query Editor', 'DirectQuery', 'Security', 'Privacy', 'Regional settings', 'Diagnostics', 'Preview features', 'Auto recovery']
+  let page = $state<Page>(untrack(() => initial))
+
+  const GLOBAL = ['Data Load', 'Power Query Editor', 'DirectQuery', 'Security', 'Privacy', 'Regional settings', 'Diagnostics', 'Preview features']
   const CURRENT = ['Data Load', 'Regional settings', 'Privacy', 'Auto recovery', 'Report settings']
 </script>
 
@@ -19,20 +30,37 @@
   <div class="options">
     <nav class="pages" aria-label="Options pages">
       <h3>Global</h3>
-      {#each GLOBAL as page (page)}
-        <button class="page-item" disabled title={NOT_AVAILABLE}>{page}</button>
+      {#each GLOBAL as name (name)}
+        <button class="page-item" disabled title={NOT_AVAILABLE}>{name}</button>
       {/each}
-      <button class="page-item active" aria-current="page" title="AI features (DashCraft): providers, keys, consents">
+      <button
+        class="page-item"
+        class:active={page === 'autoRecovery'}
+        aria-current={page === 'autoRecovery' ? 'page' : undefined}
+        title="Keep unsaved edits for recovery after a crash"
+        onclick={() => (page = 'autoRecovery')}>Auto recovery</button
+      >
+      <button
+        class="page-item"
+        class:active={page === 'ai'}
+        aria-current={page === 'ai' ? 'page' : undefined}
+        title="AI features (DashCraft): providers, keys, consents"
+        onclick={() => (page = 'ai')}
+      >
         <Icon name="ai" size={14} />
         AI
       </button>
       <h3>Current file</h3>
-      {#each CURRENT as page (page)}
-        <button class="page-item" disabled title={NOT_AVAILABLE}>{page}</button>
+      {#each CURRENT as name (name)}
+        <button class="page-item" disabled title={NOT_AVAILABLE}>{name}</button>
       {/each}
     </nav>
     <div class="page">
-      <AiOptionsPage {status} {demo} {onstatus} />
+      {#if page === 'ai'}
+        <AiOptionsPage {status} {demo} {onstatus} />
+      {:else}
+        <AutoRecoveryOptionsPage />
+      {/if}
     </div>
   </div>
   {#snippet footer()}
