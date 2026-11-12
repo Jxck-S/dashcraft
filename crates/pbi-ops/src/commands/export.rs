@@ -1,4 +1,5 @@
-//! `export.table`, `export.model`, `convert.pbip`, `convert.pbit`.
+//! `export.table`, `export.visualData`, `export.model`, `convert.pbip`,
+//! `convert.pbit`.
 
 use std::fs;
 use std::io::Write;
@@ -6,15 +7,17 @@ use std::path::{Component, Path, PathBuf};
 
 use pbi_core::{pbip_files, pbit_bytes};
 use pbi_model::{Model, names_eq};
+use pbi_render::query::VisualTable;
 use pbi_session::{
     CsvExportOptions, MarkdownOptions, ModelDocOptions, ParquetCompression, ParquetExportOptions,
-    TableStatus, model_doc, model_to_markdown,
+    TableStatus, model_doc, model_to_markdown, value_to_json,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::{BASE, doc, loaded_doc};
+use crate::canvas::{self, Target};
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
 use crate::error::OpError;
@@ -200,6 +203,179 @@ impl Command for ExportTable {
 }
 
 // ---------------------------------------------------------------------------
+
+/// What `export.visualData` exports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum VisualDataMode {
+    /// The data as the visual shows it (its fields, grouped and
+    /// aggregated).
+    #[default]
+    Summarized,
+    /// The rows behind it: the visual's columns plus the columns of its
+    /// table.
+    Underlying,
+}
+
+/// `export.visualData`.
+#[derive(Debug)]
+pub struct ExportVisualData;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ExportVisualDataParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+    /// Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page.
+    #[serde(default)]
+    pub page: Option<String>,
+    /// The visual's name.
+    pub visual: String,
+    #[serde(default)]
+    pub mode: VisualDataMode,
+    /// The CSV file to write; absent: the CSV is returned inline.
+    #[serde(default)]
+    pub path: Option<PathBuf>,
+    /// Values formatted as the visual shows them instead of raw values.
+    #[serde(default)]
+    pub formatted: bool,
+    /// Prefix text cells starting with `=`, `+`, `-`, `@`, TAB or CR with
+    /// `'` (spreadsheet formula-injection guard).
+    #[serde(default)]
+    pub excel_safe: bool,
+    /// Replace an existing file.
+    #[serde(default)]
+    pub overwrite: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportVisualDataOut {
+    pub mode: VisualDataMode,
+    /// Column headers.
+    pub columns: Vec<String>,
+    /// Data rows (without the header).
+    pub rows: usize,
+    /// The rows were cut at the row limit (30 000).
+    pub truncated: bool,
+    /// Filters not applied, columns left out.
+    pub warnings: Vec<String>,
+    /// The written file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    /// The CSV, when no `path` was given.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub csv: Option<String>,
+}
+
+impl Command for ExportVisualData {
+    type Params = ExportVisualDataParams;
+    type Output = ExportVisualDataOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "export.visualData",
+            title: "Export a visual's data",
+            summary: "Exports a visual's summarized data or its underlying rows as CSV, with the page's filters, slicers and selections applied.",
+            category: Category::Export,
+            long_running: true,
+            writes_files: true,
+            examples: &[
+                (
+                    "Summarized data, inline",
+                    r#"{"docId": "d1", "visual": "9a5c3f0e1b"}"#,
+                ),
+                (
+                    "Underlying rows to a file",
+                    r#"{"docId": "d1", "visual": "9a5c3f0e1b", "mode": "underlying", "path": "target/tmp/rows.csv", "excelSafe": true}"#,
+                ),
+            ],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let path = p
+            .path
+            .as_deref()
+            .map(|path| check_output_file(ws.policy(), path, p.overwrite))
+            .transpose()?;
+        let entry = loaded_doc(ws, &p.doc_id, ctx).await?;
+        resolve::require_model(&entry)?;
+        let target = Target::resolve(entry, p.report.as_deref(), p.page.as_deref())?;
+        let underlying = p.mode == VisualDataMode::Underlying;
+        let table =
+            canvas::visual_data(&target, &p.visual, underlying, ctx.cancel_token().clone()).await?;
+        let csv = visual_csv(&table, p.formatted, p.excel_safe);
+        let mut out = ExportVisualDataOut {
+            mode: p.mode,
+            columns: table.headers,
+            rows: table.rows.len(),
+            truncated: table.truncated,
+            warnings: table.warnings,
+            path: None,
+            csv: None,
+        };
+        match path {
+            Some(path) => {
+                let target = path.clone();
+                tokio::task::spawn_blocking(move || {
+                    write_file_atomic(&target, p.overwrite, |w| {
+                        w.write_all(csv.as_bytes())
+                            .map_err(|e| OpError::io(e.to_string()))
+                    })
+                })
+                .await??;
+                out.path = Some(path.to_string_lossy().into_owned());
+            }
+            None => out.csv = Some(csv),
+        }
+        Ok(out)
+    }
+}
+
+/// `table` as RFC 4180 CSV (CRLF line ends).
+fn visual_csv(table: &VisualTable, formatted: bool, excel_safe: bool) -> String {
+    let field = |text: &str, is_text: bool| {
+        let mut text = text.to_owned();
+        if excel_safe && is_text && text.starts_with(['=', '+', '-', '@', '\t', '\r']) {
+            text.insert(0, '\'');
+        }
+        if text.contains([',', '"', '\n', '\r']) {
+            format!("\"{}\"", text.replace('"', "\"\""))
+        } else {
+            text
+        }
+    };
+    let mut out = String::new();
+    let header: Vec<String> = table.headers.iter().map(|h| field(h, true)).collect();
+    out.push_str(&header.join(","));
+    out.push_str("\r\n");
+    for row in &table.rows {
+        let cells: Vec<String> = row
+            .iter()
+            .map(|c| {
+                let json = value_to_json(&c.raw);
+                let text = if formatted {
+                    c.formatted.clone()
+                } else {
+                    match &json {
+                        Value::Null => String::new(),
+                        Value::String(s) => s.clone(),
+                        other => other.to_string(),
+                    }
+                };
+                field(&text, json.is_string())
+            })
+            .collect();
+        out.push_str(&cells.join(","));
+        out.push_str("\r\n");
+    }
+    out
+}
 
 /// `export.model`.
 #[derive(Debug)]

@@ -39,9 +39,11 @@
 //! (`howCreated` 2, "Drill": equalities or one-tuple `In`s on levels above
 //! the first shown one) are its drill path.
 //!
-//! Spotlight: a captured visual whose `singleVisual.display.mode` is
-//! `spotlight` is spotlighted ([`InteractionState::spotlight`]); "All
-//! visuals" bookmarks clear any other spotlight.
+//! Spotlight and focus: a captured visual whose `singleVisual.display.mode`
+//! is `spotlight` is spotlighted ([`InteractionState::spotlight`]), one
+//! whose mode is `maximize` is shown in focus mode
+//! ([`InteractionState::focus`]); "All visuals" bookmarks clear any other
+//! spotlight and focus.
 //!
 //! `options`:
 //! - `applyOnlyToTargetVisuals` + `targetVisualNames` ("Selected
@@ -51,14 +53,14 @@
 //! - `suppressData` ("Data" unchecked): selections and filters are not
 //!   applied.
 //! - `suppressDisplay` ("Display" unchecked): visibility, sort, drill,
-//!   spotlight and formatting are not applied (the page keeps its current
+//!   spotlight, focus and formatting are not applied (the page keeps its current
 //!   ones).
 //! - `suppressActiveSection` ("Current page" unchecked): the page does not
 //!   change.
 //!
 //! Not applied yet (reported in [`BookmarkEffect::not_applied`]): changed
 //! Top N filters, `byType` and transient filters, filter containers not
-//! in the report, the focus (`maximize`) and elevation display modes,
+//! in the report, the elevation display mode,
 //! matrix expansion state (`expansionStates`), a changed
 //! `drillFilterOtherVisuals`, drill filters DashCraft cannot read,
 //! projection changes, cross-highlights and formatting of other visuals.
@@ -73,7 +75,9 @@ use serde_json::{Map, Value};
 
 use super::drill::{DrillState, DrillStep, drill_filters_others, drill_levels, saved_drill};
 use super::filter::coerce_literal;
-use super::interaction::{FilterLevel, InteractionState, is_slicer_type, persisted_selection};
+use super::interaction::{
+    FilterLevel, FocusState, InteractionState, is_slicer_type, persisted_selection,
+};
 use super::plan::same_field;
 use super::semantic::{Aliases, field, sort_clauses, where_condition};
 
@@ -155,6 +159,7 @@ pub fn apply_bookmark(
                 s.sort = now.sort;
                 s.drill = now.drill;
                 s.spotlight = now.spotlight;
+                s.focus = now.focus;
             }
             s
         } else {
@@ -248,6 +253,7 @@ pub fn apply_bookmark(
                 new_state.sort.clear();
                 new_state.drill.clear();
                 new_state.spotlight = None;
+                new_state.focus = None;
             }
             for (name, c) in containers.iter().filter(|(n, _)| applies_to(n)) {
                 let single = c.get("singleVisual").unwrap_or(&Value::Null);
@@ -266,7 +272,17 @@ pub fn apply_bookmark(
                 } else if new_state.spotlight.as_ref() == Some(name) {
                     new_state.spotlight = None;
                 }
-                if let Some(mode) = mode.filter(|m| !matches!(*m, "hidden" | "spotlight")) {
+                if mode == Some("maximize") {
+                    new_state.focus = Some(FocusState {
+                        visual: name.clone(),
+                        show_as_table: false,
+                    });
+                } else if new_state.focus.as_ref().is_some_and(|f| &f.visual == name) {
+                    new_state.focus = None;
+                }
+                if let Some(mode) =
+                    mode.filter(|m| !matches!(*m, "hidden" | "spotlight" | "maximize"))
+                {
                     note(&mut effect, format!("{label}: {mode} display mode"));
                 }
                 match single.get("orderBy") {

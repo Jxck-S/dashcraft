@@ -148,6 +148,7 @@ mod context;
 pub mod drill;
 pub mod drillthrough;
 mod exec;
+pub mod export;
 pub mod filter;
 pub mod interaction;
 mod plan;
@@ -173,12 +174,14 @@ pub use drillthrough::{
     DrillthroughContext, DrillthroughField, DrillthroughPage, allows_cross_report_drillthrough,
     cross_report_targets, drill_through, drillthrough_page, drillthrough_targets,
 };
+pub use export::{DATA_TABLE_SUFFIX, VisualTable, data_table_name, data_table_visual, source_name};
 pub use filter::{
     ColumnRef, FilterBuilder, FilterPlan, coerce_literal, coerce_value, parse_datetime,
 };
 pub use interaction::{
-    FilterLevel, FilterOverrides, InteractionState, PointField, PointSelection, SlicerSelection,
-    is_slicer_type, persisted_selection, slicer_fields, sync_group, synced_slicers,
+    FOCUS_MARGIN, FilterLevel, FilterOverrides, FocusState, InteractionState, PointField,
+    PointSelection, SlicerSelection, is_slicer_type, persisted_selection, slicer_fields,
+    sync_group, synced_slicers,
 };
 pub use semantic::TopNSpec;
 pub use tooltip::{TooltipPage, tooltip_page, tooltip_state, visual_tooltip_page};

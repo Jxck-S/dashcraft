@@ -171,6 +171,10 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.setSlicer`](#canvassetslicer) | Replaces a slicer's selection by value (no hit ids needed) and returns the re-rendered page. | M L A |
 | [`canvas.setRange`](#canvassetrange) | Filters a numeric or date range slicer to a lower and/or upper bound (a date includes the whole day) and returns the re-rendered page. | M L A |
 | [`canvas.setRelativeDate`](#canvassetrelativedate) | Filters a date slicer to a relative period ("Last 3 months", "This year", "Next 2 hours") of the session clock and returns the re-rendered page. | M L A |
+| [`canvas.focus`](#canvasfocus) | Shows one visual filling the page (focus mode), optionally with its data as a table below it; without a visual goes back to the report. | M L A |
+| [`canvas.showAsTable`](#canvasshowastable) | Shows a visual with its data as a table below it, filling the page (focus mode); without a visual goes back to the report. | M L A |
+| [`canvas.setSpotlight`](#canvassetspotlight) | Spotlights a visual (the other visuals fade); without a visual ends the spotlight. | M L A |
+| [`canvas.sortVisual`](#canvassortvisual) | Sorts a visual by one of its fields (the header's "Sort axis"), changes the sort direction or restores the saved sort. | M L A |
 | [`canvas.clearSelections`](#canvasclearselections) | Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page. | M L A |
 | [`canvas.setSlicerSearch`](#canvassetslicersearch) | Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page. | M L A |
 | [`canvas.toggleMatrixRow`](#canvastogglematrixrow) | Expands or collapses the matrix row of a cell hit and returns the re-rendered page. | M L A |
@@ -179,11 +183,13 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.applyBookmark`](#canvasapplybookmark) | Applies a report bookmark to the canvas (page, slicers, filters, visibility, sort, drill and spotlight; all or only its target visuals) and renders the page it shows; lists the parts not applied yet. | M L A |
 | [`canvas.tooltip`](#canvastooltip) | The hover tooltip (category, series, values) of a data point hit, from the last render. | A |
 | [`canvas.tooltipPage`](#canvastooltippage) | Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. | A |
+| [`canvas.contextMenu`](#canvascontextmenu) | What a data point's context menu can copy ("Copy value", "Copy selection"), from the last render. | A |
 | [`canvas.drill`](#canvasdrill) | Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page. | M L A |
 | [`canvas.drillthroughTargets`](#canvasdrillthroughtargets) | The drillthrough pages a data point hit can drill through to (the "Drill through" menu). | A |
 | [`canvas.drillthrough`](#canvasdrillthrough) | Drills through from a data point (or the page's selection) to a drillthrough page (also of another report): filters it on the point's values, keeps the source's filters if set and renders it. | M L A |
 | [`canvas.state`](#canvasstate) | The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. | A |
 | [`export.table`](#exporttable) | Writes one table's data as CSV or Parquet (with model metadata); loads the data on first use. | L A W |
+| [`export.visualData`](#exportvisualdata) | Exports a visual's summarized data or its underlying rows as CSV, with the page's filters, slicers and selections applied. | L A W |
 | [`export.model`](#exportmodel) | The model documentation as JSON (model doc) or a Markdown data dictionary, inline or to a file; no data needed. | A W |
 | [`convert.pbip`](#convertpbip) | Writes the document, unsaved edits included, as a PBIP project (TMDL + PBIR) into a folder; the open document keeps its source (doc.saveAs moves it). | L A W |
 | [`convert.pbit`](#convertpbit) | Writes a PBIT template (model schema and one report, no data), unsaved edits included. | L A W |
@@ -1833,6 +1839,8 @@ Result:
 | `isDefault` | boolean | The state equals the report's saved state. |
 | `warnings` | string[] | Unreadable saved slicer selections. |
 | `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
 
 Examples:
 
@@ -1941,6 +1949,8 @@ Result:
 | `isDefault` | boolean | The state equals the report's saved state. |
 | `warnings` | string[] | Unreadable saved slicer selections. |
 | `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
 
 Examples:
 
@@ -1988,6 +1998,8 @@ Result:
 | `isDefault` | boolean | The state equals the report's saved state. |
 | `warnings` | string[] | Unreadable saved slicer selections. |
 | `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
 
 Examples:
 
@@ -2037,11 +2049,199 @@ Result:
 | `isDefault` | boolean | The state equals the report's saved state. |
 | `warnings` | string[] | Unreadable saved slicer selections. |
 | `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
 
 Examples:
 
 - The last 3 calendar months: `{"docId":"d1","field":"Date","anchor":"last","duration":3,"period":"calendarMonths"}`
 - Clear a relative slicer: `{"docId":"d1","field":"Date"}`
+
+### `canvas.focus`
+
+**Focus mode.** Shows one visual filling the page (focus mode), optionally with its data as a table below it; without a visual goes back to the report.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` (optional) | string \| null | The visual to show in focus mode; absent: back to the report. |
+| `showAsTable` (optional) | boolean | Also show the visual's data as a table below it ("Show as a table"). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string |  |
+| `report` | string | Report name. |
+| `page` | string | Page internal name. |
+| `pageDisplayName` | string |  |
+| `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
+| `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
+| `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
+| `width` | number |  |
+| `height` | number |  |
+| `hitRegions` | HitRegionOut[] | Hit regions in paint order (hit-test from the end). |
+| `overlayHitRegions` | HitRegionOut[] | Hit regions of the overlay (above every page region). |
+| `visuals` | CanvasVisualOut[] | Every visual of the page (hidden ones included), in page order. |
+| `interactions` | CanvasInteractionOut[] |  |
+| `selections` | SelectionOut[] | Slicer selections and the cross-filter. |
+| `effectiveFilters` | FilterSpecOut | Report + page filters + selections as a filter spec (what cards are evaluated in, ignoring per-visual interactions). |
+| `isDefault` | boolean | The state equals the report's saved state. |
+| `warnings` | string[] | Unreadable saved slicer selections. |
+| `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
+
+Examples:
+
+- Focus on a visual: `{"docId":"d1","visual":"9a5c3f0e1b"}`
+- Back to the report: `{"docId":"d1"}`
+
+### `canvas.showAsTable`
+
+**Show as a table.** Shows a visual with its data as a table below it, filling the page (focus mode); without a visual goes back to the report.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` (optional) | string \| null | The visual's name; absent: ends the mode. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string |  |
+| `report` | string | Report name. |
+| `page` | string | Page internal name. |
+| `pageDisplayName` | string |  |
+| `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
+| `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
+| `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
+| `width` | number |  |
+| `height` | number |  |
+| `hitRegions` | HitRegionOut[] | Hit regions in paint order (hit-test from the end). |
+| `overlayHitRegions` | HitRegionOut[] | Hit regions of the overlay (above every page region). |
+| `visuals` | CanvasVisualOut[] | Every visual of the page (hidden ones included), in page order. |
+| `interactions` | CanvasInteractionOut[] |  |
+| `selections` | SelectionOut[] | Slicer selections and the cross-filter. |
+| `effectiveFilters` | FilterSpecOut | Report + page filters + selections as a filter spec (what cards are evaluated in, ignoring per-visual interactions). |
+| `isDefault` | boolean | The state equals the report's saved state. |
+| `warnings` | string[] | Unreadable saved slicer selections. |
+| `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
+
+Examples:
+
+- A chart's data as a table: `{"docId":"d1","visual":"9a5c3f0e1b"}`
+
+### `canvas.setSpotlight`
+
+**Spotlight.** Spotlights a visual (the other visuals fade); without a visual ends the spotlight.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` (optional) | string \| null | The visual's name; absent: ends the mode. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string |  |
+| `report` | string | Report name. |
+| `page` | string | Page internal name. |
+| `pageDisplayName` | string |  |
+| `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
+| `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
+| `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
+| `width` | number |  |
+| `height` | number |  |
+| `hitRegions` | HitRegionOut[] | Hit regions in paint order (hit-test from the end). |
+| `overlayHitRegions` | HitRegionOut[] | Hit regions of the overlay (above every page region). |
+| `visuals` | CanvasVisualOut[] | Every visual of the page (hidden ones included), in page order. |
+| `interactions` | CanvasInteractionOut[] |  |
+| `selections` | SelectionOut[] | Slicer selections and the cross-filter. |
+| `effectiveFilters` | FilterSpecOut | Report + page filters + selections as a filter spec (what cards are evaluated in, ignoring per-visual interactions). |
+| `isDefault` | boolean | The state equals the report's saved state. |
+| `warnings` | string[] | Unreadable saved slicer selections. |
+| `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
+
+Examples:
+
+- Spotlight a visual: `{"docId":"d1","visual":"9a5c3f0e1b"}`
+- End the spotlight: `{"docId":"d1"}`
+
+### `canvas.sortVisual`
+
+**Sort a visual.** Sorts a visual by one of its fields (the header's "Sort axis"), changes the sort direction or restores the saved sort.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` | string | The visual's name. |
+| `field` (optional) | string \| null | Field to sort by: `queryRef`, display name or `Table[Column]`; absent: `direction` applies to the current sort, or (without `direction`) the saved sort returns. |
+| `direction` (optional) | `"ascending"` \| `"descending"` \| null | Default: descending for values, ascending for categories. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string |  |
+| `report` | string | Report name. |
+| `page` | string | Page internal name. |
+| `pageDisplayName` | string |  |
+| `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
+| `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
+| `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
+| `width` | number |  |
+| `height` | number |  |
+| `hitRegions` | HitRegionOut[] | Hit regions in paint order (hit-test from the end). |
+| `overlayHitRegions` | HitRegionOut[] | Hit regions of the overlay (above every page region). |
+| `visuals` | CanvasVisualOut[] | Every visual of the page (hidden ones included), in page order. |
+| `interactions` | CanvasInteractionOut[] |  |
+| `selections` | SelectionOut[] | Slicer selections and the cross-filter. |
+| `effectiveFilters` | FilterSpecOut | Report + page filters + selections as a filter spec (what cards are evaluated in, ignoring per-visual interactions). |
+| `isDefault` | boolean | The state equals the report's saved state. |
+| `warnings` | string[] | Unreadable saved slicer selections. |
+| `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
+
+Examples:
+
+- Sort by a measure: `{"docId":"d1","visual":"9a5c3f0e1b","field":"Sales.Total Sales"}`
+- Ascending: `{"docId":"d1","visual":"9a5c3f0e1b","direction":"ascending"}`
 
 ### `canvas.clearSelections`
 
@@ -2081,6 +2281,8 @@ Result:
 | `isDefault` | boolean | The state equals the report's saved state. |
 | `warnings` | string[] | Unreadable saved slicer selections. |
 | `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
 
 Examples:
 
@@ -2126,6 +2328,8 @@ Result:
 | `isDefault` | boolean | The state equals the report's saved state. |
 | `warnings` | string[] | Unreadable saved slicer selections. |
 | `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
 
 Examples:
 
@@ -2169,6 +2373,8 @@ Result:
 | `isDefault` | boolean | The state equals the report's saved state. |
 | `warnings` | string[] | Unreadable saved slicer selections. |
 | `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
 
 Examples:
 
@@ -2238,6 +2444,8 @@ Result:
 | `isDefault` | boolean | The state equals the report's saved state. |
 | `warnings` | string[] | Unreadable saved slicer selections. |
 | `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
 
 Examples:
 
@@ -2324,6 +2532,33 @@ Examples:
 
 - Hover a column: `{"docId":"d1","report":"Stores","page":"Store Performance","hitId":"1f2e3d|dataPoint|0|2"}`
 
+### `canvas.contextMenu`
+
+**Data point context menu.** What a data point's context menu can copy ("Copy value", "Copy selection"), from the last render.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `hitId` | string | A hit id from the last render. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `visual` | string | The visual (a data table's source visual). |
+| `copyValue`? | string \| null | "Copy value": the value under the pointer. |
+| `copySelection`? | string \| null | "Copy selection": the point's fields and values as tab-separated header and value rows. |
+
+Examples:
+
+- A table cell: `{"docId":"d1","hitId":"1f2e3d|dataPoint|1|4"}`
+
 ### `canvas.drill`
 
 **Drill down or up.** Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page.
@@ -2364,6 +2599,8 @@ Result:
 | `isDefault` | boolean | The state equals the report's saved state. |
 | `warnings` | string[] | Unreadable saved slicer selections. |
 | `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
 
 Examples:
 
@@ -2492,6 +2729,43 @@ Examples:
 
 - CSV for Excel: `{"docId":"d1","table":"Orders","format":"csv","path":"target/tmp/orders.csv","formatted":true,"excelSafe":true,"bom":true}`
 - Parquet: `{"docId":"d1","table":"Returns","format":"parquet","path":"target/tmp/returns.parquet","overwrite":true}`
+
+### `export.visualData`
+
+**Export a visual's data.** Exports a visual's summarized data or its underlying rows as CSV, with the page's filters, slicers and selections applied.
+
+_long-running, agent-safe, writes files; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` | string | The visual's name. |
+| `mode` (optional) | `"summarized"` \| `"underlying"` | What `export.visualData` exports. |
+| `path` (optional) | string \| null | The CSV file to write; absent: the CSV is returned inline. |
+| `formatted` (optional) | boolean | Values formatted as the visual shows them instead of raw values. |
+| `excelSafe` (optional) | boolean | Prefix text cells starting with `=`, `+`, `-`, `@`, TAB or CR with `'` (spreadsheet formula-injection guard). |
+| `overwrite` (optional) | boolean | Replace an existing file. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `mode` | `"summarized"` \| `"underlying"` | What `export.visualData` exports. |
+| `columns` | string[] | Column headers. |
+| `rows` | integer | Data rows (without the header). |
+| `truncated` | boolean | The rows were cut at the row limit (30 000). |
+| `warnings` | string[] | Filters not applied, columns left out. |
+| `path`? | string \| null | The written file. |
+| `csv`? | string \| null | The CSV, when no `path` was given. |
+
+Examples:
+
+- Summarized data, inline: `{"docId":"d1","visual":"9a5c3f0e1b"}`
+- Underlying rows to a file: `{"docId":"d1","visual":"9a5c3f0e1b","mode":"underlying","path":"target/tmp/rows.csv","excelSafe":true}`
 
 ### `export.model`
 

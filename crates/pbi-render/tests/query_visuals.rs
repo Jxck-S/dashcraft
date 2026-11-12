@@ -1103,3 +1103,105 @@ fn scatter_gauge_treemap_and_waterfall_query_their_roles() {
     assert!(v.windows(2).all(|w| w[0] >= w[1]), "{v:?}");
     assert_eq!(v.iter().sum::<i64>(), 5);
 }
+
+fn export_report() -> Report {
+    let stores = visual(
+        "stores",
+        "clusteredColumnChart",
+        vec![
+            projection("Category", col("Stores", "Region")),
+            projection("Y", measure("Store Count")),
+        ],
+    );
+    let orders = visual(
+        "orders",
+        "clusteredColumnChart",
+        vec![
+            projection("Category", col("Stores", "Region")),
+            projection("Y", measure("Order Count")),
+        ],
+    );
+    report(Page {
+        name: "p".into(),
+        visuals: vec![stores, orders],
+        visual_interactions: vec![VisualInteraction {
+            source: "orders".into(),
+            target: "stores".into(),
+            kind: InteractionKind::DataFilter,
+        }],
+        ..Page::default()
+    })
+}
+
+fn texts(rows: &[Vec<pbi_render::dataview::CellValue>]) -> Vec<Vec<String>> {
+    let mut out: Vec<Vec<String>> = rows
+        .iter()
+        .map(|r| r.iter().map(|c| c.formatted.clone()).collect())
+        .collect();
+    out.sort();
+    out
+}
+
+#[test]
+fn export_summarized_and_underlying_data() {
+    let env = env();
+    let report = export_report();
+    let page = &report.pages[0];
+    let limits = QueryLimits::default();
+    let state = InteractionState::new();
+    let stores = page.visual("stores").unwrap();
+
+    let summary = env
+        .summarized_data(&report, page, stores, &state, &limits)
+        .unwrap();
+    assert_eq!(summary.headers, ["Region", "Store Count"]);
+    assert_eq!(
+        texts(&summary.rows),
+        [["Central", "3"], ["East", "1"], ["West", "1"]]
+    );
+    assert!(!summary.truncated);
+
+    let rows = env
+        .underlying_data(&report, page, stores, &state, &limits)
+        .unwrap();
+    assert_eq!(rows.headers[0], "Region");
+    assert!(
+        rows.headers.iter().any(|h| h == "Store Name"),
+        "{:?}",
+        rows.headers
+    );
+    assert_eq!(rows.headers.iter().filter(|h| *h == "Region").count(), 1);
+    assert_eq!(rows.rows.len(), 5);
+
+    // A selected data point that filters the visual narrows its rows.
+    let mut selected = InteractionState::new();
+    selected.selected_points = Some(PointSelection::point(
+        "orders",
+        vec![(col("Stores", "Region"), Value::string("Central"))],
+    ));
+    let rows = env
+        .underlying_data(&report, page, stores, &selected, &limits)
+        .unwrap();
+    assert_eq!(rows.rows.len(), 3, "{:?}", texts(&rows.rows));
+
+    // Order rows read the store's region through the relationship.
+    let orders = page.visual("orders").unwrap();
+    let rows = env
+        .underlying_data(&report, page, orders, &state, &limits)
+        .unwrap();
+    assert_eq!(rows.headers, ["Region", "StoreKey", "Payment"]);
+    let mut regions: Vec<String> = rows.rows.iter().map(|r| r[0].formatted.clone()).collect();
+    regions.sort();
+    assert_eq!(regions, ["", "Central", "East", "East", "West"]);
+
+    // Capped at the row limit.
+    let one = QueryLimits {
+        max_rows: 2,
+        ..QueryLimits::default()
+    };
+    let rows = env
+        .underlying_data(&report, page, orders, &state, &one)
+        .unwrap();
+    assert_eq!(rows.rows.len(), 2);
+    assert!(rows.truncated);
+}

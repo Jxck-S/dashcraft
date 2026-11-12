@@ -1222,10 +1222,19 @@ in focus mode or as a table and export its data; see images and report-level mea
   session clock (`--now`, `doc.open` `now`) everywhere a filter applies, and renders without a clock
   skip them with a warning; the app drags the handles (mouse and arrow keys), edits the boxes and
   shows the relative pickers.
-- [ ] **M9.8 Visual header and context menus.** Focus mode, show as table (visual plus data),
+- [x] **M9.8 Visual header and context menus.** Focus mode, show as table (visual plus data),
   sort by and sort direction from the menu (view state), spotlight, copy value and copy selection,
   export data (summarized and underlying, CSV first), context menu on data points (the Analyze
-  entries arrive with M23.7).
+  entries arrive with M23.7). *Done:* `canvas.focus` / `canvas.showAsTable` (the visual fills the
+  page within a 16 px margin, with a table of its data below it; bookmarks in focus mode apply it
+  too), `canvas.setSpotlight`, `canvas.sortVisual` (by field and / or direction, back to the saved
+  sort; `canvas.render` lists each visual's sort fields), `canvas.contextMenu` (copy value, copy
+  selection as tab-separated text) and `export.visualData` (summarized: the visual's query; underlying:
+  the rows of its base table under its filters, with related columns; CSV, row-capped); the app's
+  visual header (Focus mode, More options) and right-click menu. Approximations: the base table of
+  the underlying data is the table of the visual's first field, columns over many-to-many
+  relationships are left out with a warning, totals are not exported, and Desktop's focus margins
+  are not documented.
 - [ ] **M9.9 Report-level measures, images and legacy themes.** Measures from
   `reportExtensions.json` evaluate in visuals; `RegisteredResources` images draw as `image`
   visuals, page backgrounds, wallpapers and button images (PNG, JPEG, GIF first frame, sanitized

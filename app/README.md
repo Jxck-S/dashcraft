@@ -754,11 +754,10 @@ on Windows 10 and 11.
   are capped at 1000 rows per `EVALUATE` and use the model's format strings for model columns.
 - Report canvas: highlights are drawn on bar, column, combo, pie, donut, treemap and funnel
   charts, whose data labels show the highlighted values and tooltips a "Highlighted" line; other visuals (tables, matrices, lines, …) are filtered instead; Q&A and Web URL
-  buttons are not executed; bookmarks cannot be added or updated, and their focus-mode and
+  buttons are not executed; bookmarks cannot be added or updated, and their
   cross-highlight parts are not applied; range slicers have no
-  calendar popup (tiles select like list items); no visual header menus (focus mode, show as table, sort, export) or filter
-  card editing (the header shows drill buttons only); the right-click menu offers drill and
-  Drill through only; cross-filters
+  calendar popup (tiles select like list items); no filter card editing; the visual header and
+  right-click menu have no Analyze, Include or Exclude items, and Export data writes CSV only; cross-filters
   from matrices use the row path only; report-page tooltips show for chart data points only;
   interaction state lasts until the document closes. Performance analyzer, Sync
   slicers, Mobile layout and the Analytics pane are shown disabled.

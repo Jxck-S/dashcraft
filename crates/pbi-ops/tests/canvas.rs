@@ -1426,3 +1426,184 @@ async fn relative_date_slicers_follow_the_session_clock() {
         cleared["selections"]
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_header_focus_sort_spotlight_copy_and_export() {
+    let dir = tmp_dir("pbi-ops-header-");
+    let pbip = mini_pbip(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let visual = |page: &Value, name: &str| {
+        page["visuals"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["name"] == name)
+            .cloned()
+            .unwrap_or_else(|| panic!("no visual {name} in {page}"))
+    };
+
+    // The bar chart sorts by its axis or its value; cards do not sort.
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    let sort = &visual(&page, "bars")["sort"];
+    let refs: Vec<&str> = sort["fields"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["queryRef"].as_str().unwrap())
+        .collect();
+    assert_eq!(refs, ["Sales.Region", "Sum(Sales.Amount)"]);
+    assert_eq!(sort["changed"], false);
+    assert!(visual(&page, "total").get("sort").is_none());
+
+    let sorted = r
+        .run(
+            "canvas.sortVisual",
+            json!({"docId": doc, "visual": "bars", "field": "Region"}),
+        )
+        .await;
+    let current = &visual(&sorted, "bars")["sort"]["current"];
+    assert_eq!(current[0]["queryRef"], "Sales.Region", "{current}");
+    assert_eq!(current[0]["direction"], "ascending");
+    let flipped = r
+        .run(
+            "canvas.sortVisual",
+            json!({"docId": doc, "visual": "bars", "direction": "descending"}),
+        )
+        .await;
+    let sort = &visual(&flipped, "bars")["sort"];
+    assert_eq!(sort["current"][0]["direction"], "descending");
+    assert_eq!(sort["changed"], true);
+    let by_value = r
+        .run(
+            "canvas.sortVisual",
+            json!({"docId": doc, "visual": "bars", "field": "Sales[Amount]"}),
+        )
+        .await;
+    assert_eq!(
+        visual(&by_value, "bars")["sort"]["current"][0]["direction"],
+        "descending"
+    );
+    let reset = r
+        .run("canvas.sortVisual", json!({"docId": doc, "visual": "bars"}))
+        .await;
+    assert_eq!(visual(&reset, "bars")["sort"]["changed"], false);
+    let err = r
+        .try_run(
+            "canvas.sortVisual",
+            json!({"docId": doc, "visual": "bars", "field": "Nope"}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::NotFound, "{err:?}");
+    let err = r
+        .try_run(
+            "canvas.sortVisual",
+            json!({"docId": doc, "visual": "total", "field": "Total"}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::InvalidParams, "{err:?}");
+
+    // Copy value and selection of a bar.
+    let bar = hit(&page, "bars|dataPoint|").to_owned();
+    let menu = r
+        .run("canvas.contextMenu", json!({"docId": doc, "hitId": bar}))
+        .await;
+    assert_eq!(menu["visual"], "bars");
+    let value = menu["copyValue"].as_str().unwrap();
+    let selection = menu["copySelection"].as_str().unwrap();
+    let (header, values) = selection.split_once('\n').unwrap();
+    assert_eq!(header, "Region\tSum of Amount", "{menu}");
+    assert!(values.ends_with(&format!("\t{value}")), "{menu}");
+    assert!(["630", "590", "610"].contains(&value), "{menu}");
+
+    // Spotlight.
+    let lit = r
+        .run(
+            "canvas.setSpotlight",
+            json!({"docId": doc, "visual": "bars"}),
+        )
+        .await;
+    assert_eq!(lit["spotlight"], "bars");
+    let off = r.run("canvas.setSpotlight", json!({"docId": doc})).await;
+    assert!(off.get("spotlight").is_none());
+
+    // Focus mode: the chart fills the page, the others are hidden.
+    let focused = r
+        .run("canvas.focus", json!({"docId": doc, "visual": "bars"}))
+        .await;
+    assert_eq!(focused["focus"]["visual"], "bars", "{focused}");
+    assert_eq!(visual(&focused, "total")["hidden"], true);
+    assert_eq!(visual(&focused, "region")["hidden"], true);
+    let rect = &visual(&focused, "bars")["rect"];
+    assert!(rect["width"].as_f64().unwrap() > 600.0, "{rect}");
+    assert_eq!(focused["isDefault"], false);
+
+    // Show as a table: a table of the chart's data below it, whose cells
+    // copy like any table's.
+    let table = r
+        .run(
+            "canvas.showAsTable",
+            json!({"docId": doc, "visual": "bars"}),
+        )
+        .await;
+    assert_eq!(table["focus"]["showAsTable"], true);
+    let data = visual(&table, "bars~table");
+    assert_eq!(data["visualType"], "tableEx");
+    assert!(data["error"].is_null(), "{data}");
+    let cell = hit(&table, "bars~table|dataPoint|").to_owned();
+    let menu = r
+        .run("canvas.contextMenu", json!({"docId": doc, "hitId": cell}))
+        .await;
+    assert_eq!(menu["visual"], "bars", "{menu}");
+    assert!(menu["copyValue"].is_string(), "{menu}");
+    let click = r
+        .run("canvas.click", json!({"docId": doc, "hitId": cell}))
+        .await;
+    assert_eq!(click["changed"], false, "a data table cell does not select");
+    let back = r.run("canvas.focus", json!({"docId": doc})).await;
+    assert!(back.get("focus").is_none());
+    assert_eq!(visual(&back, "total")["hidden"], false);
+    let err = r
+        .try_run("canvas.focus", json!({"docId": doc, "visual": "nope"}))
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::NotFound, "{err:?}");
+
+    // Export: the summarized data inline, the underlying rows to a file,
+    // both under the slicer selection.
+    let summary = r
+        .run("export.visualData", json!({"docId": doc, "visual": "bars"}))
+        .await;
+    assert_eq!(summary["columns"], json!(["Region", "Sum of Amount"]));
+    let mut lines: Vec<&str> = summary["csv"].as_str().unwrap().lines().collect();
+    assert_eq!(lines.remove(0), "Region,Sum of Amount");
+    lines.sort_unstable();
+    assert_eq!(lines, ["East,630", "North,610", "West,590"]);
+    r.run(
+        "canvas.setSlicer",
+        json!({"docId": doc, "visual": "region", "values": ["North"]}),
+    )
+    .await;
+    let out = dir.path().join("rows.csv");
+    let rows = r
+        .run(
+            "export.visualData",
+            json!({"docId": doc, "visual": "bars", "mode": "underlying", "path": out}),
+        )
+        .await;
+    assert_eq!(rows["rows"], 20, "{rows}");
+    assert_eq!(rows["columns"][0], "Region");
+    let csv = std::fs::read_to_string(&out).unwrap();
+    assert!(csv.starts_with("Region,Amount,Item\r\n"), "{csv}");
+    assert_eq!(csv.lines().count(), 21);
+    let err = r
+        .try_run(
+            "export.visualData",
+            json!({"docId": doc, "visual": "bars", "path": out}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::Io, "{err:?}");
+}

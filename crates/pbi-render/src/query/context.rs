@@ -92,12 +92,14 @@ pub(crate) fn visual_filters(
     let builder = env.builder();
     let mut out = VisualFilters::default();
     let mut top_n = Vec::new();
+    // A data table (focus mode's "Show as a table") filters as its visual.
+    let name = super::export::source_name(&visual.name);
     for (scope, level, filters) in [
         (WarningScope::Report, FilterLevel::Report, &report.filters),
         (WarningScope::Page, FilterLevel::Page, &page.filters),
         (
             WarningScope::Visual,
-            FilterLevel::Visual(&visual.name),
+            FilterLevel::Visual(name),
             &visual.filters,
         ),
     ] {
@@ -142,7 +144,7 @@ pub(crate) fn visual_filters(
     for slicer in page
         .visuals
         .iter()
-        .filter(|s| s.name != visual.name && is_slicer_type(&s.visual_type))
+        .filter(|s| s.name != name && is_slicer_type(&s.visual_type))
     {
         let Some(selection) = state.slicer_selections.get(&slicer.name) else {
             continue;
@@ -150,7 +152,7 @@ pub(crate) fn visual_filters(
         if selection.is_all() {
             continue;
         }
-        match page.interaction(&slicer.name, &visual.name) {
+        match page.interaction(&slicer.name, name) {
             Some(InteractionKind::NoFilter) => continue,
             Some(InteractionKind::HighlightFilter) => note_highlight(&mut out, &slicer.name),
             _ => {}
@@ -159,10 +161,10 @@ pub(crate) fn visual_filters(
     }
 
     if let Some(points) = &state.selected_points
-        && points.source != visual.name
+        && points.source != name
         && !points.points.is_empty()
     {
-        let kind = page.interaction(&points.source, &visual.name);
+        let kind = page.interaction(&points.source, name);
         let highlight = match kind {
             Some(InteractionKind::NoFilter) => None,
             Some(InteractionKind::HighlightFilter) => Some(true),

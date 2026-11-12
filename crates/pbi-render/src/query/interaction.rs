@@ -1,6 +1,7 @@
 //! Report interaction state: slicer selections, the selected data points
-//! of one visual (cross-filtering) and what a bookmark changes: visuals it
-//! shows, hides or sorts and filter cards it sets.
+//! of one visual (cross-filtering), what a bookmark changes (visuals it
+//! shows, hides or sorts and filter cards it sets) and the visual header's
+//! view modes (spotlight, focus mode, "Show as a table").
 //!
 //! # Where slicer selections live in PBIR
 //!
@@ -48,7 +49,7 @@ use std::borrow::Cow;
 use indexmap::IndexMap;
 use pbi_engine::Value;
 use pbi_model::{
-    Condition, FieldExpr, Filter, LiteralValue, Page, PropValue, Report, SortItem, Visual,
+    Condition, FieldExpr, Filter, LiteralValue, Page, Position, PropValue, Report, SortItem, Visual,
 };
 use serde::{Deserialize, Serialize};
 
@@ -187,7 +188,28 @@ pub struct InteractionState {
     /// other visuals of the page are drawn faded.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub spotlight: Option<String>,
+    /// The visual in focus mode (the visual header's "Focus mode" and
+    /// "Show as a table", a bookmark's `maximize` display mode): it fills
+    /// the page and the other visuals are hidden (see
+    /// [`InteractionState::page_with_visibility`]).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focus: Option<FocusState>,
 }
+
+/// Focus mode of one visual.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FocusState {
+    /// Name of the visual in focus.
+    pub visual: String,
+    /// "Show as a table": the visual's data as a table below it
+    /// ([`data_table_visual`](super::export::data_table_visual), named
+    /// [`data_table_name`](super::export::data_table_name)).
+    pub show_as_table: bool,
+}
+
+/// Margin around a visual in focus mode (page units).
+pub const FOCUS_MARGIN: f64 = 16.0;
 
 /// Where a filter card lives.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -352,14 +374,23 @@ impl InteractionState {
     }
 
     /// `page` with [`Self::visibility`] applied to its visuals' `isHidden`
-    /// (borrowed when nothing changes).
+    /// and [`Self::focus`] applied (borrowed when nothing changes). In focus
+    /// mode every other visual is hidden (hidden slicers keep filtering) and
+    /// the visual, out of its group, fills the page within
+    /// [`FOCUS_MARGIN`]; with "Show as a table" it takes the top half and
+    /// its data table the bottom half.
     pub fn page_with_visibility<'a>(&self, page: &'a Page) -> Cow<'a, Page> {
         let differs = |v: &Visual| {
             self.visibility
                 .get(&v.name)
                 .is_some_and(|h| *h != v.is_hidden)
         };
-        if !page.visuals.iter().any(differs) {
+        let focus = self.focus.as_ref().filter(|f| {
+            page.visuals
+                .iter()
+                .any(|v| v.name == f.visual && !v.is_group())
+        });
+        if focus.is_none() && !page.visuals.iter().any(differs) {
             return Cow::Borrowed(page);
         }
         let mut page = page.clone();
@@ -368,7 +399,50 @@ impl InteractionState {
                 v.is_hidden = *hidden;
             }
         }
+        if let Some(focus) = focus {
+            self.focus_page(&mut page, focus);
+        }
         Cow::Owned(page)
+    }
+
+    fn focus_page(&self, page: &mut Page, focus: &FocusState) {
+        let m = FOCUS_MARGIN;
+        let width = (page.width - 2.0 * m).max(1.0);
+        let height = (page.height - 2.0 * m).max(1.0);
+        let top = if focus.show_as_table {
+            ((height - m) / 2.0).max(1.0)
+        } else {
+            height
+        };
+        let mut table = None;
+        for v in &mut page.visuals {
+            if v.name != focus.visual {
+                v.is_hidden = true;
+                continue;
+            }
+            v.is_hidden = false;
+            v.parent_group_name = None;
+            v.position = Position {
+                x: m,
+                y: m,
+                width,
+                height: top,
+                angle: None,
+                ..v.position.clone()
+            };
+            if focus.show_as_table {
+                let drilled = super::drill::drilled_visual(v, self);
+                let mut t = super::export::data_table_visual(&drilled);
+                t.name = super::export::data_table_name(&v.name);
+                if let Some(sort) = self.sort.get(&v.name) {
+                    t.sort.clone_from(sort);
+                }
+                t.position.y = m + top + m;
+                t.position.height = (height - top - m).max(1.0);
+                table = Some(t);
+            }
+        }
+        page.visuals.extend(table);
     }
 }
 

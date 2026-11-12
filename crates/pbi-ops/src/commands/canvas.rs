@@ -12,8 +12,8 @@ use pbi_render::query::relative::RelativeDateSpec;
 
 use super::{BASE, loaded_doc};
 use crate::canvas::{
-    self, CanvasAction, CanvasPageOut, Changed, DrillthroughTargetOut, MAX_SEARCH_CHARS, Modifiers,
-    Target, TooltipLineOut, TooltipPageOut,
+    self, CanvasAction, CanvasPageOut, Changed, ContextMenuOut, DrillthroughTargetOut,
+    MAX_SEARCH_CHARS, Modifiers, SortOrder, Target, TooltipLineOut, TooltipPageOut,
 };
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
@@ -525,6 +525,197 @@ impl Command for CanvasClearSelections {
 
 // ---------------------------------------------------------------------------
 
+/// `canvas.focus`.
+#[derive(Debug)]
+pub struct CanvasFocus;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CanvasFocusParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+    /// Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page.
+    #[serde(default)]
+    pub page: Option<String>,
+    /// The visual to show in focus mode; absent: back to the report.
+    #[serde(default)]
+    pub visual: Option<String>,
+    /// Also show the visual's data as a table below it ("Show as a
+    /// table").
+    #[serde(default)]
+    pub show_as_table: bool,
+}
+
+impl Command for CanvasFocus {
+    type Params = CanvasFocusParams;
+    type Output = CanvasPageOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.focus",
+            title: "Focus mode",
+            summary: "Shows one visual filling the page (focus mode), optionally with its data as a table below it; without a visual goes back to the report.",
+            long_running: true,
+            examples: &[
+                (
+                    "Focus on a visual",
+                    r#"{"docId": "d1", "visual": "9a5c3f0e1b"}"#,
+                ),
+                ("Back to the report", r#"{"docId": "d1"}"#),
+            ],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        canvas::focus(&t, p.visual.as_deref(), p.show_as_table).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.showAsTable`.
+#[derive(Debug)]
+pub struct CanvasShowAsTable;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CanvasVisualParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+    /// Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page.
+    #[serde(default)]
+    pub page: Option<String>,
+    /// The visual's name; absent: ends the mode.
+    #[serde(default)]
+    pub visual: Option<String>,
+}
+
+impl Command for CanvasShowAsTable {
+    type Params = CanvasVisualParams;
+    type Output = CanvasPageOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.showAsTable",
+            title: "Show as a table",
+            summary: "Shows a visual with its data as a table below it, filling the page (focus mode); without a visual goes back to the report.",
+            long_running: true,
+            examples: &[(
+                "A chart's data as a table",
+                r#"{"docId": "d1", "visual": "9a5c3f0e1b"}"#,
+            )],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        canvas::focus(&t, p.visual.as_deref(), true).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.setSpotlight`.
+#[derive(Debug)]
+pub struct CanvasSetSpotlight;
+
+impl Command for CanvasSetSpotlight {
+    type Params = CanvasVisualParams;
+    type Output = CanvasPageOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.setSpotlight",
+            title: "Spotlight",
+            summary: "Spotlights a visual (the other visuals fade); without a visual ends the spotlight.",
+            long_running: true,
+            examples: &[
+                (
+                    "Spotlight a visual",
+                    r#"{"docId": "d1", "visual": "9a5c3f0e1b"}"#,
+                ),
+                ("End the spotlight", r#"{"docId": "d1"}"#),
+            ],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        canvas::set_spotlight(&t, p.visual.as_deref()).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.sortVisual`.
+#[derive(Debug)]
+pub struct CanvasSortVisual;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CanvasSortVisualParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+    /// Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page.
+    #[serde(default)]
+    pub page: Option<String>,
+    /// The visual's name.
+    pub visual: String,
+    /// Field to sort by: `queryRef`, display name or `Table[Column]`;
+    /// absent: `direction` applies to the current sort, or (without
+    /// `direction`) the saved sort returns.
+    #[serde(default)]
+    pub field: Option<String>,
+    /// Default: descending for values, ascending for categories.
+    #[serde(default)]
+    pub direction: Option<SortOrder>,
+}
+
+impl Command for CanvasSortVisual {
+    type Params = CanvasSortVisualParams;
+    type Output = CanvasPageOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.sortVisual",
+            title: "Sort a visual",
+            summary: "Sorts a visual by one of its fields (the header's \"Sort axis\"), changes the sort direction or restores the saved sort.",
+            long_running: true,
+            examples: &[
+                (
+                    "Sort by a measure",
+                    r#"{"docId": "d1", "visual": "9a5c3f0e1b", "field": "Sales.Total Sales"}"#,
+                ),
+                (
+                    "Ascending",
+                    r#"{"docId": "d1", "visual": "9a5c3f0e1b", "direction": "ascending"}"#,
+                ),
+            ],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        canvas::sort_visual(&t, &p.visual, p.field.as_deref(), p.direction).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+
 /// `canvas.setSlicerSearch`.
 #[derive(Debug)]
 pub struct CanvasSetSlicerSearch;
@@ -898,6 +1089,36 @@ impl Command for CanvasTooltip {
         Ok(TooltipOut {
             lines: canvas::tooltip(&t, &p.hit_id)?,
         })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.contextMenu`.
+#[derive(Debug)]
+pub struct CanvasContextMenu;
+
+impl Command for CanvasContextMenu {
+    type Params = CanvasHitParams;
+    type Output = ContextMenuOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.contextMenu",
+            title: "Data point context menu",
+            summary: "What a data point's context menu can copy (\"Copy value\", \"Copy selection\"), from the last render.",
+            mutates_document: false,
+            examples: &[(
+                "A table cell",
+                r#"{"docId": "d1", "hitId": "1f2e3d|dataPoint|1|4"}"#,
+            )],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        canvas::context_menu(&t, &p.hit_id)
     }
 }
 

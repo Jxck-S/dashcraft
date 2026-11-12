@@ -400,6 +400,22 @@ export interface CanvasDrillthroughParams {
   targetReport?: string | null
 }
 
+export interface CanvasFocusParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /** The visual to show in focus mode; absent: back to the report. */
+  visual?: string | null
+  /**
+   * Also show the visual's data as a table below it ("Show as a
+   * table").
+   */
+  showAsTable?: boolean
+}
+
 export interface CanvasHitParams {
   /** The document id from `doc.open` (`d1`, …). */
   docId: string
@@ -484,6 +500,10 @@ export interface CanvasPageOut {
   warnings: string[]
   /** Query + render wall time. */
   durationMs: number
+  /** The visual in focus mode (`canvas.focus`). */
+  focus?: FocusOut | null
+  /** The spotlighted visual (`canvas.setSpotlight`, bookmarks). */
+  spotlight?: string | null
 }
 
 /** The page of a canvas command. */
@@ -607,6 +627,25 @@ export interface CanvasSetSlicerParams {
   invert?: boolean
 }
 
+export interface CanvasSortVisualParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /** The visual's name. */
+  visual: string
+  /**
+   * Field to sort by: `queryRef`, display name or `Table[Column]`;
+   * absent: `direction` applies to the current sort, or (without
+   * `direction`) the saved sort returns.
+   */
+  field?: string | null
+  /** Default: descending for values, ascending for categories. */
+  direction?: SortOrder | null
+}
+
 export interface CanvasStateOut {
   /** Slicer selections and selected data points (`InteractionState`). */
   interaction: JsonValue
@@ -650,6 +689,22 @@ export interface CanvasVisualOut {
    * has fewer than two levels to drill on.
    */
   drill?: DrillOut | null
+  /**
+   * The fields the visual can be sorted by and its current sort
+   * (`canvas.sortVisual`); absent for visuals that do not sort.
+   */
+  sort?: VisualSortOut | null
+}
+
+export interface CanvasVisualParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /** The visual's name; absent: ends the mode. */
+  visual?: string | null
 }
 
 /** An AI capability. The id (`dax.explain`, …) is stable. */
@@ -987,6 +1042,19 @@ export interface ConsentRevokeParams {
   provider: string
   /** Only this capability (default: all of the provider's consents). */
   capability?: Capability | null
+}
+
+/** What a data point's context menu offers. */
+export interface ContextMenuOut {
+  /** The visual (a data table's source visual). */
+  visual: string
+  /** "Copy value": the value under the pointer. */
+  copyValue?: string | null
+  /**
+   * "Copy selection": the point's fields and values as tab-separated
+   * header and value rows.
+   */
+  copySelection?: string | null
 }
 
 export interface ConvertPbipOut {
@@ -2620,6 +2688,45 @@ export interface ExportTableParams {
   overwrite?: boolean
 }
 
+export interface ExportVisualDataOut {
+  mode: VisualDataMode
+  /** Column headers. */
+  columns: string[]
+  /** Data rows (without the header). */
+  rows: number
+  /** The rows were cut at the row limit (30 000). */
+  truncated: boolean
+  /** Filters not applied, columns left out. */
+  warnings: string[]
+  /** The written file. */
+  path?: string | null
+  /** The CSV, when no `path` was given. */
+  csv?: string | null
+}
+
+export interface ExportVisualDataParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /** The visual's name. */
+  visual: string
+  mode?: VisualDataMode
+  /** The CSV file to write; absent: the CSV is returned inline. */
+  path?: string | null
+  /** Values formatted as the visual shows them instead of raw values. */
+  formatted?: boolean
+  /**
+   * Prefix text cells starting with `=`, `+`, `-`, `@`, TAB or CR with
+   * `'` (spreadsheet formula-injection guard).
+   */
+  excelSafe?: boolean
+  /** Replace an existing file. */
+  overwrite?: boolean
+}
+
 export interface ExpressionOut {
   name: string
   /** `m` or `dax`. */
@@ -2742,6 +2849,16 @@ export interface FindingOut {
   object?: number | null
   /** A fix hint. */
   suggestion?: string | null
+}
+
+/** A visual in focus mode. */
+export interface FocusOut {
+  visual: string
+  /**
+   * Its data is shown as a table below it (the table is the visual
+   * named `<visual>~table`).
+   */
+  showAsTable: boolean
 }
 
 export interface GenerateMeasureOut {
@@ -4568,6 +4685,27 @@ export interface SnippetOut {
   after?: string | null
 }
 
+/** A field a visual can be sorted by. */
+export interface SortFieldOut {
+  /** The projection's `queryRef` (`canvas.sortVisual`'s `field`). */
+  queryRef: string
+  /** Display name. */
+  label: string
+  /** A measure or an aggregated column (sorted descending by default). */
+  isValue: boolean
+}
+
+/** One key of a visual's current sort. */
+export interface SortKeyOut {
+  /** `queryRef` of the field (`None` when it is not on the visual). */
+  queryRef: string | null
+  label: string
+  direction: SortOrder
+}
+
+/** Sort direction. */
+export type SortOrder = 'ascending' | 'descending'
+
 /** Sort order of `data.page`. */
 export interface SortParam {
   /** Column name (case-insensitive). */
@@ -5111,6 +5249,9 @@ export interface VisualCounts {
   truncated: number
 }
 
+/** What `export.visualData` exports. */
+export type VisualDataMode = 'summarized' | 'underlying'
+
 export interface VisualDataRoleOut {
   name: string
   displayName?: string | null
@@ -5153,6 +5294,18 @@ export interface VisualPositionOut {
    * to their group when the file does so).
    */
   members: MemberPositionOut[]
+}
+
+/** The sort of a visual (the visual header's "Sort axis"). */
+export interface VisualSortOut {
+  fields: SortFieldOut[]
+  /** Current sort keys, first first (empty: the visual's default order). */
+  current: SortKeyOut[]
+  /**
+   * Sorted differently from the saved report (by `canvas.sortVisual` or
+   * a bookmark).
+   */
+  changed: boolean
 }
 
 /** Status of one visual. */
@@ -5390,6 +5543,14 @@ export interface OpsCommands {
   'canvas.setRange': { params: CanvasSetRangeParams; output: CanvasPageOut }
   /** Filters a date slicer to a relative period ("Last 3 months", "This year", "Next 2 hours") of the session clock and returns the re-rendered page. */
   'canvas.setRelativeDate': { params: CanvasSetRelativeDateParams; output: CanvasPageOut }
+  /** Shows one visual filling the page (focus mode), optionally with its data as a table below it; without a visual goes back to the report. */
+  'canvas.focus': { params: CanvasFocusParams; output: CanvasPageOut }
+  /** Shows a visual with its data as a table below it, filling the page (focus mode); without a visual goes back to the report. */
+  'canvas.showAsTable': { params: CanvasVisualParams; output: CanvasPageOut }
+  /** Spotlights a visual (the other visuals fade); without a visual ends the spotlight. */
+  'canvas.setSpotlight': { params: CanvasVisualParams; output: CanvasPageOut }
+  /** Sorts a visual by one of its fields (the header's "Sort axis"), changes the sort direction or restores the saved sort. */
+  'canvas.sortVisual': { params: CanvasSortVisualParams; output: CanvasPageOut }
   /** Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page. */
   'canvas.clearSelections': { params: CanvasClearParams; output: CanvasPageOut }
   /** Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page. */
@@ -5406,6 +5567,8 @@ export interface OpsCommands {
   'canvas.tooltip': { params: CanvasHitParams; output: TooltipOut }
   /** Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. */
   'canvas.tooltipPage': { params: CanvasHitParams; output: CanvasTooltipPageOut }
+  /** What a data point's context menu can copy ("Copy value", "Copy selection"), from the last render. */
+  'canvas.contextMenu': { params: CanvasHitParams; output: ContextMenuOut }
   /** Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page. */
   'canvas.drill': { params: CanvasDrillParams; output: CanvasPageOut }
   /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
@@ -5416,6 +5579,8 @@ export interface OpsCommands {
   'canvas.state': { params: CanvasPageParams; output: CanvasStateOut }
   /** Writes one table's data as CSV or Parquet (with model metadata); loads the data on first use. */
   'export.table': { params: ExportTableParams; output: ExportTableOut }
+  /** Exports a visual's summarized data or its underlying rows as CSV, with the page's filters, slicers and selections applied. */
+  'export.visualData': { params: ExportVisualDataParams; output: ExportVisualDataOut }
   /** The model documentation as JSON (model doc) or a Markdown data dictionary, inline or to a file; no data needed. */
   'export.model': { params: ExportModelParams; output: ExportModelOut }
   /** Writes the document, unsaved edits included, as a PBIP project (TMDL + PBIR) into a folder; the open document keeps its source (doc.saveAs moves it). */
@@ -5538,6 +5703,10 @@ export const OPS_META = {
   'canvas.setSlicer': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.setRange': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.setRelativeDate': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
+  'canvas.focus': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
+  'canvas.showAsTable': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
+  'canvas.setSpotlight': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
+  'canvas.sortVisual': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.clearSelections': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.setSlicerSearch': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.toggleMatrixRow': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -5546,11 +5715,13 @@ export const OPS_META = {
   'canvas.applyBookmark': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.tooltip': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.tooltipPage': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'canvas.contextMenu': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.drill': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.drillthroughTargets': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.drillthrough': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.state': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'export.table': { category: 'export', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
+  'export.visualData': { category: 'export', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'export.model': { category: 'export', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: true },
   'convert.pbip': { category: 'convert', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'convert.pbit': { category: 'convert', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
@@ -5748,6 +5919,14 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasSetRange: (params: CanvasSetRangeParams, options?: O) => run('canvas.setRange', params, options),
     /** Filters a date slicer to a relative period ("Last 3 months", "This year", "Next 2 hours") of the session clock and returns the re-rendered page. */
     canvasSetRelativeDate: (params: CanvasSetRelativeDateParams, options?: O) => run('canvas.setRelativeDate', params, options),
+    /** Shows one visual filling the page (focus mode), optionally with its data as a table below it; without a visual goes back to the report. */
+    canvasFocus: (params: CanvasFocusParams, options?: O) => run('canvas.focus', params, options),
+    /** Shows a visual with its data as a table below it, filling the page (focus mode); without a visual goes back to the report. */
+    canvasShowAsTable: (params: CanvasVisualParams, options?: O) => run('canvas.showAsTable', params, options),
+    /** Spotlights a visual (the other visuals fade); without a visual ends the spotlight. */
+    canvasSetSpotlight: (params: CanvasVisualParams, options?: O) => run('canvas.setSpotlight', params, options),
+    /** Sorts a visual by one of its fields (the header's "Sort axis"), changes the sort direction or restores the saved sort. */
+    canvasSortVisual: (params: CanvasSortVisualParams, options?: O) => run('canvas.sortVisual', params, options),
     /** Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page. */
     canvasClearSelections: (params: CanvasClearParams, options?: O) => run('canvas.clearSelections', params, options),
     /** Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page. */
@@ -5764,6 +5943,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasTooltip: (params: CanvasHitParams, options?: O) => run('canvas.tooltip', params, options),
     /** Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. */
     canvasTooltipPage: (params: CanvasHitParams, options?: O) => run('canvas.tooltipPage', params, options),
+    /** What a data point's context menu can copy ("Copy value", "Copy selection"), from the last render. */
+    canvasContextMenu: (params: CanvasHitParams, options?: O) => run('canvas.contextMenu', params, options),
     /** Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page. */
     canvasDrill: (params: CanvasDrillParams, options?: O) => run('canvas.drill', params, options),
     /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
@@ -5774,6 +5955,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasState: (params: CanvasPageParams, options?: O) => run('canvas.state', params, options),
     /** Writes one table's data as CSV or Parquet (with model metadata); loads the data on first use. */
     exportTable: (params: ExportTableParams, options?: O) => run('export.table', params, options),
+    /** Exports a visual's summarized data or its underlying rows as CSV, with the page's filters, slicers and selections applied. */
+    exportVisualData: (params: ExportVisualDataParams, options?: O) => run('export.visualData', params, options),
     /** The model documentation as JSON (model doc) or a Markdown data dictionary, inline or to a file; no data needed. */
     exportModel: (params: ExportModelParams, options?: O) => run('export.model', params, options),
     /** Writes the document, unsaved edits included, as a PBIP project (TMDL + PBIR) into a folder; the open document keeps its source (doc.saveAs moves it). */
