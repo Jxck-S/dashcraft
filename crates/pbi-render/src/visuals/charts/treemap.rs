@@ -36,11 +36,11 @@ use crate::dataview::BLANK_LABEL;
 use crate::scene::{Color, Group, Paint, Rect, RectNode, TextAnchor};
 use crate::text::TextStyle;
 
-use super::ChartCtx;
 use super::colors::series_colors;
 use super::format::{NumberStyle, data_label};
 use super::labels::{DataLabels, baseline_centered, tailor};
 use super::legend::{Legend, LegendItem};
+use super::{ChartCtx, DIMMED_OPACITY};
 
 /// Most labels drawn (untrusted-input guard).
 const MAX_LABELS: usize = 2_000;
@@ -59,6 +59,8 @@ pub struct Leaf {
     pub formatted: String,
     pub format_string: Option<String>,
     pub color: Color,
+    /// The highlighted value when another visual highlights this one.
+    pub highlight: Option<f64>,
 }
 
 /// A top-level rectangle (one group value).
@@ -243,6 +245,7 @@ pub fn branches(cc: &ChartCtx<'_>) -> Vec<Branch> {
                         .copied()
                         .unwrap_or_else(|| resolver.data_color(s))
                 }),
+                highlight: sd.highlight(i),
             });
         }
         if leaves.is_empty() {
@@ -379,6 +382,7 @@ pub fn render(cc: &ChartCtx<'_>) -> Group {
     let labels = DataLabels::read(&cc.props, false);
     let value_style = white_unless("labels", "smallLightLabel");
     let opacity = cc.selection_opacity();
+    let highlighted = cc.data.has_highlights();
     let max_abs = branches
         .iter()
         .flat_map(|b| b.leaves.iter().map(|l| l.value.abs()))
@@ -415,7 +419,27 @@ pub fn render(cc: &ChartCtx<'_>) -> Group {
             {
                 lg = lg.with_opacity(*op);
             }
-            lg.push(RectNode::new(r).fill(Paint::solid(l.color)));
+            let tile = RectNode::new(r).fill(Paint::solid(l.color));
+            if highlighted {
+                // Dimmed tile; the highlighted share drawn solid from the
+                // bottom, its height in proportion.
+                let mut dimmed = Group::new().with_opacity(DIMMED_OPACITY);
+                dimmed.push(tile);
+                lg.push(dimmed);
+                let ratio = l
+                    .highlight
+                    .filter(|h| h.is_finite() && l.value > 0.0)
+                    .map_or(0.0, |h| (h.abs() / l.value).clamp(0.0, 1.0));
+                if ratio > 0.0 {
+                    let h = r.height * ratio;
+                    lg.push(
+                        RectNode::new(Rect::new(r.x, r.bottom() - h, r.width, h))
+                            .fill(Paint::solid(l.color)),
+                    );
+                }
+            } else {
+                lg.push(tile);
+            }
             tiles.push(lg);
         }
         let room = outer.width - 2.0 * TEXT_INSET;

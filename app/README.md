@@ -750,14 +750,13 @@ on Windows 10 and 11.
   fields" options; dragging cards does not save a layout.
 - The DAX query view has no IntelliSense, formatter, find / replace or command palette; results
   are capped at 1000 rows per `EVALUATE` and use the model's format strings for model columns.
-- Report canvas: highlight interactions (`HighlightFilter`) filter instead of highlighting, and a
-  cross-filter source dims its other points but other visuals are not highlighted; a bookmark's
-  filter, visibility and sort parts, drillthrough, Q&A and Web URL
-  buttons are not executed; bookmarks cannot be added or updated; synced
-  slicers (`syncGroup`) and the newer slicers' `selfFilter` are not read, so each page keeps its
-  own selection; range and relative-date slicers draw but their sliders / date pickers are not
-  interactive (tiles select like list items); no visual header menus (focus mode, show as table,
-  sort, export), drill-down / drill-up, right-click menus or filter card editing; cross-filters
+- Report canvas: highlights are drawn on bar, column, combo, pie, donut, treemap and funnel
+  charts; other visuals (tables, matrices, lines, …) are filtered instead; Q&A and Web URL
+  buttons are not executed; bookmarks cannot be added or updated, and their drill, spotlight and
+  cross-highlight parts are not applied; the newer slicers' `selfFilter` is not read; range and
+  relative-date slicers draw but their sliders / date pickers are not interactive (tiles select
+  like list items); no visual header menus (focus mode, show as table, sort, export), drill-down
+  / drill-up or filter card editing; the right-click menu offers Drill through only; cross-filters
   from matrices use the row path only; tooltips are the default ones (report-page tooltips are
   not rendered); interaction state lasts until the document closes. Performance analyzer, Sync
   slicers, Mobile layout and the Analytics pane are shown disabled.

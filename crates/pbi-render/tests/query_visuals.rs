@@ -309,7 +309,7 @@ fn highlights(dv: &DataView, i: usize) -> Option<Vec<String>> {
 }
 
 #[test]
-fn selected_points_highlight_bar_and_column_charts() {
+fn selected_points_highlight_bar_column_and_pie_charts() {
     let env = env();
     let mut page = page();
     page.visual_interactions = vec![VisualInteraction {
@@ -350,17 +350,44 @@ fn selected_points_highlight_bar_and_column_charts() {
     assert_eq!(categories(&stacked), ["West"]);
     assert_eq!(highlights(&stacked, 0), None);
 
-    // A pie target (not drawn highlighted yet) is filtered, with a note.
+    // Pies highlight too: every format stays, only the Pop-up's share is
+    // highlighted.
     state.selected_points = Some(PointSelection::point(
         "bar",
         vec![(col("Stores", "Store Name"), Value::from("Store 3"))],
     ));
     let pie = query(&env, &report, "pie", &state);
-    assert_eq!(categories(&pie), ["Pop-up"]);
+    let formats = categories(&pie);
+    assert!(formats.len() > 1, "{formats:?}");
+    let hl = highlights(&pie, 0).unwrap();
+    for (format, h) in formats.iter().zip(&hl) {
+        if format == "Pop-up" {
+            assert_eq!(h, "1");
+        } else {
+            assert!(h.is_empty() || h == "(Blank)", "{format}: {hl:?}");
+        }
+    }
     assert!(
-        pie.warnings.iter().any(|w| w.message.contains("highlight")),
+        !pie.warnings.iter().any(|w| w.message.contains("highlight")),
         "{:?}",
         pie.warnings
+    );
+
+    // A table cannot draw highlights: an explicit highlight filters it,
+    // with a note.
+    report.pages[0].visual_interactions.push(VisualInteraction {
+        source: "bar".into(),
+        target: "table".into(),
+        kind: InteractionKind::HighlightFilter,
+    });
+    let table = query(&env, &report, "table", &state);
+    assert!(
+        table
+            .warnings
+            .iter()
+            .any(|w| w.message.contains("highlight")),
+        "{:?}",
+        table.warnings
     );
 
     // Series charts highlight per series.

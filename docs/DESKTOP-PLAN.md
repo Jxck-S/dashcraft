@@ -1148,11 +1148,11 @@ in focus mode or as a table and export its data; see images and report-level mea
   DataViews (like the visuals API), charts draw the highlighted part over the dimmed total, tables
   and matrices filter as Desktop does; selecting inside the source visual highlights it.
   *Progress:* points selected in another visual highlight bar and column charts (clustered,
-  stacked, 100%) by default and for `HighlightFilter`, unless the report sets
-  `defaultFilterActionIsDataFilter`: categorical DataViews carry `ValueColumn::highlights` and the
-  bars are drawn dimmed with the highlighted part solid; line charts, tables, matrices and cards
-  filter; the source visual dims its other points. Next: pie, donut, treemap, funnel and combo
-  highlights (filtered with a warning today), highlighted values in labels and tooltips.
+  stacked, 100%), the columns of combos, pies, donuts, treemaps and funnels by default and for
+  `HighlightFilter`, unless the report sets `defaultFilterActionIsDataFilter`: categorical
+  DataViews carry `ValueColumn::highlights` and the shapes are drawn dimmed with the highlighted
+  part solid; line charts, tables, matrices and cards filter; the source visual dims its other
+  points. Next: highlighted values in labels and tooltips.
 - [ ] **M9.2 Drill down and up.** Hierarchies and several fields on an axis or in rows: drill mode,
   drill down on a point, drill up, go to the next level, expand all one level, for charts and
   matrices; drill state is view state (ADR-0006).
