@@ -21,6 +21,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - Opening and saving a PBIP project fingerprints its files faster: the size and file-count caps are checked before any file is read, and the files are read on up to 8 threads (Acme Outfitters: 8.8 → 5.8 ms per scan).
 
 ### Added
+- Bar and column charts highlight instead of filtering (M9.1): a point selected in another visual dims their bars and draws the selected part solid, as Power BI does by default and for "Highlight" interactions, unless the report's "selections filter other visuals" setting is on; the DataView's `highlights` carry the values. Pies, donuts, treemaps, funnels and combo charts still filter, with a warning.
 - Bookmarks now set filter cards (M9.5): the report, page and visual filters a bookmark captures (by name, or by field) replace the saved conditions on the canvas, following "selected visuals only" and the Data switch; changed Top N filters are listed as not applied.
 - Bookmarks now set visuals' sort order (M9.5): a captured visual's `orderBy` replaces its saved sort until another bookmark resets it, following "selected visuals only" and the Display switch.
 - Bookmarks now show and hide visuals and groups (M9.5): a visual captured as hidden (`display.mode`) or a hidden group (`visualContainerGroups`) disappears from the canvas and is no longer queried, and the visuals it shows reappear, following "selected visuals only" and the Display switch. Spotlight and focus modes are listed as not applied.

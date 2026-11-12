@@ -5,6 +5,25 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-12
+
+### M9.1: highlight interactions on bar and column charts
+
+- **What:** `context::visual_filters` no longer filters a bar or column chart (clustered,
+  stacked, 100%) by points selected in another visual when the interaction is the default or
+  `HighlightFilter` and the report does not set `defaultFilterActionIsDataFilter`: it keeps the
+  visual's context and adds `VisualFilters::highlight` (that context plus the selection, after
+  Top N). `exec::chart` reruns its category (or category × series) query under it, without the
+  measure filter, and fills `ValueColumn::highlights` aligned by keys (BLANK where nothing is
+  highlighted). `SeriesData::highlights` and `bar::Segment::highlight` carry them to the
+  renderer, which draws the full bar dimmed (`DIMMED_OPACITY`) and the highlighted part solid
+  (stacked parts from their segment's base, clamped to it). Pies, donuts, treemaps, funnels and
+  combos still filter, now with a warning also for the default interaction.
+- **Why:** M9.1; GAPS Interactions "Highlight interactions" row (❌ 1 → 🟡 3, area 1.8 → 1.9).
+- **Numbers:** 2 new tests (DataView highlights incl. `DataFilter` and the report setting;
+  dimmed and highlighted bars, stacked clamping); render snapshots and Acme expected values
+  unchanged (no selection).
+
 ## 2026-11-11
 
 ### M9.5: bookmarks set filter cards

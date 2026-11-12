@@ -801,6 +801,69 @@ fn selection_dims_other_points() {
     assert_eq!(opacities, vec![charts::DIMMED_OPACITY, 1.0]);
 }
 
+/// Per data point: the dimmed full bar and the solid highlighted part.
+fn highlighted_bars(g: &Group) -> Vec<(Rect, Option<Rect>)> {
+    let mut out = Vec::new();
+    walk(g, &mut |g| {
+        if !matches!(
+            g.id.as_ref().map(|i| &i.kind),
+            Some(HitKind::DataPoint { .. })
+        ) {
+            return;
+        }
+        let full = match g.children.first() {
+            Some(Node::Group(d)) if d.opacity == charts::DIMMED_OPACITY => match d.children.first()
+            {
+                Some(Node::Rect(r)) => r.rect,
+                _ => panic!("dimmed group without a bar: {d:?}"),
+            },
+            other => panic!("bar not dimmed: {other:?}"),
+        };
+        let part = match g.children.get(1) {
+            Some(Node::Rect(r)) => Some(r.rect),
+            _ => None,
+        };
+        out.push((full, part));
+    });
+    out
+}
+
+#[test]
+fn highlighted_columns_draw_the_highlighted_part_over_the_dimmed_bar() {
+    let mut dv = dataview(&["A", "B"], &[("M", vec![Some(4.0), Some(2.0)])]);
+    dv.categorical.as_mut().unwrap().values[0].highlights = Some(vec![num(Some(1.0)), num(None)]);
+    let bars = highlighted_bars(&render("clusteredColumnChart", &dv));
+    assert_eq!(bars.len(), 2);
+    let (full, part) = bars[0];
+    let part = part.unwrap();
+    assert!(
+        (part.height - full.height / 4.0).abs() < 0.01,
+        "{full:?} {part:?}"
+    );
+    assert!((part.bottom() - full.bottom()).abs() < 0.01);
+    assert_eq!((part.x, part.width), (full.x, full.width));
+    assert_eq!(bars[1].1, None);
+
+    // Stacked: each highlighted part starts at its segment's base.
+    let mut dv = series_dataview(&["A"], &[("s1", vec![Some(2.0)]), ("s2", vec![Some(2.0)])]);
+    let cat = dv.categorical.as_mut().unwrap();
+    cat.values[0].highlights = Some(vec![num(Some(1.0))]);
+    cat.values[1].highlights = Some(vec![num(Some(5.0))]);
+    let bars = highlighted_bars(&render("stackedColumnChart", &dv));
+    let [(s1, Some(p1)), (s2, Some(p2))] = bars[..] else {
+        panic!("{bars:?}");
+    };
+    assert!((p1.bottom() - s1.bottom()).abs() < 0.01);
+    assert!((p1.height - s1.height / 2.0).abs() < 0.01);
+    // A highlight above the segment's value stays inside the segment.
+    assert_eq!(p2, s2);
+
+    // Without highlights the bars are not dimmed.
+    let dv = dataview(&["A"], &[("M", vec![Some(1.0)])]);
+    let g = render("clusteredColumnChart", &dv);
+    assert!(matches!(points(&g)[0].2, Node::Rect(_)));
+}
+
 #[test]
 fn svg_output_is_deterministic() {
     let dv = series_dataview(

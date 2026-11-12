@@ -301,6 +301,87 @@ fn selected_points_cross_filter_other_visuals() {
     assert_eq!(single(&query(&env, &report, "total", &state)), "2");
 }
 
+fn highlights(dv: &DataView, i: usize) -> Option<Vec<String>> {
+    dv.categorical.as_ref().unwrap().values[i]
+        .highlights
+        .as_ref()
+        .map(|h| h.iter().map(|c| c.formatted.clone()).collect())
+}
+
+#[test]
+fn selected_points_highlight_bar_and_column_charts() {
+    let env = env();
+    let mut page = page();
+    page.visual_interactions = vec![VisualInteraction {
+        source: "pie".into(),
+        target: "stacked".into(),
+        kind: InteractionKind::DataFilter,
+    }];
+    let mut report = report(page);
+    let mut state = InteractionState::new();
+    state.selected_points = Some(PointSelection::point(
+        "pie",
+        vec![(col("Stores", "Format"), Value::from("Pop-up"))],
+    ));
+
+    // The bar chart keeps every store; only Store 3 (the Pop-up) is
+    // highlighted.
+    let bar = query(&env, &report, "bar", &state);
+    assert_eq!(
+        categories(&bar),
+        [
+            "Store 1", "(Blank)", "Store 3", "Store 4", "Store 2", "Store 5"
+        ]
+    );
+    assert_eq!(values(&bar, 0), ["2", "1", "1", "1", "0", "0"]);
+    let hl = highlights(&bar, 0).unwrap();
+    assert_eq!(hl[2], "1", "{hl:?}");
+    for (i, h) in hl.iter().enumerate().filter(|(i, _)| *i != 2) {
+        assert!(h.is_empty() || h == "(Blank)", "{i}: {hl:?}");
+    }
+    assert!(
+        !bar.warnings.iter().any(|w| w.message.contains("highlight")),
+        "{:?}",
+        bar.warnings
+    );
+
+    // An explicit filter interaction filters it.
+    let stacked = query(&env, &report, "stacked", &state);
+    assert_eq!(categories(&stacked), ["West"]);
+    assert_eq!(highlights(&stacked, 0), None);
+
+    // A pie target (not drawn highlighted yet) is filtered, with a note.
+    state.selected_points = Some(PointSelection::point(
+        "bar",
+        vec![(col("Stores", "Store Name"), Value::from("Store 3"))],
+    ));
+    let pie = query(&env, &report, "pie", &state);
+    assert_eq!(categories(&pie), ["Pop-up"]);
+    assert!(
+        pie.warnings.iter().any(|w| w.message.contains("highlight")),
+        "{:?}",
+        pie.warnings
+    );
+
+    // Series charts highlight per series.
+    report.pages[0].visual_interactions.clear();
+    let stacked = query(&env, &report, "stacked", &state);
+    assert_eq!(categories(&stacked), ["East", "(Blank)", "Central", "West"]);
+    let west = 3;
+    assert_eq!(highlights(&stacked, 0).unwrap()[west], "1");
+    assert_eq!(highlights(&stacked, 0).unwrap()[0], "");
+
+    // "Selections filter other visuals" turns highlighting off.
+    report.settings = json!({ "defaultFilterActionIsDataFilter": true });
+    state.selected_points = Some(PointSelection::point(
+        "pie",
+        vec![(col("Stores", "Format"), Value::from("Pop-up"))],
+    ));
+    let bar = query(&env, &report, "bar", &state);
+    assert_eq!(categories(&bar), ["Store 3"]);
+    assert_eq!(highlights(&bar, 0), None);
+}
+
 #[test]
 fn bar_charts_sort_by_value_and_pies_sum_to_the_total() {
     let env = env();

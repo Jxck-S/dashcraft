@@ -2,6 +2,12 @@
 //! conditions a bookmark set), slicer
 //! selections of the other slicers, cross-filter from the selected visual
 //! (honouring `visualInteractions`), then Top N filters.
+//!
+//! Points selected in another visual highlight bar and column charts
+//! (the default interaction, or `HighlightFilter`, unless the report sets
+//! `defaultFilterActionIsDataFilter`): [`VisualFilters::highlight`] is the
+//! visual's filter context plus the selection, and the visual keeps its
+//! unselected values. Other targets are filtered.
 
 use pbi_engine::FilterContext;
 use pbi_model::{Condition, Filter, InteractionKind, Page, Report, Visual};
@@ -23,7 +29,48 @@ pub(crate) struct VisualFilters {
     /// Visual-level conditions over measures / aggregations (applied to
     /// the visual's rows).
     pub value_conditions: Vec<Condition>,
+    /// [`Self::context`] plus the points selected in the visual that
+    /// highlights this one (`None` when nothing highlights it).
+    pub highlight: Option<FilterContext>,
     pub warnings: Vec<QueryWarning>,
+}
+
+/// Visual types that draw highlighted values (bars and columns).
+fn draws_highlights(visual_type: &str) -> bool {
+    matches!(
+        visual_type,
+        "clusteredBarChart"
+            | "barChart"
+            | "stackedBarChart"
+            | "hundredPercentStackedBarChart"
+            | "clusteredColumnChart"
+            | "columnChart"
+            | "stackedColumnChart"
+            | "hundredPercentStackedColumnChart"
+    )
+}
+
+/// Visual types that Power BI highlights by default but DashCraft filters.
+fn highlights_elsewhere(visual_type: &str) -> bool {
+    matches!(
+        visual_type,
+        "pieChart"
+            | "donutChart"
+            | "treemap"
+            | "funnel"
+            | "lineClusteredColumnComboChart"
+            | "lineStackedColumnComboChart"
+    )
+}
+
+/// The report sets "selections filter other visuals" instead of
+/// highlighting them.
+fn filters_by_default(report: &Report) -> bool {
+    report
+        .settings
+        .get("defaultFilterActionIsDataFilter")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
 }
 
 struct Pending {
@@ -60,6 +107,7 @@ pub(crate) fn visual_filters(
         }
     }
 
+    let mut highlight_points = false;
     let mut highlight_noted = false;
     let mut note_highlight = |out: &mut VisualFilters, source: &str| {
         if !highlight_noted {
@@ -98,16 +146,21 @@ pub(crate) fn visual_filters(
         && !points.points.is_empty()
     {
         let kind = page.interaction(&points.source, &visual.name);
-        let apply = match kind {
-            Some(InteractionKind::NoFilter) => false,
-            Some(InteractionKind::HighlightFilter) => {
-                note_highlight(&mut out, &points.source);
-                true
-            }
-            _ => true,
+        let highlight = match kind {
+            Some(InteractionKind::NoFilter) => None,
+            Some(InteractionKind::HighlightFilter) => Some(true),
+            Some(_) => Some(false),
+            None => Some(!filters_by_default(report)),
         };
-        if apply {
-            apply_points(&builder, &mut out, state);
+        match highlight {
+            Some(true) if draws_highlights(&visual.visual_type) => highlight_points = true,
+            Some(highlight) => {
+                if highlight && (kind.is_some() || highlights_elsewhere(&visual.visual_type)) {
+                    note_highlight(&mut out, &points.source);
+                }
+                apply_points(&builder, &mut out.context, &mut out.warnings, state);
+            }
+            None => {}
         }
     }
 
@@ -120,6 +173,11 @@ pub(crate) fn visual_filters(
                     .not_applied(),
             );
         }
+    }
+    if highlight_points {
+        let mut context = out.context.clone();
+        apply_points(&builder, &mut context, &mut out.warnings, state);
+        out.highlight = Some(context);
     }
     out
 }
@@ -208,7 +266,12 @@ fn apply_slicer(
     }
 }
 
-fn apply_points(builder: &FilterBuilder<'_>, out: &mut VisualFilters, state: &InteractionState) {
+fn apply_points(
+    builder: &FilterBuilder<'_>,
+    context: &mut FilterContext,
+    warnings: &mut Vec<QueryWarning>,
+    state: &InteractionState,
+) {
     let Some(sel) = &state.selected_points else {
         return;
     };
@@ -237,24 +300,24 @@ fn apply_points(builder: &FilterBuilder<'_>, out: &mut VisualFilters, state: &In
         }
     }
     if dropped > 0 {
-        out.warnings.push(warn(format!(
+        warnings.push(warn(format!(
             "{dropped} selected point(s) with different fields were ignored"
         )));
     }
     match builder.tuple_filter(&fields, &tuples, false) {
         Ok((filters, approx)) => {
             for f in filters {
-                out.context.add(f);
+                context.add(f);
             }
             for reason in approx {
-                out.warnings.push(warn(format!(
+                warnings.push(warn(format!(
                     "cross-filter applied approximately: {reason}"
                 )));
             }
         }
-        Err(reason) => out
-            .warnings
-            .push(warn(format!("cross-filter not applied: {reason}")).not_applied()),
+        Err(reason) => {
+            warnings.push(warn(format!("cross-filter not applied: {reason}")).not_applied())
+        }
     }
 }
 

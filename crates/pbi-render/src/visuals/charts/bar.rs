@@ -29,7 +29,7 @@ use super::labels::{
 };
 use super::legend::{Legend, LegendItem};
 use super::scale::{self, LinearScale};
-use super::{ChartCtx, ChartData, Stacking, line};
+use super::{ChartCtx, ChartData, DIMMED_OPACITY, Stacking, line};
 
 /// Gap between category labels and the plot.
 const CATEGORY_GAP: f64 = 9.0;
@@ -61,11 +61,15 @@ pub struct Segment {
     pub value: f64,
     /// Slot within the band: `(index, count)` for clustered bars.
     pub slot: (usize, usize),
+    /// Highlighted part `[from, to]` (another visual's selection; `None`
+    /// when nothing of it is highlighted).
+    pub highlight: Option<(f64, f64)>,
 }
 
 /// Bar segments of `categories` for `series` (clustered: side by side
 /// from 0; stacked: positives up from 0 and negatives down; percent:
-/// stacked shares of the category's absolute total).
+/// stacked shares of the category's absolute total). A stacked segment's
+/// highlighted part starts at the segment's base and stays inside it.
 pub fn segments(
     data: &ChartData,
     series: &[usize],
@@ -85,6 +89,7 @@ pub fn segments(
             let Some(v) = data.series.get(*s).and_then(|x| x.value(i)) else {
                 continue;
             };
+            let h = data.series.get(*s).and_then(|x| x.highlight(i));
             match stacking {
                 Stacking::Clustered => out.push(Segment {
                     series: *s,
@@ -93,13 +98,17 @@ pub fn segments(
                     to: v,
                     value: v,
                     slot: (slot, k),
+                    highlight: h.map(|h| (0.0, h)),
                 }),
                 Stacking::Stacked | Stacking::Percent => {
-                    let v2 = if stacking == Stacking::Percent {
-                        if total > 0.0 { v / total } else { 0.0 }
-                    } else {
-                        v
+                    let share = |v: f64| {
+                        if stacking == Stacking::Percent {
+                            if total > 0.0 { v / total } else { 0.0 }
+                        } else {
+                            v
+                        }
                     };
+                    let v2 = share(v);
                     let (from, to) = if v2 >= 0.0 {
                         let r = (pos, pos + v2);
                         pos += v2;
@@ -109,6 +118,14 @@ pub fn segments(
                         neg += v2;
                         r
                     };
+                    let highlight = h.map(share).and_then(|h2| {
+                        let h2 = if v2 >= 0.0 {
+                            h2.clamp(0.0, v2)
+                        } else {
+                            h2.clamp(v2, 0.0)
+                        };
+                        (h2 != 0.0).then_some((from, from + h2))
+                    });
                     out.push(Segment {
                         series: *s,
                         category: i,
@@ -116,6 +133,7 @@ pub fn segments(
                         to,
                         value: v,
                         slot: (0, 1),
+                        highlight,
                     });
                 }
             }
@@ -127,7 +145,9 @@ pub fn segments(
 /// Value-axis domain of the bars (0 included).
 pub fn bar_domain(data: &ChartData, series: &[usize], stacking: Stacking) -> (f64, f64) {
     let segs = segments(data, series, 0..data.len(), stacking);
-    let ends = segs.iter().flat_map(|s| [s.from, s.to]);
+    let ends = segs
+        .iter()
+        .flat_map(|s| [s.from, s.to].into_iter().chain(s.highlight.map(|h| h.1)));
     let (lo, hi) = scale::value_domain(ends, true);
     if stacking == Stacking::Percent {
         return (lo.clamp(-1.0, 0.0), if hi > 0.0 { 1.0 } else { hi });
@@ -193,24 +213,55 @@ fn bar_color(cc: &ChartCtx<'_>, colors: &[Color], series: usize, category: usize
     }
 }
 
+/// How a chart draws its bars: the selection's opacity per category
+/// (the chart is the selection's source), and whether another visual
+/// highlights it (bars dimmed, highlighted parts solid).
+struct BarStyle {
+    opacity: Option<Vec<f64>>,
+    highlighted: bool,
+}
+
+impl BarStyle {
+    fn of(cc: &ChartCtx<'_>) -> Self {
+        Self {
+            opacity: cc.selection_opacity(),
+            highlighted: cc.data.has_highlights(),
+        }
+    }
+}
+
+/// Pushes a bar; `part` maps a value range to the bar's rectangle (for
+/// the highlighted part).
 fn push_bar(
     g: &mut Group,
     cc: &ChartCtx<'_>,
     rect: Rect,
     color: Color,
     seg: &Segment,
-    opacity: &Option<Vec<f64>>,
+    style: &BarStyle,
+    part: impl Fn(f64, f64) -> Rect,
 ) {
-    let rect = Rect::new(rect.x, rect.y, rect.width.max(0.0), rect.height.max(0.0));
+    let fix = |r: Rect| Rect::new(r.x, r.y, r.width.max(0.0), r.height.max(0.0));
     let mut bg = Group::new().with_id(cc.hit(seg.series, seg.category));
-    if let Some(o) = opacity
+    if let Some(o) = style
+        .opacity
         .as_ref()
         .and_then(|o| o.get(seg.category))
         .filter(|o| **o < 1.0)
     {
         bg = bg.with_opacity(*o);
     }
-    bg.push(RectNode::new(rect).fill(Paint::solid(color)));
+    let bar = RectNode::new(fix(rect)).fill(Paint::solid(color));
+    if style.highlighted {
+        let mut dimmed = Group::new().with_opacity(DIMMED_OPACITY);
+        dimmed.push(bar);
+        bg.push(dimmed);
+        if let Some((from, to)) = seg.highlight {
+            bg.push(RectNode::new(fix(part(from, to))).fill(Paint::solid(color)));
+        }
+    } else {
+        bg.push(bar);
+    }
     g.push(bg);
 }
 
@@ -385,22 +436,25 @@ pub fn render_bar(cc: &ChartCtx<'_>, stacking: Stacking) -> Group {
     g.push(ax);
 
     // Bars.
-    let opacity = cc.selection_opacity();
+    let style = BarStyle::of(cc);
     let segs = segments(data, &series, 0..count, stacking);
     let mut bars = Group::new().with_class("pbi-bars");
     for seg in &segs {
         let band = y0 + seg.category as f64 * step + step * inner / 2.0;
         let thick = step * (1.0 - inner) / seg.slot.1.max(1) as f64;
         let y = band + thick * seg.slot.0 as f64;
-        let (xa, xb) = (x_scale.map_clamped(seg.from), x_scale.map_clamped(seg.to));
-        let rect = Rect::new(xa.min(xb), y, (xb - xa).abs(), thick);
+        let rect_of = |from: f64, to: f64| {
+            let (xa, xb) = (x_scale.map_clamped(from), x_scale.map_clamped(to));
+            Rect::new(xa.min(xb), y, (xb - xa).abs(), thick)
+        };
         push_bar(
             &mut bars,
             cc,
-            rect,
+            rect_of(seg.from, seg.to),
             bar_color(cc, &colors, seg.series, seg.category),
             seg,
-            &opacity,
+            &style,
+            rect_of,
         );
     }
     g.push(bars);
@@ -553,7 +607,7 @@ pub fn render_column(cc: &ChartCtx<'_>, stacking: Stacking, combo: bool) -> Grou
     layout.draw_axes(cc, &mut g);
     let visible = layout.x.visible(data.len());
     let segs = segments(data, &bars_idx, visible.clone(), stacking);
-    let opacity = cc.selection_opacity();
+    let style = BarStyle::of(cc);
     let mut bars = Group::new().with_class("pbi-bars");
     for seg in &segs {
         let Some((x, w)) = layout.x.bar_slot(seg.category) else {
@@ -561,18 +615,21 @@ pub fn render_column(cc: &ChartCtx<'_>, stacking: Stacking, combo: bool) -> Grou
         };
         let thick = w / seg.slot.1.max(1) as f64;
         let x = x + thick * seg.slot.0 as f64;
-        let (ya, yb) = (
-            layout.y.scale.map_clamped(seg.from),
-            layout.y.scale.map_clamped(seg.to),
-        );
-        let rect = Rect::new(x, ya.min(yb), thick, (yb - ya).abs());
+        let rect_of = |from: f64, to: f64| {
+            let (ya, yb) = (
+                layout.y.scale.map_clamped(from),
+                layout.y.scale.map_clamped(to),
+            );
+            Rect::new(x, ya.min(yb), thick, (yb - ya).abs())
+        };
         push_bar(
             &mut bars,
             cc,
-            rect,
+            rect_of(seg.from, seg.to),
             bar_color(cc, &colors, seg.series, seg.category),
             seg,
-            &opacity,
+            &style,
+            rect_of,
         );
     }
     g.push(bars);

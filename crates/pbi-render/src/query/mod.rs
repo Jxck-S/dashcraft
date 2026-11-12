@@ -27,9 +27,11 @@
 //!    report filters, page filters, the visual's own filters, the
 //!    selections of the *other* slicers on the page, and the selected data
 //!    points of another visual — the last two honouring the page's
-//!    `visualInteractions` (`NoFilter` → skipped; `HighlightFilter` →
-//!    applied as a filter, with a warning; default `DataFilter`). Top N
-//!    filters are evaluated last, in the context built so far.
+//!    `visualInteractions` (`NoFilter` → skipped; `DataFilter` →
+//!    filtered; `HighlightFilter` and the default → selected points
+//!    highlight bar and column charts and filter the rest, see below;
+//!    slicers always filter). Top N filters are evaluated last, in the
+//!    context built so far.
 //!    `isHiddenInViewMode` / `isLockedInViewMode` do not change evaluation.
 //!    Filters on tables without a relationship path to a measure's tables
 //!    have no effect on it (engine propagation), so a measure over a table
@@ -114,8 +116,13 @@
 //!
 //! # Known gaps
 //!
-//! - Highlight interactions are applied as filters (`ValueColumn::highlights`
-//!   stays `None`); a visual's own selection does not highlight it.
+//! - Points selected in another visual highlight bar and column charts
+//!   (unless the report's `defaultFilterActionIsDataFilter` is set or the
+//!   interaction is `DataFilter`): the values keep the visual's own filter
+//!   context and `ValueColumn::highlights` holds the values with the
+//!   selection added (BLANK where nothing is highlighted). Pies, donuts,
+//!   treemaps, funnels and combo charts are filtered instead, with a
+//!   warning. A visual's own selection dims its other points.
 //! - Synced slicers (`syncGroup`) and the `selfFilter` of newer slicers are
 //!   not read; drill-down / drill-through state is not modelled beyond
 //!   `active` projections.
