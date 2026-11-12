@@ -30,6 +30,12 @@ test('without drillthrough pages the item is disabled', () => {
   assert.equal(items[0].enabled, false)
 })
 
+test('a cross-report drillthrough page names its report', () => {
+  const items = drillthroughMenu([{ ...target('detail', 'Store Detail'), report: 'Stores' }], () => {})
+  assert.equal(items[1].label, 'Store Detail (Stores)')
+  assert.match(items[1].title ?? '', /^In the report Stores\. Filtered on Sales\.Region/)
+})
+
 const drill = (first: number, last: number, levels = ['Year', 'Quarter', 'Month']) => ({
   role: 'Category',
   levels,

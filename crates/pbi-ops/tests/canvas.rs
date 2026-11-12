@@ -1070,3 +1070,176 @@ async fn tooltips_of_highlighted_charts_add_the_highlighted_value() {
         "{tip}"
     );
 }
+
+fn copy_dir(from: &std::path::Path, to: &std::path::Path) {
+    std::fs::create_dir_all(to).unwrap();
+    for entry in std::fs::read_dir(from).unwrap() {
+        let entry = entry.unwrap();
+        let target = to.join(entry.file_name());
+        if entry.file_type().unwrap().is_dir() {
+            copy_dir(&entry.path(), &target);
+        } else {
+            std::fs::copy(entry.path(), target).unwrap();
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cross_report_drillthrough_goes_to_another_report() {
+    let dir = tmp_dir("pbi-ops-xdrill-");
+    let pbip = mini_pbip(dir.path());
+    write_visual(
+        dir.path(),
+        "details",
+        "sum",
+        false,
+        json!({"visualType": "cardVisual", "query": {"queryState": {"Data": {"projections": [{
+            "field": {"Measure": {"Expression": {"SourceRef": {"Entity": "Sales"}}, "Property": "Total"}},
+            "queryRef": "Sales.Total", "nativeQueryRef": "Total", "active": true
+        }]}}}}),
+    );
+    // A second report over the same model whose Details page accepts
+    // drillthrough from other reports.
+    let detail = dir.path().join("Detail.Report");
+    copy_dir(&dir.path().join("Mini.Report"), &detail);
+    std::fs::write(
+        dir.path().join("Mini.pbip"),
+        json!({"version": "1.0", "artifacts": [
+            {"report": {"path": "Mini.Report"}}, {"report": {"path": "Detail.Report"}}
+        ]})
+        .to_string(),
+    )
+    .unwrap();
+    std::fs::write(
+        detail.join("definition/report.json"),
+        json!({
+            "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.0.0/schema.json",
+            "settings": {"useCrossReportDrillthrough": true}
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let region =
+        json!({"Column": {"Expression": {"SourceRef": {"Entity": "Sales"}}, "Property": "Region"}});
+    std::fs::write(
+        detail.join("definition/pages/details/page.json"),
+        json!({
+            "name": "details", "displayName": "Details", "displayOption": "FitToPage",
+            "width": 640, "height": 360,
+            "filterConfig": {"filters": [{"name": "drill", "field": region, "type": "Categorical"}]},
+            "pageBinding": {"name": "binding", "type": "Drillthrough", "referenceScope": "CrossReport",
+                "parameters": [{"name": "p", "boundFilter": "drill", "fieldExpr": region}]}
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let overview = r
+        .run("canvas.render", json!({"docId": doc, "report": "Mini"}))
+        .await;
+    let mut west = None;
+    for h in overview["hitRegions"].as_array().unwrap() {
+        let id = h["id"].as_str().unwrap();
+        if !id.starts_with("bars|dataPoint|") {
+            continue;
+        }
+        let tip = r
+            .run(
+                "canvas.tooltip",
+                json!({"docId": doc, "report": "Mini", "hitId": id}),
+            )
+            .await;
+        if tip["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|l| l["value"] == "West")
+        {
+            west = Some(id.to_owned());
+        }
+    }
+    let west = west.expect("a West bar");
+
+    // Mini's own Details page is no drillthrough page; Detail's is offered.
+    let targets = r
+        .run(
+            "canvas.drillthroughTargets",
+            json!({"docId": doc, "report": "Mini", "hitId": west}),
+        )
+        .await;
+    assert_eq!(
+        targets["targets"],
+        json!([{"page": "details", "displayName": "Details", "fields": ["Sales.Region"],
+            "keepAllFilters": true, "report": "Detail"}]),
+        "{targets}"
+    );
+
+    // Without `targetReport` the page is looked up in Mini.
+    let err = r
+        .try_run(
+            "canvas.drillthrough",
+            json!({"docId": doc, "report": "Mini", "hitId": west, "target": "Details"}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::InvalidParams);
+    // Detail's Overview is not a cross-report drillthrough page.
+    let err = r
+        .try_run(
+            "canvas.drillthrough",
+            json!({"docId": doc, "report": "Mini", "hitId": west, "target": "Overview",
+                "targetReport": "Detail"}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::InvalidParams);
+
+    let drilled = r
+        .run(
+            "canvas.drillthrough",
+            json!({"docId": doc, "report": "Mini", "hitId": west, "target": "Details",
+                "targetReport": "Detail"}),
+        )
+        .await;
+    assert_eq!(drilled["page"], "details");
+    assert_eq!(drilled["report"], "Detail");
+    let rendered = &drilled["rendered"];
+    assert!(
+        rendered["svg"].as_str().unwrap().contains(">590<"),
+        "{}",
+        rendered["visuals"]
+    );
+    // The drilled state belongs to Detail's page, not Mini's.
+    let again = r
+        .run(
+            "canvas.render",
+            json!({"docId": doc, "report": "Detail", "page": "Details"}),
+        )
+        .await;
+    let drill = again["selections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["kind"] == "drillthrough")
+        .expect("a drillthrough selection");
+    assert_eq!(
+        drill["label"], "Drillthrough from the Mini report",
+        "{drill}"
+    );
+    let mini = r
+        .run(
+            "canvas.render",
+            json!({"docId": doc, "report": "Mini", "page": "Details"}),
+        )
+        .await;
+    assert!(
+        mini["selections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|s| s["kind"] != "drillthrough"),
+        "{}",
+        mini["selections"]
+    );
+}

@@ -1176,7 +1176,7 @@ in focus mode or as a table and export its data; see images and report-level mea
   conditions); `canvas.tooltipPage` renders it statelessly and the app shows it in the hover
   card. Acme's Store Performance chart uses the Store Tooltip page (`expected.json`
   `tooltipPages`); P13 measures it (p95 1.6 ms on the Windows desktop).
-- [ ] **M9.4 Drillthrough.** Drillthrough pages and their fields, Drill through on the context
+- [x] **M9.4 Drillthrough.** Drillthrough pages and their fields, Drill through on the context
   menu and from buttons, "keep all filters", the back button, and cross-report drillthrough between
   reports open in the same workspace. *Progress:* `pbi_render::query::drillthrough` finds
   drillthrough pages (filters with `howCreated` Drillthrough or bound by `pageBinding`, tooltip
@@ -1187,8 +1187,12 @@ in focus mode or as a table and export its data; see images and report-level mea
   kept). `canvas.drillthroughTargets` and `canvas.drillthrough` (from a hit or the page's
   selection) and drillthrough buttons use it; the Filters pane shows a Drillthrough card; the
   app follows drillthrough buttons and right-click Drill through, and Back returns. Acme's
-  Store Detail is a drillthrough page on Region (`expected.json` `drillthrough`). Next: the
-  source visual's own filters, cross-report drillthrough.
+  Store Detail is a drillthrough page on Region (`expected.json` `drillthrough`). *Done:* "Keep
+  all filters" also carries the source visual's own filters, and cross-report drillthrough goes
+  to the pages bound with `referenceScope: CrossReport` of the document's other reports when they
+  set `useCrossReportDrillthrough` (the service-only feature, extended to the open document; the
+  source report's filters are carried too); `canvas.drillthrough` takes `targetReport`, the
+  Filters pane card names the source report and the app's Back returns across reports.
 - [x] **M9.5 Bookmarks.** Read `bookmarks/*.bookmark.json` and groups; apply data, display and
   current-page parts and "selected visuals only"; Bookmarks pane in view mode with a slideshow;
   bookmark buttons; bookmark and page navigators drawn as lists of buttons. *Progress:* bookmarks

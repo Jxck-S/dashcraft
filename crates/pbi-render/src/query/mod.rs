@@ -169,8 +169,8 @@ pub use drill::{
     drill_levels, drill_state, saved_drill,
 };
 pub use drillthrough::{
-    DrillthroughContext, DrillthroughField, DrillthroughPage, drill_through, drillthrough_page,
-    drillthrough_targets,
+    DrillthroughContext, DrillthroughField, DrillthroughPage, allows_cross_report_drillthrough,
+    cross_report_targets, drill_through, drillthrough_page, drillthrough_targets,
 };
 pub use filter::{
     ColumnRef, FilterBuilder, FilterPlan, coerce_literal, coerce_value, parse_datetime,

@@ -22,11 +22,9 @@
 //!   visual's own filters are kept, like a drillthrough with "Keep all
 //!   filters" ([`super::drillthrough`]).
 
-use pbi_model::{FieldExpr, FilterKind, Report};
+use pbi_model::Report;
 
-use super::drillthrough::{
-    DrillthroughContext, DrillthroughField, carried_filters, filter_label, is_kind,
-};
+use super::drillthrough::{DrillthroughContext, DrillthroughField, carried_filters, is_kind};
 use super::interaction::{FilterLevel, InteractionState, PointField, PointSelection};
 use super::plan::same_field;
 use crate::theme::{as_bool, as_text};
@@ -170,9 +168,8 @@ pub fn tooltip_state(
             filter: String::new(),
         })
         .collect();
-    let is_hovered = |field: &FieldExpr| point.iter().any(|p| same_field(&p.field, field));
     let mut not_applied = Vec::new();
-    let mut carried = carried_filters(
+    let carried = carried_filters(
         report,
         source_page,
         source_state,
@@ -180,26 +177,6 @@ pub fn tooltip_state(
         &hovered,
         &mut not_applied,
     );
-    if let Some(v) = report
-        .pages
-        .get(source_page)
-        .and_then(|p| p.visuals.iter().find(|v| v.name == visual))
-    {
-        for f in &v.filters {
-            let f = source_state.filters.apply(FilterLevel::Visual(visual), f);
-            let Some(condition) = &f.condition else {
-                continue;
-            };
-            if f.field.as_ref().is_some_and(is_hovered) {
-                continue;
-            }
-            if f.kind == FilterKind::TopN {
-                not_applied.push(format!("the Top N visual filter {}", filter_label(&f)));
-                continue;
-            }
-            carried.push(condition.clone());
-        }
-    }
     let points: Vec<Vec<PointField>> = if point.is_empty() {
         Vec::new()
     } else {
@@ -211,6 +188,7 @@ pub fn tooltip_state(
             .get(source_page)
             .map(|p| p.name.clone())
             .unwrap_or_default(),
+        source_report: None,
         selection: PointSelection {
             source: visual.to_owned(),
             points,
@@ -223,7 +201,7 @@ pub fn tooltip_state(
 #[cfg(test)]
 mod tests {
     use pbi_engine::Value;
-    use pbi_model::{Condition, Filter, Literal, Page, PropValue, Visual};
+    use pbi_model::{Condition, FieldExpr, Filter, Literal, Page, PropValue, Visual};
 
     use super::*;
 

@@ -119,7 +119,8 @@
   let canvasInfo = $state.raw<RenderedPage | null>(null)
   let canvasIncoming = $state.raw<RenderedPage | null>(null)
   let canvasFilters = $state.raw<FilterSpec | null>(null)
-  let navHistory = $state<number[]>([])
+  /** Pages left by navigation and drillthrough, for Back (a cross-report drillthrough changes the report). */
+  let navHistory = $state<{ report: number; page: number }[]>([])
   let webLink = $state<string | null>(null)
   // Bookmarks pane: the report's bookmarks (loaded when the pane opens), the last one applied and
   // the slideshow's position.
@@ -1096,8 +1097,14 @@
 
   /** Shows a page of the current report; the page left is pushed on the Back history. */
   function selectPage(id: number, remember = true) {
-    const current = page?.id ?? null
-    if (remember && current != null && current !== id) navHistory = [...navHistory.slice(-49), current]
+    showPage(report?.id ?? null, id, remember)
+  }
+
+  /** Shows page `id` of report `toReport` (another report after a cross-report drillthrough). */
+  function showPage(toReport: number | null, id: number, remember = true) {
+    const current = report && page ? { report: report.id, page: page.id } : null
+    if (remember && current && (current.page !== id || current.report !== toReport)) navHistory = [...navHistory.slice(-49), current]
+    if (toReport != null) reportId = toReport
     pageId = id
     selectedVisualId = null
   }
@@ -1136,12 +1143,12 @@
     switch (action.kind) {
       case 'back': {
         const previous = navHistory.at(-1)
-        if (previous == null || !report?.pages.some((p) => p.id === previous)) {
+        if (previous == null || !reports.some((r) => r.id === previous.report && r.pages.some((p) => p.id === previous.page))) {
           toast('info', 'There is no previous page to go back to.')
           return
         }
         navHistory = navHistory.slice(0, -1)
-        selectPage(previous, false)
+        showPage(previous.report, previous.page, false)
         break
       }
       case 'navigate': {
@@ -1165,12 +1172,13 @@
       }
       case 'drillthrough': {
         // The backend has already filtered the drillthrough page; Back returns to this one.
-        const target = report ? backend.pageIdOf(report.id, action.page) : null
-        if (target == null) {
-          toast('info', `The page ${action.displayName} is not in this report.`)
+        const toReport = action.report ? backend.reportIdOf(action.report) : (report?.id ?? null)
+        const target = toReport != null ? backend.pageIdOf(toReport, action.page) : null
+        if (toReport == null || target == null) {
+          toast('info', `The page ${action.displayName} is not in ${action.report ? `the report ${action.report}` : 'this report'}.`)
           break
         }
-        selectPage(target)
+        showPage(toReport, target)
         const skipped = action.notApplied ?? []
         status = {
           message: `Drilled through to ${action.displayName}${skipped.length > 0 ? `; filters not kept: ${skipped.join(', ')}` : ''}`,

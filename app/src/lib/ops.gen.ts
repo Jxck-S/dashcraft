@@ -247,6 +247,7 @@ export type CanvasAction = {
   kind: 'drillthrough'
   page: string
   displayName: string
+  report?: string | null
   /** Parts of the source's filter context not kept. */
   notApplied?: string[]
 } | {
@@ -370,6 +371,8 @@ export interface CanvasDrillthroughOut {
   /** Internal name of the drillthrough page. */
   page: string
   displayName: string
+  /** The report of the drillthrough page, when it is another report. */
+  report?: string | null
   /** Parts of the source's filter context not kept (Top N filters, …). */
   notApplied: string[]
   /** The drillthrough page, filtered and rendered. */
@@ -390,6 +393,11 @@ export interface CanvasDrillthroughParams {
   hitId?: string | null
   /** The drillthrough page (see `canvas.drillthroughTargets`). */
   target: string
+  /**
+   * The report of the drillthrough page, for a cross-report
+   * drillthrough (`report` of the target). Default: the source's report.
+   */
+  targetReport?: string | null
 }
 
 export interface CanvasHitParams {
@@ -2274,6 +2282,11 @@ export interface DrillthroughTargetOut {
   fields: string[]
   /** "Keep all filters": the source's filter context goes along. */
   keepAllFilters: boolean
+  /**
+   * The report of the page, when it is another report (cross-report
+   * drillthrough).
+   */
+  report?: string | null
 }
 
 /** Result of `canvas.drillthroughTargets`. */
@@ -5283,7 +5296,7 @@ export interface OpsCommands {
   'canvas.drill': { params: CanvasDrillParams; output: CanvasPageOut }
   /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
   'canvas.drillthroughTargets': { params: CanvasHitParams; output: DrillthroughTargetsOut }
-  /** Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. */
+  /** Drills through from a data point (or the page's selection) to a drillthrough page (also of another report): filters it on the point's values, keeps the source's filters if set and renders it. */
   'canvas.drillthrough': { params: CanvasDrillthroughParams; output: CanvasDrillthroughOut }
   /** The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. */
   'canvas.state': { params: CanvasPageParams; output: CanvasStateOut }
@@ -5635,7 +5648,7 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasDrill: (params: CanvasDrillParams, options?: O) => run('canvas.drill', params, options),
     /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
     canvasDrillthroughTargets: (params: CanvasHitParams, options?: O) => run('canvas.drillthroughTargets', params, options),
-    /** Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. */
+    /** Drills through from a data point (or the page's selection) to a drillthrough page (also of another report): filters it on the point's values, keeps the source's filters if set and renders it. */
     canvasDrillthrough: (params: CanvasDrillthroughParams, options?: O) => run('canvas.drillthrough', params, options),
     /** The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. */
     canvasState: (params: CanvasPageParams, options?: O) => run('canvas.state', params, options),
