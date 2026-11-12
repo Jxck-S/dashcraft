@@ -99,6 +99,7 @@ pub fn catalog() -> Registry {
         .with::<edit::ModelDependencies>()
         .with::<edit::ReportVisualMove>()
         .with::<edit::ReportVisualResize>()
+        .with::<edit::ReportStatePersist>()
         .with::<edit::DocumentApplyEdits>()
         .with::<edit::DocumentUndo>()
         .with::<edit::DocumentRedo>()

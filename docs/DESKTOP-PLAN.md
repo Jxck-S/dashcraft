@@ -1264,9 +1264,21 @@ in focus mode or as a table and export its data; see images and report-level mea
   (`crates/pbi-ops/tests/canvas.rs`). Not checked against Desktop: measure filters above visual
   level (Desktop's UI only adds them on visuals), pending selections not syncing until applied,
   and the filter pane's Apply settings, read but unused while the pane is read-only (M20.1).
-- [ ] **M9.11 Persist reading state.** On save, the current slicer selections and filter states
+- [x] **M9.11 Persist reading state.** On save, the current slicer selections and filter states
   are written to the report as Desktop does, through document transactions (the step foreseen by
-  ADR-0006), honouring the "persistent filters" setting.
+  ADR-0006), honouring the "persistent filters" setting. *Done:* `report.state.persist` turns the
+  applied slicer selections that differ from the saved ones and the filter cards a bookmark
+  changed into one undoable "Save reading state" group of `SetVisualObjects` and
+  `SetFilterDefinition` commands (`pbi-model`); `pbi_render::query::persist` writes the PBIR
+  `general.filter` of slicers (`In`, inverted `Not(In)`, range and relative-date conditions) and
+  filter definitions, and `doc.save` patches only those JSON values (`pbi-core` save in place).
+  After it the selections are the saved ones (Reset to default goes to them; undo restores the
+  old ones). Refused when the report sets `isPersistentUserStateDisabled` and for legacy-layout
+  reports; pending selections are not saved. The app runs it before Save and Save as. Tests:
+  `reading_state_is_saved_with_the_report` (`crates/pbi-ops/tests/canvas.rs`),
+  `slicer_state_and_filter_definitions_are_written` (`crates/pbi-core/tests/save_in_place.rs`),
+  the writer's round trips in `query::persist`. Not checked against Desktop: the exact JSON
+  Desktop writes (aliases, `Version`), and saving cross-filters, drill state or legacy layouts.
 
 **Crates and layers.** `pbi-render` (query, DataView highlights, drill and drillthrough filters,
 tooltip pages, bookmarks, images), `pbi-pbir` (bookmark and extension types already kept),

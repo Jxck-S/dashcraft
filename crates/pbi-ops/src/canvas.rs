@@ -39,15 +39,16 @@ use pbi_core::container::Container;
 use pbi_core::{OpenedDocument, ReportSource};
 use pbi_engine::{CancellationToken, EngineSnapshot, Value};
 use pbi_model::{
-    ComparisonKind, Condition, DataType, Document, FieldExpr, Literal, LiteralValue, Model, Page,
-    Rename, Report, ResourcePackage, ResourceRef, SortDirection, SortItem, Visual, names_eq,
-    renames_between,
+    CommandGroup, ComparisonKind, Condition, DataType, Document, FieldExpr, Literal, LiteralValue,
+    Model, Page, Rename, Report, ResourcePackage, ResourceRef, SetFilterDefinition,
+    SetVisualObjects, SortDirection, SortItem, Visual, names_eq, renames_between,
 };
 use pbi_render::dataview::{
     BLANK_LABEL, CellValue, ColumnMeta, DataView, FieldRefKind, ValueColumn,
 };
 use pbi_render::images::{ImageResource, ImageSource, MAX_IMAGE_BYTES, decode_image};
 use pbi_render::layout::{FrameOptions, auto_title};
+use pbi_render::query::persist;
 use pbi_render::query::relative::{RelativeAnchor, RelativeDateSpec, RelativePeriod};
 use pbi_render::query::{
     DATA_TABLE_SUFFIX, DrillAction, DrillthroughPage, FocusState, InteractionState, PointField,
@@ -644,6 +645,9 @@ struct PageEntry {
     names: Arc<Model>,
     /// Saved slicer selections that could not be read.
     problems: Vec<String>,
+    /// The `objects` of the page's slicers `initial` was read from: when
+    /// they change (`report.state.persist`, undo), `initial` is read again.
+    saved: Vec<serde_json::Value>,
     view: PageViewState,
     /// Viewport of the last `canvas.render` (later renders reuse it).
     viewport: Option<(f64, f64)>,
@@ -700,6 +704,7 @@ impl PageEntry {
             state,
             names: Arc::clone(model),
             problems,
+            saved: slicer_objects_of(page).cloned().collect(),
             view: PageViewState::new(),
             viewport: None,
             state_version: 0,
@@ -728,6 +733,18 @@ impl PageEntry {
         self.set_state(state);
     }
 
+    /// Reads the saved slicer selections (`initial`) again when the page's
+    /// slicers were saved with another state since.
+    fn follow_page(&mut self, page: &Page) {
+        if slicer_objects_of(page).eq(self.saved.iter()) {
+            return;
+        }
+        let (initial, problems) = InteractionState::from_page(page);
+        self.initial = initial;
+        self.problems = problems;
+        self.saved = slicer_objects_of(page).cloned().collect();
+    }
+
     /// Replaces the interaction state; `true` if it changed.
     fn set_state(&mut self, state: InteractionState) -> bool {
         if state == self.state {
@@ -743,6 +760,14 @@ impl PageEntry {
             OpError::invalid_params("the page has not been rendered yet: call canvas.render first")
         })
     }
+}
+
+/// The `objects` of `page`'s slicers, in order.
+fn slicer_objects_of(page: &Page) -> impl Iterator<Item = &serde_json::Value> {
+    page.visuals
+        .iter()
+        .filter(|v| is_slicer_type(&v.visual_type))
+        .map(|v| &v.objects)
 }
 
 /// Applies `renames`, in order, to the fields of a page's selections and
@@ -809,6 +834,7 @@ impl CanvasStore {
             .entry(key)
             .or_insert_with(|| PageEntry::new(page, model));
         entry.follow_renames(model);
+        entry.follow_page(page);
         f(entry)
     }
 
@@ -906,6 +932,126 @@ impl CanvasStore {
             .is_some_and(|e| e.last.is_some())
     }
 
+    /// Pages of report `index` with a canvas state, in page order.
+    fn pages_of(&self, index: usize) -> Vec<usize> {
+        let mut pages: Vec<usize> = lock(&self.pages)
+            .keys()
+            .filter(|(r, _)| *r == index)
+            .map(|(_, p)| *p)
+            .collect();
+        pages.sort_unstable();
+        pages
+    }
+
+    /// The edits that save the reading state of report `index` into it
+    /// (`report.state.persist`): the applied selection of every slicer that
+    /// differs from its saved one (pending selections are not applied yet)
+    /// and the filter cards a bookmark changed. Report-level filter
+    /// overrides come from the first page (in page order) that has them.
+    pub(crate) fn persist_plan(
+        &self,
+        revision: &RevisionSnapshot,
+        index: usize,
+    ) -> Result<PersistPlan, OpError> {
+        let report = resolve::report_in(&revision.document, index)?;
+        let model = self.model(revision, &report);
+        let mut plan = PersistPlan {
+            group: CommandGroup::new("Save reading state"),
+            visuals: Vec::new(),
+            filters: Vec::new(),
+            skipped: Vec::new(),
+        };
+        let mut report_filters: HashSet<String> = HashSet::new();
+        for p in self.pages_of(index) {
+            let Some(page) = report.pages.get(p) else {
+                continue;
+            };
+            let (state, initial) = self.update((index, p), page, &model, |e| {
+                (e.state.clone(), e.initial.clone())
+            });
+            for v in page
+                .visuals
+                .iter()
+                .filter(|v| is_slicer_type(&v.visual_type))
+            {
+                let applied = state.slicer_selections.get(&v.name);
+                if applied == initial.slicer_selections.get(&v.name) {
+                    continue;
+                }
+                match persist::slicer_objects(v, applied) {
+                    Ok(objects) if objects != v.objects => {
+                        plan.group.commands.push(Box::new(SetVisualObjects {
+                            visual: v.id,
+                            objects,
+                        }));
+                        plan.visuals.push(v.name.clone());
+                    }
+                    Ok(_) => {}
+                    Err(reason) => plan
+                        .skipped
+                        .push(format!("slicer `{}`: {reason}", visual_label(v))),
+                }
+            }
+            for (name, condition) in &state.filters.report {
+                if report_filters.insert(name.clone())
+                    && let Some(f) = report.filters.iter().find(|f| f.name == *name)
+                {
+                    plan.filter(f, condition.as_ref(), "report filter");
+                }
+            }
+            for (name, condition) in &state.filters.page {
+                if let Some(f) = page.filters.iter().find(|f| f.name == *name) {
+                    plan.filter(f, condition.as_ref(), "page filter");
+                }
+            }
+            for (visual, overrides) in &state.filters.visuals {
+                let Some(v) = page.visuals.iter().find(|v| v.name == *visual) else {
+                    continue;
+                };
+                for (name, condition) in overrides {
+                    if let Some(f) = v.filters.iter().find(|f| f.name == *name) {
+                        plan.filter(f, condition.as_ref(), "visual filter");
+                    }
+                }
+            }
+        }
+        Ok(plan)
+    }
+
+    /// Drops the filter overrides of report `index`'s pages that no longer
+    /// change anything (their condition was saved into the report).
+    pub(crate) fn drop_saved_overrides(&self, revision: &RevisionSnapshot, index: usize) {
+        let Ok(report) = resolve::report_in(&revision.document, index) else {
+            return;
+        };
+        let model = self.model(revision, &report);
+        let saved = |filters: &[pbi_model::Filter], name: &str, c: &Option<Condition>| {
+            filters.iter().any(|f| f.name == name && f.condition == *c)
+        };
+        for p in self.pages_of(index) {
+            let Some(page) = report.pages.get(p) else {
+                continue;
+            };
+            self.update((index, p), page, &model, |e| {
+                let mut state = e.state.clone();
+                let filters = &mut state.filters;
+                filters
+                    .report
+                    .retain(|name, c| !saved(&report.filters, name, c));
+                filters
+                    .page
+                    .retain(|name, c| !saved(&page.filters, name, c));
+                for (visual, overrides) in &mut filters.visuals {
+                    if let Some(v) = page.visuals.iter().find(|v| v.name == *visual) {
+                        overrides.retain(|name, c| !saved(&v.filters, name, c));
+                    }
+                }
+                filters.visuals.retain(|_, o| !o.is_empty());
+                e.set_state(state);
+            });
+        }
+    }
+
     /// Cancels every running render (the document is closed).
     pub fn cancel_all(&self) {
         for entry in lock(&self.pages).values_mut() {
@@ -922,6 +1068,38 @@ impl CanvasStore {
         lock(&self.pages).clear();
         lock(&self.themes).clear();
         lock(&self.active_bookmarks).clear();
+    }
+}
+
+/// What `report.state.persist` writes (see [`CanvasStore::persist_plan`]).
+pub(crate) struct PersistPlan {
+    /// One undoable edit.
+    pub group: CommandGroup,
+    /// The slicers whose selection is saved.
+    pub visuals: Vec<String>,
+    /// The filter cards whose condition is saved.
+    pub filters: Vec<String>,
+    /// What cannot be saved, and why.
+    pub skipped: Vec<String>,
+}
+
+impl PersistPlan {
+    fn filter(&mut self, filter: &pbi_model::Filter, condition: Option<&Condition>, level: &str) {
+        if filter.condition.as_ref() == condition {
+            return;
+        }
+        let label = filter.display_name.as_deref().unwrap_or(&filter.name);
+        match persist::filter_with(filter, condition) {
+            Ok(new) => {
+                self.group.commands.push(Box::new(SetFilterDefinition {
+                    filter: filter.id,
+                    condition: new.condition,
+                    raw: new.raw,
+                }));
+                self.filters.push(filter.name.clone());
+            }
+            Err(reason) => self.skipped.push(format!("{level} `{label}`: {reason}")),
+        }
     }
 }
 

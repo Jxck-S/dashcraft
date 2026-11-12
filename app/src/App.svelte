@@ -835,6 +835,13 @@
     const fileName = doc.summary.fileName
     saving = true
     status = { message: `Saving ${fileName}…`, isError: false }
+    // Like Desktop, the file keeps the slicer and filter state it is saved with.
+    const state = await backend.persistState()
+    if (!state.ok) {
+      saving = false
+      fail(state.error)
+      return false
+    }
     let result = await backend.save()
     if (!result.ok && result.kind === 'conflict') {
       const choice = await ask(
@@ -896,6 +903,12 @@
     if (!folder) return false
     saving = true
     status = { message: `Saving as a project in ${folder}…`, isError: false }
+    const state = await backend.persistState()
+    if (!state.ok) {
+      saving = false
+      fail(state.error)
+      return false
+    }
     let result = await backend.saveAs(folder)
     if (!result.ok && editing.folderNotEmpty(result)) {
       const choice = await ask(

@@ -5,6 +5,7 @@ use std::mem;
 use super::{Applied, ChangeEvent, Command, CommandError, CommandGroup, expect_kind, model_mut};
 use crate::document::{Document, ObjectKind, ObjectPath};
 use crate::ids::ObjectId;
+use crate::query::Condition;
 #[cfg(doc)]
 use crate::report::Page;
 use crate::report::Position;
@@ -328,6 +329,103 @@ impl Command for SetVisualPosition {
 
     fn label(&self) -> String {
         "Move visual".to_owned()
+    }
+}
+
+/// Replaces a visual's `objects` (formatting and persisted slicer state).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SetVisualObjects {
+    pub visual: ObjectId,
+    pub objects: serde_json::Value,
+}
+
+impl Command for SetVisualObjects {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let ObjectPath::Visual {
+            report,
+            page,
+            visual,
+        } = expect_kind(doc, self.visual, ObjectKind::Visual)?
+        else {
+            return Err(CommandError::NotFound(self.visual));
+        };
+        let slot = doc
+            .reports
+            .get_mut(report)
+            .and_then(|r| r.pages.get_mut(page))
+            .and_then(|p| p.visuals.get_mut(visual))
+            .ok_or(CommandError::NotFound(self.visual))?;
+        let old = mem::replace(&mut slot.objects, self.objects.clone());
+        let events = changed(self.visual, old != self.objects);
+        Ok(Applied::new(
+            SetVisualObjects {
+                visual: self.visual,
+                objects: old,
+            },
+            events,
+        ))
+    }
+
+    fn label(&self) -> String {
+        "Edit visual objects".to_owned()
+    }
+}
+
+/// Replaces a report, page or visual filter's condition and source JSON
+/// (`raw`, which holds its `filter` definition) together.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SetFilterDefinition {
+    pub filter: ObjectId,
+    pub condition: Option<Condition>,
+    pub raw: serde_json::Value,
+}
+
+impl Command for SetFilterDefinition {
+    fn apply(&self, doc: &mut Document) -> Result<Applied, CommandError> {
+        let path = expect_kind(doc, self.filter, ObjectKind::Filter)?;
+        let slot = match path {
+            ObjectPath::ReportFilter { report, filter } => doc
+                .reports
+                .get_mut(report)
+                .and_then(|r| r.filters.get_mut(filter)),
+            ObjectPath::PageFilter {
+                report,
+                page,
+                filter,
+            } => doc
+                .reports
+                .get_mut(report)
+                .and_then(|r| r.pages.get_mut(page))
+                .and_then(|p| p.filters.get_mut(filter)),
+            ObjectPath::VisualFilter {
+                report,
+                page,
+                visual,
+                filter,
+            } => doc
+                .reports
+                .get_mut(report)
+                .and_then(|r| r.pages.get_mut(page))
+                .and_then(|p| p.visuals.get_mut(visual))
+                .and_then(|v| v.filters.get_mut(filter)),
+            _ => None,
+        }
+        .ok_or(CommandError::NotFound(self.filter))?;
+        let condition = mem::replace(&mut slot.condition, self.condition.clone());
+        let raw = mem::replace(&mut slot.raw, self.raw.clone());
+        let events = changed(self.filter, condition != self.condition || raw != self.raw);
+        Ok(Applied::new(
+            SetFilterDefinition {
+                filter: self.filter,
+                condition,
+                raw,
+            },
+            events,
+        ))
+    }
+
+    fn label(&self) -> String {
+        "Edit filter".to_owned()
     }
 }
 

@@ -159,6 +159,7 @@ mod exec;
 pub mod export;
 pub mod filter;
 pub mod interaction;
+pub mod persist;
 mod plan;
 pub mod reduction;
 pub mod relative;
@@ -192,6 +193,7 @@ pub use interaction::{
     PointSelection, SlicerSelection, is_slicer_type, persisted_selection, slicer_fields,
     sync_group, synced_slicers,
 };
+pub use persist::{filter_definition, filter_with, slicer_objects};
 pub use reduction::QueryReduction;
 pub use semantic::TopNSpec;
 pub use tooltip::{TooltipPage, tooltip_page, tooltip_state, visual_tooltip_page};

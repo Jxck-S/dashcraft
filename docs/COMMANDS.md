@@ -129,6 +129,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.dependencies`](#modeldependencies) | Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields. | A |
 | [`report.visual.move`](#reportvisualmove) | Moves a visual or a visual group (with the visuals in it) on its page as one undoable edit. | M A |
 | [`report.visual.resize`](#reportvisualresize) | Resizes a visual or a visual group (top-left corner fixed; the visuals in a group scale with it unless it scrolls) as one undoable edit. | M A |
+| [`report.state.persist`](#reportstatepersist) | Writes the applied slicer selections and changed filters into the report as one undoable edit, so a save keeps them; refused when persistent filters are off. | M A |
 | [`doc.applyEdits`](#docapplyedits) | Applies a group of document edits atomically as one undoable history step. | M A |
 | [`doc.undo`](#docundo) | Undoes the latest document edit. | M A |
 | [`doc.redo`](#docredo) | Reapplies the latest undone document edit. | M A |
@@ -3686,6 +3687,35 @@ Result:
 Examples:
 
 - Resize a visual: `{"docId":"d1","page":"1","visual":"f7a9c9413fef68532313","width":320,"height":180}`
+
+### `report.state.persist`
+
+**Save reading state.** Writes the applied slicer selections and changed filters into the report as one undoable edit, so a save keeps them; refused when persistent filters are off.
+
+_mutates the document, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `changed` | boolean |  |
+| `revision` | integer |  |
+| `dirty` | boolean |  |
+| `changedObjectIds` | integer[] |  |
+| `visuals` | string[] | The slicers (visual names) whose applied selection is now saved. |
+| `filters` | string[] | The filter cards (filter names) whose condition is now saved. |
+| `skipped` | string[] | Selections and filters that cannot be saved, with the reason. |
+
+Examples:
+
+- Keep the slicer selections: `{"docId":"d1"}`
 
 ### `doc.applyEdits`
 

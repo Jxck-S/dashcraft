@@ -87,6 +87,8 @@ Update **2026-11-12** (M9.9): report-level measures evaluate in visuals (§1 `re
 
 Update **2026-11-12** (M9.10): measure filters of the report and page apply to each visual's rows, and the query-reduction options work: Apply buttons on slicers and "Apply all slicers" keep selections pending until applied (`canvas.applySlicers`), and disabled cross-highlighting stops selected points from filtering by default (§6 relative-date and measure filters row 3 → 4).
 
+Update **2026-11-12** (M9.11): saving keeps the reading state: `report.state.persist` writes the applied slicer selections and the filters a bookmark changed into the report as one undoable edit, honouring the report's persistent-filters setting, and the app runs it before Save and Save as (§6 persisting selections 0 → 3).
+
 ## How to read it
 
 - **Status**: ✅ done (behaves like Power BI for this capability, within the documented limits) ·
@@ -297,7 +299,7 @@ Source: [VISUALS.md "Interaction summary"](VISUALS.md#interaction-summary), ADR-
 | Relative-date and measure filters at report/page level | 🟢 | 4 | relative date and time filters apply at every level against the session clock (`report_page_and_visual_filters_with_warnings` in `crates/pbi-render/tests/query_visuals.rs`); measure filters of the report and page filter each visual's rows and Top N applies at every level; query reduction (Apply buttons on slicers, "Apply all slicers", cross-highlighting off) defers or limits interactions (`query_reduction_and_page_measure_filters`, `apply_all_slicers_button_defers_selections` in `crates/pbi-ops/tests/canvas.rs`) | Measure filters on matrices; the filter pane's Apply button (M20.1); checks against Desktop |
 | Visual header menus (focus mode, show as table, sort, export), right-click menus | 🟡 | 3 | `canvas.focus`, `canvas.showAsTable`, `canvas.setSpotlight`, `canvas.sortVisual`, `canvas.contextMenu` and `export.visualData` (`visual_header_focus_sort_spotlight_copy_and_export` in `crates/pbi-ops/tests/canvas.rs`; `maximize_bookmarks_and_focus_mode_fill_the_page` in `crates/pbi-render/tests/visuals_basics.rs`, `export_summarized_and_underlying_data` in `crates/pbi-render/tests/query_visuals.rs`); the app's visual header and right-click menu | Analyze entries (M23.7), Include / Exclude, export to XLSX, Desktop's focus margins; underlying data picks the first field's table |
 | Q&A | ❌ | 0 | "not available" | After the AI layer |
-| Persisting selections (save with the report, bookmarks) | ❌ | 0 | view state only (ADR-0006) | Commands that turn view state into document edits |
+| Persisting selections (save with the report, bookmarks) | 🟡 | 3 | `report.state.persist` saves applied slicer selections and bookmark-changed filters into PBIR reports as one undoable edit; the app runs it before Save | Legacy layouts, cross-filter and drill state, Desktop-checked JSON |
 | Headless interaction (`canvas.*` registry commands) | ✅ | 4 | 12 `canvas.*` commands (`docs/COMMANDS.md`), the same ones the app uses; legacy reports' themes resolved | — |
 
 ## 7. Rendering fidelity

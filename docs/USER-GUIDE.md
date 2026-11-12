@@ -134,7 +134,7 @@ The Report view behaves like Power BI's reading view:
 - **Selection**: click a visual to select it for the Filters, Visualizations, Data and Properties panes. Tab and Enter select visuals with the keyboard.
 - **Reset to default** (View tab): back to the selections saved in the report, with no cross-filter.
 
-Selections are never saved to the file. They last until the document closes.
+File → **Save** (or Save as) keeps your applied slicer selections and the filters a bookmark changed in the report, as Power BI Desktop does, as one step you can undo; Reset to default then goes back to them. Reports that turn off persistent filters, and PBIX reports in the older layout, keep the saved selections. Cross-filters, drill state and selections waiting for **Apply** are not saved.
 
 ## View as roles
 

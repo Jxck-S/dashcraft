@@ -10,9 +10,9 @@ use pbi_core::{
     ChangeKind, CoreError, FileChange, OpenOptions, OpenedDocument, ProjectFingerprint, open_path,
     save_as_project, save_in_place,
 };
-use pbi_model::{Document, Rename, SourceFormat};
+use pbi_model::{Condition, Document, FieldExpr, Literal, Rename, SourceFormat};
 use pretty_assertions::assert_eq;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 const MODEL: &str = "AcmeOutfitters.SemanticModel";
 const ONLINE: &str = "Acme Outfitters - Online.Report";
@@ -570,6 +570,73 @@ fn moving_a_visual_patches_only_its_position() {
         new_lines(&original[SESSIONS_CARD], &saved[SESSIONS_CARD]),
         ["    \"x\": 300.5,", "    \"width\": 260,"]
     );
+    let reopened = open(&root);
+    assert_eq!(
+        normalized(&reopened.document.reports),
+        normalized(&edited.reports)
+    );
+}
+
+#[test]
+fn slicer_state_and_filter_definitions_are_written() {
+    let (_dir, root) = project();
+    let original = files(&root);
+    let opened = open(&root);
+    let mut fingerprint = ProjectFingerprint::scan(&opened).unwrap();
+    let mut edited = opened.document.clone();
+    let slicer = edited
+        .reports
+        .iter_mut()
+        .flat_map(|r| &mut r.pages)
+        .flat_map(|p| &mut p.visuals)
+        .find(|v| v.visual_type == "slicer")
+        .unwrap();
+    let mut objects = match &slicer.objects {
+        Value::Object(m) => m.clone(),
+        _ => serde_json::Map::new(),
+    };
+    objects.insert("dashcraftTest".into(), json!([{"properties": {}}]));
+    slicer.objects = Value::Object(objects);
+    let slicer_name = slicer.name.clone();
+    let filter = edited
+        .reports
+        .iter_mut()
+        .flat_map(|r| &mut r.pages)
+        .flat_map(|p| &mut p.filters)
+        .find(|f| matches!(f.field, Some(FieldExpr::Column { .. })))
+        .expect("a page filter on a column");
+    let Some(FieldExpr::Column { entity, property }) = filter.field.clone() else {
+        unreachable!()
+    };
+    let definition = json!({
+        "Version": 2,
+        "From": [{"Name": "t", "Entity": entity, "Type": 0}],
+        "Where": [{"Condition": {"In": {
+            "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "t"}}, "Property": property}}],
+            "Values": [[{"Literal": {"Value": "'Persisted'"}}]]
+        }}}]
+    });
+    filter.condition = Some(Condition::In {
+        exprs: vec![FieldExpr::column(entity, property)],
+        values: vec![vec![Literal::text("Persisted")]],
+    });
+    filter.raw["filter"] = definition;
+
+    let outcome = save_in_place(&opened, &mut fingerprint, &edited, false).unwrap();
+    let mut written = outcome.written.clone();
+    written.sort();
+    assert_eq!(written.len(), 2, "{written:?}");
+    assert!(
+        written.iter().any(|p| p.ends_with("/page.json")),
+        "{written:?}"
+    );
+    assert!(
+        written
+            .iter()
+            .any(|p| p.contains(&format!("/visuals/{slicer_name}/"))),
+        "{written:?}"
+    );
+    assert_eq!(changed(&original, &files(&root)), written);
     let reopened = open(&root);
     assert_eq!(
         normalized(&reopened.document.reports),
