@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from 'svelte'
+  import { onMount, tick, untrack } from 'svelte'
   import type { ExplainTarget } from './components/ai/ExplainPane.svelte'
   import CsvDialog from './components/CsvDialog.svelte'
   import Modal from './components/Modal.svelte'
@@ -13,6 +13,7 @@
   import Toasts, { type Toast } from './components/Toasts.svelte'
   import ViewAsDialog from './components/ViewAsDialog.svelte'
   import DataPane, { fieldKey, type DataTarget } from './components/panes/DataPane.svelte'
+  import BookmarksPane from './components/panes/BookmarksPane.svelte'
   import FiltersPane from './components/panes/FiltersPane.svelte'
   import SelectionPane from './components/panes/SelectionPane.svelte'
   import VisualizationsPane from './components/panes/VisualizationsPane.svelte'
@@ -33,6 +34,7 @@
   import * as backend from './lib/backend'
   import type {
     BlobMapDto,
+    BookmarkOut,
     CanvasAction,
     CsvLoad,
     DocumentHistory,
@@ -86,8 +88,8 @@
   let ribbonCollapsed = $state(false)
   let backstage = $state<BackstageSection | null>(null)
   let recent = $state.raw<RecentFileDto[]>([])
-  let panes = $state({ filters: true, selection: false, properties: false })
-  let collapsed = $state({ filters: false, viz: false, data: false, selection: false, properties: false, explain: false })
+  let panes = $state({ filters: true, bookmarks: false, selection: false, properties: false })
+  let collapsed = $state({ filters: false, viz: false, data: false, bookmarks: false, selection: false, properties: false, explain: false })
 
   // Data session: table statuses, a version bumped on every data change, the refresh run.
   let statuses = $state.raw<TableStatus[]>([])
@@ -119,6 +121,14 @@
   let canvasFilters = $state.raw<FilterSpec | null>(null)
   let navHistory = $state<number[]>([])
   let webLink = $state<string | null>(null)
+  // Bookmarks pane: the report's bookmarks (loaded when the pane opens), the last one applied and
+  // the slideshow's position.
+  let bookmarks = $state.raw<BookmarkOut[] | null>(null)
+  let bookmarksError = $state<string | null>(null)
+  let bookmarksKey: string | null = null
+  let activeBookmark = $state<string | null>(null)
+  let slideshow = $state<number | null>(null)
+  let slideshowBar = $state<HTMLDivElement | null>(null)
 
   // Table view.
   let tableMode = $state<'grid' | 'schema'>('grid')
@@ -1149,16 +1159,92 @@
           const target = report ? backend.pageIdOf(report.id, action.page) : null
           if (target != null) selectPage(target)
         }
-        const skipped = action.notApplied ?? []
-        status = {
-          message: `Bookmark ${action.displayName} applied${skipped.length > 0 ? `; not applied yet: ${skipped.join(', ')}` : ''}`,
-          isError: false,
-        }
+        activeBookmark = action.name
+        status = { message: bookmarkMessage(action.displayName, action.notApplied ?? []), isError: false }
         break
       }
       case 'notAvailable':
         toast('info', action.message)
         break
+    }
+  }
+
+  function bookmarkMessage(name: string, skipped: string[]): string {
+    return `Bookmark ${name} applied${skipped.length > 0 ? `; not applied yet: ${skipped.join(', ')}` : ''}`
+  }
+
+  // The Bookmarks pane lists the current report's bookmarks; they are read when it opens.
+  $effect(() => {
+    const key = doc && report ? `${doc.summary.docId}:${report.id}` : null
+    const open = panes.bookmarks
+    untrack(() => {
+      if (key !== bookmarksKey) {
+        bookmarksKey = key
+        bookmarks = null
+        bookmarksError = null
+        activeBookmark = null
+        slideshow = null
+      }
+      if (key != null && open && bookmarks == null && bookmarksError == null && report) void loadBookmarks(report.id, key)
+    })
+  })
+
+  async function loadBookmarks(reportId: number, key: string) {
+    const result = await backend.reportBookmarks(reportId)
+    if (key !== bookmarksKey || bookmarks != null) return
+    if (result.ok) bookmarks = result.value
+    else if (result.kind !== 'cancelled') bookmarksError = result.error
+  }
+
+  /** Applies a bookmark from the Bookmarks pane or the slideshow (as a bookmark button does). */
+  async function applyBookmark(name: string) {
+    if (!report || !page) return
+    const result = await backend.applyBookmark(report.id, page.id, name)
+    if (!result.ok) {
+      if (result.kind !== 'cancelled') fail(result.error)
+      return
+    }
+    const out = result.value
+    activeBookmark = out.bookmark
+    const target = out.navigated ? backend.pageIdOf(report.id, out.rendered.page) : null
+    // A new page renders itself with the bookmark's state; the current one takes the render.
+    if (target != null) selectPage(target)
+    else canvasIncoming = out.rendered
+    status = { message: bookmarkMessage(out.displayName, out.notApplied), isError: false }
+  }
+
+  /** View: shows the bookmarks one after the other from the first, with a bar to step through them. */
+  async function startSlideshow() {
+    if (!bookmarks || bookmarks.length === 0) return
+    slideshow = 0
+    await applyBookmark(bookmarks[0].name)
+    await tick()
+    slideshowBar?.querySelector<HTMLButtonElement>('button.next:not(:disabled), button.exit')?.focus()
+  }
+
+  async function stepSlideshow(delta: number) {
+    if (slideshow == null || !bookmarks) return
+    const next = slideshow + delta
+    if (next < 0 || next >= bookmarks.length) return
+    slideshow = next
+    await tick()
+    // At the first or last bookmark the pressed button turns disabled: keep the focus in the bar.
+    const focused = document.activeElement
+    if (slideshowBar && (!slideshowBar.contains(focused) || (focused as HTMLButtonElement).disabled)) slideshowBar.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    await applyBookmark(bookmarks[next].name)
+  }
+
+  function exitSlideshow() {
+    slideshow = null
+    status = { message: 'Bookmark slideshow closed', isError: false }
+    document.querySelector<HTMLButtonElement>('.bookmarks button.view')?.focus()
+  }
+
+  function slideshowKey(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.stopPropagation()
+      event.preventDefault()
+      exitSlideshow()
     }
   }
 
@@ -1885,6 +1971,22 @@
           {/if}
         {/key}
       {/if}
+      {#if activeView === 'report' && report && slideshow != null && bookmarks?.[slideshow]}
+        {@const current = bookmarks[slideshow]}
+        <div class="slideshow" role="group" aria-label="Bookmark slideshow" bind:this={slideshowBar}>
+          <button class="prev" onkeydown={slideshowKey} onclick={() => void stepSlideshow(-1)} disabled={slideshow === 0} aria-label="Previous bookmark" title="Previous bookmark">
+            <Icon name="chevronLeft" size={16} />
+          </button>
+          <span class="slide-name">{current.displayName}</span>
+          <span class="slide-count">{slideshow + 1} of {bookmarks.length}</span>
+          <button class="next" onkeydown={slideshowKey} onclick={() => void stepSlideshow(1)} disabled={slideshow === bookmarks.length - 1} aria-label="Next bookmark" title="Next bookmark">
+            <Icon name="chevron" size={16} />
+          </button>
+          <button class="exit" onkeydown={slideshowKey} onclick={exitSlideshow} aria-label="Exit the bookmark slideshow" title="Exit (Esc)">
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+      {/if}
       {#if activeView === 'report' && report}
         <div class="page-nav">
           {#if reports.length > 1}
@@ -1904,6 +2006,11 @@
       {@render explainPane()}
       {#if activeView === 'report'}
         {#if panes.properties}{@render propertiesPane(true)}{/if}
+        {#if panes.bookmarks}
+          <Pane title="Bookmarks" icon="bookmarks" collapsed={collapsed.bookmarks} ontogglecollapse={() => (collapsed = { ...collapsed, bookmarks: !collapsed.bookmarks })} onclose={() => (panes = { ...panes, bookmarks: false })}>
+            <BookmarksPane {bookmarks} error={bookmarksError} active={activeBookmark} onapply={(name) => void applyBookmark(name)} onview={() => void startSlideshow()} />
+          </Pane>
+        {/if}
         {#if panes.selection}
           <Pane title="Selection" icon="selection" collapsed={collapsed.selection} ontogglecollapse={() => (collapsed = { ...collapsed, selection: !collapsed.selection })} onclose={() => (panes = { ...panes, selection: false })}>
             <SelectionPane {page} selectedId={selectedVisualId} onselect={(id) => selectVisual(id)} />
@@ -2223,6 +2330,54 @@
     display: flex;
     flex: none !important;
     min-width: 0;
+  }
+
+  .slideshow {
+    display: flex;
+    flex: none !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 4px 12px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface, #fff);
+  }
+
+  .slideshow button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .slideshow button:hover:not(:disabled) {
+    background: var(--color-hover);
+  }
+
+  .slideshow button:disabled {
+    color: var(--color-text-subtle);
+    cursor: default;
+  }
+
+  .slideshow .exit {
+    margin-left: 16px;
+  }
+
+  .slide-name {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .slide-count {
+    color: var(--color-text-muted);
   }
 
   .page-nav :global(.page-tabs) {

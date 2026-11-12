@@ -22,7 +22,7 @@ export interface RibbonActions {
   loadCsv: (table: string) => void
   manageRelationships: () => void
   setZoomMode: (mode: ZoomMode) => void
-  togglePane: (pane: 'filters' | 'selection' | 'properties') => void
+  togglePane: (pane: 'filters' | 'bookmarks' | 'selection' | 'properties') => void
   setCanvasMode: (mode: 'wireframe' | 'outline') => void
   /** "Reset to default": the report's saved slicer selections, no cross-filter. */
   resetToDefault: () => void
@@ -57,7 +57,7 @@ export interface RibbonContext {
   hasReport: boolean
   theme: ReportThemeDto | null
   zoomMode: ZoomMode
-  panes: { filters: boolean; selection: boolean; properties: boolean }
+  panes: { filters: boolean; bookmarks: boolean; selection: boolean; properties: boolean }
   canvasMode: 'wireframe' | 'outline'
   /** The canvas has slicer selections or a cross-filter that differ from the report's saved state. */
   canReset: boolean
@@ -355,7 +355,7 @@ function viewTab(ctx: RibbonContext): RibbonTab {
         'show-panes',
         'Show panes',
         button('pane-filters', 'Filters', 'filter', { enabled: ctx.hasReport, pressed: ctx.panes.filters, title: 'Show or hide the Filters pane', onclick: () => act.togglePane('filters') }),
-        off('pane-bookmarks', 'Bookmarks', 'bookmarks'),
+        button('pane-bookmarks', 'Bookmarks', 'bookmarks', { enabled: ctx.hasReport, pressed: ctx.panes.bookmarks, title: 'Show or hide the Bookmarks pane', onclick: () => act.togglePane('bookmarks') }),
         button('pane-selection', 'Selection', 'selection', { enabled: ctx.hasReport, pressed: ctx.panes.selection, title: 'Show or hide the Selection pane', onclick: () => act.togglePane('selection') }),
         off('pane-performance', 'Performance analyzer', 'performance'),
         off('pane-sync-slicers', 'Sync slicers', 'syncSlicers'),

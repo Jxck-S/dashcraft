@@ -104,7 +104,7 @@ Update **2026-11-11** (A6 in CI, [ADR-0030](adr/0030-screen-readers-in-ci.md)): 
 | 3 | [DAX](#3-dax) | 3.8 | 5 / 6 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; relationship overrides in `RELATED`/`SUMMARIZE` |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh, drill-down |
 | 5 | [Visuals](#5-visuals) | 2.1 | 15 / 6 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
-| 6 | [Interactions](#6-interactions) | 1.7 | 7 / 3 / 9 | Highlighting, drillthrough, drill-down, synced slicers, the Bookmarks pane |
+| 6 | [Interactions](#6-interactions) | 1.8 | 7 / 3 / 9 | Highlighting, drillthrough, drill-down, synced slicers, bookmark navigators |
 | 7 | [Rendering fidelity](#7-rendering-fidelity) | 3.2 | 4 / 0 / 2 | No golden images (Power BI exports of the Acme Outfitters pages); DIN font |
 | 8 | [Performance](#8-performance) | 4.8 | 12 / 0 / 1 | No app-open or webview canvas-latency scenarios; P09–P12 not in the baseline yet |
 | 9 | [Command registry, MCP, AI](#9-command-registry-mcp-ai) | 3.4 | 8 / 3 / 1 | Broader editing commands |
@@ -283,7 +283,7 @@ Source: [VISUALS.md "Interaction summary"](VISUALS.md#interaction-summary), ADR-
 | Report-page tooltips | ❌ | 0 | not rendered | ROADMAP Next |
 | Back and page-navigation buttons, Clear all slicers | ✅ | 4 | `canvas.click` button actions | — |
 | Web URL buttons | ✅ | n/a | shown with Copy link, never opened (policy) | — |
-| Bookmarks (buttons, navigator, pane) | 🟡 | 2 | bookmark buttons and `canvas.applyBookmark` apply the page, slicer selections and cross-filter, "selected visuals only" and the data/display switches; the rest is listed as not applied (`bookmarks_on_the_example_report` in `crates/pbi-ops/tests/e2e.rs`, `bookmarks_set_the_slicer_and_cards_match_expected` in `crates/pbi-render/tests/query_reference.rs`) | Bookmarks pane, slideshow and navigator lists (M9.5); filter, visibility and sort parts |
+| Bookmarks (buttons, navigator, pane) | 🟡 | 3 | bookmark buttons and `canvas.applyBookmark` apply the page, slicer selections and cross-filter, "selected visuals only" and the data/display switches; the rest is listed as not applied (`bookmarks_on_the_example_report` in `crates/pbi-ops/tests/e2e.rs`, `bookmarks_set_the_slicer_and_cards_match_expected` in `crates/pbi-render/tests/query_reference.rs`); the app's Bookmarks pane (groups, click to apply) and slideshow (`scripts/app-checks/bookmarks.mjs`, with accessibility checks) | Navigator lists (M9.5); filter, visibility and sort parts |
 | Drillthrough | ❌ | 0 | "not available" | ROADMAP Next |
 | Drill-down/up on hierarchies | ❌ | 0 | — | — |
 | Matrix expand/collapse, table/matrix/slicer scrolling | ✅ | 4 | `canvas.toggleMatrixRow`, `canvas.scroll` | — |
@@ -370,7 +370,7 @@ Source: [app/README.md](../app/README.md), [desktop-ui-reference.md](../app/docs
 | Several documents, several models per project | ❌ | 1 | one document; first model only | — |
 | Export from the app (data, PDF, PowerPoint) | 🟡 | 1 | File → Export writes a PBIP project or PBIT template (`convert.pbip`/`convert.pbit`); table data, PDF and PowerPoint: CLI or not at all | `export.table` from the Table view; PDF |
 | Get data / connectors | ❌ | 0 | offline policy; "Load CSV manually…" | — |
-| Performance analyzer, Bookmarks, Sync slicers panes, Mobile layout | ❌ | 0 | shown disabled | — |
+| Performance analyzer, Sync slicers panes, Mobile layout | ❌ | 0 | shown disabled | — |
 | Settings persistence | 🟡 | 2 | recent files and AI settings (`ai.json`) persist; the blob map is per session (app/README "Known gaps") | Persist the other settings |
 | Opt-in AI: Options → AI, consent dialog with the exact request, Explain with AI, Suggest a measure | ✅ | 3 | app/README, [AI.md](AI.md#in-the-desktop-app); hostile-input tests of the Markdown renderer (`app/tests/markdown.test.ts`) | AI in the DAX query view |
 | Modeling → View as (RLS roles, other user) | ✅ | 3 | `app/src/components/ViewAsDialog.svelte` over `security.roles` / `security.viewAs` (§4) | — |

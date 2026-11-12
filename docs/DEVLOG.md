@@ -7,6 +7,19 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M9.5: the Bookmarks pane and slideshow
+
+- **What:** `app/src/components/panes/BookmarksPane.svelte` (View → Bookmarks, now enabled):
+  bookmarks in pane order, consecutive members of a group as a collapsible section, the one
+  applied last marked `aria-current`; a click calls `canvas.applyBookmark` (backend
+  `applyBookmark`) and follows it to the bookmark's page. **View** starts the slideshow: a
+  `role="group"` bar above the page tabs (Previous, name, "n of N", Next, Exit / Esc) that keeps
+  the focus inside and returns it to View. `scripts/app-checks/bookmarks.mjs` drives it on the
+  Acme Stores report after a refresh.
+- **Why:** M9.5 and the GAPS Interactions row "Bookmarks" (2 → 3; §6 average 1.7 → 1.8).
+- **Numbers:** `bookmarks.mjs` 28 checks pass (both bookmarks' 10 card values via the button,
+  the pane and the slideshow; A1–A5, IBM checker with no violation on the pane and the bar).
+
 ### M9.5: bookmarks, headless part
 
 - **What:** `pbi-model` gains `Bookmark` and `Report::bookmarks` (groups as children);

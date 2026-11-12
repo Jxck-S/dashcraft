@@ -307,7 +307,7 @@ Every visual region and the whole page must reach the default threshold, SSIM â‰
 ## Known gaps
 
 - Highlight interactions filter instead of highlighting; a visual's own selection dims but does not highlight.
-- The Bookmarks pane, bookmark navigators, a bookmark's filter, visibility and sort parts, drillthrough, Q&A, report-page tooltips, visual header menus (focus mode, show as table, sort, export), drill-down/up and right-click menus are not available.
+- Bookmark navigators, a bookmark's filter, visibility and sort parts, drillthrough, Q&A, report-page tooltips, visual header menus (focus mode, show as table, sort, export), drill-down/up and right-click menus are not available.
 - Synced slicers, range-slider dragging, relative-date pickers.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.
 - Scatter play axes are not animated (the first frame is drawn); `ribbonChart` and maps are placeholders.
