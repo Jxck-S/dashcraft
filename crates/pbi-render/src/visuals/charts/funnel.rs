@@ -34,10 +34,10 @@ use crate::scene::{
 };
 use crate::text::TextStyle;
 
-use super::ChartCtx;
 use super::axis::{AxisSettings, SCROLLBAR_SIZE, scrollbar};
 use super::format::{NumberStyle, data_label};
 use super::labels::{DataLabels, baseline_centered, prefers_white_text, tailor, width};
+use super::{ChartCtx, DIMMED_OPACITY};
 
 /// Share of a band filled by its bar.
 const BAR_FILL: f64 = 0.9;
@@ -60,6 +60,8 @@ pub struct Stage {
     pub series: usize,
     pub index: usize,
     pub opacity: f64,
+    /// The highlighted value when another visual highlights this one.
+    pub highlight: Option<f64>,
 }
 
 /// What a data label shows (`funnelLabelStyle`).
@@ -132,6 +134,7 @@ pub fn stages(cc: &ChartCtx<'_>) -> Vec<Stage> {
                 series: s,
                 index: 0,
                 opacity: 1.0,
+                highlight: series.highlight(0),
             })
             .collect();
     }
@@ -161,6 +164,7 @@ pub fn stages(cc: &ChartCtx<'_>) -> Vec<Stage> {
                 .and_then(|o| o.get(i))
                 .copied()
                 .unwrap_or(1.0),
+            highlight: series.highlight(i),
         })
         .collect()
 }
@@ -269,6 +273,9 @@ pub fn render(cc: &ChartCtx<'_>) -> Group {
     }
     g.push(ax);
 
+    // Highlighted by another visual: bars dimmed, the highlighted value
+    // drawn solid on the same scale, centred, never wider than its bar.
+    let highlighted = cc.data.has_highlights();
     let mut bars = Group::new().with_class("pbi-bars");
     for (k, s) in stages.iter().take(count).enumerate() {
         let w = bar_w(s.value);
@@ -280,7 +287,21 @@ pub fn render(cc: &ChartCtx<'_>) -> Group {
         if s.opacity < 1.0 {
             bg = bg.with_opacity(s.opacity);
         }
-        bg.push(RectNode::new(rect).fill(Paint::solid(s.color)));
+        let bar = RectNode::new(rect).fill(Paint::solid(s.color));
+        if highlighted {
+            let mut dimmed = Group::new().with_opacity(DIMMED_OPACITY);
+            dimmed.push(bar);
+            bg.push(dimmed);
+            let hw = bar_w(s.highlight.filter(|h| h.is_finite())).min(w);
+            if hw > 0.0 {
+                bg.push(
+                    RectNode::new(Rect::new(cx - hw / 2.0, bar_y(k), hw, bar_h))
+                        .fill(Paint::solid(s.color)),
+                );
+            }
+        } else {
+            bg.push(bar);
+        }
         bars.push(bg);
     }
     g.push(bars);

@@ -277,7 +277,7 @@ The interactive canvas is in the app ([app/README.md](../app/README.md#the-inter
 | Page and bookmark navigators | one button per page or bookmark | — | — | goes to the page or applies the bookmark |
 | Cards, textbox, shape, placeholders | — | — | — | clicking selects the visual for the panes |
 
-`visualInteractions`: `NoFilter` skips a target; `DataFilter` filters; `HighlightFilter` and the default highlight bar and column charts (the full bars dimmed, the selection's part solid; stacked parts start at their segment's base) and filter the other visuals, as Power BI does, unless the report sets "selections filter other visuals" (`defaultFilterActionIsDataFilter`). Pies, donuts, treemaps, funnels and combo charts are filtered instead of highlighted, with a warning; slicers always filter. Clicking the selected point again, the visual background, the empty canvas or Esc clears the cross-filter.
+`visualInteractions`: `NoFilter` skips a target; `DataFilter` filters; `HighlightFilter` and the default highlight bar, column and combo charts (the full bars dimmed, the selection's part solid; stacked parts start at their segment's base), pies and donuts (the slice dimmed, the highlighted share a slice of the same angle with its radius in proportion), funnels (a centred bar on the same scale) and treemaps (the tile's bottom part, its height in proportion), and filter the other visuals, as Power BI does, unless the report sets "selections filter other visuals" (`defaultFilterActionIsDataFilter`). An explicit `HighlightFilter` on a visual that cannot draw highlights (tables, lines, …) filters it, with a warning; slicers always filter. Clicking the selected point again, the visual background, the empty canvas or Esc clears the cross-filter.
 
 ## Render verification
 
@@ -309,7 +309,7 @@ Every visual region and the whole page must reach the default threshold, SSIM �
 
 ## Known gaps
 
-- Pies, donuts, treemaps, funnels and combo charts are filtered instead of highlighted; data labels and tooltips of highlighted bars show the full values.
+- Data labels and tooltips of highlighted charts show the full values; the lines of combo charts are not highlighted. How Desktop sizes a highlighted pie slice and treemap tile (radius or area, which edge) is not documented: DashCraft scales the radius and fills the tile from the bottom.
 - A bookmark's changed Top N filters, its spotlight and focus modes, cross-report drillthrough, Q&A, report-page tooltips, visual header menus (focus mode, show as table, sort, export), drill-down/up and the right-click menu's other items are not available.
 - Range-slider dragging, relative-date pickers, the newer slicers' `selfFilter`.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.

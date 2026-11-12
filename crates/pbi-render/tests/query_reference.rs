@@ -516,8 +516,8 @@ fn slicer_and_cross_filter_interactions() {
     let bar_online = sum(&query(session, report, summary, &bar, &online));
     assert!((bar_all - all).abs() < 1e-6, "{bar_all}");
     assert!(bar_online > 0.0 && bar_online < bar_all, "{bar_online}");
-    // Column chart → donut is HighlightFilter: applied as a filter, with a
-    // warning.
+    // Column chart → donut is HighlightFilter: the donut keeps its totals
+    // and highlights the Camping share of each slice.
     let mut camping = base.clone();
     camping.selected_points = Some(PointSelection::point(
         "bdf9d92d87bec8350cc4",
@@ -528,9 +528,22 @@ fn slicer_and_cross_filter_interactions() {
     ));
     let dv = query(session, report, summary, donut, &camping);
     assert!(
-        dv.warnings.iter().any(|w| w.message.contains("highlight")),
+        !dv.warnings.iter().any(|w| w.message.contains("highlight")),
         "{:?}",
         dv.warnings
+    );
+    let donut_all = sum(&query(session, report, summary, donut, &base));
+    assert!((sum(&dv) - donut_all).abs() < 1e-6, "{}", sum(&dv));
+    let highlighted: f64 = dv.categorical.as_ref().unwrap().values[0]
+        .highlights
+        .as_ref()
+        .expect("highlights")
+        .iter()
+        .filter_map(|c| c.raw.as_f64())
+        .sum();
+    assert!(
+        highlighted > 0.0 && highlighted < donut_all,
+        "{highlighted} of {donut_all}"
     );
 }
 

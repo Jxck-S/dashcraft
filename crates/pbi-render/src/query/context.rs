@@ -5,7 +5,8 @@
 //! page adds the drilled points and the filters the drillthrough carried
 //! after its page filters.
 //!
-//! Points selected in another visual highlight bar and column charts
+//! Points selected in another visual highlight bar, column, combo, pie,
+//! donut, treemap and funnel charts
 //! (the default interaction, or `HighlightFilter`, unless the report sets
 //! `defaultFilterActionIsDataFilter`): [`VisualFilters::highlight`] is the
 //! visual's filter context plus the selection, and the visual keeps its
@@ -38,7 +39,8 @@ pub(crate) struct VisualFilters {
     pub warnings: Vec<QueryWarning>,
 }
 
-/// Visual types that draw highlighted values (bars and columns).
+/// Visual types that draw highlighted values (bars, columns, the columns
+/// of combos, pies, donuts, treemaps and funnels).
 fn draws_highlights(visual_type: &str) -> bool {
     matches!(
         visual_type,
@@ -50,19 +52,12 @@ fn draws_highlights(visual_type: &str) -> bool {
             | "columnChart"
             | "stackedColumnChart"
             | "hundredPercentStackedColumnChart"
-    )
-}
-
-/// Visual types that Power BI highlights by default but DashCraft filters.
-fn highlights_elsewhere(visual_type: &str) -> bool {
-    matches!(
-        visual_type,
-        "pieChart"
+            | "lineClusteredColumnComboChart"
+            | "lineStackedColumnComboChart"
+            | "pieChart"
             | "donutChart"
             | "treemap"
             | "funnel"
-            | "lineClusteredColumnComboChart"
-            | "lineStackedColumnComboChart"
     )
 }
 
@@ -163,7 +158,8 @@ pub(crate) fn visual_filters(
         match highlight {
             Some(true) if draws_highlights(&visual.visual_type) => highlight_points = true,
             Some(highlight) => {
-                if highlight && (kind.is_some() || highlights_elsewhere(&visual.visual_type)) {
+                // An explicit highlight on a visual that cannot draw one.
+                if highlight && kind.is_some() {
                     note_highlight(&mut out, &points.source);
                 }
                 apply_points(&builder, &mut out.context, &mut out.warnings, points);

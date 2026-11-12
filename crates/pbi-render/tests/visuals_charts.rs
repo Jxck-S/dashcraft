@@ -864,6 +864,91 @@ fn highlighted_columns_draw_the_highlighted_part_over_the_dimmed_bar() {
     assert!(matches!(points(&g)[0].2, Node::Rect(_)));
 }
 
+/// Per data point: the bounds of the dimmed full shape and of the solid
+/// highlighted part (rectangles or paths).
+fn highlighted_shapes(g: &Group) -> Vec<(Rect, Option<Rect>)> {
+    let bounds = |n: &Node| match n {
+        Node::Rect(r) => Some(r.rect),
+        Node::Path(p) => p.d.bounds(),
+        _ => None,
+    };
+    let mut out = Vec::new();
+    walk(g, &mut |g| {
+        if !matches!(
+            g.id.as_ref().map(|i| &i.kind),
+            Some(HitKind::DataPoint { .. })
+        ) {
+            return;
+        }
+        let full = match g.children.first() {
+            Some(Node::Group(d)) if d.opacity == charts::DIMMED_OPACITY => {
+                d.children.first().and_then(bounds)
+            }
+            other => panic!("shape not dimmed: {other:?}"),
+        };
+        out.push((full.unwrap(), g.children.get(1).and_then(bounds)));
+    });
+    out
+}
+
+fn close(a: f64, b: f64) -> bool {
+    (a - b).abs() < 0.01
+}
+
+#[test]
+fn pies_funnels_treemaps_and_combos_draw_highlights() {
+    let highlighted = |a: Option<f64>| {
+        let mut dv = dataview(&["A", "B"], &[("M", vec![Some(4.0), Some(2.0)])]);
+        dv.categorical.as_mut().unwrap().values[0].highlights = Some(vec![num(a), num(None)]);
+        dv
+    };
+
+    // Pie: the highlighted share is a slice of the same angle whose radius
+    // is in proportion to it.
+    let shapes = highlighted_shapes(&render("pieChart", &highlighted(Some(2.0))));
+    let [(full, Some(part)), (_, None)] = shapes[..] else {
+        panic!("{shapes:?}");
+    };
+    assert!(close(part.width, full.width / 2.0), "{full:?} {part:?}");
+    assert!(close(part.height, full.height / 2.0), "{full:?} {part:?}");
+    let shapes = highlighted_shapes(&render("donutChart", &highlighted(Some(4.0))));
+    assert_eq!(shapes[0].1, Some(shapes[0].0), "{shapes:?}");
+
+    // Funnel: a centred bar on the same scale.
+    let shapes = highlighted_shapes(&render("funnel", &highlighted(Some(1.0))));
+    let [(full, Some(part)), (_, None)] = shapes[..] else {
+        panic!("{shapes:?}");
+    };
+    assert!(close(part.width, full.width / 4.0), "{full:?} {part:?}");
+    assert!(close(part.center().0, full.center().0));
+    assert_eq!((part.y, part.height), (full.y, full.height));
+
+    // Treemap: the tile's bottom part, its height in proportion.
+    let shapes = highlighted_shapes(&render("treemap", &highlighted(Some(1.0))));
+    let [(full, Some(part)), (_, None)] = shapes[..] else {
+        panic!("{shapes:?}");
+    };
+    assert!(close(part.height, full.height / 4.0), "{full:?} {part:?}");
+    assert!(close(part.bottom(), full.bottom()));
+    assert_eq!((part.x, part.width), (full.x, full.width));
+
+    // Combo: the columns are dimmed, with their highlighted parts.
+    let mut dv = dataview(
+        &["A", "B"],
+        &[
+            ("M", vec![Some(4.0), Some(2.0)]),
+            ("2:L", vec![Some(1.0), Some(3.0)]),
+        ],
+    );
+    dv.categorical.as_mut().unwrap().values[0].highlights = Some(vec![num(Some(2.0)), num(None)]);
+    let g = render("lineClusteredColumnComboChart", &dv);
+    let dimmed = points(&g)
+        .into_iter()
+        .filter(|(_, _, n)| matches!(n, Node::Group(d) if d.opacity == charts::DIMMED_OPACITY))
+        .count();
+    assert_eq!(dimmed, 2);
+}
+
 #[test]
 fn svg_output_is_deterministic() {
     let dv = series_dataview(

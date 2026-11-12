@@ -32,7 +32,7 @@ use super::labels::{
     DataLabels, baseline_centered, prefers_white_text, tailor, tailor_parenthesized, width,
 };
 use super::legend::{Legend, LegendItem};
-use super::{ChartCtx, ChartKind};
+use super::{ChartCtx, ChartKind, DIMMED_OPACITY};
 
 /// Most labels placed (untrusted-input guard).
 const MAX_LABELS: usize = 300;
@@ -56,6 +56,8 @@ pub struct Slice {
     pub series: usize,
     pub index: usize,
     pub opacity: f64,
+    /// The highlighted value when another visual highlights this one.
+    pub highlight: Option<f64>,
 }
 
 /// Start and end angles (degrees clockwise from 12 o'clock) of slices with
@@ -111,6 +113,7 @@ fn slices(cc: &ChartCtx<'_>) -> Vec<Slice> {
                 series: 0,
                 index: s,
                 opacity: 1.0,
+                highlight: series.highlight(0),
             });
         }
         return out;
@@ -137,6 +140,7 @@ fn slices(cc: &ChartCtx<'_>) -> Vec<Slice> {
                 series: 0,
                 index: i,
                 opacity: op(i),
+                highlight: series.highlight(i),
             });
         }
         return out;
@@ -165,6 +169,7 @@ fn slices(cc: &ChartCtx<'_>) -> Vec<Slice> {
                 series: s,
                 index: i,
                 opacity: op(i),
+                highlight: series.highlight(i),
             });
         }
     }
@@ -218,6 +223,9 @@ pub fn render(cc: &ChartCtx<'_>) -> Group {
     } else {
         0.0
     };
+    // Highlighted by another visual: every slice dimmed, and the highlighted
+    // share drawn solid from the inner radius out, its length in proportion.
+    let highlighted = cc.data.has_highlights();
     let mut pie = Group::new().with_class("pbi-slices");
     for (s, (a0, a1)) in slices.iter().zip(&angles) {
         if a1 <= a0 {
@@ -227,10 +235,26 @@ pub fn render(cc: &ChartCtx<'_>) -> Group {
         if s.opacity < 1.0 {
             sg = sg.with_opacity(s.opacity);
         }
-        sg.push(
-            PathNode::new(PathData::pie_slice(cx, cy, r, inner, *a0, *a1))
-                .fill(Paint::solid(s.color)),
-        );
+        let slice = PathNode::new(PathData::pie_slice(cx, cy, r, inner, *a0, *a1))
+            .fill(Paint::solid(s.color));
+        if highlighted {
+            let mut dimmed = Group::new().with_opacity(DIMMED_OPACITY);
+            dimmed.push(slice);
+            sg.push(dimmed);
+            let ratio = s
+                .highlight
+                .filter(|h| h.is_finite() && s.size > 0.0)
+                .map_or(0.0, |h| (h.abs() / s.size).clamp(0.0, 1.0));
+            if ratio > 0.0 {
+                let outer = inner + (r - inner) * ratio;
+                sg.push(
+                    PathNode::new(PathData::pie_slice(cx, cy, outer, inner, *a0, *a1))
+                        .fill(Paint::solid(s.color)),
+                );
+            }
+        } else {
+            sg.push(slice);
+        }
         pie.push(sg);
     }
     g.push(pie);

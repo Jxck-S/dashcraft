@@ -7,6 +7,20 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.1: highlights on pies, donuts, treemaps, funnels and combos
+
+- **What:** `pbi-render`'s filter context now highlights (instead of filtering) combo, pie,
+  donut, treemap and funnel targets of a selection; the query already computed
+  `ValueColumn::highlights` for any categorical shape, so the work is in drawing: pies and
+  donuts draw the dimmed slice plus a slice of the same angle with its radius in proportion,
+  funnels a centred bar on the same scale, treemaps the tile's bottom part; combos reuse the
+  column path. An explicit `HighlightFilter` on a visual that cannot draw highlights still
+  filters it, with the warning.
+- **Why:** the M9.1 "Next" item and the GAPS Interactions row.
+- **Numbers:** one query test reworked (pie highlighted, table filtered with a note), one render
+  test for the four chart kinds. Desktop's pie and treemap geometry is undocumented (radius or
+  area, which edge): assumption noted in `docs/VISUALS.md`.
+
 ### M9.4: a drillthrough page in the Acme example
 
 - **What:** `scripts/examples/gen_acme.py`: Store Detail's `Region = East` page filter is a
