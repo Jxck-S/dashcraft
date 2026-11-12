@@ -59,9 +59,31 @@
             }
           ]
         },
-        "howCreated": "User"
+        "howCreated": "Drillthrough"
       }
     ]
+  },
+  "pageBinding": {
+    "name": "26cf6353dae0ac68dfb3",
+    "type": "Drillthrough",
+    "referenceScope": "Default",
+    "parameters": [
+      {
+        "name": "8d3a3f3f99ea71742732",
+        "boundFilter": "2f25b96e45cfa2bd2910",
+        "fieldExpr": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Stores"
+              }
+            },
+            "Property": "Region"
+          }
+        }
+      }
+    ],
+    "acceptsFilterContext": "Default"
   },
   "visibility": "HiddenInViewMode",
   "objects": {

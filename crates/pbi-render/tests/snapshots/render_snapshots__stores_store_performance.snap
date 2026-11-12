@@ -3,7 +3,7 @@ source: crates/pbi-render/tests/render_snapshots.rs
 expression: text
 ---
 Acme Outfitters - Stores / Store Performance (FitToPage, 1280×720, 14 visuals)
-page svg: 49469 bytes, fnv1a f06efcc8d04f99ea
+page svg: 50820 bytes, fnv1a 1307ba0f02854d05
 
 9b2792b8239b52dc5cbc shape 1280×64 at (0, 0): svg db72110097218115, 0 data points
 
@@ -38,25 +38,30 @@ c81376feb163c3047446 cardVisual 976×136 at (280, 76): svg ed62aa2ecae2b08b, 0 d
   | $50,094.88
   | Gross Margin
 
-d4431298c2010cc0f494 tableEx 560×236 at (24, 228): svg f6f24bf82303d855, 16 data points
+d4431298c2010cc0f494 tableEx 560×236 at (24, 228): svg 07a7aa52fa4b1f04, 20 data points
   | Stores (target = the store's region target)
   | Seattle Flagship
+  | West
   | $36,369.45
   | $102,500
   | 35.5%
   | Portland Pearl
+  | West
   | $27,001.60
   | $102,500
   | 26.3%
   | Salt Lake City Sugar House
+  | West
   | $26,465.85
   | $102,500
   | 25.8%
   | Boise Outlet
+  | West
   | $22,144.85
   | $102,500
   | 21.6%
   | Store Name
+  | Region
   | Total Sales
   | Target
   | Target Attainment %

@@ -4060,6 +4060,15 @@ expression: pretty(&v)
                 },
                 {
                   "role": "Values",
+                  "kind": "column",
+                  "table": "Stores",
+                  "name": "Region",
+                  "ref": "Stores[Region]",
+                  "queryRef": "Stores.Region",
+                  "nativeQueryRef": "Region"
+                },
+                {
+                  "role": "Values",
                   "kind": "measure",
                   "table": "Orders",
                   "name": "Total Sales",
@@ -4126,7 +4135,7 @@ expression: pretty(&v)
               "condition": "Stores[Region] IN ('East')",
               "isHiddenInViewMode": false,
               "isLockedInViewMode": false,
-              "howCreated": "User"
+              "howCreated": "Drillthrough"
             }
           ],
           "visuals": [
@@ -4181,6 +4190,22 @@ expression: pretty(&v)
                   "nativeQueryRef": "Total Sales"
                 }
               ],
+              "filters": []
+            },
+            {
+              "name": "4a2530b2c02ca65fe50f",
+              "visualType": "actionButton",
+              "isGroup": false,
+              "isHidden": false,
+              "position": {
+                "x": 1208.0,
+                "y": 12.0,
+                "z": 5000.0,
+                "width": 48.0,
+                "height": 40.0,
+                "tabOrder": 5000
+              },
+              "fields": [],
               "filters": []
             },
             {
@@ -4376,7 +4401,7 @@ expression: pretty(&v)
     "parameters": 1,
     "reports": 3,
     "pages": 8,
-    "visuals": 80,
+    "visuals": 81,
     "filters": 12,
     "errors": 0,
     "warnings": 0,

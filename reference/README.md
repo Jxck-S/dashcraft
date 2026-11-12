@@ -28,7 +28,7 @@ check DashCraft against it with `python3 scripts/examples/check_acme.py`. Paths 
 | `examples/acme-outfitters/expected.json` | Expected values (schema below); `EXPECTED.md` is the readable form |
 | `examples/acme-outfitters/AcmeOutfitters.SemanticModel/definition/` | TMDL files for round-trip tests (`tables/`, `roles/`, `expressions.tmdl`, `relationships.tmdl`, …) |
 | `examples/acme-outfitters/Acme Outfitters - Overview.Report/` | PBIR report (`--report Overview`): Executive Summary, Product Detail, Time Intelligence |
-| `examples/acme-outfitters/Acme Outfitters - Stores.Report/` | PBIR report (`--report Stores`): Store Performance, Store Detail (hidden), Store Tooltip (tooltip page); bookmarks |
+| `examples/acme-outfitters/Acme Outfitters - Stores.Report/` | PBIR report (`--report Stores`): Store Performance, Store Detail (hidden drillthrough page on Region), Store Tooltip (tooltip page); bookmarks |
 | `examples/acme-outfitters/Acme Outfitters - Online.Report/` | PBIR report (`--report Online`): Online Overview, Customer Detail |
 | `examples/acme-outfitters/data/*.csv` | Source CSVs (M evaluation, CSV loading, `data.loadCsv`) |
 
@@ -50,7 +50,7 @@ Targets 120, Returns 168, Web Sessions 1,600; calculated: Date 731, Products Nev
 | Overview / Product Detail | Status ≠ Cancelled; Category ∈ {Camping, Hiking}, List Price 50–400 | Total Sales $345,894.00 · Units Sold 2,299 · Margin % 45.4% · Revenue per Unit $150.45 · Products Never Sold Count 6 · Unknown Product Orders 0 |
 | Overview / Time Intelligence | Status ≠ Cancelled; Year Month = 2025-06 | Total Sales by `Time Calc`: Current $41,267.95 · YTD $204,412.55 · PY $35,804.75 · YoY % +15.3%; Sales Prev Month $45,297.75 · Shipped Sales $40,393.90 |
 | Stores / Store Performance | Channel ∈ {Retail, Outlet}; Region = West, Date in 2025 | Total Sales $111,981.75 · Target $102,500 · Target Attainment % 109.3% · Return Rate 3.9% · Gross Margin $50,094.88 |
-| Stores / Store Detail (hidden) | Channel ∈ {Retail, Outlet}; Region = East (page filter) | Returns table total: Returns Count 33 · Refunds $3,980.50 |
+| Stores / Store Detail (hidden) | Channel ∈ {Retail, Outlet}; Region = East (saved drillthrough filter) | Returns table total: Returns Count 33 · Refunds $3,980.50 |
 | Stores / Store Tooltip | Channel ∈ {Retail, Outlet} | Total Sales $609,500.10 · Target Attainment % 106.6% |
 | Online / Online Overview | Channel = Online, Device = Mobile; Loyalty Tier ≠ Unassigned (inverted slicer) | Total Sales $235,768.30 · Order Count 1,024 · Active Customers 293 · Customer Count 290 · Avg Order Value $230.24 · Sessions 678 · Conversion Rate 8.6% · Avg Pages per Session 8.0 · Sessions (All Devices) 1,600 |
 | Online / Customer Detail | Channel = Online, Device = Mobile; Segment = Corporate (page filter) | Customer Count 29 · Total Sales $22,734.80 |

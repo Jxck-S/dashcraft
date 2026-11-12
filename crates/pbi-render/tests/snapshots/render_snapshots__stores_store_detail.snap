@@ -2,17 +2,17 @@
 source: crates/pbi-render/tests/render_snapshots.rs
 expression: text
 ---
-Acme Outfitters - Stores / Store Detail (FitToWidth, 1280×900, 5 visuals)
-page svg: 19463 bytes, fnv1a 21eea18f3c0c9321
+Acme Outfitters - Stores / Store Detail (FitToWidth, 1280×900, 6 visuals)
+page svg: 20466 bytes, fnv1a 22ff348cdf24aaea
 
 e75a27703fdb37682083 shape 1280×64 at (0, 0): svg 368747810bf4ec7f, 0 data points
 
-9ec3f2beb17aab1baec7 textbox 680×48 at (24, 8): svg 3d3022ce2d77bec7, 0 data points
+9ec3f2beb17aab1baec7 textbox 680×48 at (24, 8): svg 14877cbb84b841d1, 0 data points
   | Acme Outfitters
-  |   |  Store detail (hidden page, East region)
+  |   |  Store detail (drillthrough on Region; saved: East)
 
-3b28913dac9013392389 multiRowCard 1232×280 at (24, 80): svg 60f06bf83e7af5e8, 0 data points
-  | East stores
+3b28913dac9013392389 multiRowCard 1232×280 at (24, 80): svg d81b37e05fbf6f63, 0 data points
+  | Stores in the region
   | Boston Back Bay
   | Jordan Lee
   | Store Manager
@@ -74,3 +74,5 @@ e75a27703fdb37682083 shape 1280×64 at (0, 0): svg 368747810bf4ec7f, 0 data poin
   | 10
   | 7
   | 6
+
+4a2530b2c02ca65fe50f actionButton 48×40 at (1208, 12): svg c6265775918ecca7, 0 data points

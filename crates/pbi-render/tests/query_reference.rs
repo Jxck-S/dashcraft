@@ -640,7 +640,7 @@ fn every_visual_of_every_report_queries() {
             }
         }
     }
-    assert_eq!(count, 80, "the example's visuals");
+    assert_eq!(count, 81, "the example's visuals");
 }
 
 /// The committed samples (`tests/samples_reference.rs` renders the fetched

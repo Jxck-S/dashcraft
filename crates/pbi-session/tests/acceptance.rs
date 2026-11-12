@@ -273,7 +273,7 @@ fn find_report(session: &Session, name: &str) -> Report {
 fn key_table(field: &str) -> &'static str {
     match field {
         "Category" | "Product Name" => "Products",
-        "Store Name" | "Store Manager" | "City" => "Stores",
+        "Store Name" | "Store Manager" | "City" | "Region" => "Stores",
         "Reason" => "Returns",
         "Loyalty Tier" => "Customers",
         "Device" => "Web Sessions",

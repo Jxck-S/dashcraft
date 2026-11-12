@@ -136,7 +136,7 @@ fn run_executes_one_command() {
         r#"{"includeExpressions": false}"#,
     ]);
     assert_exit(&o, 0);
-    assert_eq!(json_out(&o)["counts"]["visuals"], 80);
+    assert_eq!(json_out(&o)["counts"]["visuals"], 81);
     let o = dashcraft(&["run", "doc.lint", "--doc", PBIP, "-p", "deny=warning"]);
     assert_exit(&o, 0);
     assert_eq!(json_out(&o)["summary"]["warnings"], 0);

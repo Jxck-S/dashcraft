@@ -1491,6 +1491,7 @@
               "rows": [
                 {
                   "Store Name": "Seattle Flagship",
+                  "Region": "West",
                   "Total Sales": {
                     "value": 36369.45,
                     "formatted": "$36,369.45"
@@ -1506,6 +1507,7 @@
                 },
                 {
                   "Store Name": "Portland Pearl",
+                  "Region": "West",
                   "Total Sales": {
                     "value": 27001.6,
                     "formatted": "$27,001.60"
@@ -1521,6 +1523,7 @@
                 },
                 {
                   "Store Name": "Salt Lake City Sugar House",
+                  "Region": "West",
                   "Total Sales": {
                     "value": 26465.85,
                     "formatted": "$26,465.85"
@@ -1536,6 +1539,7 @@
                 },
                 {
                   "Store Name": "Boise Outlet",
+                  "Region": "West",
                   "Total Sales": {
                     "value": 22144.85,
                     "formatted": "$22,144.85"
@@ -2026,6 +2030,135 @@
           "measure": "Gross Margin",
           "value": 151445.31,
           "formatted": "$151,445.31"
+        }
+      ]
+    }
+  ],
+  "drillthrough": [
+    {
+      "report": "Acme Outfitters - Stores",
+      "sourcePage": "Store Performance",
+      "sourcePageId": "ef3ce6b6fadf22960137",
+      "sourceVisual": "d4431298c2010cc0f494",
+      "sourceVisualKey": "stores",
+      "point": {
+        "Store Name": "Seattle Flagship",
+        "Region": "West"
+      },
+      "page": "Store Detail",
+      "pageId": "50c645140e8e10eea677",
+      "keepAllFilters": true,
+      "drillthroughFilters": [
+        "'Stores'[Region] in ['West']"
+      ],
+      "keptFilters": [
+        "'Stores'[Region] in ['West']",
+        "'Date'[Date] >= 2025-01-01 and < 2026-01-01"
+      ],
+      "visuals": [
+        {
+          "visual": "3b28913dac9013392389",
+          "visualKey": "stores",
+          "visualType": "multiRowCard",
+          "rows": [
+            {
+              "Store Name": "Seattle Flagship",
+              "Store Manager": "Riley Chen",
+              "City": "Seattle",
+              "Total Sales": {
+                "value": 36369.45,
+                "formatted": "$36,369.45"
+              }
+            },
+            {
+              "Store Name": "Portland Pearl",
+              "Store Manager": "Morgan Price",
+              "City": "Portland",
+              "Total Sales": {
+                "value": 27001.6,
+                "formatted": "$27,001.60"
+              }
+            },
+            {
+              "Store Name": "Boise Outlet",
+              "Store Manager": "Casey Nguyen",
+              "City": "Boise",
+              "Total Sales": {
+                "value": 22144.85,
+                "formatted": "$22,144.85"
+              }
+            },
+            {
+              "Store Name": "Salt Lake City Sugar House",
+              "Store Manager": "Riley Chen",
+              "City": "Salt Lake City",
+              "Total Sales": {
+                "value": 26465.85,
+                "formatted": "$26,465.85"
+              }
+            }
+          ]
+        },
+        {
+          "visual": "4deb2424b9269f15f86c",
+          "visualKey": "returns",
+          "visualType": "tableEx",
+          "rows": [
+            {
+              "Reason": "Changed Mind",
+              "Returns Count": {
+                "value": 6,
+                "formatted": "6"
+              },
+              "Refunds": {
+                "value": 904.8,
+                "formatted": "$904.80"
+              }
+            },
+            {
+              "Reason": "Damaged In Transit",
+              "Returns Count": {
+                "value": 4,
+                "formatted": "4"
+              },
+              "Refunds": {
+                "value": 603.05,
+                "formatted": "$603.05"
+              }
+            },
+            {
+              "Reason": "Not As Described",
+              "Returns Count": {
+                "value": 2,
+                "formatted": "2"
+              },
+              "Refunds": {
+                "value": 339.6,
+                "formatted": "$339.60"
+              }
+            },
+            {
+              "Reason": "Wrong Size",
+              "Returns Count": {
+                "value": 7,
+                "formatted": "7"
+              },
+              "Refunds": {
+                "value": 1059.2,
+                "formatted": "$1,059.20"
+              }
+            }
+          ],
+          "total": {
+            "Returns Count": {
+              "value": 19,
+              "formatted": "19"
+            },
+            "Refunds": {
+              "value": 2906.65,
+              "formatted": "$2,906.65"
+            }
+          }
         }
       ]
     }

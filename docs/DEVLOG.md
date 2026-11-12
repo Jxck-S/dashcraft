@@ -7,6 +7,19 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.4: a drillthrough page in the Acme example
+
+- **What:** `scripts/examples/gen_acme.py`: Store Detail's `Region = East` page filter is a
+  drillthrough filter (`howCreated: Drillthrough`, `pageBinding` of type Drillthrough, Keep all
+  filters), with a Back button; Store Performance's Stores table gains a Region column so its rows
+  drill through. `expected.json` gets a `drillthrough` entry (from the Seattle Flagship row: West
+  stores and returns under the source's 2025 slicer), also in `EXPECTED.md`.
+  `drillthrough_on_the_example_report` (`crates/pbi-ops/tests/e2e.rs`) checks the targets and the
+  drilled page's texts; render snapshots of both Stores pages and the `inspect` snapshot updated.
+- **Why:** M9 acceptance criterion 1 (a drillthrough binding on the Store Detail page); GAPS
+  Drillthrough row.
+- **Numbers:** visuals 80 → 81; `check_acme.py` 449 passed; 1 new test.
+
 ### M9.4: right-click Drill through
 
 - **What:** the app's report canvas opens a context menu on a right-clicked data point: a
