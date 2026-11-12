@@ -38,6 +38,9 @@
 //!   made in one is copied to the others ([`synced_slicers`]). Saved files
 //!   already carry the same filter on every synced slicer.
 //! - Not read yet: the `selfFilter` of the newer slicer visuals.
+//!
+//! A drillthrough page keeps what it was drilled with in
+//! [`InteractionState::drillthrough`] ([`super::drillthrough`]).
 
 use std::borrow::Cow;
 
@@ -50,6 +53,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::dataview::value_serde;
 
+use super::drillthrough::DrillthroughContext;
 use super::filter::coerce_literal;
 use super::semantic;
 
@@ -169,6 +173,10 @@ pub struct InteractionState {
     /// [`InteractionState::set_filter`]).
     #[serde(skip_serializing_if = "FilterOverrides::is_empty")]
     pub filters: FilterOverrides,
+    /// The drillthrough that filters this page (see
+    /// [`drill_through`](super::drillthrough::drill_through)).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub drillthrough: Option<DrillthroughContext>,
 }
 
 /// Where a filter card lives.

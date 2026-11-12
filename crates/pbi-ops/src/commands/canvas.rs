@@ -9,7 +9,8 @@ use serde_json::Value;
 
 use super::{BASE, loaded_doc};
 use crate::canvas::{
-    self, CanvasAction, CanvasPageOut, Changed, MAX_SEARCH_CHARS, Modifiers, Target, TooltipLineOut,
+    self, CanvasAction, CanvasPageOut, Changed, DrillthroughTargetOut, MAX_SEARCH_CHARS, Modifiers,
+    Target, TooltipLineOut,
 };
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
@@ -673,6 +674,129 @@ impl Command for CanvasTooltip {
         let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
         Ok(TooltipOut {
             lines: canvas::tooltip(&t, &p.hit_id)?,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.drillthroughTargets`.
+#[derive(Debug)]
+pub struct CanvasDrillthroughTargets;
+
+/// Result of `canvas.drillthroughTargets`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DrillthroughTargetsOut {
+    /// Pages whose drillthrough fields the data point all has, in page
+    /// order; empty for other hits.
+    pub targets: Vec<DrillthroughTargetOut>,
+}
+
+impl Command for CanvasDrillthroughTargets {
+    type Params = CanvasHitParams;
+    type Output = DrillthroughTargetsOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.drillthroughTargets",
+            title: "Drillthrough targets",
+            summary: "The drillthrough pages a data point hit can drill through to (the \"Drill through\" menu).",
+            mutates_document: false,
+            examples: &[(
+                "A bar's drillthrough pages",
+                r#"{"docId": "d1", "hitId": "1f2e3d|dataPoint|0|2"}"#,
+            )],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        Ok(DrillthroughTargetsOut {
+            targets: canvas::drillthrough_targets(&t, &p.hit_id).await?,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.drillthrough`.
+#[derive(Debug)]
+pub struct CanvasDrillthrough;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CanvasDrillthroughParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+    /// The source page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page.
+    #[serde(default)]
+    pub page: Option<String>,
+    /// A data point hit id from the last render of the source page.
+    /// Default: the page's selected data points.
+    #[serde(default)]
+    pub hit_id: Option<String>,
+    /// The drillthrough page (see `canvas.drillthroughTargets`).
+    pub target: String,
+}
+
+/// Result of `canvas.drillthrough`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CanvasDrillthroughOut {
+    /// Internal name of the drillthrough page.
+    pub page: String,
+    pub display_name: String,
+    /// Parts of the source's filter context not kept (Top N filters, …).
+    pub not_applied: Vec<String>,
+    /// The drillthrough page, filtered and rendered.
+    pub rendered: CanvasPageOut,
+}
+
+impl Command for CanvasDrillthrough {
+    type Params = CanvasDrillthroughParams;
+    type Output = CanvasDrillthroughOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.drillthrough",
+            title: "Drill through",
+            summary: "Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when \"Keep all filters\" is on, and renders it.",
+            long_running: true,
+            examples: &[
+                (
+                    "From a bar",
+                    r#"{"docId": "d1", "hitId": "1f2e3d|dataPoint|0|2", "target": "Store details"}"#,
+                ),
+                (
+                    "From the selection",
+                    r#"{"docId": "d1", "page": "Overview", "target": "Store details"}"#,
+                ),
+            ],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        let (action, rendered) = canvas::drillthrough(&t, p.hit_id.as_deref(), &p.target).await?;
+        let CanvasAction::Drillthrough {
+            page,
+            display_name,
+            not_applied,
+        } = action
+        else {
+            return Err(OpError::internal("a drillthrough gave another action"));
+        };
+        Ok(CanvasDrillthroughOut {
+            page,
+            display_name,
+            not_applied,
+            rendered,
         })
     }
 }

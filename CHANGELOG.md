@@ -21,6 +21,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - Opening and saving a PBIP project fingerprints its files faster: the size and file-count caps are checked before any file is read, and the files are read on up to 8 threads (Acme Outfitters: 8.8 → 5.8 ms per scan).
 
 ### Added
+- Drillthrough (M9.4): `canvas.drillthroughTargets` lists the drillthrough pages of a data point and `canvas.drillthrough` filters one on the point's (or the selection's) values, keeping the source's filters when "Keep all filters" is on; drillthrough buttons work in the app.
 - Synced slicers (M9.6): selecting or clearing in a slicer, or Clear all slicers, copies its selection to every slicer of its sync group (`syncGroup`) over the same fields on any page, hidden ones included, so they filter their pages as in Power BI.
 - Bar and column charts highlight instead of filtering (M9.1): a point selected in another visual dims their bars and draws the selected part solid, as Power BI does by default and for "Highlight" interactions, unless the report's "selections filter other visuals" setting is on; the DataView's `highlights` carry the values. Pies, donuts, treemaps, funnels and combo charts still filter, with a warning.
 - Bookmarks now set filter cards (M9.5): the report, page and visual filters a bookmark captures (by name, or by field) replace the saved conditions on the canvas, following "selected visuals only" and the Data switch; changed Top N filters are listed as not applied.

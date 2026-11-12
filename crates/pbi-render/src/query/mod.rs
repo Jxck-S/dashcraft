@@ -125,8 +125,10 @@
 //!   warning. A visual's own selection dims its other points.
 //! - Synced slicers (`syncGroup`) are synced by the caller
 //!   ([`synced_slicers`]); the `selfFilter` of newer slicers is not read;
-//!   drill-down / drill-through state is not modelled beyond
-//!   `active` projections.
+//!   drill-down state is not modelled beyond `active` projections.
+//! - Drillthrough ([`drillthrough`]) filters the target page by the
+//!   drilled points and the conditions it carries; cross-report
+//!   drillthrough and drillthrough on measures are not modelled.
 //! - Totals and subtotals are re-evaluations with fewer group columns
 //!   (right for non-additive measures too). `ALLSELECTED` and `ISINSCOPE`
 //!   work through `SUMMARIZECOLUMNS` / `ROW`: the shadow context is the
@@ -140,6 +142,7 @@
 
 pub mod bookmark;
 mod context;
+pub mod drillthrough;
 mod exec;
 pub mod filter;
 pub mod interaction;
@@ -156,6 +159,10 @@ use serde::Serialize;
 
 pub use crate::dataview::{DataView, QueryWarning, WarningScope};
 pub use bookmark::{BookmarkEffect, apply_bookmark};
+pub use drillthrough::{
+    DrillthroughContext, DrillthroughField, DrillthroughPage, drill_through, drillthrough_page,
+    drillthrough_targets,
+};
 pub use filter::{
     ColumnRef, FilterBuilder, FilterPlan, coerce_literal, coerce_value, parse_datetime,
 };

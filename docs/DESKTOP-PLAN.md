@@ -1161,7 +1161,17 @@ in focus mode or as a table and export its data; see images and report-level mea
   bound by fields.
 - [ ] **M9.4 Drillthrough.** Drillthrough pages and their fields, Drill through on the context
   menu and from buttons, "keep all filters", the back button, and cross-report drillthrough between
-  reports open in the same workspace.
+  reports open in the same workspace. *Progress:* `pbi_render::query::drillthrough` finds
+  drillthrough pages (filters with `howCreated` Drillthrough or bound by `pageBinding`, tooltip
+  pages excluded), the targets of a data point (pages whose drillthrough fields it all has) and
+  the target's state: the drilled values as an exact filter (`InteractionState::drillthrough`)
+  replacing the saved drill value, plus, with "Keep all filters" (`acceptsFilterContext`), the
+  source page's filters, slicer selections and cross-filter as conditions (Top N listed as not
+  kept). `canvas.drillthroughTargets` and `canvas.drillthrough` (from a hit or the page's
+  selection) and drillthrough buttons use it; the Filters pane shows a Drillthrough card; the
+  app follows drillthrough buttons and Back returns. Next: the right-click Drill through menu,
+  a drillthrough page in the Acme example, the source visual's own filters, cross-report
+  drillthrough.
 - [ ] **M9.5 Bookmarks.** Read `bookmarks/*.bookmark.json` and groups; apply data, display and
   current-page parts and "selected visuals only"; Bookmarks pane in view mode with a slideshow;
   bookmark buttons; bookmark and page navigators drawn as lists of buttons. *Progress:* bookmarks

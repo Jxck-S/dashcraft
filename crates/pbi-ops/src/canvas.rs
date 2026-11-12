@@ -45,8 +45,9 @@ use pbi_render::dataview::{
 };
 use pbi_render::layout::{FrameOptions, auto_title};
 use pbi_render::query::{
-    InteractionState, PointField, PointSelection, QueryEnv, QueryLimits, SlicerSelection,
-    is_slicer_type, slicer_fields, synced_slicers,
+    DrillthroughPage, InteractionState, PointField, PointSelection, QueryEnv, QueryLimits,
+    SlicerSelection, drill_through, drillthrough_page, is_slicer_type, slicer_fields,
+    synced_slicers,
 };
 use pbi_render::scene::{HitId, HitKind, HitRegion, Rect};
 use pbi_render::svg::{SvgOptions, to_svg};
@@ -194,6 +195,8 @@ pub struct CanvasInteractionOut {
 pub enum SelectionKind {
     Slicer,
     CrossFilter,
+    /// The drillthrough that filters a drillthrough page.
+    Drillthrough,
 }
 
 /// A slicer selection or the cross-filter, as a Filters pane card.
@@ -280,7 +283,16 @@ pub enum CanvasAction {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         not_applied: Vec<String>,
     },
-    /// An action DashCraft does not implement (drillthrough, Q&A).
+    /// A drillthrough filtered drillthrough page `page`: go to it.
+    Drillthrough {
+        page: String,
+        display_name: String,
+        /// Parts of the source's filter context not kept.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        not_applied: Vec<String>,
+    },
+    /// An action DashCraft cannot carry out (Q&A, a drillthrough without a
+    /// selection, …).
     NotAvailable { message: String },
 }
 
@@ -453,6 +465,14 @@ fn rename_state(state: &mut InteractionState, renames: &[Rename]) {
         }
         for condition in state.filters.conditions_mut() {
             rename.apply_to_condition(condition);
+        }
+        if let Some(drill) = &mut state.drillthrough {
+            for f in drill.selection.points.iter_mut().flatten() {
+                rename.apply_to_field(&mut f.field);
+            }
+            for condition in &mut drill.carried {
+                rename.apply_to_condition(condition);
+            }
         }
     }
 }
@@ -1106,6 +1126,23 @@ pub async fn click(
             Err(e) => return Err(e),
         });
     }
+    if let Some(CanvasAction::Drillthrough { page, .. }) = &action {
+        let selection = target.update(|e, _, _| e.state.selected_points.clone())?;
+        action = Some(match selection {
+            None => CanvasAction::NotAvailable {
+                message: "Select a data point to drill through".to_owned(),
+            },
+            Some(selection) => match drill_to(target, &selection, page) {
+                Ok((a, _)) => a,
+                Err(e) if matches!(e.code, OpErrorCode::NotFound | OpErrorCode::InvalidParams) => {
+                    CanvasAction::NotAvailable {
+                        message: format!("Drillthrough is not available: {}", e.message),
+                    }
+                }
+                Err(e) => return Err(e),
+            },
+        });
+    }
     finish_change(target, changed, render_unchanged, action).await
 }
 
@@ -1193,6 +1230,145 @@ pub async fn apply_bookmark_and_render(
     };
     let page = render(&target).await?;
     Ok((applied, page))
+}
+
+/// A drillthrough page a data point can go to.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DrillthroughTargetOut {
+    /// Internal page name.
+    pub page: String,
+    pub display_name: String,
+    /// The page's drillthrough fields (`Table[Column]`).
+    pub fields: Vec<String>,
+    /// "Keep all filters": the source's filter context goes along.
+    pub keep_all_filters: bool,
+}
+
+impl From<DrillthroughPage> for DrillthroughTargetOut {
+    fn from(p: DrillthroughPage) -> Self {
+        Self {
+            fields: p
+                .fields
+                .iter()
+                .map(|f| f.field.query_ref().unwrap_or_else(|| f.filter.clone()))
+                .collect(),
+            page: p.name,
+            display_name: p.display_name,
+            keep_all_filters: p.keep_all_filters,
+        }
+    }
+}
+
+/// `canvas.drillthroughTargets`: the drillthrough pages data point `hit`
+/// can drill through to (empty for other hits and points without fields).
+///
+/// # Errors
+/// `invalidParams` for a malformed hit id, `notFound`.
+pub async fn drillthrough_targets(
+    target: &Target,
+    hit: &str,
+) -> Result<Vec<DrillthroughTargetOut>, OpError> {
+    let hit = decode_hit(hit)?;
+    let HitKind::DataPoint { series, index } = hit.kind else {
+        return Ok(Vec::new());
+    };
+    ensure_rendered(target).await?;
+    let page_index = target.page;
+    target.update(|entry, report, page| {
+        let visual = resolve::visual(page, &hit.visual)?;
+        let Some(Some(point)) = data_point(entry, visual, series, index)? else {
+            return Ok(Vec::new());
+        };
+        Ok(
+            pbi_render::query::drillthrough_targets(report, page_index, &point)
+                .into_iter()
+                .map(DrillthroughTargetOut::from)
+                .collect(),
+        )
+    })?
+}
+
+/// Drills through from the points `selection` of page `src` to page
+/// `page_ref`: sets the target page's state and returns
+/// [`CanvasAction::Drillthrough`] and the target's index. Call it outside
+/// page entry updates (it updates two pages).
+fn drill_to(
+    src: &Target,
+    selection: &PointSelection,
+    page_ref: &str,
+) -> Result<(CanvasAction, usize), OpError> {
+    let revision = src.entry.session().revision_snapshot();
+    let report = resolve::report_in(&revision.document, src.report)?;
+    let index = resolve::page_index(&report, Some(page_ref))?;
+    let page = drillthrough_page(&report, index)
+        .filter(|_| index != src.page)
+        .ok_or_else(|| {
+            OpError::invalid_params(format!(
+                "'{}' is not a drillthrough page of another page",
+                truncate(page_ref, 80)
+            ))
+        })?;
+    let (Some(source_page), Some(target_page)) =
+        (report.pages.get(src.page), report.pages.get(index))
+    else {
+        return Err(OpError::not_found("the page is gone"));
+    };
+    let store = &src.entry.canvas;
+    let model = &revision.model;
+    let source_state = store.update(src.key(), source_page, model, |e| e.state.clone());
+    let target_state = store.update((src.report, index), target_page, model, |e| e.state.clone());
+    let (state, not_applied) = drill_through(
+        &report,
+        src.page,
+        &source_state,
+        &page,
+        selection,
+        &target_state,
+    )
+    .map_err(OpError::invalid_params)?;
+    store.update((src.report, index), target_page, model, |e| {
+        e.set_state(state)
+    });
+    Ok((
+        CanvasAction::Drillthrough {
+            page: page.name,
+            display_name: page.display_name,
+            not_applied,
+        },
+        index,
+    ))
+}
+
+/// `canvas.drillthrough`: drills through from data point `hit` of page
+/// `src` (`None`: the page's selected points) to drillthrough page
+/// `target_page`, and renders that page.
+///
+/// # Errors
+/// `invalidParams` (malformed hit, no selection, not a drillthrough page,
+/// a point without a value for a drillthrough field), `notFound`.
+pub async fn drillthrough(
+    src: &Target,
+    hit: Option<&str>,
+    target_page: &str,
+) -> Result<(CanvasAction, CanvasPageOut), OpError> {
+    let hit = hit.map(decode_hit).transpose()?;
+    ensure_rendered(src).await?;
+    let selection =
+        src.update(|entry, _, page| match &hit {
+            Some(h) => drill_points(entry, page, h),
+            None => entry.state.selected_points.clone().ok_or_else(|| {
+                OpError::invalid_params("select a data point to drill through from")
+            }),
+        })??;
+    let (action, index) = drill_to(src, &selection, target_page)?;
+    let target = Target {
+        entry: Arc::clone(&src.entry),
+        report: src.report,
+        page: index,
+    };
+    let page = render(&target).await?;
+    Ok((action, page))
 }
 
 /// `canvas.scroll`: scrolls a table, matrix or slicer list by a delta in
@@ -1471,22 +1647,9 @@ fn apply_click(
             }
         }
         HitKind::DataPoint { series, index } => {
-            let last = entry.last()?;
-            let Some(dv) = last.dataview(&visual.name) else {
+            let Some(point) = data_point(entry, visual, *series, *index)? else {
                 return Ok((changed, action));
             };
-            // The fields of the page the caller saw, in today's names.
-            let seen = last.page.visual(&visual.name).unwrap_or(visual);
-            let mut point = point_fields(seen, dv, last.interaction(&visual.name), *series, *index);
-            if let Some(fields) = &mut point
-                && !Arc::ptr_eq(&last.model, &entry.names)
-            {
-                for rename in renames_between(&last.model, &entry.names) {
-                    for f in fields.iter_mut() {
-                        rename.apply_to_field(&mut f.field);
-                    }
-                }
-            }
             let mut state = entry.state.clone();
             state.selected_points = match point {
                 Some(point) => {
@@ -1543,7 +1706,16 @@ fn button_action(
                 ),
             }),
         },
-        ButtonAction::Drillthrough { .. } => unavailable("Drillthrough"),
+        ButtonAction::Drillthrough { page } if page.is_empty() => {
+            unavailable("This drillthrough button (no destination)")
+        }
+        // Applied by `click` once the page entry is released (it changes
+        // the destination page).
+        ButtonAction::Drillthrough { page } => Some(CanvasAction::Drillthrough {
+            page,
+            display_name: String::new(),
+            not_applied: Vec::new(),
+        }),
         ButtonAction::Bookmark { bookmark } if bookmark.is_empty() => {
             unavailable("This bookmark button (no bookmark)")
         }
@@ -1745,6 +1917,55 @@ fn point_fields(
         _ => return None,
     };
     (!fields.is_empty()).then_some(fields)
+}
+
+/// The identity of data point (`series`, `index`) of `visual` in the last
+/// render, in today's field names: `None` when the visual has no data,
+/// `Some(None)` for totals and cells without a group.
+fn data_point(
+    entry: &PageEntry,
+    visual: &Visual,
+    series: usize,
+    index: usize,
+) -> Result<Option<Option<Vec<PointField>>>, OpError> {
+    let last = entry.last()?;
+    let Some(dv) = last.dataview(&visual.name) else {
+        return Ok(None);
+    };
+    // The fields of the page the caller saw.
+    let seen = last.page.visual(&visual.name).unwrap_or(visual);
+    let mut point = point_fields(seen, dv, last.interaction(&visual.name), series, index);
+    if let Some(fields) = &mut point
+        && !Arc::ptr_eq(&last.model, &entry.names)
+    {
+        for rename in renames_between(&last.model, &entry.names) {
+            for f in fields.iter_mut() {
+                rename.apply_to_field(&mut f.field);
+            }
+        }
+    }
+    Ok(Some(point))
+}
+
+/// The points a drillthrough from data point hit `hit` uses: the visual's
+/// selection when it includes the point, else the point alone.
+fn drill_points(entry: &PageEntry, page: &Page, hit: &HitId) -> Result<PointSelection, OpError> {
+    let HitKind::DataPoint { series, index } = hit.kind else {
+        return Err(OpError::invalid_params(
+            "drillthrough starts from a data point hit",
+        ));
+    };
+    let visual = resolve::visual(page, &hit.visual)?;
+    let point = data_point(entry, visual, series, index)?
+        .flatten()
+        .ok_or_else(|| OpError::invalid_params("this data point has no fields to drill on"))?;
+    Ok(match &entry.state.selected_points {
+        Some(sel) if sel.source == visual.name && sel.points.contains(&point) => sel.clone(),
+        _ => PointSelection {
+            source: visual.name.clone(),
+            points: vec![point],
+        },
+    })
 }
 
 /// The point selection after clicking `point` in `source`.
@@ -2251,6 +2472,30 @@ fn selections(
             summary,
         });
     }
+    if let Some(drill) = state
+        .drillthrough
+        .as_ref()
+        .filter(|d| !d.selection.points.is_empty())
+    {
+        let from = report
+            .find_page(&drill.source_page)
+            .map_or_else(|| drill.source_page.clone(), |p| p.display_name.clone());
+        let label = format!("Drillthrough from {from}");
+        if !drill.carried.is_empty() {
+            spec.unsupported.push(UnsupportedFilter {
+                name: format!("Filters kept from {from}"),
+                kind: "Drillthrough".into(),
+                field: None,
+                reason: "filters kept by a drillthrough are not translated".into(),
+            });
+        }
+        out.push(points_selection(
+            &drill.selection,
+            label,
+            SelectionKind::Drillthrough,
+            &mut spec,
+        ));
+    }
     if let Some(points) = state
         .selected_points
         .as_ref()
@@ -2258,59 +2503,79 @@ fn selections(
     {
         let source = page.visual(&points.source);
         let label = source.map_or_else(|| points.source.clone(), visual_label);
-        let first = points.points.first().map(Vec::as_slice).unwrap_or_default();
-        let fields: Vec<FieldExpr> = first.iter().map(|p| p.field.clone()).collect();
-        let texts: Vec<String> = points
-            .points
-            .iter()
-            .map(|p| {
-                p.iter()
-                    .map(|f| value_label(&f.value))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            })
-            .collect();
-        let uniform = points
-            .points
-            .iter()
-            .all(|p| p.len() == fields.len() && p.iter().zip(&fields).all(|(a, b)| a.field == *b));
-        let columns: Option<Vec<(String, String)>> = fields.iter().map(column_of).collect();
-        match columns {
-            Some(columns) if uniform && (points.points.len() == 1 || fields.len() == 1) => {
-                for (i, (table, column)) in columns.into_iter().enumerate() {
-                    let mut values: Vec<serde_json::Value> = Vec::new();
-                    for p in &points.points {
-                        if let Some(f) = p.get(i) {
-                            let json = value_to_json(&f.value);
-                            if !values.contains(&json) {
-                                values.push(json);
-                            }
-                        }
-                    }
-                    spec.filters.push(ColumnFilterSpec {
-                        table,
-                        column,
-                        values,
-                        exclude: false,
-                    });
-                }
-            }
-            _ => spec.unsupported.push(UnsupportedFilter {
-                name: format!("Selection in {label}"),
-                kind: "CrossFilter".into(),
-                field: fields.first().and_then(FieldExpr::query_ref),
-                reason: "this selection cannot be expressed as column filters".into(),
-            }),
-        }
-        out.push(SelectionOut {
-            visual: points.source.clone(),
-            kind: SelectionKind::CrossFilter,
+        out.push(points_selection(
+            points,
             label,
-            fields: fields.iter().map(field_name).collect(),
-            summary: format!("is {}", list_summary(&texts)),
-        });
+            SelectionKind::CrossFilter,
+            &mut spec,
+        ));
     }
     (out, spec)
+}
+
+/// Selected points as a Filters pane card; adds their column filters to
+/// `spec` (or why they cannot be).
+fn points_selection(
+    points: &PointSelection,
+    label: String,
+    kind: SelectionKind,
+    spec: &mut FilterSpec,
+) -> SelectionOut {
+    let first = points.points.first().map(Vec::as_slice).unwrap_or_default();
+    let fields: Vec<FieldExpr> = first.iter().map(|p| p.field.clone()).collect();
+    let texts: Vec<String> = points
+        .points
+        .iter()
+        .map(|p| {
+            p.iter()
+                .map(|f| value_label(&f.value))
+                .collect::<Vec<_>>()
+                .join(", ")
+        })
+        .collect();
+    let uniform = points
+        .points
+        .iter()
+        .all(|p| p.len() == fields.len() && p.iter().zip(&fields).all(|(a, b)| a.field == *b));
+    let columns: Option<Vec<(String, String)>> = fields.iter().map(column_of).collect();
+    match columns {
+        Some(columns) if uniform && (points.points.len() == 1 || fields.len() == 1) => {
+            for (i, (table, column)) in columns.into_iter().enumerate() {
+                let mut values: Vec<serde_json::Value> = Vec::new();
+                for p in &points.points {
+                    if let Some(f) = p.get(i) {
+                        let json = value_to_json(&f.value);
+                        if !values.contains(&json) {
+                            values.push(json);
+                        }
+                    }
+                }
+                spec.filters.push(ColumnFilterSpec {
+                    table,
+                    column,
+                    values,
+                    exclude: false,
+                });
+            }
+        }
+        _ => spec.unsupported.push(UnsupportedFilter {
+            name: format!("Selection in {label}"),
+            kind: match kind {
+                SelectionKind::Drillthrough => "Drillthrough",
+                _ => "CrossFilter",
+            }
+            .into(),
+            field: fields.first().and_then(FieldExpr::query_ref),
+            reason: "this selection cannot be expressed as column filters".into(),
+        }),
+    }
+    SelectionOut {
+        visual: points.source.clone(),
+        kind,
+        label,
+        fields: fields.iter().map(field_name).collect(),
+        summary: format!("is {}", list_summary(&texts)),
+    }
 }
 
 #[cfg(test)]
