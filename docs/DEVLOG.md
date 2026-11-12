@@ -18,7 +18,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   **Open saved** per file: the file as last saved, its edits kept for the next start.
 - **Why:** M8 acceptance 4 (A1–A6 for the recovery prompt, the bar and Compare) and the "open
   saved" choice of M8.1.
-- **Numbers:** `external-changes.mjs` 49 → 50 checks, `recovery.mjs` 16 → 22, all pass on
+- **Numbers:** `external-changes.mjs` 49 → 50 checks, `recovery.mjs` 16 → 29 (with A1–A5 and the IBM checker for Document recovery, which found the Open saved name missing its visible label), all pass on
   Windows; the screen-reader run is in PR #80.
 
 ### M8.3: report objects in the diff as their PBIR files

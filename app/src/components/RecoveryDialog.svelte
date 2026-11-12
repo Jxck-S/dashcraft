@@ -50,7 +50,7 @@
         </div>
         <div class="actions">
           <button class="primary" disabled={problem !== null || pending !== null} onclick={() => onrestore(j.recoveryId)} aria-label={`Restore ${fileName(j.path)}`}>Restore</button>
-          <button disabled={!j.path || !j.sourceExists || pending !== null} onclick={() => onopensaved(j.recoveryId)} aria-label={`Open the saved ${fileName(j.path)}`} title="Open the file as it was last saved; the unsaved edits are offered again next start">Open saved</button>
+          <button disabled={!j.path || !j.sourceExists || pending !== null} onclick={() => onopensaved(j.recoveryId)} aria-label={`Open saved ${fileName(j.path)}`} title="Open the file as it was last saved; the unsaved edits are offered again next start">Open saved</button>
           <button disabled={pending !== null} onclick={() => ondiscard(j.recoveryId)} aria-label={`Discard the unsaved edits of ${fileName(j.path)}`}>Discard</button>
         </div>
       </li>
