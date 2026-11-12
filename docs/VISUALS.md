@@ -135,7 +135,7 @@ The conditional color replaces the column's background (`columnFormatting.backCo
 
 ### `actionButton`, `pageNavigator`, `bookmarkNavigator` — Full
 
-- **Honoured** (default state only): `shape.tileShape`, `roundEdge`; `fill`; `outline`; `icon` (`show`, `shapeType`: blank, back, forward, left/right arrow, information, help, Q&A, bookmark, reset, filter, clear, apply; `lineColor`, `lineWeight`, `lineTransparency`, `fillColor`, `padding`); `text` (font, alignment; the icon sits on its left).
+- **Honoured** (default state only): `shape.tileShape`, `roundEdge`; `fill`; `outline`; `icon` (`show`, `shapeType`: blank, back, forward, left/right arrow, information, help, Q&A, bookmark, reset, filter, clear, apply; `lineColor`, `lineWeight`, `lineTransparency`, `fillColor`, `padding`; `icon.image` replaces the shape); `fill.image` over the fill; `text` (font, alignment; the icon sits on its left).
 - **Service behaviour reproduced**: the icon is a square of the content's shorter side; the Back icon is an arrow in a circle (10% strokes, `#605E5C`), as on the service's 40×40 button.
 - **Actions** (`visualLink`): `Back`, `PageNavigation`, `Bookmark`, `Drillthrough`, `WebUrl`, `QnA`, `ApplyAllSlicers`, `ClearAllSlicers`; `show = false` disables it.
 - **Interaction**: Back returns to the previous page in the app's navigation history; page navigation opens the target page; Clear all slicers clears them; Apply all slicers does nothing (selections apply at once); Web URL shows the URL with Copy link (never opened); a bookmark button applies its bookmark (page, slicer selections, cross-filter; the status bar names the parts not applied yet); a drillthrough button drills through from the page's selected data points to its page (filtered on their values, keeping the source page's and visual's filters with "Keep all filters"; a cross-report drillthrough page of another report of the document is a target too; without a selection it says to select a data point); Q&A shows "not available".
@@ -260,9 +260,16 @@ Types: `lineChart`, `areaChart`, `stackedAreaChart`, `lineClusteredColumnComboCh
 - **Ignored**: Analytics pane lines, log-scale axes, conditional colors.
 - **Interaction**: click a column to cross-filter by its category (and breakdown value for a breakdown change); totals and "Other" select the category only; tooltips.
 
+### `image` — Partial
+
+- **Honoured**: `general.imageUrl` (a `RegisteredResources` item or a `data:` URI), else `image.sourceFile`; `imageScaling.imageScalingType` (`Normal`: natural size, centred and clipped; `Fit`: contained, the default; `Fill`: covers the area, clipped; `Tile`: repeated from the top left, at most 400 tiles, else `Normal`).
+- **Images** (`pbi_render::images`, also used for page backgrounds, wallpapers and buttons): PNG and JPEG are embedded as they are after a full decode; GIF (first frame) and BMP are converted to PNG; SVG is parsed and written back without scripts, external references or foreign content. Files over 8 MiB, sides over 16,384 px or images over 48 megapixels are refused.
+- **Not drawn**: images from web URLs (never fetched) and data-bound images (`imageData`) show the placeholder; so do missing and refused files.
+- **Page images**: `background.image` is drawn over the page at the background's transparency (Desktop's default page transparency is 100 %, so set it lower to see the image) and `outspace.image` over the wallpaper; buttons draw `fill.image` over their fill and `icon.image` in place of the icon shape. The scaling names are Desktop's; how each one positions the image is an approximation, not checked against Desktop.
+
 ### Placeholders
 
-Every other type renders as a placeholder box with the type and bound fields: `image`, `map`, `filledMap`, `shapeMap`, `azureMap`, `ribbonChart`, `decompositionTreeVisual`, `keyDriversVisual`, `qnaVisual`, R and Python visuals, Power Apps and Power Automate visuals, and custom visuals (`.pbiviz` packages are never executed). The query still runs, so a broken field reference in a placeholder visual is still reported.
+Every other type renders as a placeholder box with the type and bound fields: `map`, `filledMap`, `shapeMap`, `azureMap`, `ribbonChart`, `decompositionTreeVisual`, `keyDriversVisual`, `qnaVisual`, R and Python visuals, Power Apps and Power Automate visuals, and custom visuals (`.pbiviz` packages are never executed). The query still runs, so a broken field reference in a placeholder visual is still reported.
 
 ## Interaction summary
 
@@ -316,8 +323,7 @@ Every visual region and the whole page must reach the default threshold, SSIM �
 - Range slicers have no date-picker calendar popup.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.
 - Scatter play axes are not animated (the first frame is drawn); `ribbonChart` and maps are placeholders.
-- `image` visuals and page wallpaper images are not drawn; button hover/press states are not drawn.
-- Report-level measures (`reportExtensions.json`) are not evaluated.
-- PBIX `Report/Layout` and PBIR-Legacy reports render with the built-in default theme in the CLI.
+- Button hover/press states are not drawn. Images from web URLs and data-bound images are not drawn; image scaling is not checked against Desktop.
+- Report-level measures (`reportExtensions.json`) evaluate in visuals but not in `dax.query`.
 - Data reduction is a plain cap, not Power BI's sampling algorithms.
 - No DIN metric-compatible font is bundled (no open one exists); Calibri uses Carlito.

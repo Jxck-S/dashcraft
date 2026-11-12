@@ -2,6 +2,11 @@
 //! placeholders. This is the base every visual renderer plugs into via
 //! [`render_page_with`] / [`frame_group`].
 //!
+//! Page paint order: wallpaper color → wallpaper image (`outspace.image`,
+//! over the canvas) → page background color → page background image
+//! (`background.image`, over the page, at the background's transparency)
+//! → visuals.
+//!
 //! Paint order per visual: drop shadow → background (or an invisible,
 //! hit-testable rectangle) → title → content
 //! (clipped to [`VisualFrame::content`], or to the rounded inner rect) →
@@ -12,12 +17,13 @@
 use pbi_model::{Page, Report, Visual};
 
 use super::{LayoutOptions, PageLayout, TextAlign, VisualFrame};
+use crate::images::{ImageScaling, place};
 use crate::scene::{
     Clip, Color, Group, HitId, Paint, PathBuilder, PathData, PathNode, Rect, RectNode, Scene,
     TextAnchor,
 };
 use crate::text::{FontBook, MeasureOptions, TextLayout};
-use crate::theme::ThemeResolver;
+use crate::theme::{PropLookup, ThemeResolver};
 
 /// CSS class of every visual container group.
 pub const VISUAL_CLASS: &str = "pbi-visual";
@@ -86,10 +92,13 @@ where
         .number("outspace", "transparency")
         .unwrap_or(0.0)
         .clamp(0.0, 100.0);
-    scene.root.push(
-        RectNode::new(Rect::new(0.0, 0.0, scene.width, scene.height))
-            .fill(Paint::with_transparency(outspace, outspace_t)),
-    );
+    let canvas = Rect::new(0.0, 0.0, scene.width, scene.height);
+    scene
+        .root
+        .push(RectNode::new(canvas).fill(Paint::with_transparency(outspace, outspace_t)));
+    if let Some(wallpaper) = image_group(&objects, "outspace", canvas, outspace_t) {
+        scene.root.push(wallpaper);
+    }
 
     let mut page_group = Group::new()
         .with_transform(layout.page_transform())
@@ -103,6 +112,9 @@ where
     let bg_paint = Paint::with_transparency(bg, bg_t);
     if bg_paint.is_visible() {
         page_group.push(RectNode::new(layout.page_rect()).fill(bg_paint));
+    }
+    if let Some(image) = image_group(&objects, "background", layout.page_rect(), bg_t) {
+        page_group.push(image);
     }
 
     for frame in layout.visible() {
@@ -118,6 +130,28 @@ where
     }
     scene.root.push(page_group);
     scene
+}
+
+/// `object.image` drawn in `area` (clipped to it) at `transparency`
+/// percent; `Fit` unless the image says otherwise.
+fn image_group(
+    objects: &PropLookup<'_>,
+    object: &str,
+    area: Rect,
+    transparency: f64,
+) -> Option<Group> {
+    let (image, scaling) = objects.image(object, "image")?;
+    let nodes = place(&image, area, scaling.unwrap_or(ImageScaling::Fit));
+    if nodes.is_empty() || transparency >= 100.0 {
+        return None;
+    }
+    let mut g = Group::new()
+        .with_clip(Clip::rect(area))
+        .with_opacity(1.0 - transparency / 100.0);
+    for node in nodes {
+        g.push(node);
+    }
+    Some(g)
 }
 
 /// A visual's container group (hit id `HitId::visual(name)`, class

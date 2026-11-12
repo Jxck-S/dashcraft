@@ -406,7 +406,7 @@ async fn render(
             .get(pi)
             .ok_or_else(|| OpError::not_found("no such page"))?;
         let theme = resolve::theme(&session, ri);
-        let env = QueryEnv::from_revision(&revision);
+        let env = QueryEnv::from_revision(&revision).for_report(&report, None);
         let opts = PageRenderOptions {
             limits: QueryLimits {
                 cancel: cancel.clone(),

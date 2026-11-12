@@ -9,7 +9,7 @@
 //!
 //! Ownership (parallel development):
 //! - `common`, `textbox`, `shape`, `button`, `navigator`, `card`,
-//!   `placeholder`, `page`
+//!   `image_visual`, `placeholder`, `page`
 //!   — basics + page orchestration
 //! - `slicer`, `table`, `matrix` — slicers and grids
 //! - `charts/**` — pie/donut, bar/column, line/area, scatter, funnel,
@@ -20,6 +20,7 @@ pub mod cache;
 pub mod card;
 pub mod charts;
 pub mod common;
+pub mod image_visual;
 pub mod matrix;
 pub mod navigator;
 pub mod page;
@@ -77,6 +78,7 @@ pub fn render_visual(ctx: &VisualCtx<'_>) -> Option<Group> {
         "textbox" => textbox::render(ctx),
         "shape" | "basicShape" => shape::render(ctx),
         "actionButton" => button::render(ctx),
+        "image" => image_visual::render(ctx),
         "pageNavigator" | "bookmarkNavigator" => navigator::render(ctx),
         "cardVisual" | "card" | "multiRowCard" | "kpi" => card::render(ctx),
         "slicer" | "advancedSlicerVisual" => slicer::render(ctx),

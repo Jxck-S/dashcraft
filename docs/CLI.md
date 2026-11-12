@@ -113,7 +113,7 @@ Global flags:
 - `--slicer "SLICER=V1,V2"` selects values in a slicer; `SLICER!=V1` selects everything else, `SLICER=` selects all (clears it), `(Blank)` is BLANK. SLICER is the slicer's visual name or its field (display name, column, or `Table[Column]`), case-insensitive. It replaces the selection saved in the report. Repeatable.
 - Existing output files are never overwritten without `--force`. Outputs, pages and slicers are checked before the refresh.
 - A visual whose query fails is drawn with ⚠ and reported on stderr; the exit code is then 2 (also when the refresh fails).
-- Reports stored as PBIX `Report/Layout` or PBIR-Legacy `report.json` render with the built-in default theme in the CLI (the app resolves their theme files).
+- Every report renders with its theme (also PBIX `Report/Layout` and PBIR-Legacy `report.json` reports), its report-level measures and its registered images (image visuals, page backgrounds, wallpapers, buttons); images from web URLs are never fetched.
 - `--json` prints `{ schemaVersion: 1, source, report, refresh { tables, ok, failed, skipped } | null, now?, ok, pages[] { index, name, displayName, width, height, outputs[] { format: png|svg, path, width?, height?, bytes }, durationMs, slicers[] { visual, values[], inverted, condition, origin: report|cli }, summary { visuals, ok, warnings, errors, hidden, truncated }, visuals[] { name, visualType, status: ok|warning|error|hidden, error?, warnings[], truncated, queryMicros, renderMicros } } }`.
 - Rendered pages show the data: don't commit them.
 

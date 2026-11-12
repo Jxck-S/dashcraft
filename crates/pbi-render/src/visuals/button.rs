@@ -14,6 +14,7 @@
 //! | `icon.lineColor` / `lineWeight` / `lineTransparency` | icon strokes | `#605E5C` (theme `foregroundNeutralSecondary`) / 10% of the icon size / `0` |
 //! | `icon.fillColor` / `icon.transparency` | icon fill | none |
 //! | `icon.padding` | icon inset (px) | `0` |
+//! | `icon.image` / `fill.image` | a report image ([`crate::images`]) instead of the vector icon / over the fill | none |
 //! | `text.show` / `text.text` / font properties / alignment | button text (icon on its left) | `false` / – / `label` class / center |
 //!
 //! The icon is a square of the content box's shorter side, centred (with
@@ -33,6 +34,7 @@
 use pbi_model::Visual;
 use serde::{Deserialize, Serialize};
 
+use crate::images::{ImageScaling, place};
 use crate::layout::TextAlign;
 use crate::scene::{
     Clip, Color, Group, HitId, Paint, PathBuilder, PathData, PathNode, Rect, RectNode, Stroke,
@@ -193,6 +195,13 @@ pub fn render(ctx: &VisualCtx<'_>) -> Option<Group> {
     // Invisible, so the hit region covers the whole button.
     g.push(RectNode::new(area).fill(Paint::new(Color::BLACK, 0.0)));
     button_shape(ctx, &o, area, false, None, None, &mut g);
+    if let Some((image, scaling)) = o.image("fill", "image") {
+        let mut layer = Group::new().with_clip(Clip::rect(area));
+        for node in place(&image, area, scaling.unwrap_or(ImageScaling::Fit)) {
+            layer.push(node);
+        }
+        g.push(layer);
+    }
 
     let c = ctx.frame.content;
     let text = o
@@ -213,9 +222,14 @@ pub fn render(ctx: &VisualCtx<'_>) -> Option<Group> {
                 _ => IconKind::Blank,
             })
     };
+    let icon_image = o
+        .bool("icon", "show")
+        .unwrap_or(true)
+        .then(|| o.image("icon", "image"))
+        .flatten();
     let pad = o.number("icon", "padding").unwrap_or(0.0).max(0.0);
     let mut text_box = c;
-    if icon != IconKind::Blank && c.width > 0.0 && c.height > 0.0 {
+    if (icon != IconKind::Blank || icon_image.is_some()) && c.width > 0.0 && c.height > 0.0 {
         let side = if text.is_some() {
             c.height.min(c.width / 3.0)
         } else {
@@ -260,8 +274,19 @@ pub fn render(ctx: &VisualCtx<'_>) -> Option<Group> {
                 Paint::with_transparency(c, t)
             })
             .filter(Paint::is_visible);
-        for node in icon_nodes(icon, icon_box, &stroke, fill) {
-            g.push(node);
+        match &icon_image {
+            Some((image, scaling)) => {
+                let mut layer = Group::new().with_clip(Clip::rect(icon_box));
+                for node in place(image, icon_box, scaling.unwrap_or(ImageScaling::Fit)) {
+                    layer.push(node);
+                }
+                g.push(layer);
+            }
+            None => {
+                for node in icon_nodes(icon, icon_box, &stroke, fill) {
+                    g.push(node);
+                }
+            }
         }
     }
     if let Some(text) = text {

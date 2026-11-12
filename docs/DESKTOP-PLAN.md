@@ -1235,11 +1235,19 @@ in focus mode or as a table and export its data; see images and report-level mea
   the underlying data is the table of the visual's first field, columns over many-to-many
   relationships are left out with a warning, totals are not exported, and Desktop's focus margins
   are not documented.
-- [ ] **M9.9 Report-level measures, images and legacy themes.** Measures from
+- [x] **M9.9 Report-level measures, images and legacy themes.** Measures from
   `reportExtensions.json` evaluate in visuals; `RegisteredResources` images draw as `image`
   visuals, page backgrounds, wallpapers and button images (PNG, JPEG, GIF first frame, sanitized
   SVG, size-capped); PBIX `Layout` and PBIR-Legacy reports use their themes in `render.*` and the
-  CLI.
+  CLI. *Done:* `QueryEnv::for_report` adds the report's measures to the query model (skipping
+  names that clash with model measures or columns; cached per model in `ReportModels` so render
+  caches stay valid), in `render.*`, `canvas.*`, tooltips, exports and the CLI;
+  `pbi_render::images` validates and embeds images (PNG/JPEG as they are, GIF/BMP first frame as
+  PNG, SVG re-serialized by usvg; 8 MiB, 16,384 px a side, 48 megapixels) and places them with
+  Normal, Fit, Fill or Tile scaling; resvg now rasterizes images. `pbi_ops::canvas::report_theme`
+  (theme files and images, PBIR and legacy) serves every renderer. Approximations: the scaling
+  modes' exact placement and the page transparency applied to the background image are not
+  checked against Desktop; web-URL and data-bound images are not drawn.
 - [ ] **M9.10 Remaining filter semantics.** Relative date and time, Top N and measure filters at
   report and page level; the Apply button and query-reduction behaviour of the filter pane and
   slicers. *Partly done with M9.7:* relative date and time filters now apply at every level.

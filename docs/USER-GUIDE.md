@@ -237,6 +237,8 @@ cmp target/tmp/render/01-Overview.png approved/01-Overview.png   # pixel-exact r
 
 Select slicer values headlessly with `--slicer "Region=West"` (repeatable; `!=` inverts, `=` alone clears). Use `--scale 1` for smaller files.
 
+Renders, like the app's canvas, use the report's theme (also for PBIX, PBIT and PBIR-Legacy reports), its report-level measures (`reportExtensions.json`) and its registered images: image visuals, page backgrounds, wallpapers and button images (PNG, JPEG, GIF and BMP first frame, sanitized SVG, up to 8 MiB and 48 megapixels each). Images from web URLs are never fetched: those visuals show a placeholder.
+
 To compare against **Power BI service exports** (`ExportTo` PNGs) rather than a previous DashCraft render, use the SSIM comparison in `pbi_render::golden` (alignment, per-visual SSIM, heatmaps), as `crates/pbi-render/tests/golden.rs` does:
 
 ```sh

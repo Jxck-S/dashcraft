@@ -43,12 +43,14 @@ pub mod defaults;
 pub mod value;
 
 use std::borrow::Cow;
-use std::sync::OnceLock;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
 use pbi_model::{Page, Visual};
 use pbi_pbir::{PbirReport, ThemeJson};
 use serde_json::Value;
 
+use crate::images::{ImageLocation, ImageRef, ImageResource, ImageScaling, ImageSource};
 use crate::scene::{Color, Insets};
 use crate::text::TextStyle;
 
@@ -236,13 +238,53 @@ pub struct ThemeResolver {
     /// Content hash of `theme` (render cache key), computed on first use;
     /// the theme never changes after construction.
     fingerprint: OnceLock<Option<u64>>,
+    /// The report's resource-package images; `None` draws none of them.
+    images: Option<Arc<dyn ImageSource>>,
+    /// Decoded `data:` images (themes), by URI.
+    data_images: Arc<Mutex<HashMap<String, Option<Arc<ImageResource>>>>>,
 }
+
+/// Most decoded `data:` images a resolver keeps.
+const MAX_DATA_IMAGES: usize = 32;
 
 impl ThemeResolver {
     pub fn new(theme: Theme) -> Self {
         Self {
             theme,
             fingerprint: OnceLock::new(),
+            images: None,
+            data_images: Arc::default(),
+        }
+    }
+
+    /// Attaches the report's images (`RegisteredResources`, …).
+    #[must_use]
+    pub fn with_images(mut self, images: Arc<dyn ImageSource>) -> Self {
+        self.images = Some(images);
+        self
+    }
+
+    /// The decoded image `image` refers to; `None` when it is missing,
+    /// refused ([`crate::images::decode_image`]) or a web URL (never
+    /// fetched).
+    pub fn image(&self, image: &ImageRef) -> Option<Arc<ImageResource>> {
+        match &image.location {
+            ImageLocation::Package { package, item } => self.images.as_ref()?.image(package, item),
+            ImageLocation::Data(uri) => {
+                let mut memo = self
+                    .data_images
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner);
+                if let Some(hit) = memo.get(uri) {
+                    return hit.clone();
+                }
+                let decoded = crate::images::decode_data_uri(uri).map(Arc::new);
+                if memo.len() < MAX_DATA_IMAGES {
+                    memo.insert(uri.clone(), decoded.clone());
+                }
+                decoded
+            }
+            ImageLocation::Web(_) => None,
         }
     }
 
@@ -571,6 +613,20 @@ impl<'a> PropLookup<'a> {
         self.candidates(object, prop)
             .iter()
             .find_map(|r| resolver.color(&r.value))
+    }
+
+    /// The image an image property refers to ([`crate::images::image_ref`])
+    /// and its scaling, when it resolves.
+    pub fn image(
+        &self,
+        object: &str,
+        prop: &str,
+    ) -> Option<(Arc<ImageResource>, Option<ImageScaling>)> {
+        let resolver = self.props.resolver;
+        self.candidates(object, prop).iter().find_map(|r| {
+            let image = crate::images::image_ref(&r.value)?;
+            Some((resolver.image(&image)?, image.scaling))
+        })
     }
 
     /// A text style from an object's font properties (`fontFamily`,

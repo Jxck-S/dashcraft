@@ -3,12 +3,14 @@
 //! Pipeline: report AST + session data → [`query`] builds a [`dataview`] per visual →
 //! [`visuals`] draw into a [`scene`] laid out by [`layout`] with [`theme`] and [`text`] →
 //! [`svg`] serializes, [`png`] rasterizes. [`conditional`] reads and evaluates the
-//! conditional formatting of tables, matrices and charts.
+//! conditional formatting of tables, matrices and charts. [`images`] validates and
+//! embeds report images (image visuals, page backgrounds, wallpapers, buttons).
 
 pub mod conditional;
 pub mod dataview;
 pub(crate) mod fingerprint;
 pub mod golden;
+pub mod images;
 pub mod layout;
 pub mod png;
 pub mod query;

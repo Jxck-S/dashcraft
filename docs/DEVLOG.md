@@ -7,6 +7,20 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.9 report-level measures, images and legacy themes
+
+- **What**: `pbi-render` `QueryEnv::for_report` and `ReportModels` (report measures in the query
+  model), `images` (decode, sanitize, place; image visual, page background and wallpaper images,
+  button `icon.image` / `fill.image`), `ThemeResolver::with_images`; `pbi-ops` `ReportImages`
+  (resource-package files read from the container, decoded once) attached by
+  `canvas::report_theme`, now used by `render.*` and the CLI too (legacy themes); resvg's
+  `raster-images` feature (new crates gif, zune-jpeg, image-webp).
+- **Why**: DESKTOP-PLAN M9.9; GAPS `reportExtensions.json` 2 → 4, images 1 → 3, `image` 0 → 3,
+  legacy reports 3 → 4.
+- **Numbers**: 3 new integration tests and 7 image unit tests; no render snapshot changes; the
+  COVID-19 sample now draws its 3 images and page backgrounds (a 7890 × 4434 PNG, ~2 s for a
+  PNG page render including the decode).
+
 ### M9.8 visual header and context menus
 
 - **What**: `pbi-render` focus mode (`InteractionState.focus`, the visual fills the page within
