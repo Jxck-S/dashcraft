@@ -226,6 +226,23 @@ point's values and the source page's filters and slicers.
 | tip | cardVisual | Total Sales | $10,250.30 |
 | tip | cardVisual | Target Attainment % | 10.0% |
 
+## Drill down and up
+
+A chart whose axis holds several levels of a hierarchy shows the saved (`active`) level;
+drilling changes the shown levels, and a drill-down path filters the chart and, with
+`drillFilterOtherVisuals`, the other visuals of the page.
+
+**Online Overview / `tiers`** (Acme Outfitters - Online): levels Year → Quarter → Month, saved level Quarter (Q1, Q2, Q3, Q4).
+
+| Step | Shown | Path | Categories | kpis Total Sales |
+|---|---|---|---|---|
+| up | Year | none | 2024, 2025 | $235,768.30 |
+| down on Year 2025 | Quarter | Year = 2025 | Q1, Q2, Q3, Q4 | $126,632.90 |
+| down on Quarter Q1 | Month | Year = 2025; Quarter = Q1 | Jan, Feb, Mar | $21,197.30 |
+| up | Quarter | Year = 2025 | Q1, Q2, Q3, Q4 | $126,632.90 |
+| up | Year | none | 2024, 2025 | $235,768.30 |
+| expand | Year → Quarter | none | 2024 Q1, 2024 Q2, 2024 Q3, 2024 Q4, 2025 Q1, 2025 Q2, 2025 Q3, 2025 Q4 | $235,768.30 |
+
 ## Calculation group
 
 `'Time Calc'[Time Calculation]` applied to [Total Sales]; Acme Outfitters - Overview, page Time Intelligence: report filter + Year Month = 2025-06.

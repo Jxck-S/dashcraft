@@ -49,6 +49,7 @@ import {
   type DocumentHistoryOut,
   type DocumentSaveAsOut,
   type DocumentSaveOut,
+  type DrillActionParam,
   type DrillthroughTargetOut,
   type EditOperation,
   type FileChangeOut,
@@ -844,6 +845,11 @@ export function drillthrough(reportId: number, pageId: number, hitId: string, ta
   return onPage(reportId, pageId, async (t) =>
     map(await ops.canvasDrillthrough({ ...t, hitId, target }), (r): CanvasAction => ({ kind: 'drillthrough', page: r.page, displayName: r.displayName, notApplied: r.notApplied })),
   )
+}
+
+/** Drills `visual` up, down on data point `hitId`, to the next level or expands it one level (`canvas.drill`). */
+export function drillVisual(reportId: number, pageId: number, visual: string, action: DrillActionParam, hitId: string | null = null): Promise<Outcome<RenderedPage>> {
+  return onPage(reportId, pageId, (t) => ops.canvasDrill({ ...t, visual, action, hitId }))
 }
 
 /** The bookmarks of a report in the Bookmarks pane's order (`report.bookmarks`). */

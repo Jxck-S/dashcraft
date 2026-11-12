@@ -361,6 +361,8 @@ pub enum WarningScope {
     CrossFilter,
     /// The drillthrough that filters the page.
     Drillthrough,
+    /// A drill-down path (of this visual or one that filters it).
+    Drill,
     Interaction,
     Query,
 }

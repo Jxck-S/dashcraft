@@ -7,6 +7,17 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.2: drill down and up
+
+- **What:** `pbi-render` `query::drill` (drill levels, saved `active` level, drill state in
+  `InteractionState.drill`, the drilled visual and its path filters on itself and on visuals
+  that drill-filter); `pbi-ops` `canvas.drill` and `CanvasVisualOut.drill`; the app's drill
+  header buttons, drill mode and right-click items. The generator makes the Online report's
+  membership-tiers axis a Calendar hierarchy (Year, Quarter active, Month) and records six drill
+  steps with their categories and card values (`expected.json` `drill`).
+- **Why:** M9.2 and the GAPS "Drill-down/up on hierarchies" row (❌ 0 → 🟡 3).
+- **Numbers:** 3 unit tests, 1 e2e test, 2 app tests; `check_acme.py` 449 checks pass.
+
 ### M9.3: report-page tooltips
 
 - **What:** `pbi-render` `query::tooltip` (tooltip pages, the page of a hovered point through

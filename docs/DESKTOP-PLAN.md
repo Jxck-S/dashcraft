@@ -1153,9 +1153,19 @@ in focus mode or as a table and export its data; see images and report-level mea
   DataViews carry `ValueColumn::highlights` and the shapes are drawn dimmed with the highlighted
   part solid; line charts, tables, matrices and cards filter; the source visual dims its other
   points. Next: highlighted values in labels and tooltips.
-- [ ] **M9.2 Drill down and up.** Hierarchies and several fields on an axis or in rows: drill mode,
+- [x] **M9.2 Drill down and up.** Hierarchies and several fields on an axis or in rows: drill mode,
   drill down on a point, drill up, go to the next level, expand all one level, for charts and
-  matrices; drill state is view state (ADR-0006).
+  matrices; drill state is view state (ADR-0006). *Done:* `pbi_render::query::drill` finds the
+  drill levels (a matrix's rows, else the first chart axis role with several fields), starts from
+  the saved `active` projections and keeps the shown range and the drilled-into values per visual
+  in `InteractionState.drill`; the query shows only those levels (sorts on hidden levels move to
+  the first shown one) and filters by the path, and so do other visuals when the report or visual
+  says drilling filters them (`defaultDrillFilterOtherVisuals`, `drillFilterOtherVisuals`).
+  `canvas.drill` (up, down on a point, next level, expand) and `CanvasVisualOut.drill`; the app
+  shows drill buttons in the visual's header (drill up, drill mode, next level, expand) and drill
+  items in its right-click menu. The Acme Online report's membership-tiers chart drills Year →
+  Quarter → Month (`expected.json` `drill`). Next: drill state in bookmarks (M9.5), matrix
+  column drill, and the visual header's other buttons (M9.8).
 - [x] **M9.3 Report-page tooltips.** Tooltip pages (page type and binding) render inside the hover
   tooltip with the hovered point's filters, at the tooltip page's size; automatic tooltip pages
   bound by fields. *Done:* `pbi_render::query::tooltip` finds tooltip pages, the page of a

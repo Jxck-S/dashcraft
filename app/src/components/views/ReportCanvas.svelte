@@ -6,7 +6,9 @@
   import type { CanvasAction, FilterSpec, PageDto, RenderedPage, ReportDto, TooltipLine, TooltipPage, VisualDto } from '../../lib/backend'
   import type { CanvasInteractionOut } from '../../lib/ops'
   import { contains, parseHit, sanitizeSvg, scrollableAt, wheelPixels, type Hit } from '../../lib/canvas'
-  import { drillthroughMenu } from '../../lib/drillthrough'
+  import { DRILL_COMMANDS, canDrill, drillMenu, drillthroughMenu } from '../../lib/drillthrough'
+  import type { DrillActionParam } from '../../lib/ops'
+  import type { IconName } from '../../lib/icons'
   import type { MenuItem } from '../../lib/shell'
   import { visualKind } from '../../lib/visuals'
 
@@ -23,6 +25,10 @@
    *   clipped to it), data points cross-filter the other visuals (click again or the empty
    *   canvas to clear), action buttons report their action (`onaction`). Right-click on a data
    *   point opens its "Drill through" menu (`canvas.drillthroughTargets`, `canvas.drillthrough`).
+   * - A visual with drill levels (an axis or matrix rows with several fields) shows drill buttons
+   *   in its header while hovered or selected and drill items in its right-click menu
+   *   (`canvas.drill`): drill up, drill mode (a click on a data point drills down), show next
+   *   level, expand to next level.
    * - Wheel over a table, matrix, slicer list or open popup scrolls it; hovering data points
    *   shows a tooltip; Esc closes popups, then clears the cross-filter.
    * - Every render is reported with `onrendered` (selections and effective filters for the
@@ -258,6 +264,10 @@
       return
     }
     selectVisual(hit?.visual ?? null)
+    if (hit?.kind === 'dataPoint' && drillMode.includes(hit.visual) && visualInfo.get(hit.visual)?.drill?.canDrillDown) {
+      void drillAct(report.id, page.id, hit.visual, 'down', hit.id)
+      return
+    }
     void click(hit?.id ?? null, modifiers(event))
   }
 
@@ -266,18 +276,60 @@
   async function oncontextmenu(event: MouseEvent) {
     if (!rendered || wireframe) return
     const hit = hitOf(event)
-    if (hit?.kind !== 'dataPoint') return
+    if (!hit) return
+    const onPoint = hit.kind === 'dataPoint'
+    const levels = visualInfo.get(hit.visual)?.drill
+    if (!onPoint && !levels) return
     event.preventDefault()
     tip = null
     const { id: reportId } = report
     const { id: pageId } = page
     const at = { x: event.clientX, y: event.clientY }
+    const drillItems: MenuItem[] = drillMenu(levels, onPoint, (a) => void drillAct(reportId, pageId, hit.visual, a, onPoint ? hit.id : null))
+    if (!onPoint) {
+      menu = { ...at, items: drillItems }
+      return
+    }
     const targets = await run(() => backend.drillthroughTargets(reportId, pageId, hit.id))
     if (!targets || report.id !== reportId || page.id !== pageId) return
     menu = {
       ...at,
-      items: drillthroughMenu(targets, (t) => void drill(reportId, pageId, hit.id, t.page)),
+      items: [
+        ...drillItems,
+        ...(drillItems.length > 0 ? [{ label: '', separator: true }] : []),
+        ...drillthroughMenu(targets, (t) => void drill(reportId, pageId, hit.id, t.page)),
+      ],
     }
+  }
+
+  /** Visuals in drill mode: a click on a data point drills down. */
+  let drillMode = $state<string[]>([])
+
+  async function drillAct(reportId: number, pageId: number, visual: string, action: DrillActionParam, hitId: string | null = null) {
+    if (!rendered) return
+    accept(await run(() => backend.drillVisual(reportId, pageId, visual, action, hitId)))
+  }
+
+  /** The drill buttons of the hovered (else selected) visual with drill levels, top right of its box. */
+  const drillHeader = $derived.by(() => {
+    for (const name of [hoverVisual, selectedName]) {
+      const info = name ? visualInfo.get(name) : undefined
+      if (!info?.drill || !info.rect || info.hidden) continue
+      const w = DRILL_BUTTONS.length * 22
+      return { visual: info.name, drill: info.drill, x: info.rect.x + info.rect.width - w - 4, y: info.rect.y + 2 }
+    }
+    return null
+  })
+
+  const DRILL_BUTTONS: { action: DrillActionParam | 'mode'; icon: IconName; label: string }[] = [
+    { action: 'up', icon: 'chevronUp', label: 'Drill up' },
+    { action: 'mode', icon: 'chevronDown', label: 'Drill mode: a click on a data point drills down' },
+    { action: 'next', icon: 'chevronDoubleRight', label: DRILL_COMMANDS[2].label },
+    { action: 'expand', icon: 'hierarchy', label: DRILL_COMMANDS[3].label },
+  ]
+
+  function toggleDrillMode(visual: string) {
+    drillMode = drillMode.includes(visual) ? drillMode.filter((v) => v !== visual) : [...drillMode, visual]
   }
 
   async function drill(reportId: number, pageId: number, hitId: string, target: string) {
@@ -645,6 +697,29 @@
           <Icon name="close" size={12} />
         </button>
       {/if}
+      {#if drillHeader}
+        {@const h = drillHeader}
+        <div class="chrome-control drill-header" role="toolbar" aria-label="Drill" style:left={px(h.x)} style:top={px(h.y)}>
+          {#each DRILL_BUTTONS as b (b.action)}
+            {@const on = b.action === 'mode' && drillMode.includes(h.visual)}
+            <button
+              class="drill-button"
+              class:on
+              title={b.label}
+              aria-label={b.label}
+              aria-pressed={b.action === 'mode' ? on : undefined}
+              disabled={b.action === 'mode' ? !h.drill.canDrillDown && !on : !canDrill(h.drill, b.action, false)}
+              onclick={(e) => {
+                e.stopPropagation()
+                if (b.action === 'mode') toggleDrillMode(h.visual)
+                else void drillAct(report.id, page.id, h.visual, b.action)
+              }}
+            >
+              <Icon name={b.icon} size={12} />
+            </button>
+          {/each}
+        </div>
+      {/if}
       {#if searchEdit && searchRect}
         <input
           class="chrome-control slicer-search"
@@ -828,6 +903,39 @@
   .eraser:hover {
     background: #f3f2f1;
     color: #252423;
+  }
+
+  .drill-header {
+    display: flex;
+    gap: 2px;
+  }
+
+  .drill-button {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 2px;
+    background: rgb(255 255 255 / 0.85);
+    color: #605e5c;
+    cursor: pointer;
+  }
+
+  .drill-button:hover:not(:disabled) {
+    background: #f3f2f1;
+    color: #252423;
+  }
+
+  .drill-button.on {
+    background: var(--color-brand);
+    color: #fff;
+  }
+
+  .drill-button:disabled {
+    color: #c8c6c4;
+    cursor: default;
   }
 
   .slicer-search {

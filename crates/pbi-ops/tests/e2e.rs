@@ -4283,3 +4283,133 @@ async fn report_page_tooltip_on_the_example_report() {
         .await;
     assert!(none.get("tooltip").is_none(), "{none}");
 }
+
+/// Drill down and up on the example's Online Overview: the "Loyalty mix by quarter" chart's axis
+/// is the Calendar hierarchy (Year, Quarter, Month) showing Quarter. Each `canvas.drill` step
+/// shows the categories of `expected.json` and, as drilling filters the page, the KPI cards'
+/// values; `canvas.reset` restores the saved level.
+#[tokio::test(flavor = "multi_thread")]
+async fn drill_down_and_up_on_the_example_report() {
+    let (Some(pbip), Some(map), Some(exp)) = (fixture(PBIP), fixture(BLOB_MAP), expected()) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let report = exp.report_name("Online");
+    let wanted = exp.0["drill"].as_array().unwrap();
+    assert_eq!(wanted.len(), 1);
+    let want = &wanted[0];
+    let page_id = want["pageId"].as_str().unwrap();
+    let chart = want["visual"].as_str().unwrap().to_owned();
+    let at = |extra: Value| {
+        let mut body = json!({"docId": doc, "report": report, "page": page_id});
+        body.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        body
+    };
+    let check =
+        |page: &Value, first: &Value, last: &Value, path: &Value, cats: &Value, step: &str| {
+            let visual = page["visuals"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|v| v["name"] == chart.as_str())
+                .unwrap();
+            let drill = &visual["drill"];
+            assert_eq!(drill["levels"], want["levels"], "{step}");
+            assert_eq!((&drill["first"], &drill["last"]), (first, last), "{step}");
+            assert_eq!(&drill["path"], path, "{step}");
+            assert!(
+                visual["warnings"].as_array().unwrap().is_empty(),
+                "{step}: {visual}"
+            );
+            let texts = group_texts(page["svg"].as_str().unwrap(), &format!("{chart}|visual"));
+            for c in cats.as_array().unwrap() {
+                let c = c.as_str().unwrap();
+                assert!(texts.iter().any(|t| t == c), "{step}: no {c} in {texts:?}");
+            }
+        };
+
+    let mut page = r.run("canvas.render", at(json!({}))).await;
+    check(
+        &page,
+        &want["first"],
+        &want["last"],
+        &json!([]),
+        &want["categories"],
+        "saved",
+    );
+    for step in want["steps"].as_array().unwrap() {
+        let action = step["action"].as_str().unwrap();
+        let mut body = json!({"visual": chart, "action": action});
+        if let Some(point) = step.get("point").and_then(Value::as_object) {
+            let value = point.values().next().unwrap();
+            let text = value
+                .as_str()
+                .map_or_else(|| value.to_string(), str::to_owned);
+            let mut hit = None;
+            for id in ids(&page, "hitRegions") {
+                if !id.starts_with(&format!("{chart}|dataPoint|")) {
+                    continue;
+                }
+                let tip = r.run("canvas.tooltip", at(json!({"hitId": id}))).await;
+                if tip["lines"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|l| l["value"] == text.as_str())
+                {
+                    hit = Some(id);
+                    break;
+                }
+            }
+            body["hitId"] = json!(hit.unwrap_or_else(|| panic!("no {text} point")));
+        }
+        page = r.run("canvas.drill", at(body)).await;
+        let name = format!("{action} {}", step.get("point").unwrap_or(&Value::Null));
+        check(
+            &page,
+            &step["first"],
+            &step["last"],
+            &step["path"],
+            &step["categories"],
+            &name,
+        );
+        let svg = page["svg"].as_str().unwrap();
+        for card in step["cards"].as_array().unwrap() {
+            let texts = group_texts(svg, &format!("{}|visual", card["visual"].as_str().unwrap()));
+            let text = card["formatted"].as_str().unwrap();
+            assert!(
+                texts.iter().any(|t| t == text),
+                "{name}: {}: no {text} in {texts:?}",
+                card["measure"]
+            );
+        }
+        assert!(!page["isDefault"].as_bool().unwrap(), "{name}");
+    }
+
+    // Drill down needs a data point.
+    let err = r
+        .try_run(
+            "canvas.drill",
+            at(json!({"visual": chart, "action": "down"})),
+        )
+        .await
+        .unwrap_err();
+    assert!(err.message.contains("hitId"), "{err:?}");
+    page = r.run("canvas.reset", at(json!({}))).await;
+    check(
+        &page,
+        &want["first"],
+        &want["last"],
+        &json!([]),
+        &want["categories"],
+        "reset",
+    );
+    assert!(page["isDefault"].as_bool().unwrap());
+}

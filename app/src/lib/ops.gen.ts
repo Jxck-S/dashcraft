@@ -350,6 +350,20 @@ export interface CanvasClosePopupsParams {
   renderUnchanged?: boolean
 }
 
+export interface CanvasDrillParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report (default: the first). */
+  report?: string | null
+  /** Page (default: the active page). */
+  page?: string | null
+  /** Visual: internal name or title (default: the visual of `hitId`). */
+  visual?: string | null
+  action: DrillActionParam
+  /** A data point hit id from the last render (required for `down`). */
+  hitId?: string | null
+}
+
 /** Result of `canvas.drillthrough`. */
 export interface CanvasDrillthroughOut {
   /** Internal name of the drillthrough page. */
@@ -568,6 +582,11 @@ export interface CanvasVisualOut {
   truncated: boolean
   /** A button whose click does something (`canvas.click` returns it). */
   hasAction: boolean
+  /**
+   * Drill levels and options (`canvas.drill`); absent when the visual
+   * has fewer than two levels to drill on.
+   */
+  drill?: DrillOut | null
 }
 
 /** An AI capability. The id (`dax.explain`, …) is stable. */
@@ -2220,6 +2239,29 @@ export interface DocumentSaveParams {
    * files are kept. Without it such a save fails with `conflict`.
    */
   overwrite?: boolean
+}
+
+/** What `canvas.drill` does. */
+export type DrillActionParam = 'down' | 'up' | 'next' | 'expand'
+
+/**
+ * The drill levels of a visual (an axis, or a matrix's rows, with two or
+ * more fields) and what `canvas.drill` can do with them.
+ */
+export interface DrillOut {
+  /** The data role whose fields are the levels (`Category`, `Rows`, …). */
+  role: string
+  /** Level display names, top first. */
+  levels: string[]
+  /** First shown level (0-based). */
+  first: number
+  /** Last shown level (above `first`: expanded). */
+  last: number
+  /** The drilled values, `Level = value`, top first. */
+  path: string[]
+  canDrillUp: boolean
+  /** A level below the shown ones exists (down, next, expand). */
+  canDrillDown: boolean
 }
 
 /** A drillthrough page a data point can go to. */
@@ -5236,6 +5278,8 @@ export interface OpsCommands {
   'canvas.tooltip': { params: CanvasHitParams; output: TooltipOut }
   /** Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. */
   'canvas.tooltipPage': { params: CanvasHitParams; output: CanvasTooltipPageOut }
+  /** Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page. */
+  'canvas.drill': { params: CanvasDrillParams; output: CanvasPageOut }
   /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
   'canvas.drillthroughTargets': { params: CanvasHitParams; output: DrillthroughTargetsOut }
   /** Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. */
@@ -5372,6 +5416,7 @@ export const OPS_META = {
   'canvas.applyBookmark': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.tooltip': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.tooltipPage': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'canvas.drill': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.drillthroughTargets': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.drillthrough': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.state': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -5585,6 +5630,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasTooltip: (params: CanvasHitParams, options?: O) => run('canvas.tooltip', params, options),
     /** Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. */
     canvasTooltipPage: (params: CanvasHitParams, options?: O) => run('canvas.tooltipPage', params, options),
+    /** Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page. */
+    canvasDrill: (params: CanvasDrillParams, options?: O) => run('canvas.drill', params, options),
     /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
     canvasDrillthroughTargets: (params: CanvasHitParams, options?: O) => run('canvas.drillthroughTargets', params, options),
     /** Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. */

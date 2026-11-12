@@ -184,7 +184,8 @@ The conditional color replaces the column's background (`columnFormatting.backCo
 - **Behaviour**: only the first row level shows unless expanded; expanded parents show their subtotals in bold (stepped) or a bold "Total" row follows the group (tabular); the grand total row is pinned at the bottom; one header row per column level with cells spanning their leaf columns, a value-name row when there are several values, "Total" subtotal and grand-total columns.
 - **Conditional formatting**: as tables, per value field; "values" are the cells of the lowest visible level, "totals" the subtotal and grand-total rows and columns ([above](#conditional-formatting)). Cells under a calculation item use the item's format string.
 - **Interaction**: click a row to cross-filter by its row path; double-click or `+`/`−` to expand or collapse; scroll; hover shows the row path and cell.
-- **Gaps**: drill-down and drill-up commands, conditional formatting of row and column headers (not available in Power BI either).
+- **Drill**: with several row fields, drill up, drill down on a row, show the next level or expand to the next level (`canvas.drill`, the visual header and right-click menu); drilling filters other visuals when the report says so.
+- **Gaps**: drill on column fields, conditional formatting of row and column headers (not available in Power BI either).
 
 ### `pieChart`, `donutChart` — Full
 
@@ -310,7 +311,7 @@ Every visual region and the whole page must reach the default threshold, SSIM �
 ## Known gaps
 
 - Data labels and tooltips of highlighted charts show the full values; the lines of combo charts are not highlighted. How Desktop sizes a highlighted pie slice and treemap tile (radius or area, which edge) is not documented: DashCraft scales the radius and fills the tile from the bottom.
-- A bookmark's changed Top N filters, its spotlight and focus modes, cross-report drillthrough, Q&A, visual header menus (focus mode, show as table, sort, export), drill-down/up and the right-click menu's other items are not available.
+- A bookmark's changed Top N filters, its spotlight and focus modes, cross-report drillthrough, Q&A, visual header menus (focus mode, show as table, sort, export) and the right-click menu's other items are not available; drill works on chart axes and matrix rows, not on matrix columns, and bookmarks do not apply drill state.
 - Range-slider dragging, relative-date pickers, the newer slicers' `selfFilter`.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.
 - Scatter play axes are not animated (the first frame is drawn); `ribbonChart` and maps are placeholders.

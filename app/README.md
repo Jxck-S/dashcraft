@@ -755,8 +755,9 @@ on Windows 10 and 11.
   buttons are not executed; bookmarks cannot be added or updated, and their drill, spotlight and
   cross-highlight parts are not applied; the newer slicers' `selfFilter` is not read; range and
   relative-date slicers draw but their sliders / date pickers are not interactive (tiles select
-  like list items); no visual header menus (focus mode, show as table, sort, export), drill-down
-  / drill-up or filter card editing; the right-click menu offers Drill through only; cross-filters
+  like list items); no visual header menus (focus mode, show as table, sort, export) or filter
+  card editing (the header shows drill buttons only); the right-click menu offers drill and
+  Drill through only; cross-filters
   from matrices use the row path only; report-page tooltips show for chart data points only;
   interaction state lasts until the document closes. Performance analyzer, Sync
   slicers, Mobile layout and the Analytics pane are shown disabled.

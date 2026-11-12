@@ -3311,12 +3311,33 @@ expression: pretty(&v)
               "fields": [
                 {
                   "role": "Category",
-                  "kind": "column",
+                  "kind": "hierarchyLevel",
+                  "table": "Date",
+                  "name": "Year",
+                  "hierarchy": "Calendar",
+                  "ref": "Date[Calendar].[Year]",
+                  "queryRef": "Date.Calendar.Year",
+                  "nativeQueryRef": "Year"
+                },
+                {
+                  "role": "Category",
+                  "kind": "hierarchyLevel",
                   "table": "Date",
                   "name": "Quarter",
-                  "ref": "Date[Quarter]",
-                  "queryRef": "Date.Quarter",
+                  "hierarchy": "Calendar",
+                  "ref": "Date[Calendar].[Quarter]",
+                  "queryRef": "Date.Calendar.Quarter",
                   "nativeQueryRef": "Quarter"
+                },
+                {
+                  "role": "Category",
+                  "kind": "hierarchyLevel",
+                  "table": "Date",
+                  "name": "Month",
+                  "hierarchy": "Calendar",
+                  "ref": "Date[Calendar].[Month]",
+                  "queryRef": "Date.Calendar.Month",
+                  "nativeQueryRef": "Month"
                 },
                 {
                   "role": "Y",
