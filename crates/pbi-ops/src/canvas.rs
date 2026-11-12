@@ -35,20 +35,23 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use pbi_core::container::Container;
 use pbi_core::{OpenedDocument, ReportSource};
 use pbi_engine::{CancellationToken, EngineSnapshot, Value};
 use pbi_model::{
     ComparisonKind, Condition, DataType, Document, FieldExpr, Literal, LiteralValue, Model, Page,
-    Rename, Report, ResourceRef, SortDirection, SortItem, Visual, renames_between,
+    Rename, Report, ResourcePackage, ResourceRef, SortDirection, SortItem, Visual, names_eq,
+    renames_between,
 };
 use pbi_render::dataview::{
     BLANK_LABEL, CellValue, ColumnMeta, DataView, FieldRefKind, ValueColumn,
 };
+use pbi_render::images::{ImageResource, ImageSource, MAX_IMAGE_BYTES, decode_image};
 use pbi_render::layout::{FrameOptions, auto_title};
 use pbi_render::query::relative::{RelativeAnchor, RelativeDateSpec, RelativePeriod};
 use pbi_render::query::{
     DATA_TABLE_SUFFIX, DrillAction, DrillthroughPage, FocusState, InteractionState, PointField,
-    PointSelection, QueryEnv, QueryLimits, SlicerSelection, VisualTable,
+    PointSelection, QueryEnv, QueryLimits, ReportModels, SlicerSelection, VisualTable,
     allows_cross_report_drillthrough, cross_report_targets, drill_through, drillthrough_page,
     is_slicer_type, slicer_fields, source_name, synced_slicers, tooltip_state, visual_tooltip_page,
 };
@@ -65,7 +68,7 @@ use pbi_render::visuals::{
     query_page_data, render_interactive_page,
 };
 use pbi_session::{
-    ColumnFilterSpec, FilterSpec, Session, UnsupportedFilter, filters_from_page,
+    ColumnFilterSpec, FilterSpec, RevisionSnapshot, Session, UnsupportedFilter, filters_from_page,
     filters_from_report, value_to_json,
 };
 use schemars::JsonSchema;
@@ -609,6 +612,8 @@ pub struct CanvasStore {
     /// The bookmark applied last in each report (by index): the selected
     /// item of its bookmark navigators.
     active_bookmarks: Mutex<HashMap<usize, String>>,
+    /// The model with each report's report-level measures.
+    report_models: ReportModels,
 }
 
 impl fmt::Debug for CanvasStore {
@@ -914,14 +919,95 @@ impl CanvasStore {
 /// The theme of report `index`: a PBIR report's theme files, else (PBIX
 /// layouts, PBIR-Legacy) the base and custom theme resources read from the
 /// container (the built-in default when they are missing or unreadable).
+/// The report's registered images are attached ([`ReportImages`]).
 #[must_use]
 pub fn report_theme(opened: &OpenedDocument, index: usize) -> ThemeResolver {
-    match opened.report_sources.get(index) {
+    let theme = match opened.report_sources.get(index) {
         Some(ReportSource::Pbir { report, .. }) => ThemeResolver::from_pbir(report),
         _ => {
             let (base, custom) = report_theme_values(opened, index);
             ThemeResolver::new(Theme::from_values(base.as_ref(), custom.as_ref()))
         }
+    };
+    match opened.document.reports.get(index) {
+        Some(report) if !report.resource_packages.is_empty() => {
+            let folder = opened
+                .report_sources
+                .get(index)
+                .map(ReportSource::folder)
+                .unwrap_or_default();
+            theme.with_images(Arc::new(ReportImages {
+                container: Arc::clone(&opened.container),
+                folder: folder.trim_end_matches('/').to_owned(),
+                packages: report.resource_packages.clone(),
+                decoded: Mutex::default(),
+            }))
+        }
+        _ => theme,
+    }
+}
+
+/// Most decoded images kept per report.
+const MAX_DECODED_IMAGES: usize = 64;
+
+/// Decoded images by (package, item); `None` for refused ones.
+type DecodedImages = HashMap<(String, String), Option<Arc<ImageResource>>>;
+
+/// A report's resource-package images, read from its container and decoded
+/// on first use ([`decode_image`]: validated, size-capped).
+#[derive(Debug)]
+struct ReportImages {
+    container: Arc<dyn Container>,
+    /// The report folder in the container (`""` at the root).
+    folder: String,
+    packages: Vec<ResourcePackage>,
+    decoded: Mutex<DecodedImages>,
+}
+
+impl ReportImages {
+    /// The bytes of a registered item (`StaticResources/<package>/<path>`).
+    fn read(&self, package: &str, item: &str) -> Option<Vec<u8>> {
+        let relative = self
+            .packages
+            .iter()
+            .filter(|p| {
+                names_eq(&p.name, package)
+                    || p.kind.as_deref().is_some_and(|k| names_eq(k, package))
+            })
+            .find_map(|p| {
+                p.items
+                    .iter()
+                    .find(|i| names_eq(&i.name, item))
+                    .map(|i| format!("StaticResources/{}/{}", p.name, i.path))
+            })?;
+        let path = if self.folder.is_empty() {
+            relative
+        } else {
+            format!("{}/{relative}", self.folder)
+        };
+        let size = self.container.entry(&path)?.size;
+        if usize::try_from(size).map_or(true, |s| s > MAX_IMAGE_BYTES) {
+            return None;
+        }
+        self.container.read(&path).ok()
+    }
+}
+
+impl ImageSource for ReportImages {
+    fn image(&self, package: &str, item: &str) -> Option<Arc<ImageResource>> {
+        let key = (package.to_owned(), item.to_owned());
+        if let Some(hit) = lock(&self.decoded).get(&key) {
+            return hit.clone();
+        }
+        let decoded = self
+            .read(package, item)
+            .and_then(|bytes| decode_image(&bytes).ok())
+            .map(Arc::new);
+        let mut memo = lock(&self.decoded);
+        if memo.len() < MAX_DECODED_IMAGES {
+            memo.insert(key, decoded.clone());
+        }
+        decoded
     }
 }
 
@@ -1046,13 +1132,32 @@ impl Target {
         self.entry.canvas.theme(self.entry.session(), self.report)
     }
 
+    /// The query environment of `revision` with `report`'s report-level
+    /// measures.
+    fn env(&self, revision: &RevisionSnapshot, report: &Report) -> QueryEnv {
+        QueryEnv::from_revision(revision).for_report(report, Some(&self.entry.canvas.report_models))
+    }
+}
+
+impl CanvasStore {
+    /// The model of `revision` with `report`'s report-level measures (the
+    /// model renders of the report query, see [`Target::env`]).
+    fn model(&self, revision: &RevisionSnapshot, report: &Report) -> Arc<Model> {
+        QueryEnv::from_revision(revision)
+            .for_report(report, Some(&self.report_models))
+            .model
+    }
+}
+
+impl Target {
     fn update<R>(&self, f: impl FnOnce(&mut PageEntry, &Report, &Page) -> R) -> Result<R, OpError> {
         let revision = self.entry.session().revision_snapshot();
         let (report, page) = locate(&revision.document, self.report, self.page)?;
+        let model = self.env(&revision, &report).model;
         Ok(self
             .entry
             .canvas
-            .update(self.key(), &page, &revision.model, |e| f(e, &report, &page)))
+            .update(self.key(), &page, &model, |e| f(e, &report, &page)))
     }
 
     /// Copies the selection of slicer `visual` of this page to the slicers
@@ -1066,7 +1171,7 @@ impl Target {
             return Ok(false);
         };
         let store = &self.entry.canvas;
-        let model = &revision.model;
+        let model = &store.model(&revision, &report);
         let selection = store.update(self.key(), page, model, |e| {
             e.state.slicer_selections.get(visual).cloned()
         });
@@ -1105,7 +1210,7 @@ async fn render(target: &Target) -> Result<CanvasPageOut, OpError> {
     let revision = target.entry.session().revision_snapshot();
     let (report, page) = locate(&revision.document, target.report, target.page)?;
     let page = Arc::new(page);
-    let env = QueryEnv::from_revision(&revision);
+    let env = target.env(&revision, &report);
     let job = target.entry.canvas.begin(target.key(), &page, &env);
     let theme = target.theme();
     let entry = Arc::clone(&target.entry);
@@ -1572,7 +1677,7 @@ pub fn apply_bookmark(
     let r = resolve::report_in(&revision.document, report)?;
     let bookmark = resolve::bookmark(&r, name)?;
     let store = &doc.canvas;
-    let model = &revision.model;
+    let model = &store.model(&revision, &r);
     let index_of = |name: &str| r.pages.iter().position(|p| p.name == name);
     let current = |page: &Page| match index_of(&page.name) {
         Some(i) => store.update((report, i), page, model, |e| e.state.clone()),
@@ -2244,7 +2349,7 @@ pub async fn visual_data(
     let (report, page) = locate(&revision.document, target.report, target.page)?;
     let name = resolve::visual(&page, source_name(visual))?.name.clone();
     let state = target.update(|entry, _, _| entry.state.clone())?;
-    let env = QueryEnv::from_revision(&revision);
+    let env = target.env(&revision, &report);
     tokio::task::spawn_blocking(move || {
         let Some(v) = page.visual(&name) else {
             return Err(OpError::not_found(format!("no visual '{name}'")));
@@ -2643,7 +2748,7 @@ pub async fn tooltip_page(target: &Target, hit: &str) -> Result<Option<TooltipPa
         .get(tip.index)
         .cloned()
         .ok_or_else(|| OpError::not_found("the tooltip page is gone"))?;
-    let env = QueryEnv::from_revision(&revision);
+    let env = target.env(&revision, &report);
     let theme = target.theme();
     tokio::task::spawn_blocking(move || {
         let started = Instant::now();

@@ -16,6 +16,10 @@
 //! - [`FilterBuilder`]: report-AST conditions → engine filters.
 //! - [`QueryEnv`]: the same operations on a fixed engine snapshot + model
 //!   (one consistent snapshot per page; usable without a `Session`).
+//!   [`QueryEnv::for_report`] adds a report's report-level measures
+//!   (`reportExtensions.json`) to the model, so visuals, filters and other
+//!   measures can use them ([`ReportModels`] keeps one such model per
+//!   report and base model).
 //!
 //! The functions are synchronous and CPU-bound: call them from a blocking
 //! thread (`tokio::task::spawn_blocking`) in async code, and cancel through
@@ -156,11 +160,11 @@ pub mod relative;
 mod semantic;
 pub mod tooltip;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use pbi_dax::{DaxError, EvalContext};
 use pbi_engine::{CancellationToken, EngineSnapshot, FilterContext, Value};
-use pbi_model::{Model, Page, Report, Visual};
+use pbi_model::{Measure, Model, Page, Report, ReportMeasure, Visual, names_eq};
 use pbi_session::{RevisionSnapshot, Session};
 use serde::Serialize;
 
@@ -320,6 +324,73 @@ pub struct QueryEnv {
     pub now: Option<chrono::NaiveDateTime>,
 }
 
+/// The model with a report's report-level measures, or `None` when none
+/// of them can be added.
+fn with_report_measures(model: &Model, measures: &[ReportMeasure]) -> Option<Model> {
+    let mut merged = model.clone();
+    let mut added = false;
+    for m in measures {
+        if merged.find_measure(&m.name).is_some() {
+            continue;
+        }
+        let Some(table) = merged.table_mut(&m.table) else {
+            continue;
+        };
+        if table.columns.iter().any(|c| names_eq(&c.name, &m.name)) {
+            continue;
+        }
+        table.measures.push(Measure {
+            name: m.name.clone(),
+            expression: m.expression.clone(),
+            format_string: m.format_string.clone(),
+            display_folder: m.display_folder.clone(),
+            is_hidden: m.hidden,
+            description: m.description.clone(),
+            ..Measure::default()
+        });
+        added = true;
+    }
+    added.then_some(merged)
+}
+
+/// Memoized models with report-level measures ([`QueryEnv::for_report`]):
+/// one per base model and set of measures, the most recent few kept.
+#[derive(Debug, Default)]
+pub struct ReportModels {
+    entries: Mutex<Vec<ReportModel>>,
+}
+
+#[derive(Debug)]
+struct ReportModel {
+    base: Arc<Model>,
+    measures: Vec<ReportMeasure>,
+    merged: Option<Arc<Model>>,
+}
+
+impl ReportModels {
+    const KEEP: usize = 8;
+
+    fn get(&self, base: &Arc<Model>, measures: &[ReportMeasure]) -> Option<Arc<Model>> {
+        let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(e) = entries
+            .iter()
+            .find(|e| Arc::ptr_eq(&e.base, base) && e.measures == measures)
+        {
+            return e.merged.clone();
+        }
+        let merged = with_report_measures(base, measures).map(Arc::new);
+        if entries.len() >= Self::KEEP {
+            entries.remove(0);
+        }
+        entries.push(ReportModel {
+            base: Arc::clone(base),
+            measures: measures.to_vec(),
+            merged: merged.clone(),
+        });
+        merged
+    }
+}
+
 impl QueryEnv {
     pub fn new(
         snapshot: Arc<EngineSnapshot>,
@@ -357,6 +428,27 @@ impl QueryEnv {
             revision.culture(),
         )
         .with_now(revision.local_now())
+    }
+
+    /// This environment with `report`'s report-level measures added to
+    /// their tables in the model (unchanged when it has none). A measure
+    /// whose name is taken in the model, or whose table is not in it, is
+    /// left out, so a visual using it fails as before. With `cache`, the
+    /// model is built once per report and base model and keeps its `Arc`
+    /// (render caches compare models by pointer).
+    #[must_use]
+    pub fn for_report(mut self, report: &Report, cache: Option<&ReportModels>) -> Self {
+        if report.measures.is_empty() {
+            return self;
+        }
+        let merged = match cache {
+            Some(cache) => cache.get(&self.model, &report.measures),
+            None => with_report_measures(&self.model, &report.measures).map(Arc::new),
+        };
+        if let Some(model) = merged {
+            self.model = model;
+        }
+        self
     }
 
     /// A [`FilterBuilder`] on this model and snapshot.

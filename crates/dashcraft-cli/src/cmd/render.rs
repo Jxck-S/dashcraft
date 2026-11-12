@@ -14,7 +14,6 @@ use std::time::Instant;
 
 use anyhow::{Context as _, anyhow, bail};
 use chrono::{DateTime, FixedOffset, Utc};
-use pbi_core::ReportSource;
 use pbi_model::{Page, Report, Visual, dax_column_ref, names_eq};
 use pbi_render::png::{PngOptions, render_png};
 use pbi_render::query::{
@@ -22,9 +21,8 @@ use pbi_render::query::{
 };
 use pbi_render::scene::Color;
 use pbi_render::svg::{SvgOptions, to_svg};
-use pbi_render::theme::ThemeResolver;
 use pbi_render::visuals::{PageRenderOptions, RenderedPage, render_report_page};
-use pbi_session::{Clock, FixedClock, Session};
+use pbi_session::{Clock, FixedClock};
 use serde::Serialize;
 use serde_json::Value as Json;
 
@@ -374,8 +372,8 @@ pub fn run(args: &RenderArgs, ctx: &Context) -> anyhow::Result<Status> {
     };
     tracing::info!("refreshed in {} ms", millis(started));
 
-    let theme = theme(&session, report_index);
-    let env = QueryEnv::from_session(&session);
+    let theme = pbi_ops::resolve::theme(&session, report_index);
+    let env = QueryEnv::from_session(&session).for_report(report, None);
     let mut out_pages = Vec::with_capacity(pages.len());
     for ((&index, targets), (state, slicers)) in pages.iter().zip(&targets).zip(states) {
         let page = &report.pages[index];
@@ -440,14 +438,6 @@ pub fn run(args: &RenderArgs, ctx: &Context) -> anyhow::Result<Status> {
 
 fn millis(start: Instant) -> u64 {
     u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX)
-}
-
-/// The report's theme (built-in defaults for legacy layouts).
-fn theme(session: &Session, report_index: usize) -> ThemeResolver {
-    match session.opened().report_sources.get(report_index) {
-        Some(ReportSource::Pbir { report, .. }) => ThemeResolver::from_pbir(report),
-        _ => ThemeResolver::default(),
-    }
 }
 
 /// The page `spec` names: internal name, display name (case-insensitive),

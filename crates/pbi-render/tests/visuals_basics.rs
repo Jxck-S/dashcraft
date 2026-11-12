@@ -1,7 +1,8 @@
 //! Basic visuals on synthetic visuals and DataViews (no fixture files):
 //! textbox paragraphs, lists and alignment; shapes; buttons and their
 //! actions; page and bookmark navigators; bookmark visibility; cards (single, multi, blank, error, label clipping); the
-//! placeholder; page orchestration; SVG output.
+//! placeholder; images (image visual, page background); page orchestration;
+//! SVG output.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -12,6 +13,7 @@ use pbi_model::{Bookmark, Page, Position, Report, Visual, VisualKind};
 use pbi_render::dataview::{
     CellValue, ColumnMeta, DataView, DataViewKind, FieldRef, FieldRefKind, TableData,
 };
+use pbi_render::images::{ImageResource, ImageSource, decode_image};
 use pbi_render::layout::{FrameOptions, PageLayout, render_page_with};
 use pbi_render::query::{
     FOCUS_MARGIN, FocusState, InteractionState, VisualQueryError, apply_bookmark, data_table_name,
@@ -1181,4 +1183,89 @@ fn svg_of_basic_visuals_is_deterministic() {
         "Calibri is drawn with Carlito"
     );
     assert!(!a.contains(" scale("), "no condensed text");
+}
+
+/// A 4×4 solid red PNG.
+const RED_PNG: &str = "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGP4z8AARwzEcQCukw/x0F8jngAAAABJRU5ErkJggg==";
+
+/// Serves `red.png` from `RegisteredResources`.
+#[derive(Debug)]
+struct RedImages;
+
+impl ImageSource for RedImages {
+    fn image(&self, package: &str, item: &str) -> Option<std::sync::Arc<ImageResource>> {
+        use base64::Engine as _;
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(RED_PNG)
+            .ok()?;
+        (package == "RegisteredResources" && item == "red.png")
+            .then(|| decode_image(&bytes).ok().map(std::sync::Arc::new))
+            .flatten()
+    }
+}
+
+fn package_image(item: &str, scaling: Option<&str>) -> Json {
+    let mut image = json!({
+        "name": lit(&format!("'{item}'")),
+        "url": {"expr": {"ResourcePackageItem": {
+            "PackageName": "RegisteredResources", "PackageType": 1, "ItemName": item
+        }}}
+    });
+    if let Some(scaling) = scaling {
+        image["scaling"] = lit(&format!("'{scaling}'"));
+    }
+    json!({"image": image})
+}
+
+#[test]
+fn image_visual_and_page_background_image_render_and_rasterize() {
+    let mut picture = visual("pic", "image", (100.0, 100.0, 200.0, 100.0));
+    picture.objects = json!({"general": [{"properties": {"imageUrl": {"expr": {"ResourcePackageItem": {
+        "PackageName": "RegisteredResources", "PackageType": 1, "ItemName": "red.png"
+    }}}}}]});
+    let mut missing = visual("missing", "image", (900.0, 500.0, 200.0, 100.0));
+    missing.objects =
+        json!({"general": [{"properties": {"imageUrl": lit("'https://example.com/x.png'")}}]});
+    let mut page = page_of(vec![picture, missing]);
+    page.objects = json!({"background": [{"properties": {
+        "image": package_image("red.png", Some("Normal")),
+        "transparency": lit("0D")
+    }}]});
+    let report = Report::default();
+    let theme = ThemeResolver::default().with_images(std::sync::Arc::new(RedImages));
+    let state = InteractionState::default();
+    let scene = render_page_with(
+        &report,
+        &page,
+        &theme,
+        &FrameOptions::default(),
+        |frame, visual| {
+            render_visual(&VisualCtx {
+                frame,
+                visual,
+                theme: &theme,
+                fonts: FontBook::shared(),
+                data: None,
+                state: &state,
+                nav: &pbi_render::visuals::navigator::EMPTY,
+            })
+        },
+    );
+    let svg = to_svg(&scene, &SvgOptions::default());
+    assert_eq!(svg.matches("data:image/png;base64,").count(), 2, "{svg}");
+    assert!(!svg.contains("example.com"), "web images are never fetched");
+
+    let png = pbi_render::png::render_png(&scene, &pbi_render::png::PngOptions::default()).unwrap();
+    let img = image::load_from_memory(&png).unwrap().to_rgba8();
+    let red = |x: u32, y: u32| {
+        let p = img.get_pixel(x, y).0;
+        p[0] > 240 && p[1] < 16 && p[2] < 16
+    };
+    // `Normal`: the 4×4 image at its natural size in the page centre.
+    assert!(red(640, 360));
+    assert!(!red(630, 360) && !red(5, 5));
+    // The image visual fits (contains) the image in its content area.
+    assert!(red(200, 150));
+    // The unresolvable web image shows the placeholder, not red.
+    assert!(!red(1000, 550));
 }

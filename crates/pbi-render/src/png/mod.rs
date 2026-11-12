@@ -107,7 +107,7 @@ fn fontdb() -> Arc<usvg::fontdb::Database> {
 }
 
 /// usvg options: bundled fonts only, `data:` images only.
-fn usvg_options() -> usvg::Options<'static> {
+pub(crate) fn usvg_options() -> usvg::Options<'static> {
     usvg::Options {
         font_family: FAMILY.to_owned(),
         fontdb: fontdb(),

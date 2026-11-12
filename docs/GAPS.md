@@ -83,6 +83,8 @@ Update **2026-11-07** (M7.4c TMDL formatter): `tmdl.format` lays a file out as D
 
 Update **2026-11-11** (A6 in CI, [ADR-0030](adr/0030-screen-readers-in-ci.md)): the M6 and M7 screen-reader journeys run in CI through Guidepup. NVDA passes every required step (27 of 27) and gates; VoiceOver (24 to 26 of 32) and Orca (20 of 32) complete them and are informational, with their misses listed in the §10 Accessibility row. The runs found four faults, now fixed: the File backstage let Tab out, Option+Q did nothing on macOS, Ctrl+K Ctrl+I broke when Ctrl was released, and a cancelled formula kept announcing its old problem (§10 accessibility row; no score change). M6 and M7 are complete.
 
+Update **2026-11-12** (M9.9): report-level measures evaluate in visuals (§1 `reportExtensions.json` 2 → 4), registered images draw as image visuals, page backgrounds, wallpapers and button images (§1 images 1 → 3, §5 `image` 0 → 3), and legacy reports use their themes in the CLI and `render.*` (§1 legacy reports 3 → 4).
+
 ## How to read it
 
 - **Status**: ✅ done (behaves like Power BI for this capability, within the documented limits) ·
@@ -99,11 +101,11 @@ Update **2026-11-11** (A6 in CI, [ADR-0030](adr/0030-screen-readers-in-ci.md)): 
 
 | # | Area | Avg score | Rows ✅ / 🟡 / ❌ | Biggest gaps |
 |---|---|---|---|---|
-| 1 | [File formats](#1-file-formats) | 3.3 | 11 / 10 / 5 | Images and `DataMashup` only kept; bookmarks partly applied; report-level measures not evaluated; Fabric remote mode |
+| 1 | [File formats](#1-file-formats) | 3.5 | 13 / 9 / 4 | `DataMashup` only kept; bookmarks partly applied; Fabric remote mode |
 | 2 | [M language and library](#2-m-language-and-library) | 3.3 | 7 / 3 / 3 | Library breadth (384 of Desktop's 941 functions), the M formatter, cultures, other data sources |
 | 3 | [DAX](#3-dax) | 3.8 | 5 / 6 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; relationship overrides in `RELATED`/`SUMMARIZE` |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh |
-| 5 | [Visuals](#5-visuals) | 2.1 | 16 / 5 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
+| 5 | [Visuals](#5-visuals) | 2.3 | 16 / 6 / 7 | No visual checked against a Power BI render yet; maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
 | 6 | [Interactions](#6-interactions) | 2.2 | 7 / 6 / 6 | Range and relative-date slicers |
 | 7 | [Rendering fidelity](#7-rendering-fidelity) | 3.2 | 4 / 0 / 2 | No golden images (Power BI exports of the Acme Outfitters pages); DIN font |
 | 8 | [Performance](#8-performance) | 4.8 | 12 / 0 / 1 | No app-open or webview canvas-latency scenarios; P09–P12 not in the baseline yet |
@@ -129,7 +131,7 @@ Source: [FORMATS.md](../FORMATS.md), `crates/pbi-core/src/reader/`.
 | TMDL language service (M7.4) | 🟡 | 4 | `tmdl.diagnostics`: unknown and misplaced keywords with the closest one, forms, values, compatibility levels, duplicates, conflicting declarations, unresolved references across a model folder (also in translations), property order, `ref` lines and syntax, from a keyword catalog recorded from Microsoft's TMDL reader (ADR-0029); 4,106 of 4,109 catalog checks and all 78 checks of the 54 edited models of `tmdl-validity` match the reader, no false errors on Acme, dax-lab and the GT-4 model. `tmdl.complete` and `tmdl.hover`: keywords of the line's object at the compatibility level, property values, references across the folder, descriptions and declarations; all 1,936 keywords, 497 values and 48 references of the saved models offered and hovered, all 841 offered keywords accepted where offered. `tmdl.format`: Desktop's layout (indentation, spacing, blank lines, expression blocks, comments, line endings), only white space changed and checked by reading back; the 58 Desktop- and TOM-saved files and the writer's output are fixed points, damaged copies format back byte for byte (`pbi_tmdl::service`, `crates/pbi-tmdl/tests/groundtruth.rs`, `crates/pbi-ops/tests/tmdl_language.rs`); fuzz `tmdl_service`; in external editors through `dashcraft lsp` (M7.6: the whole `definition` folder checked from the editor and disk, go to definition across files, quick fixes; `crates/dashcraft-cli/tests/lsp.rs`) | The TMDL view's editor (M12) |
 | TMSL `model.bim` / PBIT `DataModelSchema` read + write | ✅ | 5 | `crates/pbi-tmsl/tests/tmsl.rs` (layout-preserving, UTF-16LE) | — |
 | PBIR read + write | ✅ | 5 | every fixture file re-written byte-for-byte (`crates/pbi-pbir/tests/roundtrip.rs`) | — |
-| PBIR-Legacy `report.json` / PBIX `Report/Layout` read + write | 🟡 | 3 | `pbi-pbir::legacy`, synthetic `crates/pbi-pbir/tests/legacy.rs`; legacy `Layout` reports in `reference/samples/microsoft/` | Themes of legacy reports in the CLI and `render.*` |
+| PBIR-Legacy `report.json` / PBIX `Report/Layout` read + write | ✅ | 4 | `pbi-pbir::legacy`, synthetic `crates/pbi-pbir/tests/legacy.rs`; legacy `Layout` reports in `reference/samples/microsoft/`; their themes and images in the CLI, `render.*` and the canvas (`pbi_ops::canvas::report_theme`) | — |
 | PBIX read: report, model, embedded VertiPaq data | ✅ | 4 | `crates/pbi-vertipaq/tests/` on the Microsoft sample PBIX files (decoded tables cross-checked with pbixray by hash) | Legal review before release (ADR-0003) |
 | PBIX write | ❌ | n/a | needs XPress9/ABF encoders (ADR-0003) | Out of scope: save as PBIP/PBIT |
 | PBIT read + write (`export_pbit`) | ✅ | 4 | `crates/pbi-core/tests/readers.rs`; a Desktop-saved PBIT in `reference/samples/microsoft/` | Compare `export_pbit` output with a Desktop export (blocked: Windows) |
@@ -142,11 +144,11 @@ Source: [FORMATS.md](../FORMATS.md), `crates/pbi-core/src/reader/`.
 | `.pbids` | 🟡 | 2 | metadata only (`pbi-core::reader::single`) | — |
 | `.pbiviz`, `.mez`, `.pqx` metadata and listing | ✅ | 4 | `pbi-core::reader::extension` | — |
 | Executing custom visuals or connectors | ❌ | n/a | never executed (AGENTS.md rule 6) | Out of scope |
-| Themes (base + custom, `ThemeDataColor`, `visualStyles`) | ✅ | 4 | `pbi-render::theme`, `crates/pbi-render/tests/theme.rs` | Legacy reports use the default theme in the CLI |
+| Themes (base + custom, `ThemeDataColor`, `visualStyles`) | ✅ | 4 | `pbi-render::theme`, `crates/pbi-render/tests/theme.rs`; legacy reports' theme resources in every renderer | — |
 | `diagramLayout.json` | 🟡 | 3 | Model view positions (app) | Table colours; saving layouts |
 | PBIR bookmarks | 🟡 | 3 | read into the report AST (`Report::bookmarks`, groups, PBIR `bookmarks/` and PBIR-Legacy/PBIX `config.bookmarks`; `crates/pbi-pbir/tests/{ast,legacy}.rs`), kept verbatim on save; `report.bookmarks` lists them; their page, slicer, filter, visibility, sort, drill and spotlight parts are applied | Apply their cross-highlight and matrix-expansion parts |
-| `reportExtensions.json` (report-level measures) | 🟡 | 2 | typed in `pbi-pbir` and kept in the report AST (`Report::measures`); the linter counts them as defined, renames rewrite their table, DAX and `references`, saves write them back (`crates/pbi-pbir/tests/roundtrip.rs`, `crates/pbi-core/tests/{lint,save_in_place}.rs`, `crates/pbi-ops/tests/save.rs`; Power BI Desktop loads the renamed report and its card values are unchanged, GT-6) | Evaluate them in visuals and queries (M9.9); PBIR-Legacy/PBIX `modelExtensions` |
-| `RegisteredResources` images | ❌ | 1 | kept verbatim | Draw `image` visuals and wallpapers |
+| `reportExtensions.json` (report-level measures) | ✅ | 4 | typed in `pbi-pbir` and kept in the report AST (`Report::measures`); the linter counts them as defined, renames rewrite their table, DAX and `references`, saves write them back (`crates/pbi-pbir/tests/roundtrip.rs`, `crates/pbi-core/tests/{lint,save_in_place}.rs`, `crates/pbi-ops/tests/save.rs`; Power BI Desktop loads the renamed report and its card values are unchanged, GT-6); evaluated in visuals, cross-filters, tooltips and exports, also from other report measures (`QueryEnv::for_report`; `report_level_measures_evaluate_in_visuals_and_other_measures` in `crates/pbi-render/tests/query_visuals.rs`, `report_level_measures_render` in `crates/pbi-ops/tests/canvas.rs`) | `dax.query` does not see them; PBIR-Legacy/PBIX `modelExtensions` |
+| `RegisteredResources` images | 🟡 | 3 | kept verbatim; drawn as `image` visuals, page backgrounds, wallpapers and button icons and fills (`pbi_render::images`: PNG, JPEG, GIF and BMP first frame, sanitized SVG; size- and pixel-capped; `registered_images_render` in `crates/pbi-ops/tests/canvas.rs`, `image_visual_and_page_background_image_render_and_rasterize` in `crates/pbi-render/tests/visuals_basics.rs`; the COVID-19 sample's images) | Scaling not checked against Desktop; data-bound images (`imageData`), plot-area images; web images are never fetched |
 | PBIX `DataMashup` | ❌ | 1 | listed with an Info diagnostic | Decode the package (partitions already carry the M) |
 | Fabric remote mode (`byConnection`) | ❌ | 0 | shown as remote | Optional (ROADMAP Next); keychain credentials only |
 
@@ -255,7 +257,7 @@ golden images exist yet, §7).
 | Other bar/column variants (stacked, 100 %) | ✅ | 3 | `crates/pbi-render/tests/visuals_charts*.rs` | Golden |
 | `lineChart`, `areaChart`, `stackedAreaChart` | ✅ | 3 | synthetic | Golden |
 | Line + column combos | ✅ | 3 | synthetic | Golden |
-| `image` | ❌ | 0 | placeholder | Draw `RegisteredResources` images |
+| `image` | 🟡 | 3 | registered and data-URI images with Normal, Fit, Fill and Tile scaling (`crates/pbi-render/tests/visuals_basics.rs`, `crates/pbi-ops/tests/canvas.rs`) | Not checked against a Power BI render; web URLs show the placeholder (never fetched) |
 | Maps (`map`, `filledMap`, `shapeMap`, `azureMap`) | ❌ | 0 | placeholder | Offline tiles are a design question (no network) |
 | `funnel`, `gauge`, `treemap`, `waterfallChart` | ✅ | 3 | synthetic (`crates/pbi-render/tests/visuals_more.rs`, `query_visuals.rs`): conversion-rate labels, min/max/target, squarified layout, sentiment colors and breakdown top N + Other; on the Acme pages: render snapshots, the gauge's values against `expected.json` | Golden of an Acme page (blocked: needs Power BI Desktop or the service) |
 | `scatterChart` | 🟡 | 3 | synthetic (`visuals_more.rs`): Details × Legend points, numeric axes, bubbles, labels; first play-axis frame only; Acme render snapshots | Play-axis animation; Analytics pane lines; golden |

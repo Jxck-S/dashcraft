@@ -759,6 +759,148 @@ fn write_visual(dir: &std::path::Path, page: &str, name: &str, hidden: bool, vis
     std::fs::write(path, serde_json::to_string_pretty(&body).unwrap()).unwrap();
 }
 
+/// Report-level measures (`reportExtensions.json`) render in the one-shot
+/// and the interactive renderer, also under a cross-filter.
+#[tokio::test(flavor = "multi_thread")]
+async fn report_level_measures_render() {
+    let dir = tmp_dir("pbi-ops-ext-");
+    let pbip = mini_pbip(dir.path());
+    let ext = json!({
+        "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json",
+        "name": "extension",
+        "entities": [{"name": "Sales", "measures": [
+            {"name": "Twice", "dataType": "Double", "expression": "[Total] * 2", "formatString": "0",
+             "references": {"measures": [{"entity": "Sales", "name": "Total"}]}},
+            {"name": "Thrice Plus", "dataType": "Double", "expression": "[Twice] + [Total] + 7", "formatString": "0"}
+        ]}]
+    });
+    std::fs::write(
+        dir.path()
+            .join("Mini.Report/definition/reportExtensions.json"),
+        serde_json::to_string_pretty(&ext).unwrap(),
+    )
+    .unwrap();
+    let card = |measure: &str| {
+        json!({
+            "visualType": "card",
+            "query": {"queryState": {"Values": {"projections": [{
+                "field": {"Measure": {"Expression": {"SourceRef": {"Schema": "extension", "Entity": "Sales"}}, "Property": measure}},
+                "queryRef": format!("Sales.{measure}"), "nativeQueryRef": measure
+            }]}}}
+        })
+    };
+    write_visual(dir.path(), "overview", "twice", false, card("Twice"));
+    write_visual(dir.path(), "overview", "thrice", false, card("Thrice Plus"));
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let twice = 2 * MINI_TOTAL;
+    let thrice = 3 * MINI_TOTAL + 7;
+
+    let svg = r.run("render.page", json!({"docId": doc})).await;
+    assert_eq!(svg["ok"], true, "{}", svg["visuals"]);
+    let text = svg["svg"].as_str().unwrap();
+    assert!(text.contains(&format!(">{twice}<")), "{}", svg["visuals"]);
+    assert!(text.contains(&format!(">{thrice}<")));
+
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    let text = page["svg"].as_str().unwrap();
+    assert!(text.contains(&format!(">{twice}<")), "{}", page["visuals"]);
+    let bar = hit(&page, "bars|dataPoint|").to_owned();
+    let clicked = r
+        .run("canvas.click", json!({"docId": doc, "hitId": bar}))
+        .await;
+    let text = clicked["page"]["svg"].as_str().unwrap();
+    assert!(
+        !text.contains(&format!(">{twice}<")),
+        "the card is cross-filtered"
+    );
+}
+
+/// Registered images (`StaticResources/RegisteredResources`) render in the
+/// image visual and as the page background, in both renderers.
+#[tokio::test(flavor = "multi_thread")]
+async fn registered_images_render() {
+    use base64::Engine as _;
+    let dir = tmp_dir("pbi-ops-img-");
+    let pbip = mini_pbip(dir.path());
+    let red = base64::engine::general_purpose::STANDARD
+        .decode("iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGP4z8AARwzEcQCukw/x0F8jngAAAABJRU5ErkJggg==")
+        .unwrap();
+    let resources = dir
+        .path()
+        .join("Mini.Report/StaticResources/RegisteredResources");
+    std::fs::create_dir_all(&resources).unwrap();
+    std::fs::write(resources.join("red1234.png"), &red).unwrap();
+    std::fs::write(resources.join("junk5678.png"), b"not an image").unwrap();
+    let report = json!({
+        "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.0.0/schema.json",
+        "resourcePackages": [{"name": "RegisteredResources", "type": "RegisteredResources", "items": [
+            {"name": "red1234.png", "path": "red1234.png", "type": "Image"},
+            {"name": "junk5678.png", "path": "junk5678.png", "type": "Image"}
+        ]}]
+    });
+    std::fs::write(
+        dir.path().join("Mini.Report/definition/report.json"),
+        serde_json::to_string_pretty(&report).unwrap(),
+    )
+    .unwrap();
+    let item = |name: &str| {
+        json!({"expr": {"ResourcePackageItem": {
+            "PackageName": "RegisteredResources", "PackageType": 1, "ItemName": name
+        }}})
+    };
+    let image_visual = |name: &str| json!({"visualType": "image", "objects": {"general": [{"properties": {"imageUrl": item(name)}}]}});
+    write_visual(
+        dir.path(),
+        "overview",
+        "pic",
+        false,
+        image_visual("red1234.png"),
+    );
+    write_visual(
+        dir.path(),
+        "details",
+        "junk",
+        false,
+        image_visual("junk5678.png"),
+    );
+    let page_path = dir
+        .path()
+        .join("Mini.Report/definition/pages/overview/page.json");
+    let mut page: Value =
+        serde_json::from_str(&std::fs::read_to_string(&page_path).unwrap()).unwrap();
+    page["objects"] = json!({"background": [{"properties": {
+        "image": {"image": {"name": {"expr": {"Literal": {"Value": "'red'"}}}, "url": item("red1234.png"),
+                  "scaling": {"expr": {"Literal": {"Value": "'Fill'"}}}}},
+        "transparency": {"expr": {"Literal": {"Value": "0D"}}}
+    }}]});
+    std::fs::write(&page_path, serde_json::to_string_pretty(&page).unwrap()).unwrap();
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+
+    let svg = r.run("render.page", json!({"docId": doc})).await;
+    let text = svg["svg"].as_str().unwrap();
+    assert_eq!(
+        text.matches("data:image/png;base64,").count(),
+        2,
+        "{}",
+        svg["visuals"]
+    );
+    let png = r
+        .run("render.page", json!({"docId": doc, "format": "png"}))
+        .await;
+    assert!(png["pngBase64"].as_str().is_some_and(|b| !b.is_empty()));
+
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    let text = page["svg"].as_str().unwrap();
+    assert_eq!(text.matches("data:image/png;base64,").count(), 2);
+    // An undecodable file falls back to the placeholder.
+    let details = r
+        .run("canvas.render", json!({"docId": doc, "page": "Details"}))
+        .await;
+    assert!(!details["svg"].as_str().unwrap().contains("data:image/"));
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn synced_slicers_share_their_selection_across_pages() {
     let dir = tmp_dir("pbi-ops-sync-");

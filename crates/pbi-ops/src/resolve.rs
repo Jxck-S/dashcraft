@@ -1,7 +1,6 @@
 //! Name resolution shared by the commands: reports, pages, visuals, tables,
 //! slicers; and report themes.
 
-use pbi_core::ReportSource;
 use pbi_model::{Bookmark, Document, Model, Page, Report, Visual, dax_column_ref, names_eq};
 use pbi_render::query::is_slicer_type;
 use pbi_render::theme::ThemeResolver;
@@ -207,14 +206,11 @@ pub fn table_name(model: &Model, name: &str) -> Result<String, OpError> {
     })
 }
 
-/// The report's theme (the built-in default for PBIX layouts and
-/// PBIR-Legacy reports).
+/// The report's theme and images ([`crate::canvas::report_theme`]; PBIX
+/// layouts and PBIR-Legacy reports read their theme resources).
 #[must_use]
 pub fn theme(session: &Session, report_index: usize) -> ThemeResolver {
-    match session.opened().report_sources.get(report_index) {
-        Some(ReportSource::Pbir { report, .. }) => ThemeResolver::from_pbir(report),
-        _ => ThemeResolver::default(),
-    }
+    crate::canvas::report_theme(&session.opened(), report_index)
 }
 
 /// Labels a slicer answers to: its fields' display names, column names and

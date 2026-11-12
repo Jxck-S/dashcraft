@@ -9,16 +9,18 @@ mod query_support;
 use pbi_engine::Value;
 use pbi_model::{
     AggregationFunction, Bookmark, ComparisonKind, Condition, FieldExpr, Filter, FilterKind,
-    InteractionKind, Literal, Page, Report, SortDirection, SortItem, Visual, VisualInteraction,
+    InteractionKind, Literal, Page, Report, ReportMeasure, SortDirection, SortItem, Visual,
+    VisualInteraction,
 };
 use pbi_render::dataview::{DataView, DataViewKind};
 use pbi_render::query::{
-    InteractionState, PointSelection, QueryEnv, QueryLimits, SlicerSelection, VisualQueryError,
-    apply_bookmark,
+    InteractionState, PointSelection, QueryEnv, QueryLimits, ReportModels, SlicerSelection,
+    VisualQueryError, apply_bookmark,
 };
 use pretty_assertions::assert_eq;
 use query_support::{col, env, lit, measure, projection};
 use serde_json::json;
+use std::sync::Arc;
 
 fn visual(name: &str, visual_type: &str, projections: Vec<pbi_model::Projection>) -> Visual {
     Visual {
@@ -184,6 +186,70 @@ fn cards_are_single_values_with_metadata() {
     assert_eq!(single(&query(&env, &report, "orders", &none)), "5");
     assert_eq!(single(&query(&env, &report, "sessions", &none)), "2");
     assert_eq!(query(&env, &report, "text", &none), DataView::empty());
+}
+
+fn report_measure(table: &str, name: &str, expression: &str) -> ReportMeasure {
+    ReportMeasure {
+        table: table.into(),
+        name: name.into(),
+        expression: expression.into(),
+        format_string: Some("0".into()),
+        ..ReportMeasure::default()
+    }
+}
+
+#[test]
+fn report_level_measures_evaluate_in_visuals_and_other_measures() {
+    let base = env();
+    let mut report = report(Page {
+        name: "p".into(),
+        visuals: vec![
+            card("double", "Double Stores"),
+            card("quad", "Quad Stores"),
+            card("clash", "Store Count"),
+            visual(
+                "bars",
+                "clusteredColumnChart",
+                vec![
+                    projection("Category", col("Stores", "Region")),
+                    projection("Y", measure("Double Stores")),
+                ],
+            ),
+        ],
+        ..Page::default()
+    });
+    let none = InteractionState::new();
+    let missing = try_query(&base, &report, "double", &none);
+    assert!(missing.is_err(), "{missing:?}");
+
+    report.measures = vec![
+        report_measure("Stores", "Double Stores", "[Store Count] * 2"),
+        report_measure("Stores", "Quad Stores", "[Double Stores] * 2"),
+        // A model measure keeps its definition; a measure on a missing table
+        // or named like a column is left out.
+        report_measure("Stores", "Store Count", "0"),
+        report_measure("Nowhere", "Lost", "1"),
+        report_measure("Stores", "Region", "1"),
+    ];
+    let cache = ReportModels::default();
+    let env = base.clone().for_report(&report, Some(&cache));
+    assert_eq!(single(&query(&env, &report, "double", &none)), "10");
+    assert_eq!(single(&query(&env, &report, "quad", &none)), "20");
+    assert_eq!(single(&query(&env, &report, "clash", &none)), "5");
+    let bars = query(&env, &report, "bars", &none);
+    let east = categories(&bars).iter().position(|c| c == "East").unwrap();
+    assert_eq!(values(&bars, 0)[east], "2");
+    assert!(env.model.find_measure("Lost").is_none());
+    let region = env.model.table("Stores").unwrap();
+    assert!(!region.measures.iter().any(|m| m.name == "Region"));
+
+    // The cache hands out the same model, so pointer-keyed caches hit.
+    let again = base.clone().for_report(&report, Some(&cache));
+    assert!(Arc::ptr_eq(&env.model, &again.model));
+    let uncached = base.clone().for_report(&report, None);
+    assert!(!Arc::ptr_eq(&env.model, &uncached.model));
+    let plain = base.clone().for_report(&Report::default(), Some(&cache));
+    assert!(Arc::ptr_eq(&base.model, &plain.model));
 }
 
 #[test]
