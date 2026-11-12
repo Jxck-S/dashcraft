@@ -14,11 +14,14 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   name, the changed measure's TMDL is reachable, Esc returns to Compare, Reload says so; then an
   unsaved edit outlives a killed app and Document recovery's Restore says what it restored.
   Writing them showed the bar's `role="status"` is not announced when it appears with its text,
-  so the app also says the change in the status bar's live region. Document recovery gets
+  so the app also says the change in the status bar's live region. The first run showed
+  VoiceOver and Orca dropping "Reloaded" and "Restored" when the focus moved right after: the
+  app now moves the focus first (to the ribbon tab, not the page) and says the outcome 0.5 s
+  later. Document recovery gets
   **Open saved** per file: the file as last saved, its edits kept for the next start.
 - **Why:** M8 acceptance 4 (A1–A6 for the recovery prompt, the bar and Compare) and the "open
   saved" choice of M8.1.
-- **Numbers:** `external-changes.mjs` 49 → 50 checks, `recovery.mjs` 16 → 29 (with A1–A5 and the IBM checker for Document recovery, which found the Open saved name missing its visible label), all pass on
+- **Numbers:** `external-changes.mjs` 49 → 52 checks, `recovery.mjs` 16 → 31 (with A1–A5 and the IBM checker for Document recovery, which found the Open saved name missing its visible label), all pass on
   Windows; the screen-reader run is in PR #80.
 
 ### M8.3: report objects in the diff as their PBIR files
