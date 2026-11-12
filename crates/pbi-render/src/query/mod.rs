@@ -89,7 +89,8 @@
 //! the unsupported function).
 //!
 //! **Sorting.** `sortDefinition` (fields of the visual; a column's model
-//! `sortByColumn` is honoured). Defaults: bar/column/pie/donut/funnel/
+//! `sortByColumn` is honoured), or the order a bookmark set
+//! ([`InteractionState::sort`]). Defaults: bar/column/pie/donut/funnel/
 //! treemap/waterfall/ribbon charts by the first value descending; other
 //! charts by category ascending; tables by the first column (ascending, or
 //! descending for a value); slicers and matrix row and column levels
@@ -333,7 +334,14 @@ impl QueryEnv {
         state: &InteractionState,
         limits: &QueryLimits,
     ) -> Result<DataView, VisualQueryError> {
-        exec::run_visual(self, report, page, visual, state, limits)
+        match state.sort.get(&visual.name) {
+            Some(sort) if *sort != visual.sort => {
+                let mut sorted = visual.clone();
+                sorted.sort.clone_from(sort);
+                exec::run_visual(self, report, page, &sorted, state, limits)
+            }
+            _ => exec::run_visual(self, report, page, visual, state, limits),
+        }
     }
 
     /// See [`query_page`].

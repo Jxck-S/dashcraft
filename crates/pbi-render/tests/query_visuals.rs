@@ -8,15 +8,17 @@ mod query_support;
 
 use pbi_engine::Value;
 use pbi_model::{
-    AggregationFunction, ComparisonKind, Condition, FieldExpr, Filter, FilterKind, InteractionKind,
-    Literal, Page, Report, SortDirection, SortItem, Visual, VisualInteraction,
+    AggregationFunction, Bookmark, ComparisonKind, Condition, FieldExpr, Filter, FilterKind,
+    InteractionKind, Literal, Page, Report, SortDirection, SortItem, Visual, VisualInteraction,
 };
 use pbi_render::dataview::{DataView, DataViewKind};
 use pbi_render::query::{
     InteractionState, PointSelection, QueryEnv, QueryLimits, SlicerSelection, VisualQueryError,
+    apply_bookmark,
 };
 use pretty_assertions::assert_eq;
 use query_support::{col, env, lit, measure, projection};
+use serde_json::json;
 
 fn visual(name: &str, visual_type: &str, projections: Vec<pbi_model::Projection>) -> Visual {
     Visual {
@@ -376,6 +378,64 @@ fn tables_group_sort_and_total() {
         dv.metadata[2].expression.as_deref(),
         Some("SUM(Stores[Staff])")
     );
+}
+
+#[test]
+fn bookmarks_sort_visuals() {
+    let env = env();
+    let report = report(page());
+    let names = |state: &InteractionState| -> Vec<String> {
+        let dv = query(&env, &report, "table", state);
+        let t = dv.table.unwrap();
+        t.rows.iter().map(|r| r[0].formatted.clone()).collect()
+    };
+    let by_name = json!([{"Direction": 1, "Expression": {"Column": {
+        "Expression": {"SourceRef": {"Entity": "Stores"}}, "Property": "Store Name"
+    }}}]);
+    let bookmark = |order: serde_json::Value| Bookmark {
+        name: "bm".into(),
+        exploration_state: json!({"sections": {"p1": {"visualContainers": {
+            "table": {"singleVisual": {"visualType": "tableEx", "orderBy": order}}
+        }}}}),
+        ..Bookmark::default()
+    };
+    let saved = |_: &Page| InteractionState::new();
+    let effect = apply_bookmark(&report, &bookmark(by_name), &saved);
+    assert!(effect.not_applied.is_empty(), "{:?}", effect.not_applied);
+    let state = &effect.states["p1"];
+    assert_eq!(
+        state.sort["table"],
+        [SortItem {
+            field: col("Stores", "Store Name"),
+            direction: SortDirection::Ascending,
+        }]
+    );
+    assert_eq!(names(state), ["Store 1", "Store 2", "Store 3", "Store 4"]);
+    let dv = query(&env, &report, "table", state);
+    assert_eq!(dv.metadata[0].sort, Some(SortDirection::Ascending));
+    assert_eq!(dv.metadata[2].sort, None);
+
+    // The saved order (staff, descending) is not kept as an override; an
+    // "All visuals" bookmark without `orderBy` goes back to it.
+    let staff = json!([{"Direction": 2, "Expression": {"Aggregation": {"Function": 0, "Expression": {"Column": {
+        "Expression": {"SourceRef": {"Entity": "Stores"}}, "Property": "Staff"
+    }}}}}]);
+    let effect = apply_bookmark(&report, &bookmark(staff), &|_| state.clone());
+    assert!(effect.states["p1"].sort.is_empty());
+    let effect = apply_bookmark(&report, &bookmark(serde_json::Value::Null), &|_| {
+        state.clone()
+    });
+    assert!(effect.states["p1"].sort.is_empty());
+    assert_eq!(
+        names(&effect.states["p1"]),
+        ["Store 4", "Store 3", "Store 2", "Store 1"]
+    );
+
+    // An unreadable clause is listed and the order stays.
+    let effect = apply_bookmark(&report, &bookmark(json!([{"Direction": 3}])), &|_| {
+        state.clone()
+    });
+    assert_eq!(effect.not_applied, ["Page 1: sort"]);
 }
 
 #[test]

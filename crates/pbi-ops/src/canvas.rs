@@ -434,7 +434,8 @@ impl PageEntry {
     }
 }
 
-/// Applies `renames`, in order, to the fields of a page's selections.
+/// Applies `renames`, in order, to the fields of a page's selections and
+/// sort overrides.
 fn rename_state(state: &mut InteractionState, renames: &[Rename]) {
     for rename in renames {
         for selection in state.slicer_selections.values_mut() {
@@ -446,6 +447,9 @@ fn rename_state(state: &mut InteractionState, renames: &[Rename]) {
             for f in points.points.iter_mut().flatten() {
                 rename.apply_to_field(&mut f.field);
             }
+        }
+        for item in state.sort.values_mut().flatten() {
+            rename.apply_to_field(&mut item.field);
         }
     }
 }
