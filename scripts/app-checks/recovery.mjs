@@ -1,6 +1,7 @@
 // M8.1 Auto recovery check of the desktop app (Windows, WebView2): edit a measure, end the app
 // without saving (a crash), start it again and get Document recovery; Restore brings the edit
-// back unsaved and undoable; after another crash Discard deletes it for good.
+// back unsaved and undoable; after another crash Open saved opens the saved file and keeps the
+// edit for the next start, where Discard deletes it for good.
 //
 //   (cd app && npx tauri build --debug --no-bundle)
 //   node scripts/app-checks/recovery.mjs [path/to/dashcraft-app.exe]
@@ -56,6 +57,16 @@ try {
 
   session = await launch(PORT, undefined, { keep: true })
   check('a restored, unsaved edit is offered again after another crash', await session.waitFor(`${dialog}?.textContent.includes('AcmeOutfitters.pbip')`, 60000))
+  check('Open saved', await session.evaluate(click('[aria-label="Document recovery"] button', 'Open saved')))
+  check('Open saved closes Document recovery', await session.waitFor(`!${dialog}`))
+  check('the saved file is open, without unsaved edits', await session.waitFor(`${title}.includes('AcmeOutfitters') && !${title}.includes('*')`, 30000))
+  const saved = await selectTotalSales(session)
+  check('the formula bar shows the saved formula', saved === formula, saved ?? 'no formula')
+  check('the edit is kept for the next start', journals(session.data) === 1, `${journals(session.data)} journals`)
+  await crash(session)
+
+  session = await launch(PORT, undefined, { keep: true })
+  check('the kept edit is offered again', await session.waitFor(`${dialog}?.textContent.includes('1 unsaved edit')`, 60000))
   check('Discard asks first', await session.evaluate(click('[aria-label="Document recovery"] button', 'Discard')))
   check('the question appears', await session.waitFor(`!!document.querySelector('[role="dialog"][aria-label="Discard unsaved edits"]')`))
   await session.evaluate(click('[aria-label="Discard unsaved edits"] button', 'Discard'))

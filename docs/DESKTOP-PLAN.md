@@ -1071,9 +1071,9 @@ version; compare two versions of a project.
   dropped workspace's seven edits replay to the same measures). The journal is written per
   command rather than on an interval. The app turns it on by default and keeps the choice
   (Options → Auto recovery: on or off, the folder shown), and after a crash the next start shows
-  Document recovery (Restore, Discard, Decide later; the file opened from the command line is the
+  Document recovery (Restore, Open saved, Discard, Decide later; the file opened from the command line is the
   saved one) (`auto_recovery_journals_unsaved_edits_and_remembers_the_choice` in
-  `app/src-tauri/src/lib.rs`, `scripts/app-checks/recovery.mjs`: 16 checks on Windows).
+  `app/src-tauri/src/lib.rs`, `scripts/app-checks/recovery.mjs`: 22 checks on Windows; Open saved opens the file as saved and keeps the edits for the next start).
 - [ ] **M8.2 External changes.** Watch the open project's files; a notification bar offers Reload,
   Keep mine or Compare; `doc.status` reports changes for headless callers; Save refuses to
   overwrite newer external changes unless forced.

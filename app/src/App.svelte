@@ -1964,6 +1964,12 @@
         {journals}
         pending={recoveryPending}
         onrestore={(id) => void restoreRecovery(id)}
+        onopensaved={(id) => {
+          const path = journals.find((j) => j.recoveryId === id)?.path
+          if (!path) return
+          recovery = null
+          void openPath(path)
+        }}
         ondiscard={(id) => {
           const journal = journals.find((j) => j.recoveryId === id)
           if (journal) void discardRecovery(journal)

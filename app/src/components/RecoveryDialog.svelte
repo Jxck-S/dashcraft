@@ -5,11 +5,13 @@
 
   // Document recovery: unsaved edits left by a session that ended without saving (DashCraft
   // stopped unexpectedly), as Power BI Desktop offers after a crash. Restore reopens the file
-  // with the edits (still unsaved); Discard deletes them; Decide later asks again next start.
+  // with the edits (still unsaved); Open saved opens the file as saved and, like Decide later,
+  // keeps the edits to ask again next start; Discard deletes them.
   let {
     journals,
     pending,
     onrestore,
+    onopensaved,
     ondiscard,
     onclose,
   }: {
@@ -17,6 +19,7 @@
     /** The journal being restored or discarded. */
     pending: string | null
     onrestore: (id: string) => void
+    onopensaved: (id: string) => void
     ondiscard: (id: string) => void
     onclose: () => void
   } = $props()
@@ -31,7 +34,7 @@
 </script>
 
 <Modal title="Document recovery" width={620} {onclose}>
-  <p>DashCraft closed before these files were saved. Restore one to reopen it with its unsaved edits, then save it.</p>
+  <p>DashCraft closed before these files were saved. Restore one to reopen it with its unsaved edits, then save it; Open saved opens the file as it was last saved and keeps the edits for the next start.</p>
   <ul class="journals" aria-label="Recoverable files">
     {#each journals as j (j.recoveryId)}
       {@const problem = blocker(j)}
@@ -47,6 +50,7 @@
         </div>
         <div class="actions">
           <button class="primary" disabled={problem !== null || pending !== null} onclick={() => onrestore(j.recoveryId)} aria-label={`Restore ${fileName(j.path)}`}>Restore</button>
+          <button disabled={!j.path || !j.sourceExists || pending !== null} onclick={() => onopensaved(j.recoveryId)} aria-label={`Open the saved ${fileName(j.path)}`} title="Open the file as it was last saved; the unsaved edits are offered again next start">Open saved</button>
           <button disabled={pending !== null} onclick={() => ondiscard(j.recoveryId)} aria-label={`Discard the unsaved edits of ${fileName(j.path)}`}>Discard</button>
         </div>
       </li>
