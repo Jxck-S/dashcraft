@@ -1,4 +1,5 @@
-//! Filter context of one visual: report + page + visual filters, slicer
+//! Filter context of one visual: report + page + visual filters (with the
+//! conditions a bookmark set), slicer
 //! selections of the other slicers, cross-filter from the selected visual
 //! (honouring `visualInteractions`), then Top N filters.
 
@@ -8,7 +9,9 @@ use pbi_model::{Condition, Filter, InteractionKind, Page, Report, Visual};
 use crate::dataview::{QueryWarning, WarningScope};
 
 use super::filter::{FilterBuilder, FilterPlan};
-use super::interaction::{InteractionState, SlicerSelection, is_slicer_type, slicer_fields};
+use super::interaction::{
+    FilterLevel, InteractionState, SlicerSelection, is_slicer_type, slicer_fields,
+};
 use super::plan::{same_field, value_field};
 use super::semantic::TopNSpec;
 use super::{QueryEnv, QueryLimits};
@@ -41,14 +44,19 @@ pub(crate) fn visual_filters(
     let builder = env.builder();
     let mut out = VisualFilters::default();
     let mut top_n = Vec::new();
-    for (scope, filters) in [
-        (WarningScope::Report, &report.filters),
-        (WarningScope::Page, &page.filters),
-        (WarningScope::Visual, &visual.filters),
+    for (scope, level, filters) in [
+        (WarningScope::Report, FilterLevel::Report, &report.filters),
+        (WarningScope::Page, FilterLevel::Page, &page.filters),
+        (
+            WarningScope::Visual,
+            FilterLevel::Visual(&visual.name),
+            &visual.filters,
+        ),
     ] {
         for f in filters {
-            let plan = builder.plan(f);
-            apply_plan(&mut out, &mut top_n, scope, f, plan);
+            let f = state.filters.apply(level, f);
+            let plan = builder.plan(&f);
+            apply_plan(&mut out, &mut top_n, scope, &f, plan);
         }
     }
 
