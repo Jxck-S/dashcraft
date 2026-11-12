@@ -1084,8 +1084,11 @@ version; compare two versions of a project.
   and shows a notification bar with Reload (asking before it discards unsaved edits), Keep mine
   and Compare (`scripts/app-checks/external-changes.mjs`: 49 checks on Windows; the bar appears
   about one second after an external TMDL edit; A1 to A5 and the IBM checker pass for the bar and
-  Compare). Next: the A6 screen-reader steps for the bar, and push notifications of external
-  changes for `serve` and MCP clients (they poll `doc.externalChanges` meanwhile).
+  Compare). `serve` and `mcp` push the same scan to their clients: a `doc/externalChanged`
+  notification (MCP: a `notice` log message) when a document's set of changed files changes,
+  empty again after a save or reload; the scan takes its turn among the document's mutating
+  requests, so the server's own saves are never reported (`crates/pbi-ops/tests/rpc.rs`,
+  `mcp.rs`). Next: the A6 screen-reader steps for the bar.
 - [ ] **M8.3 Semantic diff.** `doc.diff` between the in-memory revision and the files on disk, or
   between two documents or folders: objects added, removed and changed, with TMDL and PBIR
   snippets; the Compare view in the app.

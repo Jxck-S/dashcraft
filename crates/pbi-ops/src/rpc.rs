@@ -41,11 +41,24 @@
 //!   ```text
 //!   ← {"jsonrpc":"2.0","method":"doc/changed","params":{"docId":"d1","command":"model.measure.create","revision":1,"dirty":true,"changes":[{"objectId":57,"kind":"added"}]}}
 //!   ```
+//! - **External changes.** Every [`RpcOptions::external_poll`] the open
+//!   PBIP projects are scanned for files another program changed (what
+//!   `doc.externalChanges` returns); when a document's set differs from the
+//!   last one sent, a `doc/externalChanged` notification carries an
+//!   [`ExternalChangedEvent`](crate::watch::ExternalChangedEvent): the
+//!   `docId` and the `changes` (`path`, `change`: `added`/`modified`/
+//!   `removed`), empty again after a save or reload. A scan takes its turn
+//!   among the document's mutating requests.
+//!
+//!   ```text
+//!   ← {"jsonrpc":"2.0","method":"doc/externalChanged","params":{"docId":"d1","changes":[{"path":"Acme.SemanticModel/definition/tables/Sales.tmdl","change":"modified"}]}}
+//!   ```
 //! - At end of input the server waits for the running requests, writes
 //!   their responses and returns.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -56,6 +69,7 @@ use tokio_util::sync::CancellationToken;
 use crate::ctx::{CallerKind, Ctx, DocChangedEvent};
 use crate::error::OpError;
 use crate::registry::Registry;
+use crate::watch::{DEFAULT_EXTERNAL_POLL, spawn_external_watch};
 use crate::workspace::{Workspace, lock};
 
 /// Server limits.
@@ -69,6 +83,9 @@ pub struct RpcOptions {
     pub max_line_bytes: usize,
     /// Caller kind of the requests (policy).
     pub caller: CallerKind,
+    /// Interval of the external-change scans (`doc/externalChanged`);
+    /// `None` sends none.
+    pub external_poll: Option<Duration>,
 }
 
 impl Default for RpcOptions {
@@ -80,6 +97,7 @@ impl Default for RpcOptions {
             max_pending: 256,
             max_line_bytes: 16 * 1024 * 1024,
             caller: CallerKind::Rpc,
+            external_poll: Some(DEFAULT_EXTERNAL_POLL),
         }
     }
 }
@@ -93,7 +111,7 @@ struct Shared {
     caller: CallerKind,
     outbox: mpsc::Sender<String>,
     inflight: Mutex<HashMap<String, CancellationToken>>,
-    queue: DocQueue,
+    queue: Arc<DocQueue>,
     permits: Semaphore,
     max_pending: usize,
 }
@@ -272,9 +290,28 @@ where
         caller: opts.caller,
         outbox,
         inflight: Mutex::new(HashMap::new()),
-        queue: DocQueue::default(),
+        queue: Arc::default(),
         permits: Semaphore::new(opts.max_concurrent.max(1)),
         max_pending: opts.max_pending.max(1),
+    });
+    let stop_watch = CancellationToken::new();
+    let watch = opts.external_poll.map(|interval| {
+        let outbox = shared.outbox.clone();
+        spawn_external_watch(
+            Arc::clone(&shared.ws),
+            Arc::clone(&shared.queue),
+            interval,
+            stop_watch.clone(),
+            move |event| {
+                let params = serde_json::to_value(&event).unwrap_or_else(|_| json!({}));
+                outbox
+                    .try_send(
+                        json!({ "jsonrpc": "2.0", "method": "doc/externalChanged", "params": params })
+                            .to_string(),
+                    )
+                    .is_ok()
+            },
+        )
     });
     let mut tasks = JoinSet::new();
     let mut buf = Vec::new();
@@ -302,6 +339,10 @@ where
         handle_line(&shared, text, &mut tasks).await;
         while tasks.try_join_next().is_some() {}
     };
+    stop_watch.cancel();
+    if let Some(watch) = watch {
+        let _ = watch.await;
+    }
     while tasks.join_next().await.is_some() {}
     drop(shared);
     let written = write_task

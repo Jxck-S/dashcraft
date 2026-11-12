@@ -798,6 +798,52 @@ async fn expected_values_through_mcp() {
     c.finish().await;
 }
 
+/// M8.2: an external change is pushed as a `notice` log message once the
+/// client sets a log level that lets it through (not lost before).
+#[tokio::test(flavor = "multi_thread")]
+async fn external_changes_are_pushed_as_log_messages() {
+    const SALES_TMDL: &str = "Mini.SemanticModel/definition/tables/Sales.tmdl";
+    let dir = tmp_dir("pbi-ops-mcp-external-");
+    let pbip = mini_pbip(dir.path());
+    let opts = McpOptions {
+        external_poll: Some(Duration::from_millis(50)),
+        ..McpOptions::default()
+    };
+    let mut c = Client::start(&Registry::default_catalog(), confined(dir.path()), opts);
+    c.initialize("2025-06-18").await;
+    c.ok("doc_open", json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    let sales = dir.path().join(SALES_TMDL);
+    let text = std::fs::read_to_string(&sales).unwrap();
+    std::fs::write(&sales, format!("{text}\n")).unwrap();
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(c.request("ping", json!({})).await["result"], json!({}));
+    assert!(c.notes.is_empty(), "no level, no message: {:?}", c.notes);
+
+    c.request("logging/setLevel", json!({"level": "warning"}))
+        .await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    c.request("ping", json!({})).await;
+    assert!(c.notes.is_empty(), "below the level: {:?}", c.notes);
+
+    c.request("logging/setLevel", json!({"level": "notice"}))
+        .await;
+    let note = loop {
+        if let Some(note) = c.notes.pop() {
+            break note;
+        }
+        let msg = c.next().await;
+        assert!(msg.get("method").is_some(), "{msg}");
+        c.notes.push(msg);
+    };
+    assert_eq!(note["method"], "notifications/message");
+    assert_eq!(note["params"]["level"], "notice");
+    assert_eq!(
+        note["params"]["data"],
+        json!({"event": "doc/externalChanged", "docId": "d1", "changes": [{"path": SALES_TMDL, "change": "modified"}]})
+    );
+    c.finish().await;
+}
 /// M6 acceptance 11: an agent limited to the editing tools edits and saves a
 /// project inside its write roots; a project only in a read root is not
 /// saved (`pathDenied`) and keeps its bytes.

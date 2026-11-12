@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
 use tokio::io::{AsyncBufRead, AsyncWrite};
@@ -23,6 +23,7 @@ use crate::ctx::{CallerKind, Ctx, DocChangedEvent};
 use crate::error::{OpError, OpErrorCode};
 use crate::registry::Registry;
 use crate::rpc::{DocQueue, Line, read_line, spawn_writer};
+use crate::watch::{DEFAULT_EXTERNAL_POLL, ExternalChangedEvent, spawn_external_watch};
 use crate::workspace::{Workspace, lock};
 
 /// Default cap on the text of one tool result (1 MiB).
@@ -51,6 +52,9 @@ pub struct McpOptions {
     pub server_title: String,
     /// `serverInfo.version`.
     pub server_version: String,
+    /// Interval of the external-change scans (`doc/externalChanged` log
+    /// messages); `None` sends none.
+    pub external_poll: Option<Duration>,
 }
 
 impl Default for McpOptions {
@@ -67,6 +71,7 @@ impl Default for McpOptions {
             server_name: "dashcraft".to_owned(),
             server_title: "DashCraft: Power BI files, offline".to_owned(),
             server_version: env!("CARGO_PKG_VERSION").to_owned(),
+            external_poll: Some(DEFAULT_EXTERNAL_POLL),
         }
     }
 }
@@ -186,9 +191,20 @@ impl McpServer {
             opts: self.opts,
             outbox,
             inflight: Mutex::new(HashMap::new()),
-            queue: DocQueue::default(),
+            queue: Arc::default(),
             session: Mutex::new(Session::default()),
             instructions,
+        });
+        let stop_watch = CancellationToken::new();
+        let watch = shared.opts.external_poll.map(|interval| {
+            let sink = Arc::clone(&shared);
+            spawn_external_watch(
+                Arc::clone(&shared.ws),
+                Arc::clone(&shared.queue),
+                interval,
+                stop_watch.clone(),
+                move |event| sink.external_changed(&event),
+            )
         });
         let mut tasks = JoinSet::new();
         let mut buf = Vec::new();
@@ -220,6 +236,10 @@ impl McpServer {
         for token in lock(&shared.inflight).values() {
             token.cancel();
         }
+        stop_watch.cancel();
+        if let Some(watch) = watch {
+            let _ = watch.await;
+        }
         while tasks.join_next().await.is_some() {}
         drop(shared);
         let written = write_task
@@ -243,7 +263,7 @@ struct Shared {
     opts: McpOptions,
     outbox: mpsc::Sender<String>,
     inflight: Mutex<HashMap<String, CancellationToken>>,
-    queue: DocQueue,
+    queue: Arc<DocQueue>,
     permits: Semaphore,
     session: Mutex<Session>,
     instructions: String,
@@ -325,6 +345,25 @@ impl Shared {
             );
             let _ = self.outbox.try_send(note);
         }
+    }
+
+    /// Sends a pushed external change as a `notice` log message when the
+    /// session's level (`logging/setLevel`) lets it through; `false` when
+    /// it was not sent.
+    fn external_changed(&self, event: &ExternalChangedEvent) -> bool {
+        let level = lock(&self.session).log_level;
+        if !level.is_some_and(|min| LogLevel::Notice >= min) {
+            return false;
+        }
+        let mut data = serde_json::to_value(event).unwrap_or_else(|_| json!({}));
+        if let Value::Object(map) = &mut data {
+            map.insert("event".into(), "doc/externalChanged".into());
+        }
+        let note = protocol::notification(
+            "notifications/message",
+            json!({ "level": LogLevel::Notice.as_str(), "logger": self.opts.server_name, "data": data }),
+        );
+        self.outbox.try_send(note).is_ok()
     }
 }
 

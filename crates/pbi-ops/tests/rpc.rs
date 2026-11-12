@@ -65,6 +65,10 @@ struct Client {
 
 impl Client {
     fn start(registry: Registry) -> Self {
+        Self::start_with(registry, RpcOptions::default())
+    }
+
+    fn start_with(registry: Registry, opts: RpcOptions) -> Self {
         let (client, server_end) = tokio::io::duplex(1 << 20);
         let (server_read, server_write) = tokio::io::split(server_end);
         let server = tokio::spawn(serve(
@@ -72,7 +76,7 @@ impl Client {
             Arc::new(Workspace::new()),
             BufReader::new(server_read),
             server_write,
-            RpcOptions::default(),
+            opts,
         ));
         let (read, tx) = tokio::io::split(client);
         Self {
@@ -247,6 +251,65 @@ async fn committed_edits_send_doc_changed_before_the_response() {
     c.request(8, "doc.save", json!({"docId": "d1"})).await;
     let (notes, _) = c.exchange(8).await;
     assert!(doc_changed(&notes).is_empty());
+
+    c.tx.shutdown().await.unwrap();
+    c.server.await.unwrap().unwrap();
+}
+
+/// M8.2: files another program changes under an open project are pushed as
+/// `doc/externalChanged`, once per new set, and the empty set after a
+/// reload.
+#[tokio::test(flavor = "multi_thread")]
+async fn external_changes_are_pushed_until_reload() {
+    const SALES_TMDL: &str = "Mini.SemanticModel/definition/tables/Sales.tmdl";
+    let dir = tmp_dir("pbi-ops-rpc-external-");
+    let pbip = mini_pbip(dir.path());
+    let opts = RpcOptions {
+        external_poll: Some(Duration::from_millis(50)),
+        ..RpcOptions::default()
+    };
+    let mut c = Client::start_with(Registry::default_catalog(), opts);
+    c.request(1, "doc.open", json!({"path": pbip, "autoRefresh": false}))
+        .await;
+    c.exchange(1).await;
+    // Unchanged files send nothing.
+    tokio::time::sleep(Duration::from_millis(300)).await;
+
+    let sales = dir.path().join(SALES_TMDL);
+    let text = std::fs::read_to_string(&sales).unwrap();
+    std::fs::write(&sales, format!("{text}\n")).unwrap();
+    let pushed = c.next().await;
+    assert_eq!(
+        pushed,
+        json!({"jsonrpc": "2.0", "method": "doc/externalChanged", "params": {
+            "docId": "d1", "changes": [{"path": SALES_TMDL, "change": "modified"}],
+        }})
+    );
+
+    // The same set is not sent again; a reload empties it.
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    c.request(2, "doc.reload", json!({"docId": "d1"})).await;
+    let (notes, reloaded) = c.exchange(2).await;
+    assert!(reloaded.get("result").is_some(), "{reloaded}");
+    let mut external: Vec<Value> = notes
+        .into_iter()
+        .filter(|n| n["method"] == "doc/externalChanged")
+        .collect();
+    if external.is_empty() {
+        loop {
+            let msg = c.next().await;
+            if msg["method"] == "doc/externalChanged" {
+                external.push(msg);
+                break;
+            }
+        }
+    }
+    assert_eq!(
+        external,
+        [
+            json!({"jsonrpc": "2.0", "method": "doc/externalChanged", "params": {"docId": "d1", "changes": []}})
+        ]
+    );
 
     c.tx.shutdown().await.unwrap();
     c.server.await.unwrap().unwrap();
