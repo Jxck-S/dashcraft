@@ -351,10 +351,20 @@ async function journey() {
   }, /Compare .*files on disk/i)
   await step('S36', 'A1 the comparison result is announced', 'wait', () => settle(2000), /different/i, { required: false })
   await step('S37', 'A2 Tab reaches the changed measure as TMDL', 'Tab ×n', async () => `${await tabUntil(/TMDL of Customers/, 15)} Tab presses`, /TMDL of Customers/)
-  await step('S38', 'A2 Esc closes Compare and focus goes back to Compare', 'Escape', async () => {
+  // NVDA may switch to browse mode with a sound instead of words, so the focus report shows
+  // whether the first Escape closed the dialog.
+  await step('S38', 'A2 Esc closes Compare and focus goes back to Compare', 'Escape, focus report', async () => {
     await escape()
     await settle(1000)
-  }, /Compare,? button|button,? Compare|Compare this document/i)
+    await sr.clearSpokenPhraseLog()
+    await focus()
+    if (!/dialog|TMDL of|Objects that differ/i.test(await said())) return 'one Escape'
+    await press('Escape')
+    await settle(1000)
+    await sr.clearSpokenPhraseLog()
+    await focus()
+    return 'two Escapes'
+  }, (heard) => /\bCompare\b(?! ?Acme| in the bar)/.test(heard) && !/dialog/i.test(heard))
   await step('S39', 'A1 Reload in the bar rereads the project and says so', 'Shift+Tab ×n, Enter', async () => {
     const presses = await tabUntil(/Reload/, 3, true)
     await press('Enter')
