@@ -1163,6 +1163,21 @@
         status = { message: bookmarkMessage(action.displayName, action.notApplied ?? []), isError: false }
         break
       }
+      case 'drillthrough': {
+        // The backend has already filtered the drillthrough page; Back returns to this one.
+        const target = report ? backend.pageIdOf(report.id, action.page) : null
+        if (target == null) {
+          toast('info', `The page ${action.displayName} is not in this report.`)
+          break
+        }
+        selectPage(target)
+        const skipped = action.notApplied ?? []
+        status = {
+          message: `Drilled through to ${action.displayName}${skipped.length > 0 ? `; filters not kept: ${skipped.join(', ')}` : ''}`,
+          isError: false,
+        }
+        break
+      }
       case 'notAvailable':
         toast('info', action.message)
         break

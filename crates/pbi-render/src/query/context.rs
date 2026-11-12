@@ -1,7 +1,9 @@
 //! Filter context of one visual: report + page + visual filters (with the
 //! conditions a bookmark set), slicer
 //! selections of the other slicers, cross-filter from the selected visual
-//! (honouring `visualInteractions`), then Top N filters.
+//! (honouring `visualInteractions`), then Top N filters. A drillthrough
+//! page adds the drilled points and the filters the drillthrough carried
+//! after its page filters.
 //!
 //! Points selected in another visual highlight bar and column charts
 //! (the default interaction, or `HighlightFilter`, unless the report sets
@@ -14,9 +16,10 @@ use pbi_model::{Condition, Filter, InteractionKind, Page, Report, Visual};
 
 use crate::dataview::{QueryWarning, WarningScope};
 
+use super::drillthrough::DrillthroughContext;
 use super::filter::{FilterBuilder, FilterPlan};
 use super::interaction::{
-    FilterLevel, InteractionState, SlicerSelection, is_slicer_type, slicer_fields,
+    FilterLevel, InteractionState, PointSelection, SlicerSelection, is_slicer_type, slicer_fields,
 };
 use super::plan::{same_field, value_field};
 use super::semantic::TopNSpec;
@@ -105,6 +108,11 @@ pub(crate) fn visual_filters(
             let plan = builder.plan(&f);
             apply_plan(&mut out, &mut top_n, scope, &f, plan);
         }
+        if level == FilterLevel::Page
+            && let Some(drill) = &state.drillthrough
+        {
+            apply_drillthrough(&builder, &mut out, drill);
+        }
     }
 
     let mut highlight_points = false;
@@ -158,7 +166,7 @@ pub(crate) fn visual_filters(
                 if highlight && (kind.is_some() || highlights_elsewhere(&visual.visual_type)) {
                     note_highlight(&mut out, &points.source);
                 }
-                apply_points(&builder, &mut out.context, &mut out.warnings, state);
+                apply_points(&builder, &mut out.context, &mut out.warnings, points);
             }
             None => {}
         }
@@ -174,9 +182,9 @@ pub(crate) fn visual_filters(
             );
         }
     }
-    if highlight_points {
+    if highlight_points && let Some(points) = &state.selected_points {
         let mut context = out.context.clone();
-        apply_points(&builder, &mut context, &mut out.warnings, state);
+        apply_points(&builder, &mut context, &mut out.warnings, points);
         out.highlight = Some(context);
     }
     out
@@ -266,18 +274,71 @@ fn apply_slicer(
     }
 }
 
+/// The drilled points and the carried conditions of a drillthrough.
+fn apply_drillthrough(
+    builder: &FilterBuilder<'_>,
+    out: &mut VisualFilters,
+    drill: &DrillthroughContext,
+) {
+    let warn = |message: String| {
+        QueryWarning::new(WarningScope::Drillthrough, message)
+            .with_source(drill.source_page.clone())
+    };
+    for condition in &drill.carried {
+        let mut plan = FilterPlan::default();
+        builder.plan_condition(condition, &mut plan);
+        for f in plan.filters {
+            out.context.add(f);
+        }
+        for reason in plan.skipped.into_iter().chain(
+            (!plan.value_conditions.is_empty())
+                .then(|| "measure conditions are not kept by a drillthrough".to_owned()),
+        ) {
+            out.warnings
+                .push(warn(format!("kept filter not applied: {reason}")).not_applied());
+        }
+        for reason in plan.approximate {
+            out.warnings
+                .push(warn(format!("kept filter applied approximately: {reason}")));
+        }
+    }
+    apply_selection(
+        builder,
+        &mut out.context,
+        &mut out.warnings,
+        &drill.selection,
+        WarningScope::Drillthrough,
+        "drillthrough",
+    );
+}
+
 fn apply_points(
     builder: &FilterBuilder<'_>,
     context: &mut FilterContext,
     warnings: &mut Vec<QueryWarning>,
-    state: &InteractionState,
+    sel: &PointSelection,
 ) {
-    let Some(sel) = &state.selected_points else {
-        return;
-    };
-    let warn = |message: String| {
-        QueryWarning::new(WarningScope::CrossFilter, message).with_source(sel.source.clone())
-    };
+    apply_selection(
+        builder,
+        context,
+        warnings,
+        sel,
+        WarningScope::CrossFilter,
+        "cross-filter",
+    );
+}
+
+/// Filters `context` to the points of `sel` (OR of the points, AND within
+/// one).
+fn apply_selection(
+    builder: &FilterBuilder<'_>,
+    context: &mut FilterContext,
+    warnings: &mut Vec<QueryWarning>,
+    sel: &PointSelection,
+    scope: WarningScope,
+    what: &str,
+) {
+    let warn = |message: String| QueryWarning::new(scope, message).with_source(sel.source.clone());
     let Some(first) = sel.points.first() else {
         return;
     };
@@ -310,14 +371,10 @@ fn apply_points(
                 context.add(f);
             }
             for reason in approx {
-                warnings.push(warn(format!(
-                    "cross-filter applied approximately: {reason}"
-                )));
+                warnings.push(warn(format!("{what} applied approximately: {reason}")));
             }
         }
-        Err(reason) => {
-            warnings.push(warn(format!("cross-filter not applied: {reason}")).not_applied())
-        }
+        Err(reason) => warnings.push(warn(format!("{what} not applied: {reason}")).not_applied()),
     }
 }
 

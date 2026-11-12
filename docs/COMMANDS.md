@@ -176,6 +176,8 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.reset`](#canvasreset) | Back to the report's saved slicer selections, no cross-filter, scroll and dropdowns reset; returns the re-rendered page. | M L A |
 | [`canvas.applyBookmark`](#canvasapplybookmark) | Applies a report bookmark to the canvas (page, slicers, filters, visibility and sort; all or only its target visuals) and renders the page it shows; lists the parts not applied yet. | M L A |
 | [`canvas.tooltip`](#canvastooltip) | The hover tooltip (category, series, values) of a data point hit, from the last render. | A |
+| [`canvas.drillthroughTargets`](#canvasdrillthroughtargets) | The drillthrough pages a data point hit can drill through to (the "Drill through" menu). | A |
+| [`canvas.drillthrough`](#canvasdrillthrough) | Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. | M L A |
 | [`canvas.state`](#canvasstate) | The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. | A |
 | [`export.table`](#exporttable) | Writes one table's data as CSV or Parquet (with model metadata); loads the data on first use. | L A W |
 | [`export.model`](#exportmodel) | The model documentation as JSON (model doc) or a Markdown data dictionary, inline or to a file; no data needed. | A W |
@@ -2196,6 +2198,61 @@ Result:
 Examples:
 
 - A bar's tooltip: `{"docId":"d1","hitId":"1f2e3d|dataPoint|0|2"}`
+
+### `canvas.drillthroughTargets`
+
+**Drillthrough targets.** The drillthrough pages a data point hit can drill through to (the "Drill through" menu).
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `hitId` | string | A hit id from the last render. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `targets` | DrillthroughTargetOut[] | Pages whose drillthrough fields the data point all has, in page order; empty for other hits. |
+
+Examples:
+
+- A bar's drillthrough pages: `{"docId":"d1","hitId":"1f2e3d|dataPoint|0|2"}`
+
+### `canvas.drillthrough`
+
+**Drill through.** Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | The source page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `hitId` (optional) | string \| null | A data point hit id from the last render of the source page. Default: the page's selected data points. |
+| `target` | string | The drillthrough page (see `canvas.drillthroughTargets`). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `page` | string | Internal name of the drillthrough page. |
+| `displayName` | string |  |
+| `notApplied` | string[] | Parts of the source's filter context not kept (Top N filters, …). |
+| `rendered` | CanvasPageOut | The drillthrough page, filtered and rendered. |
+
+Examples:
+
+- From a bar: `{"docId":"d1","hitId":"1f2e3d|dataPoint|0|2","target":"Store details"}`
+- From the selection: `{"docId":"d1","page":"Overview","target":"Store details"}`
 
 ### `canvas.state`
 

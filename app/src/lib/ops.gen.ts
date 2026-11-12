@@ -244,6 +244,12 @@ export type CanvasAction = {
   /** Parts of the bookmark DashCraft does not apply yet. */
   notApplied?: string[]
 } | {
+  kind: 'drillthrough'
+  page: string
+  displayName: string
+  /** Parts of the source's filter context not kept. */
+  notApplied?: string[]
+} | {
   kind: 'notAvailable'
   message: string
 }
@@ -342,6 +348,33 @@ export interface CanvasClosePopupsParams {
   page?: string | null
   /** Return the page even when nothing changed (default `true`). */
   renderUnchanged?: boolean
+}
+
+/** Result of `canvas.drillthrough`. */
+export interface CanvasDrillthroughOut {
+  /** Internal name of the drillthrough page. */
+  page: string
+  displayName: string
+  /** Parts of the source's filter context not kept (Top N filters, …). */
+  notApplied: string[]
+  /** The drillthrough page, filtered and rendered. */
+  rendered: CanvasPageOut
+}
+
+export interface CanvasDrillthroughParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** The source page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /**
+   * A data point hit id from the last render of the source page.
+   * Default: the page's selected data points.
+   */
+  hitId?: string | null
+  /** The drillthrough page (see `canvas.drillthroughTargets`). */
+  target: string
 }
 
 export interface CanvasHitParams {
@@ -2178,6 +2211,26 @@ export interface DocumentSaveParams {
    * files are kept. Without it such a save fails with `conflict`.
    */
   overwrite?: boolean
+}
+
+/** A drillthrough page a data point can go to. */
+export interface DrillthroughTargetOut {
+  /** Internal page name. */
+  page: string
+  displayName: string
+  /** The page's drillthrough fields (`Table[Column]`). */
+  fields: string[]
+  /** "Keep all filters": the source's filter context goes along. */
+  keepAllFilters: boolean
+}
+
+/** Result of `canvas.drillthroughTargets`. */
+export interface DrillthroughTargetsOut {
+  /**
+   * Pages whose drillthrough fields the data point all has, in page
+   * order; empty for other hits.
+   */
+  targets: DrillthroughTargetOut[]
 }
 
 /** One reversible edit accepted by `doc.applyEdits`. */
@@ -4227,7 +4280,7 @@ export interface SecurityViewAsParams {
 }
 
 /** Kind of a Filters pane selection card. */
-export type SelectionKind = 'slicer' | 'crossFilter'
+export type SelectionKind = 'slicer' | 'crossFilter' | 'drillthrough'
 
 /** A slicer selection or the cross-filter, as a Filters pane card. */
 export interface SelectionOut {
@@ -5155,6 +5208,10 @@ export interface OpsCommands {
   'canvas.applyBookmark': { params: CanvasBookmarkParams; output: CanvasBookmarkOut }
   /** The hover tooltip (category, series, values) of a data point hit, from the last render. */
   'canvas.tooltip': { params: CanvasHitParams; output: TooltipOut }
+  /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
+  'canvas.drillthroughTargets': { params: CanvasHitParams; output: DrillthroughTargetsOut }
+  /** Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. */
+  'canvas.drillthrough': { params: CanvasDrillthroughParams; output: CanvasDrillthroughOut }
   /** The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. */
   'canvas.state': { params: CanvasPageParams; output: CanvasStateOut }
   /** Writes one table's data as CSV or Parquet (with model metadata); loads the data on first use. */
@@ -5286,6 +5343,8 @@ export const OPS_META = {
   'canvas.reset': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.applyBookmark': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.tooltip': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'canvas.drillthroughTargets': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'canvas.drillthrough': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.state': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'export.table': { category: 'export', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
   'export.model': { category: 'export', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: true },
@@ -5495,6 +5554,10 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasApplyBookmark: (params: CanvasBookmarkParams, options?: O) => run('canvas.applyBookmark', params, options),
     /** The hover tooltip (category, series, values) of a data point hit, from the last render. */
     canvasTooltip: (params: CanvasHitParams, options?: O) => run('canvas.tooltip', params, options),
+    /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
+    canvasDrillthroughTargets: (params: CanvasHitParams, options?: O) => run('canvas.drillthroughTargets', params, options),
+    /** Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. */
+    canvasDrillthrough: (params: CanvasDrillthroughParams, options?: O) => run('canvas.drillthrough', params, options),
     /** The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. */
     canvasState: (params: CanvasPageParams, options?: O) => run('canvas.state', params, options),
     /** Writes one table's data as CSV or Parquet (with model metadata); loads the data on first use. */

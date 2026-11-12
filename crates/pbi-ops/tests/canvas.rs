@@ -866,3 +866,155 @@ async fn synced_slicers_share_their_selection_across_pages() {
         "{state}"
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn drillthrough_filters_the_target_page() {
+    let dir = tmp_dir("pbi-ops-drill-");
+    let pbip = mini_pbip(dir.path());
+    let region =
+        json!({"Column": {"Expression": {"SourceRef": {"Entity": "Sales"}}, "Property": "Region"}});
+    // Details drills on Region; Desktop saves the last drilled value (East).
+    let page = json!({
+        "name": "details", "displayName": "Details", "displayOption": "FitToPage",
+        "width": 640, "height": 360,
+        "filterConfig": {"filters": [{
+            "name": "drill", "field": region, "type": "Categorical", "howCreated": "Drillthrough",
+            "filter": {"Version": 2, "From": [{"Name": "s", "Entity": "Sales", "Type": 0}],
+                "Where": [{"Condition": {"In": {
+                    "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "s"}}, "Property": "Region"}}],
+                    "Values": [[{"Literal": {"Value": "'East'"}}]]
+                }}}]}
+        }]},
+        "pageBinding": {"name": "binding", "type": "Drillthrough", "acceptsFilterContext": "Default",
+            "parameters": [{"name": "p", "boundFilter": "drill", "fieldExpr": region}]}
+    });
+    std::fs::write(
+        dir.path()
+            .join("Mini.Report/definition/pages/details/page.json"),
+        serde_json::to_string_pretty(&page).unwrap(),
+    )
+    .unwrap();
+    write_visual(
+        dir.path(),
+        "details",
+        "sum",
+        false,
+        json!({"visualType": "cardVisual", "query": {"queryState": {"Data": {"projections": [{
+            "field": {"Measure": {"Expression": {"SourceRef": {"Entity": "Sales"}}, "Property": "Total"}},
+            "queryRef": "Sales.Total", "nativeQueryRef": "Total", "active": true
+        }]}}}}),
+    );
+    write_visual(
+        dir.path(),
+        "overview",
+        "drill",
+        false,
+        json!({"visualType": "actionButton", "visualContainerObjects": {"visualLink": [{"properties": {
+            "show": {"expr": {"Literal": {"Value": "true"}}},
+            "type": {"expr": {"Literal": {"Value": "'Drillthrough'"}}},
+            "drillthroughSection": {"expr": {"Literal": {"Value": "'details'"}}}
+        }}]}}),
+    );
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let overview = r.run("canvas.render", json!({"docId": doc})).await;
+
+    // The West bar (items 1, 4, …, 58: 590 in total).
+    let mut west = None;
+    for h in overview["hitRegions"].as_array().unwrap() {
+        let id = h["id"].as_str().unwrap();
+        if !id.starts_with("bars|dataPoint|") {
+            continue;
+        }
+        let tip = r
+            .run("canvas.tooltip", json!({"docId": doc, "hitId": id}))
+            .await;
+        if tip["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|l| l["value"] == "West")
+        {
+            west = Some(id.to_owned());
+        }
+    }
+    let west = west.expect("a West bar");
+
+    // The drillthrough button needs a selection.
+    let button = hit(&overview, "drill|button").to_owned();
+    let none = r
+        .run("canvas.click", json!({"docId": doc, "hitId": button}))
+        .await;
+    assert_eq!(none["action"]["kind"], "notAvailable", "{}", none["action"]);
+
+    // Targets of a bar: Details; none for the card.
+    let targets = r
+        .run(
+            "canvas.drillthroughTargets",
+            json!({"docId": doc, "hitId": west}),
+        )
+        .await;
+    assert_eq!(targets["targets"][0]["page"], "details", "{targets}");
+    assert_eq!(targets["targets"][0]["fields"], json!(["Sales.Region"]));
+    assert_eq!(targets["targets"][0]["keepAllFilters"], true);
+    let card = hit(&overview, "total|").to_owned();
+    let none = r
+        .run(
+            "canvas.drillthroughTargets",
+            json!({"docId": doc, "hitId": card}),
+        )
+        .await;
+    assert_eq!(none["targets"], json!([]));
+
+    // Drilling replaces the saved East value with West.
+    let drilled = r
+        .run(
+            "canvas.drillthrough",
+            json!({"docId": doc, "hitId": west, "target": "Details"}),
+        )
+        .await;
+    assert_eq!(drilled["page"], "details");
+    let rendered = &drilled["rendered"];
+    assert!(
+        rendered["svg"].as_str().unwrap().contains(">590<"),
+        "{}",
+        rendered["visuals"]
+    );
+    let kinds: Vec<&Value> = rendered["selections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| &s["kind"])
+        .collect();
+    assert!(kinds.contains(&&json!("drillthrough")), "{kinds:?}");
+
+    // Overview is not a drillthrough page.
+    let err = r
+        .try_run(
+            "canvas.drillthrough",
+            json!({"docId": doc, "page": "Details", "target": "Overview"}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::InvalidParams);
+
+    // With a selected bar, the button drills through.
+    r.run("canvas.click", json!({"docId": doc, "hitId": west}))
+        .await;
+    let clicked = r
+        .run("canvas.click", json!({"docId": doc, "hitId": button}))
+        .await;
+    assert_eq!(
+        clicked["action"]["kind"], "drillthrough",
+        "{}",
+        clicked["action"]
+    );
+    assert_eq!(clicked["action"]["displayName"], "Details");
+    let state = r
+        .run("canvas.state", json!({"docId": doc, "page": "Details"}))
+        .await;
+    assert_eq!(
+        state["interaction"]["drillthrough"]["sourcePage"], "overview",
+        "{state}"
+    );
+}

@@ -7,6 +7,22 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.4: drillthrough
+
+- **What:** new `pbi_render::query::drillthrough`: `drillthrough_page` (page filters created by
+  drillthrough or bound by `pageBinding.parameters[].boundFilter`; tooltip pages excluded; "Keep
+  all filters" from `acceptsFilterContext`), `drillthrough_targets` (pages whose drillthrough
+  fields a point all has) and `drill_through` (the target's state: the drilled values as
+  `InteractionState::drillthrough`, applied by `context` as an exact page-level tuple filter; the
+  saved drill value neutralised; the source's page filters, slicers and cross-filter carried as
+  `Condition`s, Top N listed as not kept). `pbi-ops` adds `canvas.drillthroughTargets`,
+  `canvas.drillthrough` (from a hit or the page's selection), drillthrough buttons in
+  `canvas.click`, a Drillthrough card in `selections`; the app follows the `drillthrough` action.
+- **Why:** M9.4; GAPS Interactions "Drillthrough" row (❌ 0 → 🟡 3, area 2.1 → 2.2).
+- **Numbers:** 4 new tests (3 in `pbi_render::query::drillthrough`, 1 end to end in
+  `crates/pbi-ops/tests/canvas.rs`); 2 new commands; render snapshots unchanged. Desktop's rule
+  for pages with several drillthrough fields is undocumented: a point must have all of them.
+
 ### M9.6: synced slicers
 
 - **What:** `pbi_render::query::sync_group` reads `syncGroup` (PBIR) and

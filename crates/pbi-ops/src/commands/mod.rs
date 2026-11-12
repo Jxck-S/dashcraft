@@ -152,6 +152,8 @@ pub fn catalog() -> Registry {
         .with::<canvas::CanvasReset>()
         .with::<canvas::CanvasApplyBookmark>()
         .with::<canvas::CanvasTooltip>()
+        .with::<canvas::CanvasDrillthroughTargets>()
+        .with::<canvas::CanvasDrillthrough>()
         .with::<canvas::CanvasState>()
         // export / convert
         .with::<export::ExportTable>()

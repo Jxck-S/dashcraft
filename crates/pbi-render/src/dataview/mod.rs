@@ -359,6 +359,8 @@ pub enum WarningScope {
     Visual,
     Slicer,
     CrossFilter,
+    /// The drillthrough that filters the page.
+    Drillthrough,
     Interaction,
     Query,
 }
