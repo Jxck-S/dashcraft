@@ -2,7 +2,7 @@
 
 Milestones M0–M5 and their work items. Fixtures and their expected values are described in [AGENTS.md §7](../AGENTS.md#fixtures-and-expected-values). Architecture decisions are in [`docs/adr/`](adr/).
 
-**Gate:** Phase 1 (Data Explorer) is tagged `v0.1.0` after M2, before Phase 2 (Report Renderer) work is merged. Phase 2 (M3–M4 plus M5 formats and docs) ships as `v0.2.0` ([CHANGELOG](../CHANGELOG.md)).
+**Gate:** Phase 1 (Data Explorer) is tagged `v0.1.0` after M2, before Phase 2 (Report Renderer) work is merged. Phase 2 (M3–M4 plus M5 formats and docs) ships as `v0.2.0`, and the work after it through DESKTOP-PLAN M6–M9 as `v0.3.0` ([CHANGELOG](../CHANGELOG.md)).
 
 Legend: `[x]` done, `[ ]` not done. Item IDs match the work-tracking IDs used in sessions.
 
@@ -12,12 +12,17 @@ Legend: `[x]` done, `[ ]` not done. Item IDs match the work-tracking IDs used in
 |---|---|---|
 | v0.1.0 (2026-10-21) | Phase 1, Data Explorer: readers, model tree, M and DAX engines, data grid, exports, linter, CLI | Released |
 | v0.2.0 (2026-10-22) | Phase 2, Report Renderer: visual queries, built-in visuals, SVG/PNG output, `render`, golden-image tooling, interactive canvas in a Power BI Desktop-style app. M5: the remaining [FORMATS.md](../FORMATS.md) formats, docs, installers and the release workflow ([docs/packaging.md](packaging.md)) | Released; installers are unsigned until signing certificates exist |
-| Unreleased | The work below, in `main` ([CHANGELOG.md](../CHANGELOG.md) `[Unreleased]`, [docs/ROADMAP.md](ROADMAP.md)) | Not tagged yet |
+| v0.3.0 (2026-11-12) | The work below: command registry, automation and MCP, opt-in AI, the app on the registry, more visuals and engine features; [DESKTOP-PLAN](DESKTOP-PLAN.md) M6 (editable document state and save), M7 (language services, formula bar, `dashcraft lsp`), M8 (recovery, external changes, semantic diff) and M9 (reading-view parity) | Released; installers unsigned; M8's A6 screen-reader steps for the notification bar and Compare are still open |
+| Unreleased | Work in `main` after v0.3.0 ([CHANGELOG.md](../CHANGELOG.md) `[Unreleased]`) | Not tagged yet |
 
-### Since v0.2.0 (unreleased, in `main`)
+### In v0.3.0
 
 | Theme | What landed |
 |---|---|
+| Editing and save (M6) | One revisioned document state, atomic undoable edits through the registry (CLI, RPC, MCP, app), Save and Save As PBIP in Power BI Desktop's TMDL form ([ADR-0012](adr/0012-revisioned-document-state.md) to [ADR-0015](adr/0015-accessibility-target.md)) |
+| Language foundation (M7) | DAX, M and TMDL language services and formatters, the formula bar with IntelliSense and Desktop's editor keys, `dashcraft lsp` |
+| Recovery and external changes (M8) | Auto recovery journals, external-change detection with Reload, Keep mine and Compare, `doc.diff` and File → Compare |
+| Reading-view parity (M9) | Highlighting, drill, report-page tooltips, drillthrough, bookmarks, synced, range and relative-date slicers, visual header and context menus, report measures and images, query reduction, saving the reading state |
 | Command registry | `pbi-ops` ([ADR-0007](adr/0007-command-registry.md)): 60 typed commands (including measure create, update and delete, object dependents, measure editing, DAX-aware rename, descriptions, visual move and resize, grouped document edits and history) plus 9 opt-in `ai.*` commands, with JSON Schemas for parameters and results, a workspace of open documents, cancellation, progress events and a path policy; catalog in [docs/COMMANDS.md](COMMANDS.md) |
 | Automation | `dashcraft commands`, `run` (one command or a `--batch` file), `serve --stdio` (JSON-RPC 2.0 lines) and `mcp`, a Model Context Protocol server that offers the agent-safe commands as tools inside read/write roots ([docs/MCP.md](MCP.md)) |
 | Opt-in AI | `pbi-ai` ([ADR-0008](adr/0008-ai-layer.md), [docs/AI.md](AI.md)), off by default: explain a measure, and suggest a measure (parsed and optionally evaluated locally, never applied), through OpenAI-compatible, Azure OpenAI or Ollama providers, only after a recorded consent per provider, capability and data class; `ai.preview` shows the exact request; keys only in the OS keychain (or `DASHCRAFT_AI_API_KEY`). CLI: `ai login`/`logout`. App: Options → AI, a consent dialog showing the exact request, **Explain with AI**, **Suggest a measure** |
@@ -95,7 +100,7 @@ Where each area stands against Power BI Desktop, scored 0–5: [GAPS.md](GAPS.md
 - [x] `m5-packaging`: Tauri bundles (dmg/msi/AppImage) and a release workflow. Signing is blocked until certificates and secrets are provided.
 - [x] `m5-docs`: final README (format notes, supported-visuals matrix, DAX and M coverage), `FORMATS.md`, [CLI.md](CLI.md), [USER-GUIDE.md](USER-GUIDE.md), [VISUALS.md](VISUALS.md), [ARCHITECTURE.md](ARCHITECTURE.md), changelog for `v0.2.0`.
 
-## After v0.2.0 (unreleased)
+## After v0.2.0 (released in v0.3.0)
 
 - [x] `perf-budgets`: `cargo xtask perf` (P01–P08) and `cargo xtask layers`; all eight scenarios within target after the render cache and the DAX fast paths ([perf.md](perf.md)).
 - [x] `ops-registry`: command registry `pbi-ops` ([ADR-0007](adr/0007-command-registry.md)) with `commands`, `run`, `serve`.

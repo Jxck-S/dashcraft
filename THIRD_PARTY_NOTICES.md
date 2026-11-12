@@ -1,6 +1,6 @@
 # Third-party notices
 
-DashCraft is proprietary software (`LicenseRef-Proprietary`). Trademark and non-affiliation notice: [NOTICE](NOTICE). This file lists third-party materials that are **bundled**, **vendored**, or **consulted as references** under the clean-room rules in [ADR-0003](docs/adr/0003-vertipaq-xpress9-cleanroom.md).
+DashCraft is licensed under the MIT License or the Apache License 2.0, at your option (`MIT OR Apache-2.0`; [LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE)). Trademark and non-affiliation notice: [NOTICE](NOTICE). This file lists third-party materials that are **bundled**, **vendored**, or **consulted as references** under the clean-room rules in [ADR-0003](docs/adr/0003-vertipaq-xpress9-cleanroom.md).
 
 Status: **skeleton (M0).** Sections marked *pending* are completed when the corresponding code or asset lands. Per-source details for XPress9, ABF and VertiPaq are kept in `crates/pbi-vertipaq/REFERENCES.md` (maintained by the implementer of that crate) and summarized here.
 
