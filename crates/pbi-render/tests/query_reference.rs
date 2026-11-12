@@ -19,7 +19,9 @@ use acme_support::{
 use pbi_engine::Value;
 use pbi_model::{FieldExpr, Page, Report};
 use pbi_render::dataview::{CellValue, DataView, DataViewKind, Matrix, MatrixNode};
-use pbi_render::query::{InteractionState, PointSelection, QueryEnv, QueryLimits, SlicerSelection};
+use pbi_render::query::{
+    InteractionState, PointSelection, QueryEnv, QueryLimits, SlicerSelection, apply_bookmark,
+};
 use pbi_session::Session;
 use pretty_assertions::assert_eq;
 use serde_json::Value as Json;
@@ -681,4 +683,63 @@ fn sample_visuals_never_panic() {
         println!("{path}: {ok} visuals ok, {failed} failed");
         assert!(ok > 0, "{path}");
     }
+}
+
+#[test]
+fn bookmarks_set_the_slicer_and_cards_match_expected() {
+    let (Some(session), Some(expected)) = (acme(), acme_expected()) else {
+        return;
+    };
+    let mut checked = 0;
+    for entry in expected["bookmarks"].as_array().unwrap() {
+        let full = entry["report"].as_str().unwrap();
+        let short = ACME_REPORTS
+            .iter()
+            .find(|s| full.ends_with(*s))
+            .expect("report");
+        let report = &report(session, short);
+        let bookmark = report
+            .bookmark(entry["bookmark"].as_str().unwrap())
+            .expect("bookmark");
+        let slicer = entry["slicer"].as_str().unwrap();
+        // The current state has another selection and a cross-filter: a
+        // bookmark that applies only to its slicer keeps both.
+        let other = PointSelection::point("someVisual", Vec::new());
+        let effect = apply_bookmark(report, bookmark, &|p: &Page| {
+            let mut s = saved(p);
+            s.select("otherSlicer", SlicerSelection::values(["x"]));
+            s.selected_points = Some(other.clone());
+            s
+        });
+        assert!(effect.not_applied.is_empty(), "{:?}", effect.not_applied);
+        let page_id = entry["pageId"].as_str().unwrap();
+        assert_eq!(effect.page.as_deref(), Some(page_id));
+        let state = &effect.states[page_id];
+        assert!(state.slicer_selections.contains_key("otherSlicer"));
+        assert_eq!(state.selected_points.as_ref(), Some(&other));
+        assert_eq!(
+            state.slicer_selections.contains_key(slicer),
+            !entry["selection"].is_null(),
+            "{}",
+            entry["bookmark"]
+        );
+        let page = report.page(page_id).expect("page");
+        for card in entry["cards"].as_array().unwrap() {
+            let measure = card["measure"].as_str().unwrap();
+            let dv = query(
+                session,
+                report,
+                page,
+                card["visual"].as_str().unwrap(),
+                state,
+            );
+            assert_cell(
+                &format!("{} / {measure}", entry["bookmark"]),
+                card_cell(&dv, measure),
+                card,
+            );
+            checked += 1;
+        }
+    }
+    assert_eq!(checked, 10, "every bookmark card of expected.json");
 }

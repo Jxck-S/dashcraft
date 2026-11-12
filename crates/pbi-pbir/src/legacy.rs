@@ -510,6 +510,7 @@ pub fn legacy_to_report_ast(legacy: &LegacyReport) -> (Report, Vec<Diagnostic>) 
             cfg.default_drill_filter_other_visuals.as_ref(),
         );
         put_extra(&mut report.extra, "config.", &cfg.extra);
+        report.bookmarks = crate::bookmarks::legacy_bookmarks(cfg.extra.get("bookmarks"));
     }
     report.filters = filters(&legacy.filters, path, "/filters", &mut ctx);
     report.resource_packages = layout

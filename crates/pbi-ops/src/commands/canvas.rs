@@ -545,6 +545,101 @@ impl Command for CanvasReset {
 
 // ---------------------------------------------------------------------------
 
+/// `canvas.applyBookmark`.
+#[derive(Debug)]
+pub struct CanvasApplyBookmark;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CanvasBookmarkParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+    /// Bookmark: internal name, else display name (case-insensitive); see
+    /// `report.bookmarks`.
+    pub bookmark: String,
+    /// The page shown now, rendered when the bookmark does not change the
+    /// page (internal name, display name, 1-based index or a unique part).
+    /// Default: the active page.
+    #[serde(default)]
+    pub page: Option<String>,
+}
+
+/// Result of `canvas.applyBookmark`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CanvasBookmarkOut {
+    /// Internal name of the bookmark.
+    pub bookmark: String,
+    pub display_name: String,
+    /// The bookmark shows another page than `page` (`rendered.page`).
+    pub navigated: bool,
+    /// Pages whose slicer or cross-filter state the bookmark changed
+    /// (internal names).
+    pub changed_pages: Vec<String>,
+    /// Parts of the bookmark DashCraft does not apply yet (filter pane,
+    /// visibility, sort, drill state, formatting, …).
+    pub not_applied: Vec<String>,
+    /// The page the bookmark shows (else `page`), rendered.
+    pub rendered: CanvasPageOut,
+}
+
+impl Command for CanvasApplyBookmark {
+    type Params = CanvasBookmarkParams;
+    type Output = CanvasBookmarkOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.applyBookmark",
+            title: "Apply a bookmark",
+            summary: "Applies a report bookmark to the canvas (its page and slicer selections, all or only its target visuals) and renders the page it shows; lists the parts not applied yet.",
+            long_running: true,
+            examples: &[
+                (
+                    "By display name",
+                    r#"{"docId": "d1", "report": "Stores", "bookmark": "West region"}"#,
+                ),
+                (
+                    "Keep the current page",
+                    r#"{"docId": "d1", "report": "Stores", "bookmark": "831d0f1adb1c9f2ed1d0", "page": "Store Performance"}"#,
+                ),
+            ],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        let (applied, rendered) = canvas::apply_bookmark_and_render(&t, &p.bookmark).await?;
+        let pages = t.page_names()?;
+        let CanvasAction::Bookmark {
+            name,
+            display_name,
+            not_applied,
+            ..
+        } = applied.action
+        else {
+            return Err(OpError::internal("a bookmark gave another action"));
+        };
+        Ok(CanvasBookmarkOut {
+            bookmark: name,
+            display_name,
+            navigated: applied.page.is_some_and(|i| i != t.page_index()),
+            changed_pages: applied
+                .changed
+                .iter()
+                .filter_map(|&i| pages.get(i).cloned())
+                .collect(),
+            not_applied,
+            rendered,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
 /// `canvas.tooltip`.
 #[derive(Debug)]
 pub struct CanvasTooltip;

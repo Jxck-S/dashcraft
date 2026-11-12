@@ -162,6 +162,24 @@ export interface BatchStepResult {
   error?: OpError | null
 }
 
+/** A bookmark of a report. */
+export interface BookmarkOut {
+  /** Internal name (bookmark buttons and `canvas.applyBookmark` use it). */
+  name: string
+  displayName: string
+  /** Display name of its group, if any. */
+  group?: string | null
+  /** Internal name of the page it shows (none: it keeps the current page). */
+  page?: string | null
+  pageDisplayName?: string | null
+  /** It applies the selections and filters ("Data"). */
+  data: boolean
+  /** It applies visibility, sort and drill state ("Display"). */
+  display: boolean
+  /** Visuals it applies to ("Selected visuals"); empty: all visuals. */
+  targetVisuals: string[]
+}
+
 /** Schema summary of a PBIP local data cache (`.pbi/cache.abf`). */
 export interface CacheAbfOut {
   /** Path relative to the opened folder. */
@@ -218,8 +236,55 @@ export type CanvasAction = {
   kind: 'webUrl'
   url: string
 } | {
+  kind: 'bookmark'
+  name: string
+  displayName: string
+  page?: string | null
+  pageDisplayName?: string | null
+  /** Parts of the bookmark DashCraft does not apply yet. */
+  notApplied?: string[]
+} | {
   kind: 'notAvailable'
   message: string
+}
+
+/** Result of `canvas.applyBookmark`. */
+export interface CanvasBookmarkOut {
+  /** Internal name of the bookmark. */
+  bookmark: string
+  displayName: string
+  /** The bookmark shows another page than `page` (`rendered.page`). */
+  navigated: boolean
+  /**
+   * Pages whose slicer or cross-filter state the bookmark changed
+   * (internal names).
+   */
+  changedPages: string[]
+  /**
+   * Parts of the bookmark DashCraft does not apply yet (filter pane,
+   * visibility, sort, drill state, formatting, …).
+   */
+  notApplied: string[]
+  /** The page the bookmark shows (else `page`), rendered. */
+  rendered: CanvasPageOut
+}
+
+export interface CanvasBookmarkParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /**
+   * Bookmark: internal name, else display name (case-insensitive); see
+   * `report.bookmarks`.
+   */
+  bookmark: string
+  /**
+   * The page shown now, rendered when the bookmark does not change the
+   * page (internal name, display name, 1-based index or a unique part).
+   * Default: the active page.
+   */
+  page?: string | null
 }
 
 /** Result of a state change. */
@@ -3940,6 +4005,12 @@ export interface ReplayFailureOut {
   message: string
 }
 
+export interface ReportBookmarksOut {
+  report: string
+  /** Bookmarks in the Bookmarks pane's order, groups flattened. */
+  bookmarks: BookmarkOut[]
+}
+
 /** A report of an open document. */
 export interface ReportBrief {
   name: string
@@ -4942,6 +5013,8 @@ export interface OpsCommands {
   'report.list': { params: DocParams; output: ReportListOut }
   /** The pages of a report: names, size, visibility, visual and filter counts. */
   'report.pages': { params: ReportParams; output: ReportPagesOut }
+  /** The bookmarks of a report in pane order: group, page shown, Data/Display/Current page options and target visuals. */
+  'report.bookmarks': { params: ReportParams; output: ReportBookmarksOut }
   /** The visuals of a page: type, title, position, bound fields and visual filters. */
   'report.visuals': { params: PageParams; output: ReportVisualsOut }
   /** A report's filters (plus a page's) translated to column filters, with the ones that cannot be applied (Top N, relative date…). */
@@ -5078,6 +5151,8 @@ export interface OpsCommands {
   'canvas.closePopups': { params: CanvasClosePopupsParams; output: CanvasChangeOut }
   /** Back to the report's saved slicer selections, no cross-filter, scroll and dropdowns reset; returns the re-rendered page. */
   'canvas.reset': { params: CanvasPageParams; output: CanvasPageOut }
+  /** Applies a report bookmark to the canvas (its page and slicer selections, all or only its target visuals) and renders the page it shows; lists the parts not applied yet. */
+  'canvas.applyBookmark': { params: CanvasBookmarkParams; output: CanvasBookmarkOut }
   /** The hover tooltip (category, series, values) of a data point hit, from the last render. */
   'canvas.tooltip': { params: CanvasHitParams; output: TooltipOut }
   /** The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. */
@@ -5140,6 +5215,7 @@ export const OPS_META = {
   'model.relationships': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.list': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.pages': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'report.bookmarks': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visuals': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.filters': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'security.roles': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -5208,6 +5284,7 @@ export const OPS_META = {
   'canvas.toggleMatrixRow': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.closePopups': { category: 'canvas', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.reset': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
+  'canvas.applyBookmark': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.tooltip': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.state': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'export.table': { category: 'export', mutatesDocument: false, longRunning: true, agentSafe: true, writesFiles: true },
@@ -5276,6 +5353,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     reportList: (params: DocParams, options?: O) => run('report.list', params, options),
     /** The pages of a report: names, size, visibility, visual and filter counts. */
     reportPages: (params: ReportParams, options?: O) => run('report.pages', params, options),
+    /** The bookmarks of a report in pane order: group, page shown, Data/Display/Current page options and target visuals. */
+    reportBookmarks: (params: ReportParams, options?: O) => run('report.bookmarks', params, options),
     /** The visuals of a page: type, title, position, bound fields and visual filters. */
     reportVisuals: (params: PageParams, options?: O) => run('report.visuals', params, options),
     /** A report's filters (plus a page's) translated to column filters, with the ones that cannot be applied (Top N, relative date…). */
@@ -5412,6 +5491,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasClosePopups: (params: CanvasClosePopupsParams, options?: O) => run('canvas.closePopups', params, options),
     /** Back to the report's saved slicer selections, no cross-filter, scroll and dropdowns reset; returns the re-rendered page. */
     canvasReset: (params: CanvasPageParams, options?: O) => run('canvas.reset', params, options),
+    /** Applies a report bookmark to the canvas (its page and slicer selections, all or only its target visuals) and renders the page it shows; lists the parts not applied yet. */
+    canvasApplyBookmark: (params: CanvasBookmarkParams, options?: O) => run('canvas.applyBookmark', params, options),
     /** The hover tooltip (category, series, values) of a data point hit, from the last render. */
     canvasTooltip: (params: CanvasHitParams, options?: O) => run('canvas.tooltip', params, options),
     /** The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. */

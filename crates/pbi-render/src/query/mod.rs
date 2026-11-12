@@ -129,6 +129,7 @@
 //! - Data reduction is a plain cap (`QueryLimits`), not Power BI's
 //!   sampling algorithms.
 
+pub mod bookmark;
 mod context;
 mod exec;
 pub mod filter;
@@ -145,6 +146,7 @@ use pbi_session::{RevisionSnapshot, Session};
 use serde::Serialize;
 
 pub use crate::dataview::{DataView, QueryWarning, WarningScope};
+pub use bookmark::{BookmarkEffect, apply_bookmark};
 pub use filter::{
     ColumnRef, FilterBuilder, FilterPlan, coerce_literal, coerce_value, parse_datetime,
 };

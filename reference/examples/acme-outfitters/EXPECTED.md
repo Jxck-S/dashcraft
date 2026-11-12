@@ -171,6 +171,30 @@ Report filters: 'Stores'[Channel] in ['Online']; 'Web Sessions'[Device] in ['Mob
   - Loyalty Tier Silver, Total Sales $2,828.75
   - Loyalty Tier Unassigned, Total Sales $6,636.05
 
+## Bookmarks
+
+Each bookmark applied to its page as saved (it changes only its target slicer):
+
+**West region** (Acme Outfitters - Stores, Store Performance): slicer `region` 'Stores'[Region] in ['West'].
+
+| Visual | Type | Measure | Expected |
+|---|---|---|---|
+| kpis | cardVisual | Total Sales | $111,981.75 |
+| kpis | cardVisual | Target | $102,500 |
+| kpis | cardVisual | Target Attainment % | 109.3% |
+| kpis | cardVisual | Return Rate | 3.9% |
+| kpis | cardVisual | Gross Margin | $50,094.88 |
+
+**All regions** (Acme Outfitters - Stores, Store Performance): slicer `region` cleared (all).
+
+| Visual | Type | Measure | Expected |
+|---|---|---|---|
+| kpis | cardVisual | Total Sales | $334,715.85 |
+| kpis | cardVisual | Target | $315,000 |
+| kpis | cardVisual | Target Attainment % | 106.3% |
+| kpis | cardVisual | Return Rate | 4.3% |
+| kpis | cardVisual | Gross Margin | $151,445.31 |
+
 ## Calculation group
 
 `'Time Calc'[Time Calculation]` applied to [Total Sales]; Acme Outfitters - Overview, page Time Intelligence: report filter + Year Month = 2025-06.

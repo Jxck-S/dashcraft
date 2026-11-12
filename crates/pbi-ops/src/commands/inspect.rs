@@ -1,10 +1,11 @@
 //! `doc.inspect`, `model.tables`, `model.measures`, `model.relationships`,
 //! `report.list`, `report.pages`, `report.visuals`, `report.filters`.
 
-use pbi_model::names_eq;
+use pbi_model::{Bookmark, Report, names_eq};
 use pbi_session::{filters_from_page, filters_from_report};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::{BASE, DocParams, doc};
 use crate::command::{Category, Command, CommandMeta};
@@ -469,6 +470,116 @@ impl Command for ReportPages {
             report: report.name.clone(),
             pages,
         })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `report.bookmarks`.
+#[derive(Debug)]
+pub struct ReportBookmarks;
+
+/// A bookmark of a report.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BookmarkOut {
+    /// Internal name (bookmark buttons and `canvas.applyBookmark` use it).
+    pub name: String,
+    pub display_name: String,
+    /// Display name of its group, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
+    /// Internal name of the page it shows (none: it keeps the current page).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_display_name: Option<String>,
+    /// It applies the selections and filters ("Data").
+    pub data: bool,
+    /// It applies visibility, sort and drill state ("Display").
+    pub display: bool,
+    /// Visuals it applies to ("Selected visuals"); empty: all visuals.
+    pub target_visuals: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportBookmarksOut {
+    pub report: String,
+    /// Bookmarks in the Bookmarks pane's order, groups flattened.
+    pub bookmarks: Vec<BookmarkOut>,
+}
+
+impl Command for ReportBookmarks {
+    type Params = ReportParams;
+    type Output = ReportBookmarksOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "report.bookmarks",
+            title: "Report bookmarks",
+            summary: "The bookmarks of a report in pane order: group, page shown, Data/Display/Current page options and target visuals.",
+            category: Category::Inspect,
+            examples: &[(
+                "Bookmarks of a report",
+                r#"{"docId": "d1", "report": "Stores"}"#,
+            )],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, _ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &p.doc_id)?;
+        let session = entry.session();
+        let index = resolve::report_index(session, p.report.as_deref())?;
+        let report = resolve::report_at(session, index)?;
+        let mut bookmarks = Vec::new();
+        for item in &report.bookmarks {
+            if item.is_group() {
+                for b in &item.children {
+                    bookmarks.push(bookmark_out(&report, b, Some(&item.display_name)));
+                }
+            } else {
+                bookmarks.push(bookmark_out(&report, item, None));
+            }
+        }
+        Ok(ReportBookmarksOut {
+            report: report.name.clone(),
+            bookmarks,
+        })
+    }
+}
+
+fn bookmark_out(report: &Report, b: &Bookmark, group: Option<&str>) -> BookmarkOut {
+    let flag = |key: &str| b.options.get(key).and_then(Value::as_bool) == Some(true);
+    let page = (!flag("suppressActiveSection"))
+        .then(|| {
+            b.exploration_state
+                .get("activeSection")
+                .and_then(Value::as_str)
+        })
+        .flatten()
+        .and_then(|name| report.pages.iter().find(|p| p.name == name));
+    BookmarkOut {
+        name: b.name.clone(),
+        display_name: b.display_name.clone(),
+        group: group.map(str::to_owned),
+        page: page.map(|p| p.name.clone()),
+        page_display_name: page.map(|p| p.display_name.clone()),
+        data: !flag("suppressData"),
+        display: !flag("suppressDisplay"),
+        target_visuals: if flag("applyOnlyToTargetVisuals") {
+            b.options
+                .get("targetVisualNames")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        } else {
+            Vec::new()
+        },
     }
 }
 

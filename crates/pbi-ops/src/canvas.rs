@@ -67,7 +67,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::dto::FilterSpecOut;
-use crate::error::OpError;
+use crate::error::{OpError, OpErrorCode};
 use crate::resolve;
 use crate::workspace::{DocEntry, lock};
 
@@ -266,7 +266,20 @@ pub enum CanvasAction {
     Navigate { page: String, display_name: String },
     /// A web link: never opened automatically.
     WebUrl { url: String },
-    /// An action DashCraft does not implement (bookmarks, drillthrough, Q&A).
+    /// A bookmark was applied to the canvas state of its pages; go to
+    /// `page` when present.
+    Bookmark {
+        name: String,
+        display_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        page: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        page_display_name: Option<String>,
+        /// Parts of the bookmark DashCraft does not apply yet.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        not_applied: Vec<String>,
+    },
+    /// An action DashCraft does not implement (drillthrough, Q&A).
     NotAvailable { message: String },
 }
 
@@ -675,6 +688,21 @@ impl Target {
         (self.report, self.page)
     }
 
+    /// Index of the page.
+    #[must_use]
+    pub fn page_index(&self) -> usize {
+        self.page
+    }
+
+    /// Internal names of the report's pages.
+    ///
+    /// # Errors
+    /// `notFound` when the report is gone.
+    pub fn page_names(&self) -> Result<Vec<String>, OpError> {
+        let report = resolve::report_in(&self.entry.session().document(), self.report)?;
+        Ok(report.pages.into_iter().map(|p| p.name).collect())
+    }
+
     fn report_and_page(&self) -> Result<(Report, Page), OpError> {
         locate(&self.entry.session().document(), self.report, self.page)
     }
@@ -979,10 +1007,108 @@ pub async fn click(
     let hit = hit.map(decode_hit).transpose()?;
     ensure_rendered(target).await?;
     let theme = target.theme();
-    let (changed, action) = target.update(|entry, report, page| {
+    let (mut changed, mut action) = target.update(|entry, report, page| {
         apply_click(entry, report, page, &theme, hit.as_ref(), mods)
     })??;
+    if let Some(CanvasAction::Bookmark { name, .. }) = &action {
+        action = Some(match apply_bookmark(&target.entry, target.report, name) {
+            Ok(applied) => {
+                changed |= applied.changed.contains(&target.page);
+                applied.action
+            }
+            Err(e) if matches!(e.code, OpErrorCode::NotFound | OpErrorCode::InvalidParams) => {
+                CanvasAction::NotAvailable {
+                    message: format!(
+                        "The bookmark '{}' is not in this report",
+                        truncate(name, 80)
+                    ),
+                }
+            }
+            Err(e) => return Err(e),
+        });
+    }
     finish_change(target, changed, render_unchanged, action).await
+}
+
+/// A bookmark applied to the canvas.
+#[derive(Debug)]
+pub struct AppliedBookmark {
+    /// [`CanvasAction::Bookmark`].
+    pub action: CanvasAction,
+    /// Index of the page the bookmark shows.
+    pub page: Option<usize>,
+    /// Indexes of the pages whose interaction state changed.
+    pub changed: Vec<usize>,
+}
+
+/// Applies bookmark `name` (internal or display name) of report `report`
+/// to the interaction state of the pages it captures
+/// ([`pbi_render::query::apply_bookmark`]).
+///
+/// # Errors
+/// `notFound` (no such report or bookmark), `invalidParams` (a group).
+pub fn apply_bookmark(
+    doc: &Arc<DocEntry>,
+    report: usize,
+    name: &str,
+) -> Result<AppliedBookmark, OpError> {
+    let revision = doc.session().revision_snapshot();
+    let r = resolve::report_in(&revision.document, report)?;
+    let bookmark = resolve::bookmark(&r, name)?;
+    let store = &doc.canvas;
+    let model = &revision.model;
+    let index_of = |name: &str| r.pages.iter().position(|p| p.name == name);
+    let current = |page: &Page| match index_of(&page.name) {
+        Some(i) => store.update((report, i), page, model, |e| e.state.clone()),
+        None => InteractionState::from_page(page).0,
+    };
+    let effect = pbi_render::query::apply_bookmark(&r, bookmark, &current);
+    let mut changed = Vec::new();
+    for (page_name, state) in effect.states {
+        let Some((i, page)) = r
+            .pages
+            .iter()
+            .enumerate()
+            .find(|(_, p)| p.name == page_name)
+        else {
+            continue;
+        };
+        if store.update((report, i), page, model, |e| e.set_state(state)) {
+            changed.push(i);
+        }
+    }
+    let page = effect.page.as_deref().and_then(index_of);
+    let shown = page.and_then(|i| r.pages.get(i));
+    Ok(AppliedBookmark {
+        action: CanvasAction::Bookmark {
+            name: bookmark.name.clone(),
+            display_name: bookmark.display_name.clone(),
+            page: shown.map(|p| p.name.clone()),
+            page_display_name: shown.map(|p| p.display_name.clone()),
+            not_applied: effect.not_applied,
+        },
+        page,
+        changed,
+    })
+}
+
+/// `canvas.applyBookmark`: applies a bookmark and renders the page it
+/// shows (else the page `current`).
+///
+/// # Errors
+/// `notFound`, `invalidParams`.
+pub async fn apply_bookmark_and_render(
+    current: &Target,
+    name: &str,
+) -> Result<(AppliedBookmark, CanvasPageOut), OpError> {
+    let applied = apply_bookmark(&current.entry, current.report, name)?;
+    let target = Target {
+        entry: Arc::clone(&current.entry),
+        report: current.report,
+        page: applied.page.unwrap_or(current.page),
+    };
+    let page = render(&target).await?;
+    Ok((applied, page))
 }
 
 /// `canvas.scroll`: scrolls a table, matrix or slicer list by a delta in
@@ -1324,7 +1450,18 @@ fn button_action(
             }),
         },
         ButtonAction::Drillthrough { .. } => unavailable("Drillthrough"),
-        ButtonAction::Bookmark { .. } => unavailable("Bookmarks"),
+        ButtonAction::Bookmark { bookmark } if bookmark.is_empty() => {
+            unavailable("This bookmark button (no bookmark)")
+        }
+        // Applied by `click` once the page entry is released (a bookmark
+        // can change other pages).
+        ButtonAction::Bookmark { bookmark } => Some(CanvasAction::Bookmark {
+            name: bookmark,
+            display_name: String::new(),
+            page: None,
+            page_display_name: None,
+            not_applied: Vec::new(),
+        }),
         ButtonAction::QnA => unavailable("Q&A"),
         ButtonAction::WebUrl { url } => Some(CanvasAction::WebUrl {
             url: truncate(&url, 2048),

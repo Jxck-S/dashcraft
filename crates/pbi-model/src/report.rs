@@ -35,6 +35,11 @@ pub struct Report {
     /// Name of the page shown on open.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_page: Option<String>,
+    /// Bookmarks and bookmark groups in the Bookmarks pane's order (PBIR
+    /// `definition/bookmarks/`, PBIX `Layout` `config.bookmarks`). Read
+    /// only: saving keeps the source files as they are.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub bookmarks: Vec<Bookmark>,
     #[serde(skip_serializing_if = "is_null")]
     pub settings: serde_json::Value,
     /// Report `objects` (outspace pane, section defaults, …), verbatim.
@@ -152,6 +157,56 @@ pub struct ReportMeasure {
     /// order.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub references: Vec<MeasureReference>,
+}
+
+/// A bookmark: a captured report state applied from the Bookmarks pane or a
+/// button; or a group of bookmarks (`children`, no state of its own).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Bookmark {
+    /// Internal name (buttons refer to it).
+    pub name: String,
+    pub display_name: String,
+    /// The bookmarks of a group, in order.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<Bookmark>,
+    /// `options` (`targetVisualNames`, `applyOnlyToTargetVisuals`,
+    /// `suppressData`, `suppressDisplay`, `suppressActiveSection`),
+    /// verbatim.
+    #[serde(skip_serializing_if = "is_null")]
+    pub options: serde_json::Value,
+    /// `explorationState` (active page, per-page and per-visual state),
+    /// verbatim.
+    #[serde(skip_serializing_if = "is_null")]
+    pub exploration_state: serde_json::Value,
+}
+
+impl Bookmark {
+    /// A group of bookmarks rather than a bookmark.
+    pub fn is_group(&self) -> bool {
+        !self.children.is_empty()
+    }
+}
+
+impl Report {
+    /// Every bookmark (not the groups), groups flattened, in pane order.
+    pub fn all_bookmarks(&self) -> impl Iterator<Item = &Bookmark> {
+        self.bookmarks.iter().flat_map(|b| {
+            let own = (!b.is_group()).then_some(b);
+            own.into_iter().chain(b.children.iter())
+        })
+    }
+
+    /// A bookmark by internal name, falling back to display name
+    /// (case-insensitive).
+    pub fn bookmark(&self, name_or_display_name: &str) -> Option<&Bookmark> {
+        self.all_bookmarks()
+            .find(|b| b.name == name_or_display_name)
+            .or_else(|| {
+                self.all_bookmarks()
+                    .find(|b| names_eq(&b.display_name, name_or_display_name))
+            })
+    }
 }
 
 /// A measure a report-level measure uses.

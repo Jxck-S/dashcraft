@@ -7,6 +7,22 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M9.5: bookmarks, headless part
+
+- **What:** `pbi-model` gains `Bookmark` and `Report::bookmarks` (groups as children);
+  `pbi-pbir` reads PBIR `bookmarks/bookmarks.json` and `*.bookmark.json` (files the list
+  omits too; missing or broken files are warnings) and PBIR-Legacy/PBIX `config.bookmarks`.
+  `pbi_render::query::apply_bookmark` turns a bookmark into per-page interaction state: the
+  active section, slicer selections from the visuals' `objects` diff (remove, then merge),
+  the cross-filter cleared or kept for "selected visuals only", `suppressData` and
+  `suppressDisplay`; everything else is listed as not applied. `pbi-ops` adds
+  `report.bookmarks` and `canvas.applyBookmark`; `canvas.click` on a bookmark button applies
+  it and returns a `bookmark` action, which the app follows to the bookmark's page. The Acme
+  generator records both Stores bookmarks' card values (`expected.json` `bookmarks`).
+- **Why:** M9.5 and the GAPS Interactions row "Bookmarks" (0 → 2); PBIR bookmarks (1 → 3).
+- **Numbers:** 2 new registry commands (12 `canvas.*`); 10 card values checked across the two
+  bookmarks; new tests in `pbi-pbir` (3), `pbi-render` (2), `pbi-ops` (1).
+
 ### M8: A6 screen-reader steps; Open saved in Document recovery
 
 - **What:** `scripts/app-checks/screen-reader.mjs` walks the M8 journeys after M6 and M7 (S33 to

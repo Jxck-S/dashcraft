@@ -70,7 +70,7 @@ Levels: **Supported** (called Full in VISUALS.md): the common formatting objects
 |---|---|---|---|
 | `textbox` | Supported | Text runs (font, size, weight, style, decoration, color, links), alignment, lists, scrollbar on overflow | None |
 | `shape`, `basicShape` | Supported | 22 shape kinds, fill, outline, rotation, text | None |
-| `actionButton` | Supported | Shape, vector icon, text; actions Back, page navigation, bookmark, drillthrough, Web URL, Q&A, apply/clear all slicers | Back, page navigation and Clear all slicers run; Web URL shown with Copy link, never opened; bookmark, drillthrough, Q&A "not available" |
+| `actionButton` | Supported | Shape, vector icon, text; actions Back, page navigation, bookmark, drillthrough, Web URL, Q&A, apply/clear all slicers | Back, page navigation, bookmark (page, slicers, cross-filter) and Clear all slicers run; Web URL shown with Copy link, never opened; drillthrough, Q&A "not available" |
 | `pageNavigator`, `bookmarkNavigator` | Partial | Drawn as one labelled button (no page or bookmark list) | None |
 | `cardVisual` (new card) | Supported | Tiles grid, value/label styles, inner tile border, label clipping below ~100 px, reference labels, accent bar | None |
 | `card`, `multiRowCard` | Supported | Legacy card value and category label; multi-row card blocks with accent bar | None |

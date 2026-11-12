@@ -3899,3 +3899,130 @@ async fn lint_findings_carry_the_object_id() {
         .unwrap_or_else(|| panic!("no finding for Sales[Nope]: {lint}"));
     assert_eq!(&finding["object"], id, "{finding}");
 }
+
+/// Bookmarks on the example's Stores report: `report.bookmarks`, `canvas.applyBookmark` from
+/// another page (it navigates and sets the Region slicer) and the bookmark buttons of Store
+/// Performance; the KPI cards match each bookmark's expected values.
+#[tokio::test(flavor = "multi_thread")]
+async fn bookmarks_on_the_example_report() {
+    let (Some(pbip), Some(map), Some(exp)) = (fixture(PBIP), fixture(BLOB_MAP), expected()) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let report = exp.report_name("Stores");
+    let wanted = exp.0["bookmarks"].as_array().unwrap();
+    assert_eq!(wanted.len(), 2);
+    let perf = wanted[0]["pageId"].as_str().unwrap();
+    let kpis = exp.visual_id("Stores", "Store Performance", "kpis");
+    let cards =
+        |page: &Value| group_texts(page["svg"].as_str().unwrap(), &format!("{kpis}|visual"));
+    let check = |page: &Value, bookmark: &Value| {
+        let texts = cards(page);
+        for card in bookmark["cards"].as_array().unwrap() {
+            let value = card["formatted"].as_str().unwrap().to_owned();
+            assert!(
+                texts.contains(&value),
+                "{} / {}: no {value} in {texts:?}",
+                bookmark["bookmark"],
+                card["measure"]
+            );
+        }
+    };
+
+    let list = r
+        .run("report.bookmarks", json!({"docId": doc, "report": report}))
+        .await;
+    let listed = list["bookmarks"].as_array().unwrap();
+    assert_eq!(listed.len(), wanted.len());
+    for (got, want) in listed.iter().zip(wanted) {
+        assert_eq!(got["name"], want["name"]);
+        assert_eq!(got["displayName"], want["bookmark"]);
+        assert_eq!(got["page"], want["pageId"]);
+        assert_eq!(got["targetVisuals"], json!([want["slicer"]]));
+        assert_eq!(
+            (&got["data"], &got["display"]),
+            (&json!(true), &json!(true))
+        );
+    }
+
+    // From another page: the bookmark navigates and changes only Store Performance.
+    let other = exp.report("Stores")["pages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["pageId"] != perf)
+        .unwrap()["pageId"]
+        .as_str()
+        .unwrap();
+    let all = &wanted[1];
+    let applied = r
+        .run(
+            "canvas.applyBookmark",
+            json!({"docId": doc, "report": report, "page": other,
+                   "bookmark": all["bookmark"].as_str().unwrap().to_uppercase()}),
+        )
+        .await;
+    assert_eq!(applied["bookmark"], all["name"]);
+    assert_eq!(applied["navigated"], true);
+    assert_eq!(applied["changedPages"], json!([perf]));
+    assert_eq!(applied["notApplied"], json!([]));
+    assert_eq!(applied["rendered"]["page"], perf);
+    assert_eq!(applied["rendered"]["isDefault"], false);
+    check(&applied["rendered"], all);
+    let again = r
+        .run(
+            "canvas.render",
+            json!({"docId": doc, "report": report, "page": perf}),
+        )
+        .await;
+    check(&again, all);
+
+    // The bookmark buttons on the page apply their bookmark.
+    let buttons: Vec<String> = again["visuals"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|v| v["visualType"] == "actionButton" && v["hasAction"] == true)
+        .map(|v| v["name"].as_str().unwrap().to_owned())
+        .collect();
+    let mut seen = Vec::new();
+    for button in &buttons {
+        let clicked = r
+            .run(
+                "canvas.click",
+                json!({"docId": doc, "report": report, "page": perf,
+                       "hitId": format!("{button}|button")}),
+            )
+            .await;
+        let action = &clicked["action"];
+        if action["kind"] != "bookmark" {
+            continue;
+        }
+        let want = wanted
+            .iter()
+            .find(|b| b["name"] == action["name"])
+            .unwrap_or_else(|| panic!("unknown bookmark {action}"));
+        assert_eq!(action["displayName"], want["bookmark"]);
+        assert_eq!(action["page"], perf);
+        assert!(action.get("notApplied").is_none(), "{action}");
+        check(&clicked["page"], want);
+        seen.push(want["bookmark"].as_str().unwrap().to_owned());
+    }
+    seen.sort();
+    assert_eq!(seen, ["All regions", "West region"], "{buttons:?}");
+
+    let e = r
+        .try_run(
+            "canvas.applyBookmark",
+            json!({"docId": doc, "report": report, "bookmark": "Nope"}),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(e.code, OpErrorCode::NotFound);
+    assert_eq!(e.data.unwrap()["bookmarks"].as_array().unwrap().len(), 2);
+}

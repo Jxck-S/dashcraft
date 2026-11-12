@@ -36,6 +36,7 @@
 //! `#[serde(flatten)]`, which mangles numbers under `arbitrary_precision`
 //! and cannot preserve key order between typed and unknown fields.
 
+pub mod bookmarks;
 pub mod convert;
 pub mod error;
 pub mod json;

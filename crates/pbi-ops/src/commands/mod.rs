@@ -74,6 +74,7 @@ pub fn catalog() -> Registry {
         .with::<inspect::ModelRelationships>()
         .with::<inspect::ReportList>()
         .with::<inspect::ReportPages>()
+        .with::<inspect::ReportBookmarks>()
         .with::<inspect::ReportVisuals>()
         .with::<inspect::ReportFilters>()
         .with::<security::SecurityRoles>()
@@ -149,6 +150,7 @@ pub fn catalog() -> Registry {
         .with::<canvas::CanvasToggleMatrixRow>()
         .with::<canvas::CanvasClosePopups>()
         .with::<canvas::CanvasReset>()
+        .with::<canvas::CanvasApplyBookmark>()
         .with::<canvas::CanvasTooltip>()
         .with::<canvas::CanvasState>()
         // export / convert
