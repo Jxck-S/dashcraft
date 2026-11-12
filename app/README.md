@@ -752,7 +752,7 @@ on Windows 10 and 11.
   are capped at 1000 rows per `EVALUATE` and use the model's format strings for model columns.
 - Report canvas: highlights are drawn on bar, column, combo, pie, donut, treemap and funnel
   charts, whose data labels show the highlighted values and tooltips a "Highlighted" line; other visuals (tables, matrices, lines, …) are filtered instead; Q&A and Web URL
-  buttons are not executed; bookmarks cannot be added or updated, and their drill, spotlight and
+  buttons are not executed; bookmarks cannot be added or updated, and their focus-mode and
   cross-highlight parts are not applied; range and
   relative-date slicers draw but their sliders / date pickers are not interactive (tiles select
   like list items); no visual header menus (focus mode, show as table, sort, export) or filter

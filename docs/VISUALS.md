@@ -311,7 +311,7 @@ Every visual region and the whole page must reach the default threshold, SSIM â‰
 ## Known gaps
 
 - The lines of combo charts are not highlighted (their data labels and tooltips show the full values). How Desktop sizes a highlighted pie slice and treemap tile (radius or area, which edge) is not documented: DashCraft scales the radius and fills the tile from the bottom.
-- A bookmark's changed Top N filters, its spotlight and focus modes, cross-report drillthrough, Q&A, visual header menus (focus mode, show as table, sort, export) and the right-click menu's other items are not available; drill works on chart axes and matrix rows, not on matrix columns, and bookmarks do not apply drill state.
+- A bookmark's changed Top N filters, cross-highlights and focus mode, cross-report drillthrough, Q&A, visual header menus (focus mode, show as table, sort, export) and the right-click menu's other items are not available; drill works on chart axes and matrix rows, not on matrix columns. A bookmark's spotlight fades the other visuals to 20 % opacity (Desktop's exact fade is not documented).
 - Range-slider dragging, relative-date pickers.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.
 - Scatter play axes are not animated (the first frame is drawn); `ribbonChart` and maps are placeholders.

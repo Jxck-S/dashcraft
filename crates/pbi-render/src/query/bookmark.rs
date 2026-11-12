@@ -33,6 +33,16 @@
 //! clauses) replaces its `sortDefinition`; without one it keeps its saved
 //! order ([`InteractionState::sort`]).
 //!
+//! Drill ([`InteractionState::drill`]): a captured drillable visual shows
+//! the levels of its drill role listed in `singleVisual.activeProjections`
+//! (without them, its saved range), and its filters created by drilling
+//! (`howCreated` 2, "Drill": equalities or one-tuple `In`s on levels above
+//! the first shown one) are its drill path.
+//!
+//! Spotlight: a captured visual whose `singleVisual.display.mode` is
+//! `spotlight` is spotlighted ([`InteractionState::spotlight`]); "All
+//! visuals" bookmarks clear any other spotlight.
+//!
 //! `options`:
 //! - `applyOnlyToTargetVisuals` + `targetVisualNames` ("Selected
 //!   visuals"): only those visuals change; the rest of the page keeps its
@@ -40,22 +50,29 @@
 //!   starts from its saved state and the cross-filter is cleared.
 //! - `suppressData` ("Data" unchecked): selections and filters are not
 //!   applied.
-//! - `suppressDisplay` ("Display" unchecked): visibility, sort, drill and
-//!   formatting are not applied (the page keeps its current visibility).
+//! - `suppressDisplay` ("Display" unchecked): visibility, sort, drill,
+//!   spotlight and formatting are not applied (the page keeps its current
+//!   ones).
 //! - `suppressActiveSection` ("Current page" unchecked): the page does not
 //!   change.
 //!
 //! Not applied yet (reported in [`BookmarkEffect::not_applied`]): changed
 //! Top N filters, `byType` and transient filters, filter containers not
-//! in the report, the spotlight, focus and elevation display modes, drill
-//! and expansion state, projection changes, cross-highlights and
-//! formatting of other visuals.
+//! in the report, the focus (`maximize`) and elevation display modes,
+//! matrix expansion state (`expansionStates`), a changed
+//! `drillFilterOtherVisuals`, drill filters DashCraft cannot read,
+//! projection changes, cross-highlights and formatting of other visuals.
 
 use indexmap::IndexMap;
-use pbi_model::{Bookmark, Filter, FilterKind, Page, Report};
+use pbi_model::{
+    Bookmark, ComparisonKind, Condition, FieldExpr, Filter, FilterKind, Literal, Page, Report,
+    Visual,
+};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
+use super::drill::{DrillState, DrillStep, drill_filters_others, drill_levels, saved_drill};
+use super::filter::coerce_literal;
 use super::interaction::{FilterLevel, InteractionState, is_slicer_type, persisted_selection};
 use super::plan::same_field;
 use super::semantic::{Aliases, field, sort_clauses, where_condition};
@@ -136,6 +153,8 @@ pub fn apply_bookmark(
                 let now = current(page);
                 s.visibility = now.visibility;
                 s.sort = now.sort;
+                s.drill = now.drill;
+                s.spotlight = now.spotlight;
             }
             s
         } else {
@@ -227,6 +246,8 @@ pub fn apply_bookmark(
             if !target_only {
                 new_state.visibility.clear();
                 new_state.sort.clear();
+                new_state.drill.clear();
+                new_state.spotlight = None;
             }
             for (name, c) in containers.iter().filter(|(n, _)| applies_to(n)) {
                 let single = c.get("singleVisual").unwrap_or(&Value::Null);
@@ -240,7 +261,12 @@ pub fn apply_bookmark(
                     .and_then(|d| d.get("mode"))
                     .and_then(Value::as_str);
                 new_state.set_hidden(page, name, mode == Some("hidden"));
-                if let Some(mode) = mode.filter(|m| *m != "hidden") {
+                if mode == Some("spotlight") {
+                    new_state.spotlight = Some(name.clone());
+                } else if new_state.spotlight.as_ref() == Some(name) {
+                    new_state.spotlight = None;
+                }
+                if let Some(mode) = mode.filter(|m| !matches!(*m, "hidden" | "spotlight")) {
                     note(&mut effect, format!("{label}: {mode} display mode"));
                 }
                 match single.get("orderBy") {
@@ -254,13 +280,42 @@ pub fn apply_bookmark(
                         None => note(&mut effect, format!("{label}: sort")),
                     },
                 }
-                if single.get("expansionStates").is_some()
-                    || single.get("drillFilterOtherVisuals").is_some()
-                    || c.get("drilling").is_some()
-                {
-                    note(&mut effect, format!("{label}: drill and expansion state"));
+                let visual = page.visuals.iter().find(|v| &v.name == name);
+                if let Some(visual) = visual {
+                    match bookmarked_drill(visual, single, c) {
+                        Some(Ok(d)) => {
+                            if saved_drill(visual).as_ref() == Some(&d) {
+                                new_state.drill.shift_remove(name);
+                            } else {
+                                new_state.drill.insert(name.clone(), d);
+                            }
+                        }
+                        Some(Err(reason)) => {
+                            note(&mut effect, format!("{label}: {name}: {reason}"));
+                        }
+                        None => {}
+                    }
+                    if single
+                        .get("drillFilterOtherVisuals")
+                        .and_then(Value::as_bool)
+                        .is_some_and(|b| b != drill_filters_others(report, visual))
+                    {
+                        note(&mut effect, format!("{label}: drillFilterOtherVisuals"));
+                    }
                 }
-                if single.get("activeProjections").is_some() {
+                if single
+                    .get("expansionStates")
+                    .and_then(Value::as_array)
+                    .is_some_and(|a| !a.is_empty())
+                {
+                    note(&mut effect, format!("{label}: expansion state"));
+                }
+                let drill_role = visual.and_then(drill_levels).map(|(role, _)| role);
+                if single
+                    .get("activeProjections")
+                    .and_then(Value::as_object)
+                    .is_some_and(|a| a.keys().any(|k| Some(k.as_str()) != drill_role))
+                {
                     note(&mut effect, format!("{label}: projection changes"));
                 }
                 if !slicer && has_object_changes(single.get("objects")) {
@@ -320,6 +375,9 @@ impl FilterCx<'_> {
             .map(|c| (c.get("name").and_then(Value::as_str), c));
         let aliases = Aliases::default();
         for (name, c) in by_name.chain(by_expr) {
+            if is_drill_filter(c) {
+                continue;
+            }
             let card = match name {
                 Some(name) => cards.iter().find(|f| f.name == name),
                 None => {
@@ -352,7 +410,7 @@ impl FilterCx<'_> {
             if captured
                 .get(key)
                 .and_then(Value::as_array)
-                .is_some_and(|a| !a.is_empty())
+                .is_some_and(|a| a.iter().any(|c| !is_drill_filter(c)))
             {
                 self.note(format!("{}: {what} filters {key}", self.label));
             }
@@ -361,6 +419,112 @@ impl FilterCx<'_> {
 
     fn note(&mut self, message: String) {
         note(self.effect, message);
+    }
+}
+
+/// A captured filter container created by drilling down (`howCreated`
+/// 2, or "Drill" as in a visual's filters).
+fn is_drill_filter(container: &Value) -> bool {
+    match container.get("howCreated") {
+        Some(Value::Number(n)) => n.as_u64() == Some(2),
+        Some(Value::String(s)) => s == "Drill",
+        _ => false,
+    }
+}
+
+/// The drill state a captured visual container holds (see the module
+/// docs); `None` when the visual has nothing to drill on.
+fn bookmarked_drill(
+    visual: &Visual,
+    single: &Value,
+    container: &Value,
+) -> Option<Result<DrillState, String>> {
+    let (role, levels) = drill_levels(visual)?;
+    let saved = saved_drill(visual)?;
+    let aliases = Aliases::default();
+    let level_of = |f: &FieldExpr| levels.iter().position(|p| same_field(&p.field, f));
+    let active = single
+        .get("activeProjections")
+        .and_then(|a| a.get(role))
+        .and_then(Value::as_array);
+    let (first, last) = match active {
+        Some(exprs) => {
+            let shown: Vec<usize> = exprs
+                .iter()
+                .filter_map(|e| level_of(&field(e, &aliases)))
+                .collect();
+            match (shown.iter().min(), shown.iter().max()) {
+                (Some(&first), Some(&last)) => (first, last),
+                _ => return Some(Err("drill levels not in the visual".to_owned())),
+            }
+        }
+        None => (saved.first, saved.last),
+    };
+    let filters = container.get("filters");
+    let by_name = filters
+        .and_then(|f| f.get("byName"))
+        .and_then(Value::as_object)
+        .into_iter()
+        .flat_map(|m| m.values());
+    let listed = ["byExpr", "byTransientState"].into_iter().flat_map(|key| {
+        filters
+            .and_then(|f| f.get(key))
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+    });
+    let mut path: Vec<DrillStep> = Vec::new();
+    for c in by_name.chain(listed).filter(|c| is_drill_filter(c)) {
+        let Some(condition) = c.get("filter").and_then(where_condition) else {
+            return Some(Err("a drill filter".to_owned()));
+        };
+        let mut pairs = Vec::new();
+        if !equalities(&condition, &mut pairs) {
+            return Some(Err("a drill filter".to_owned()));
+        }
+        for (f, literal) in pairs {
+            let (Some(level), Ok(value)) = (level_of(&f), literal.value()) else {
+                return Some(Err("a drill filter".to_owned()));
+            };
+            if level >= first {
+                return Some(Err("a drill filter on a shown level".to_owned()));
+            }
+            path.retain(|s| s.level != level);
+            path.push(DrillStep {
+                level,
+                field: f,
+                value: coerce_literal(&value, None),
+            });
+        }
+    }
+    path.sort_by_key(|s| s.level);
+    Some(Ok(DrillState { first, last, path }))
+}
+
+/// Collects `field = literal` pairs of a conjunction of equalities and
+/// one-tuple `In`s; `false` for any other condition.
+fn equalities(condition: &Condition, out: &mut Vec<(FieldExpr, Literal)>) -> bool {
+    match condition {
+        Condition::And(a, b) => equalities(a, out) && equalities(b, out),
+        Condition::In { exprs, values } => match values.as_slice() {
+            [tuple] if tuple.len() == exprs.len() => {
+                out.extend(exprs.iter().cloned().zip(tuple.iter().cloned()));
+                true
+            }
+            _ => false,
+        },
+        Condition::Comparison {
+            kind: ComparisonKind::Equal,
+            left,
+            right,
+        } => match (left, right) {
+            (FieldExpr::Literal(l), f) | (f, FieldExpr::Literal(l)) => {
+                out.push((f.clone(), l.clone()));
+                true
+            }
+            _ => false,
+        },
+        _ => false,
     }
 }
 
@@ -492,7 +656,95 @@ pub fn apply_object_changes(objects: &mut Value, changes: &Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pbi_engine::Value as EngineValue;
+    use pbi_model::Projection;
     use serde_json::json;
+
+    fn date(level: &str) -> Value {
+        json!({"Column": {"Expression": {"SourceRef": {"Entity": "Date"}}, "Property": level}})
+    }
+
+    fn drill_report() -> Report {
+        let projections = ["Year", "Quarter", "Month"]
+            .map(|l| Projection {
+                role: "Category".into(),
+                field: FieldExpr::column("Date", l),
+                query_ref: format!("Date.{l}"),
+                ..Projection::default()
+            })
+            .to_vec();
+        let chart = Visual {
+            name: "chart".into(),
+            visual_type: "clusteredColumnChart".into(),
+            projections,
+            ..Visual::default()
+        };
+        Report {
+            pages: vec![Page {
+                name: "p".into(),
+                visuals: vec![chart],
+                ..Page::default()
+            }],
+            ..Report::default()
+        }
+    }
+
+    fn drilled(single: Value, filters: Value) -> BookmarkEffect {
+        let bookmark = Bookmark {
+            name: "bm".into(),
+            exploration_state: json!({"sections": {"p": {"visualContainers": {
+                "chart": {"singleVisual": single, "filters": filters}
+            }}}}),
+            ..Bookmark::default()
+        };
+        apply_bookmark(&drill_report(), &bookmark, &|_| InteractionState::new())
+    }
+
+    #[test]
+    fn bookmarks_restore_drill_levels_and_paths() {
+        let equal = |level: &str, literal: &str| json!({"Comparison": {"ComparisonKind": 0, "Left": date(level), "Right": {"Literal": {"Value": literal}}}});
+        let drill_filter = json!({
+            "name": "f1",
+            "howCreated": 2,
+            "filter": {"Version": 2, "From": [], "Where": [
+                {"Condition": equal("Year", "2025L")},
+                {"Condition": {"In": {"Expressions": [date("Quarter")], "Values": [[{"Literal": {"Value": "'Q1'"}}]]}}}
+            ]}
+        });
+        let effect = drilled(
+            json!({"activeProjections": {"Category": [date("Month")]}}),
+            json!({"byExpr": [drill_filter]}),
+        );
+        assert!(effect.not_applied.is_empty(), "{:?}", effect.not_applied);
+        let d = &effect.states["p"].drill["chart"];
+        assert_eq!((d.first, d.last), (2, 2));
+        let path: Vec<(usize, EngineValue)> =
+            d.path.iter().map(|s| (s.level, s.value.clone())).collect();
+        assert_eq!(
+            path,
+            [
+                (0, EngineValue::Integer(2025)),
+                (1, EngineValue::string("Q1"))
+            ]
+        );
+
+        // Without `activeProjections` or drill filters: the saved range.
+        let effect = drilled(json!({}), Value::Null);
+        assert!(effect.states["p"].drill.is_empty());
+
+        // A drill filter on a shown level cannot be a drill path.
+        let shown = json!({"name": "f2", "howCreated": "Drill", "filter": {"Version": 2, "From": [], "Where": [
+            {"Condition": equal("Month", "'Jan'")}
+        ]}});
+        let effect = drilled(
+            json!({"activeProjections": {"Category": [date("Month")]}}),
+            json!({"byName": {"f2": shown}}),
+        );
+        assert_eq!(
+            effect.not_applied,
+            ["p: chart: a drill filter on a shown level"]
+        );
+    }
 
     #[test]
     fn remove_then_merge() {

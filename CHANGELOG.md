@@ -22,6 +22,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - Opening and saving a PBIP project fingerprints its files faster: the size and file-count caps are checked before any file is read, and the files are read on up to 8 threads (Acme Outfitters: 8.8 → 5.8 ms per scan).
 
 ### Added
+- Bookmarks restore drill state and spotlight (M9.5): a captured visual's `activeProjections` and drill filters set its drill levels and path, and a spotlighted visual fades the rest of the page.
 - Data labels of highlighted charts show the highlighted value and their tooltips add a "Highlighted" line (M9.1).
 - Slicers honour their `general.selfFilter` (M9.6): the filter the newer slicers keep on their own item list narrows that slicer only, not the visuals it filters.
 - Drill down and up on report visuals (M9.2): charts with several axis fields and matrices with several row fields drill up, down on a data point, to the next level or expand one level, from the visual's header buttons or right-click menu, and through the new `canvas.drill` command.

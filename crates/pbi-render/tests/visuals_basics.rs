@@ -775,6 +775,60 @@ fn bookmarks_show_and_hide_visuals_and_groups() {
     assert_eq!(visibility(&effect.states["p"]), visibility(&state));
 }
 
+#[test]
+fn spotlight_bookmarks_fade_the_other_visuals() {
+    let env = env();
+    let card = |name: &str, x: f64| {
+        let mut v = card_visual(name, 100.0);
+        v.position.x = x;
+        v.projections = vec![projection("Data", measure("Store Count"))];
+        v
+    };
+    let page = page_of(vec![card("a", 0.0), card("b", 200.0)]);
+    let report = Report {
+        pages: vec![page.clone()],
+        ..Report::default()
+    };
+    let bookmark = |containers: Json| Bookmark {
+        name: "bm".into(),
+        exploration_state: json!({"activeSection": "p", "sections": {"p": {"visualContainers": containers}}}),
+        ..Bookmark::default()
+    };
+    let saved = |p: &Page| InteractionState::from_page(p).0;
+    let spot =
+        json!({"a": {"singleVisual": {"visualType": "card", "display": {"mode": "spotlight"}}}});
+    let effect = apply_bookmark(&report, &bookmark(spot), &saved);
+    assert!(effect.not_applied.is_empty(), "{:?}", effect.not_applied);
+    let state = effect.states["p"].clone();
+    assert_eq!(state.spotlight.as_deref(), Some("a"));
+
+    let opacity = |state: &InteractionState| {
+        let r = render_report_page(
+            &env,
+            &report,
+            &page,
+            &ThemeResolver::default(),
+            state,
+            &PageRenderOptions::default(),
+        );
+        ["a", "b"].map(|n| {
+            find_group(&r.scene.root, &HitId::visual(n))
+                .unwrap()
+                .opacity
+        })
+    };
+    assert_eq!(
+        opacity(&state),
+        [1.0, pbi_render::visuals::page::SPOTLIGHT_FADE]
+    );
+    assert_eq!(opacity(&saved(&page)), [1.0, 1.0]);
+
+    // An "All visuals" bookmark without a spotlight ends it.
+    let plain = json!({"a": {"singleVisual": {"visualType": "card"}}});
+    let effect = apply_bookmark(&report, &bookmark(plain), &|_| state.clone());
+    assert_eq!(effect.states["p"].spotlight, None);
+}
+
 // ------------------------------------------------------------------ cards
 
 fn card_visual(name: &str, height: f64) -> Visual {

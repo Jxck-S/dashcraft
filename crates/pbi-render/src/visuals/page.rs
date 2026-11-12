@@ -38,9 +38,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::dataview::DataView;
 use crate::fingerprint::Fingerprint;
+use crate::layout::frames::{PAGE_CLASS, VISUAL_CLASS};
 use crate::layout::{FrameOptions, LayoutOptions, PageLayout, render_page_with};
 use crate::query::{InteractionState, QueryEnv, QueryLimits, VisualQueryError};
-use crate::scene::{Group, Rect, Scene};
+use crate::scene::{Group, HitId, Node, Rect, Scene};
 use crate::text::FontBook;
 use crate::theme::ThemeResolver;
 
@@ -247,6 +248,28 @@ impl PageData {
     /// The query result of `visual`.
     pub fn get(&self, visual: &str) -> Option<&Result<DataView, VisualQueryError>> {
         self.data.iter().find(|(n, _)| n == visual).map(|(_, r)| r)
+    }
+}
+
+/// Opacity of the other visuals while one is spotlighted.
+pub const SPOTLIGHT_FADE: f64 = 0.2;
+
+/// Fades every visual container of the page but `name` (spotlight mode).
+fn spotlight(scene: &mut Scene, name: &str) {
+    let keep = HitId::visual(name);
+    let pages = scene.root.children.iter_mut().filter_map(|n| match n {
+        Node::Group(g) if g.class.as_deref() == Some(PAGE_CLASS) => Some(g),
+        _ => None,
+    });
+    for page in pages {
+        for node in &mut page.children {
+            if let Node::Group(g) = node
+                && g.class.as_deref() == Some(VISUAL_CLASS)
+                && g.id.as_ref() != Some(&keep)
+            {
+                g.opacity = SPOTLIGHT_FADE;
+            }
+        }
     }
 }
 
@@ -474,7 +497,7 @@ fn render_page_data(
     let mut interactions: Vec<VisualInteraction> = Vec::new();
     let mut reused: Vec<String> = Vec::new();
     let nav = Navigation::new(report, page, opts.active_bookmark.as_deref());
-    let scene = render_page_with(report, page, theme, &opts.frames, |frame, visual| {
+    let mut scene = render_page_with(report, page, theme, &opts.frames, |frame, visual| {
         let start = Instant::now();
         let ctx = VisualCtx {
             frame,
@@ -522,6 +545,12 @@ fn render_page_data(
         render_times.insert(visual.name.clone(), micros(start));
         group
     });
+    if let Some(name) = state.spotlight.as_deref()
+        && page.visual(name).is_some()
+        && !hidden.contains(name)
+    {
+        spotlight(&mut scene, name);
+    }
     let overlay = (!popups.is_empty()).then(|| {
         let layout = PageLayout::compute_with(
             page,
