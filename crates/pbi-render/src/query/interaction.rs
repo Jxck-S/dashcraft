@@ -53,6 +53,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::dataview::value_serde;
 
+use super::drill::DrillState;
 use super::drillthrough::DrillthroughContext;
 use super::filter::coerce_literal;
 use super::semantic;
@@ -177,6 +178,10 @@ pub struct InteractionState {
     /// [`drill_through`](super::drillthrough::drill_through)).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub drillthrough: Option<DrillthroughContext>,
+    /// Visual name → its drill range and path, where the reader drilled
+    /// (see [`drill`](super::drill::drill)).
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub drill: IndexMap<String, DrillState>,
 }
 
 /// Where a filter card lives.

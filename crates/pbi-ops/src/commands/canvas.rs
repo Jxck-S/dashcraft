@@ -7,6 +7,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use pbi_render::query::DrillAction;
+
 use super::{BASE, loaded_doc};
 use crate::canvas::{
     self, CanvasAction, CanvasPageOut, Changed, DrillthroughTargetOut, MAX_SEARCH_CHARS, Modifiers,
@@ -472,6 +474,83 @@ impl Command for CanvasToggleMatrixRow {
     async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
         canvas::toggle_matrix_row(&t, &p.hit_id).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.drill`.
+#[derive(Debug)]
+pub struct CanvasDrill;
+
+/// What `canvas.drill` does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum DrillActionParam {
+    /// Drill down on the data point `hitId`: its values filter the visual
+    /// and the next level is shown.
+    Down,
+    /// Back up one level (or collapse an expanded level).
+    Up,
+    /// Go to the next level (all values of the levels above).
+    Next,
+    /// Expand all down one level.
+    Expand,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CanvasDrillParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report (default: the first).
+    #[serde(default)]
+    pub report: Option<String>,
+    /// Page (default: the active page).
+    #[serde(default)]
+    pub page: Option<String>,
+    /// Visual: internal name or title (default: the visual of `hitId`).
+    #[serde(default)]
+    pub visual: Option<String>,
+    pub action: DrillActionParam,
+    /// A data point hit id from the last render (required for `down`).
+    #[serde(default)]
+    pub hit_id: Option<String>,
+}
+
+impl Command for CanvasDrill {
+    type Params = CanvasDrillParams;
+    type Output = CanvasPageOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.drill",
+            title: "Drill down or up",
+            summary: "Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page.",
+            long_running: true,
+            examples: &[
+                (
+                    "Drill down on a column",
+                    r#"{"docId": "d1", "action": "down", "hitId": "1f2e3d|dataPoint|0|2"}"#,
+                ),
+                (
+                    "Drill up",
+                    r#"{"docId": "d1", "visual": "1f2e3d", "action": "up"}"#,
+                ),
+            ],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        let action = match p.action {
+            DrillActionParam::Down => DrillAction::Down,
+            DrillActionParam::Up => DrillAction::Up,
+            DrillActionParam::Next => DrillAction::Next,
+            DrillActionParam::Expand => DrillAction::Expand,
+        };
+        canvas::drill(&t, p.visual.as_deref(), action, p.hit_id.as_deref()).await
     }
 }
 

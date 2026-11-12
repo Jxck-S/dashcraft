@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { drillthroughMenu } from '../src/lib/drillthrough.ts'
+import { drillMenu, drillthroughMenu } from '../src/lib/drillthrough.ts'
 
 const target = (page: string, displayName: string, keepAllFilters = true) => ({ page, displayName, fields: ['Sales.Region'], keepAllFilters })
 
@@ -28,4 +28,41 @@ test('without drillthrough pages the item is disabled', () => {
   const items = drillthroughMenu([], () => assert.fail('nothing to pick'))
   assert.equal(items.length, 1)
   assert.equal(items[0].enabled, false)
+})
+
+const drill = (first: number, last: number, levels = ['Year', 'Quarter', 'Month']) => ({
+  role: 'Category',
+  levels,
+  first,
+  last,
+  path: [],
+  canDrillUp: last > first || first > 0,
+  canDrillDown: last + 1 < levels.length,
+})
+
+test('a drillable visual lists the drill commands, enabled by its level', () => {
+  const acted: string[] = []
+  const items = drillMenu(drill(1, 1), true, (a) => acted.push(a))
+  assert.deepEqual(
+    items.map((i) => [i.label, i.enabled]),
+    [
+      ['Drill down', true],
+      ['Drill up', true],
+      ['Show next level', true],
+      ['Expand to next level', true],
+    ],
+  )
+  items[1].onclick?.()
+  assert.deepEqual(acted, ['up'])
+  const top = drillMenu(drill(0, 0), false, () => {})
+  assert.deepEqual(
+    top.map((i) => i.enabled),
+    [false, false, true, true],
+  )
+  const lowest = drillMenu(drill(2, 2), true, () => {})
+  assert.deepEqual(
+    lowest.map((i) => i.enabled),
+    [false, true, false, false],
+  )
+  assert.deepEqual(drillMenu(null, true, () => {}), [])
 })

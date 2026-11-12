@@ -2206,5 +2206,335 @@
       ]
     }
   ],
+  "drill": [
+    {
+      "report": "Acme Outfitters - Online",
+      "page": "Online Overview",
+      "pageId": "a60af4d6244c3a6206a5",
+      "visual": "f28cc556633b1995df76",
+      "visualKey": "tiers",
+      "levels": [
+        "Year",
+        "Quarter",
+        "Month"
+      ],
+      "first": 1,
+      "last": 1,
+      "categories": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4"
+      ],
+      "steps": [
+        {
+          "action": "up",
+          "first": 0,
+          "last": 0,
+          "path": [],
+          "categories": [
+            "2024",
+            "2025"
+          ],
+          "cards": [
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Total Sales",
+              "value": 235768.3,
+              "formatted": "$235,768.30"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Order Count",
+              "value": 1024,
+              "formatted": "1,024"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Active Customers",
+              "value": 293,
+              "formatted": "293"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Customer Count",
+              "value": 290,
+              "formatted": "290"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Avg Order Value",
+              "value": 230.2424804688,
+              "formatted": "$230.24"
+            }
+          ]
+        },
+        {
+          "action": "down",
+          "first": 1,
+          "last": 1,
+          "path": [
+            "Year = 2025"
+          ],
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "cards": [
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Total Sales",
+              "value": 126632.9,
+              "formatted": "$126,632.90"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Order Count",
+              "value": 557,
+              "formatted": "557"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Active Customers",
+              "value": 249,
+              "formatted": "249"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Customer Count",
+              "value": 247,
+              "formatted": "247"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Avg Order Value",
+              "value": 227.3481149013,
+              "formatted": "$227.35"
+            }
+          ],
+          "point": {
+            "Year": 2025
+          }
+        },
+        {
+          "action": "down",
+          "first": 2,
+          "last": 2,
+          "path": [
+            "Year = 2025",
+            "Quarter = Q1"
+          ],
+          "categories": [
+            "Jan",
+            "Feb",
+            "Mar"
+          ],
+          "cards": [
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Total Sales",
+              "value": 21197.3,
+              "formatted": "$21,197.30"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Order Count",
+              "value": 93,
+              "formatted": "93"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Active Customers",
+              "value": 82,
+              "formatted": "82"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Customer Count",
+              "value": 82,
+              "formatted": "82"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Avg Order Value",
+              "value": 227.9279569892,
+              "formatted": "$227.93"
+            }
+          ],
+          "point": {
+            "Quarter": "Q1"
+          }
+        },
+        {
+          "action": "up",
+          "first": 1,
+          "last": 1,
+          "path": [
+            "Year = 2025"
+          ],
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "cards": [
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Total Sales",
+              "value": 126632.9,
+              "formatted": "$126,632.90"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Order Count",
+              "value": 557,
+              "formatted": "557"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Active Customers",
+              "value": 249,
+              "formatted": "249"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Customer Count",
+              "value": 247,
+              "formatted": "247"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Avg Order Value",
+              "value": 227.3481149013,
+              "formatted": "$227.35"
+            }
+          ]
+        },
+        {
+          "action": "up",
+          "first": 0,
+          "last": 0,
+          "path": [],
+          "categories": [
+            "2024",
+            "2025"
+          ],
+          "cards": [
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Total Sales",
+              "value": 235768.3,
+              "formatted": "$235,768.30"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Order Count",
+              "value": 1024,
+              "formatted": "1,024"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Active Customers",
+              "value": 293,
+              "formatted": "293"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Customer Count",
+              "value": 290,
+              "formatted": "290"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Avg Order Value",
+              "value": 230.2424804688,
+              "formatted": "$230.24"
+            }
+          ]
+        },
+        {
+          "action": "expand",
+          "first": 0,
+          "last": 1,
+          "path": [],
+          "categories": [
+            "2024 Q1",
+            "2024 Q2",
+            "2024 Q3",
+            "2024 Q4",
+            "2025 Q1",
+            "2025 Q2",
+            "2025 Q3",
+            "2025 Q4"
+          ],
+          "cards": [
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Total Sales",
+              "value": 235768.3,
+              "formatted": "$235,768.30"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Order Count",
+              "value": 1024,
+              "formatted": "1,024"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Active Customers",
+              "value": 293,
+              "formatted": "293"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Customer Count",
+              "value": 290,
+              "formatted": "290"
+            },
+            {
+              "visual": "3d4874ac0bcfb9c0f53d",
+              "visualKey": "kpis",
+              "measure": "Avg Order Value",
+              "value": 230.2424804688,
+              "formatted": "$230.24"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "knownEngineGaps": []
 }

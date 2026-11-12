@@ -153,6 +153,7 @@ pub fn catalog() -> Registry {
         .with::<canvas::CanvasApplyBookmark>()
         .with::<canvas::CanvasTooltip>()
         .with::<canvas::CanvasTooltipPage>()
+        .with::<canvas::CanvasDrill>()
         .with::<canvas::CanvasDrillthroughTargets>()
         .with::<canvas::CanvasDrillthrough>()
         .with::<canvas::CanvasState>()

@@ -3,7 +3,8 @@
 //! selections of the other slicers, cross-filter from the selected visual
 //! (honouring `visualInteractions`), then Top N filters. A drillthrough
 //! page adds the drilled points and the filters the drillthrough carried
-//! after its page filters.
+//! after its page filters. Drill-down paths (the visual's own, and
+//! those of visuals that drill-filter the page) follow the visual filters.
 //!
 //! Points selected in another visual highlight bar, column, combo, pie,
 //! donut, treemap and funnel charts
@@ -108,6 +109,16 @@ pub(crate) fn visual_filters(
         {
             apply_drillthrough(&builder, &mut out, drill);
         }
+    }
+    for path in super::drill::drill_paths(report, page, visual, state) {
+        apply_selection(
+            &builder,
+            &mut out.context,
+            &mut out.warnings,
+            &path,
+            WarningScope::Drill,
+            "drill",
+        );
     }
 
     let mut highlight_points = false;

@@ -1001,10 +1001,13 @@ def native_ref(f: tuple) -> str:
     return f[-1] if f[0] != "m" else f[1]
 
 
-def projection(f: tuple, display: str | None = None) -> dict:
+def projection(f: tuple, display: str | None = None, active: bool = False) -> dict:
     p = {"field": field_json(f), "queryRef": query_ref(f), "nativeQueryRef": native_ref(f)}
     if display:
         p["displayName"] = display
+    if active:
+        # The shown drill level of a hierarchy on an axis.
+        p["active"] = True
     return p
 
 
@@ -2312,9 +2315,10 @@ def online_report() -> Report:
            roles={"Category": [C("Customers", "Segment")], "Y": [M("Total Sales")]},
            objects=chart_objects(), container=vco("Online sales by segment"))
     pg.add("tiers", "hundredPercentStackedColumnChart", (586, 540, 670, 164),
-           roles={"Category": [C("Date", "Quarter")], "Y": [M("Total Sales")],
-                  "Series": [C("Customers", "Loyalty Tier")]},
-           sort=[(C("Date", "Quarter"), "Ascending")],
+           roles={"Category": [H("Date", "Calendar", "Year"), [H("Date", "Calendar", "Quarter"), None, True],
+                               H("Date", "Calendar", "Month")],
+                  "Y": [M("Total Sales")], "Series": [C("Customers", "Loyalty Tier")]},
+           sort=[(H("Date", "Calendar", "Quarter"), "Ascending")],
            objects=chart_objects(labels=False, legend=True), container=vco("Loyalty mix by quarter"))
     pg.add("arrow", "basicShape", (24, 392, 200, 24),
            objects={"general": [{"properties": {"shapeType": L("arrow")}}],
@@ -2446,6 +2450,63 @@ def tooltip_expectations(e: Engine, rep: Report) -> list[dict]:
              "page": tip.display, "pageId": tip.id, "width": tip.width, "height": tip.height,
              "pointFilters": [f.describe() for f in point], "keptFilters": [f.describe() for f in carried],
              "cards": cards}]
+
+
+DRILL_LEVELS = ("Year", "Quarter", "Month")
+MONTH_ORDER = {m: i for i, m in enumerate(MONTH_ABBR)}
+
+
+def drill_expectations(e: Engine, rep: Report) -> list[dict]:
+    """Drilling the Online Overview "Loyalty mix by quarter" chart (Calendar Year, Quarter, Month
+    with Quarter shown): each step's categories (labels in axis order) and, as drilling filters the
+    other visuals of the page, the KPI cards."""
+    if rep.key != "online":
+        return []
+    pg = rep.page_by("online")
+    vis = pg.v("tiers")
+    base = pg.ctx("tiers")
+    kpis = ["Total Sales", "Order Count", "Active Customers", "Customer Count", "Avg Order Value"]
+
+    def ctx_of(ctx: Ctx, path: dict) -> Ctx:
+        for level, value in path.items():
+            ctx = ctx_plus(ctx, "Date", level, value)
+        return ctx
+
+    def categories(path: dict, first: int, last: int) -> list[str]:
+        shown = DRILL_LEVELS[first:last + 1]
+        keys = set()
+        for o in e.orders(ctx_of(base, path)):
+            row = DATE_ROWS.get(o["Order Date"])
+            if row is not None:
+                keys.add(tuple(row[c] for c in shown))
+        def order(k):
+            return tuple(MONTH_ORDER[v] if c == "Month" else v for c, v in zip(shown, k))
+        return [" ".join(str(v) for v in k) for k in sorted(keys, key=order)]
+
+    def cards(path: dict) -> list[dict]:
+        ctx = ctx_of(pg.ctx("kpis"), path)
+        return [{"visual": pg.v("kpis").id, "visualKey": "kpis", "measure": n, **e.value(n, ctx)}
+                for n in kpis]
+
+    year = max(DATE_ROWS[o["Order Date"]]["Year"] for o in e.orders(base) if o["Order Date"] in DATE_ROWS)
+    steps = []
+    for action, point, path, first, last in [
+        ("up", None, {}, 0, 0),
+        ("down", {"Year": year}, {"Year": year}, 1, 1),
+        ("down", {"Quarter": "Q1"}, {"Year": year, "Quarter": "Q1"}, 2, 2),
+        ("up", None, {"Year": year}, 1, 1),
+        ("up", None, {}, 0, 0),
+        ("expand", None, {}, 0, 1),
+    ]:
+        step = {"action": action, "first": first, "last": last,
+                "path": [f"{k} = {v}" for k, v in path.items()],
+                "categories": categories(path, first, last), "cards": cards(path)}
+        if point:
+            step["point"] = point
+        steps.append(step)
+    return [{"report": rep.name, "page": pg.display, "pageId": pg.id, "visual": vis.id, "visualKey": "tiers",
+             "levels": list(DRILL_LEVELS), "first": 1, "last": 1,
+             "categories": categories({}, 1, 1), "steps": steps}]
 
 
 def page_expectations(e: Engine, rep: Report, pg: Page) -> dict:
@@ -2685,6 +2746,7 @@ def build_expected(e: Engine, tables: dict, targets: list[dict], reports: list[R
         "bookmarks": [b for r in reports for b in bookmark_expectations(e, r)],
         "drillthrough": [d for r in reports for d in drillthrough_expectations(e, r)],
         "tooltipPages": [t for r in reports for t in tooltip_expectations(e, r)],
+        "drill": [d for r in reports for d in drill_expectations(e, r)],
     }
 
 
@@ -2909,6 +2971,23 @@ def write_expected_md(out: Path, exp: dict) -> None:
                       md_table(["Visual", "Type", "Measure", "Expected"],
                                [[c["visualKey"], c["visualType"], c["measure"], c["formatted"]] for c in t["cards"]]),
                       ""]
+    if exp["drill"]:
+        lines += ["## Drill down and up", "",
+                  "A chart whose axis holds several levels of a hierarchy shows the saved (`active`) level;",
+                  "drilling changes the shown levels, and a drill-down path filters the chart and, with",
+                  "`drillFilterOtherVisuals`, the other visuals of the page.", ""]
+        for d in exp["drill"]:
+            lines += [f"**{d['page']} / `{d['visualKey']}`** ({d['report']}): levels "
+                      f"{' → '.join(d['levels'])}, saved level {d['levels'][d['first']]} "
+                      f"({', '.join(d['categories'])}).", ""]
+            rows = []
+            for s in d["steps"]:
+                point = ", ".join(f"{k} {v}" for k, v in s.get("point", {}).items())
+                total = next(c["formatted"] for c in s["cards"] if c["measure"] == "Total Sales")
+                rows.append([s["action"] + (f" on {point}" if point else ""),
+                             " → ".join(d["levels"][s["first"]:s["last"] + 1]), "; ".join(s["path"]) or "none",
+                             ", ".join(s["categories"]), total])
+            lines += [md_table(["Step", "Shown", "Path", "Categories", "kpis Total Sales"], rows), ""]
     cg = exp["calculationGroup"]
     lines += ["## Calculation group", "", f"`'{cg['table']}'[{cg['column']}]` applied to [{cg['measure']}]; "
               + cg["context"] + ".", "",

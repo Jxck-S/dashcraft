@@ -145,6 +145,7 @@
 
 pub mod bookmark;
 mod context;
+pub mod drill;
 pub mod drillthrough;
 mod exec;
 pub mod filter;
@@ -163,6 +164,10 @@ use serde::Serialize;
 
 pub use crate::dataview::{DataView, QueryWarning, WarningScope};
 pub use bookmark::{BookmarkEffect, apply_bookmark};
+pub use drill::{
+    DrillAction, DrillInfo, DrillState, DrillStep, drill, drill_filters_others, drill_info,
+    drill_levels, drill_state, saved_drill,
+};
 pub use drillthrough::{
     DrillthroughContext, DrillthroughField, DrillthroughPage, drill_through, drillthrough_page,
     drillthrough_targets,
@@ -354,14 +359,16 @@ impl QueryEnv {
         state: &InteractionState,
         limits: &QueryLimits,
     ) -> Result<DataView, VisualQueryError> {
-        match state.sort.get(&visual.name) {
+        let sorted = match state.sort.get(&visual.name) {
             Some(sort) if *sort != visual.sort => {
                 let mut sorted = visual.clone();
                 sorted.sort.clone_from(sort);
-                exec::run_visual(self, report, page, &sorted, state, limits)
+                std::borrow::Cow::Owned(sorted)
             }
-            _ => exec::run_visual(self, report, page, visual, state, limits),
-        }
+            _ => std::borrow::Cow::Borrowed(visual),
+        };
+        let drilled = drill::drilled_visual(&sorted, state);
+        exec::run_visual(self, report, page, &drilled, state, limits)
     }
 
     /// See [`query_page`].

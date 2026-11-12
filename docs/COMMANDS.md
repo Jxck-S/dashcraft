@@ -177,6 +177,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.applyBookmark`](#canvasapplybookmark) | Applies a report bookmark to the canvas (page, slicers, filters, visibility and sort; all or only its target visuals) and renders the page it shows; lists the parts not applied yet. | M L A |
 | [`canvas.tooltip`](#canvastooltip) | The hover tooltip (category, series, values) of a data point hit, from the last render. | A |
 | [`canvas.tooltipPage`](#canvastooltippage) | Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. | A |
+| [`canvas.drill`](#canvasdrill) | Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page. | M L A |
 | [`canvas.drillthroughTargets`](#canvasdrillthroughtargets) | The drillthrough pages a data point hit can drill through to (the "Drill through" menu). | A |
 | [`canvas.drillthrough`](#canvasdrillthrough) | Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. | M L A |
 | [`canvas.state`](#canvasstate) | The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. | A |
@@ -2224,6 +2225,52 @@ Result:
 Examples:
 
 - Hover a column: `{"docId":"d1","report":"Stores","page":"Store Performance","hitId":"1f2e3d|dataPoint|0|2"}`
+
+### `canvas.drill`
+
+**Drill down or up.** Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report (default: the first). |
+| `page` (optional) | string \| null | Page (default: the active page). |
+| `visual` (optional) | string \| null | Visual: internal name or title (default: the visual of `hitId`). |
+| `action` | `"down"` \| `"up"` \| `"next"` \| `"expand"` | What `canvas.drill` does. |
+| `hitId` (optional) | string \| null | A data point hit id from the last render (required for `down`). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string |  |
+| `report` | string | Report name. |
+| `page` | string | Page internal name. |
+| `pageDisplayName` | string |  |
+| `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
+| `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
+| `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
+| `width` | number |  |
+| `height` | number |  |
+| `hitRegions` | HitRegionOut[] | Hit regions in paint order (hit-test from the end). |
+| `overlayHitRegions` | HitRegionOut[] | Hit regions of the overlay (above every page region). |
+| `visuals` | CanvasVisualOut[] | Every visual of the page (hidden ones included), in page order. |
+| `interactions` | CanvasInteractionOut[] |  |
+| `selections` | SelectionOut[] | Slicer selections and the cross-filter. |
+| `effectiveFilters` | FilterSpecOut | Report + page filters + selections as a filter spec (what cards are evaluated in, ignoring per-visual interactions). |
+| `isDefault` | boolean | The state equals the report's saved state. |
+| `warnings` | string[] | Unreadable saved slicer selections. |
+| `durationMs` | integer | Query + render wall time. |
+
+Examples:
+
+- Drill down on a column: `{"docId":"d1","action":"down","hitId":"1f2e3d|dataPoint|0|2"}`
+- Drill up: `{"docId":"d1","visual":"1f2e3d","action":"up"}`
 
 ### `canvas.drillthroughTargets`
 

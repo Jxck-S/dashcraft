@@ -45,8 +45,8 @@ use pbi_render::dataview::{
 };
 use pbi_render::layout::{FrameOptions, auto_title};
 use pbi_render::query::{
-    DrillthroughPage, InteractionState, PointField, PointSelection, QueryEnv, QueryLimits,
-    SlicerSelection, drill_through, drillthrough_page, is_slicer_type, slicer_fields,
+    DrillAction, DrillthroughPage, InteractionState, PointField, PointSelection, QueryEnv,
+    QueryLimits, SlicerSelection, drill_through, drillthrough_page, is_slicer_type, slicer_fields,
     synced_slicers, tooltip_state, visual_tooltip_page,
 };
 use pbi_render::scene::{HitId, HitKind, HitRegion, Rect};
@@ -151,6 +151,30 @@ pub struct CanvasVisualOut {
     pub truncated: bool,
     /// A button whose click does something (`canvas.click` returns it).
     pub has_action: bool,
+    /// Drill levels and options (`canvas.drill`); absent when the visual
+    /// has fewer than two levels to drill on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub drill: Option<DrillOut>,
+}
+
+/// The drill levels of a visual (an axis, or a matrix's rows, with two or
+/// more fields) and what `canvas.drill` can do with them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DrillOut {
+    /// The data role whose fields are the levels (`Category`, `Rows`, …).
+    pub role: String,
+    /// Level display names, top first.
+    pub levels: Vec<String>,
+    /// First shown level (0-based).
+    pub first: usize,
+    /// Last shown level (above `first`: expanded).
+    pub last: usize,
+    /// The drilled values, `Level = value`, top first.
+    pub path: Vec<String>,
+    pub can_drill_up: bool,
+    /// A level below the shown ones exists (down, next, expand).
+    pub can_drill_down: bool,
 }
 
 /// Scroll position and range of a table / matrix body or slicer list.
@@ -494,6 +518,9 @@ fn rename_state(state: &mut InteractionState, renames: &[Rename]) {
             for condition in &mut drill.carried {
                 rename.apply_to_condition(condition);
             }
+        }
+        for step in state.drill.values_mut().flat_map(|d| d.path.iter_mut()) {
+            rename.apply_to_field(&mut step.field);
         }
     }
 }
@@ -966,6 +993,18 @@ fn page_dto(
             warnings: v.warnings.clone(),
             truncated: v.truncated,
             has_action: v.action.is_some(),
+            drill: page
+                .visual(&v.name)
+                .and_then(|visual| pbi_render::query::drill_info(visual, &job.state))
+                .map(|d| DrillOut {
+                    role: d.role,
+                    levels: d.levels,
+                    first: d.first,
+                    last: d.last,
+                    path: d.path,
+                    can_drill_up: d.can_drill_up,
+                    can_drill_down: d.can_drill_down,
+                }),
         })
         .collect();
     let interactions = rendered
@@ -1422,6 +1461,71 @@ pub async fn toggle_matrix_row(target: &Target, hit: &str) -> Result<CanvasPageO
     let hit = decode_hit(hit)?;
     ensure_rendered(target).await?;
     target.update(|entry, _, _| apply_matrix_toggle(entry, &hit))??;
+    render(target).await
+}
+
+/// `canvas.drill`: drills `visual` (or the visual of `hit`) up, down on
+/// data point `hit`, to the next level or expands it one level. Drilling
+/// clears the visual's own cross-filter selection.
+///
+/// # Errors
+/// `invalidParams` when the visual has no levels to drill on, the action
+/// is not possible or drill down has no data point hit; `notFound`.
+pub async fn drill(
+    target: &Target,
+    visual: Option<&str>,
+    action: DrillAction,
+    hit: Option<&str>,
+) -> Result<CanvasPageOut, OpError> {
+    let hit = hit.map(decode_hit).transpose()?;
+    let name = match (visual, &hit) {
+        (Some(v), _) => v.to_owned(),
+        (None, Some(h)) => h.visual.clone(),
+        (None, None) => return Err(OpError::invalid_params("give `visual` or `hitId`")),
+    };
+    if action == DrillAction::Down {
+        ensure_rendered(target).await?;
+    }
+    target.update(|entry, _, page| {
+        let v = resolve::visual(page, &name)?;
+        let point = match (action, &hit) {
+            (DrillAction::Down, Some(h)) => {
+                let HitKind::DataPoint { series, index } = h.kind else {
+                    return Err(OpError::invalid_params(
+                        "drill down starts from a data point hit",
+                    ));
+                };
+                if h.visual != v.name {
+                    return Err(OpError::invalid_params("the hit is not on this visual"));
+                }
+                Some(
+                    data_point(entry, v, series, index)?
+                        .flatten()
+                        .ok_or_else(|| {
+                            OpError::invalid_params("this data point has no value to drill on")
+                        })?,
+                )
+            }
+            (DrillAction::Down, None) => {
+                return Err(OpError::invalid_params(
+                    "drill down needs a data point `hitId`",
+                ));
+            }
+            _ => None,
+        };
+        let mut state = entry.state.clone();
+        pbi_render::query::drill(&mut state, v, action, point.as_deref())
+            .map_err(OpError::invalid_params)?;
+        if state
+            .selected_points
+            .as_ref()
+            .is_some_and(|p| p.source == v.name)
+        {
+            state.selected_points = None;
+        }
+        entry.set_state(state);
+        Ok::<(), OpError>(())
+    })??;
     render(target).await
 }
 
