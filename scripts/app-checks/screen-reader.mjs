@@ -1,6 +1,6 @@
 // A6: drives the debug app with a real screen reader through Guidepup (MIT) and checks what it
-// says for the M6 editing and M7 formula-bar journeys: NVDA on Windows, VoiceOver on macOS,
-// Orca on Linux. Narrator has no automation API; its evidence stays the UI Automation tree
+// says for the M6 editing, M7 formula-bar and M8 external changes and recovery journeys: NVDA on
+// Windows, VoiceOver on macOS, Orca on Linux. Narrator has no automation API; its evidence stays the UI Automation tree
 // (`uia.ps1`, `editing-a11y.mjs`). Meant for the `screen-reader` CI workflow, which installs
 // Guidepup and configures the runner (`npx @guidepup/setup`); it takes over the keyboard and the
 // speech of the machine it runs on, so don't run it on your desktop while you work.
@@ -13,7 +13,7 @@
 // summary on GitHub), with a screenshot per failed step on macOS. Exits 1 when a required step
 // fails.
 import { execFile, execFileSync, spawn } from 'node:child_process'
-import { appendFileSync, cpSync, existsSync, mkdirSync, openSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, cpSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { root, sleep } from './cdp.mjs'
@@ -174,20 +174,41 @@ function writeReport(startedAt, final = true) {
   return failed.length
 }
 
-async function journey() {
-  const title = () => sr.perform(reader.title(sr))
-  const focus = () => sr.perform(reader.focus(sr))
+const title = () => sr.perform(reader.title(sr))
+const focus = () => sr.perform(reader.focus(sr))
 
-  // Wait for the window (System Events lists the process only once it has one) and the
-  // document: the window title names the file once it is open.
-  let ready = false
-  for (let i = 0; i < 40 && !ready; i++) {
+function startApp() {
+  const log = openSync(join(out, 'app.log'), 'a')
+  // A fresh data folder: no Auto recovery journals of an earlier run (Document recovery dialog).
+  const env = { ...process.env, DASHCRAFT_BLOB_MAP: join(copy, 'blob-map.json'), DASHCRAFT_DATA_DIR: join(out, 'data') }
+  if (platform === 'linux') Object.assign(env, { WEBKIT_DISABLE_DMABUF_RENDERER: '1', WEBKIT_DISABLE_COMPOSITING_MODE: '1' })
+  app = spawn(exe, [join(copy, 'AcmeOutfitters.pbip')], { env, stdio: ['ignore', log, log] })
+}
+
+/**
+ * Waits for the window (System Events lists the process only once it has one) and the document:
+ * the window title names the file once it is open.
+ */
+async function waitForDocument() {
+  for (let i = 0; i < 40; i++) {
     const front = activate()
     await sr.clearSpokenPhraseLog()
     await title().catch(() => {})
-    ready = front && DOCUMENT.test(await said())
-    if (!ready) await sleep(3000)
+    if (front && DOCUMENT.test(await said())) return
+    await sleep(3000)
   }
+}
+
+/** Another program changes a measure in the project's TMDL. */
+function editOnDisk(table, from, to) {
+  const file = join(copy, 'AcmeOutfitters.SemanticModel', 'definition', 'tables', `${table}.tmdl`)
+  const text = readFileSync(file, 'utf8')
+  if (!text.includes(from)) throw new Error(`${from} not in ${table}.tmdl`)
+  writeFileSync(file, text.replace(from, to))
+}
+
+async function journey() {
+  await waitForDocument()
   await step('S1', 'A1 the window title names the document and DashCraft', 'title', title, TITLE)
 
   // M6: find the measure, edit its formula, hear the edit, undo and redo it.
@@ -313,6 +334,71 @@ async function journey() {
     await settle(3000)
   }, /Saved/)
   await step('S32', 'A1 the title drops the unsaved mark', 'title', title, (heard) => DOCUMENT.test(heard) && !DIRTY.test(heard), { required: false })
+
+  // M8: another program changes the saved project; the bar, Compare and Reload.
+  await step('S33', 'A1 a change on disk is announced', 'another program edits Customers.tmdl', async () => {
+    editOnDisk('Customers', "measure 'Customer Count' = COUNTROWS(Customers)", "measure 'Customer Count' = COUNTROWS(Customers) + 0")
+    await settle(5000)
+  }, /Files changed on disk/)
+  // The status bar's message names Compare too ("… or Compare in the bar …").
+  await step('S34', 'A2 Tab reaches Compare in the bar', `${SEARCH}, Tab ×n`, async () => {
+    await press(SEARCH)
+    return `${await tabUntil(/Compare(?! in the bar)/, 80)} Tab presses`
+  }, /Compare(?! in the bar)/)
+  await step('S35', 'A1 Enter opens Compare and says its name', 'Enter', async () => {
+    await press('Enter')
+    await settle(3000)
+  }, /Compare .*files on disk/i)
+  await step('S36', 'A1 the comparison result is announced', 'wait', () => settle(2000), /different/i, { required: false })
+  await step('S37', 'A2 Tab reaches the changed measure as TMDL', 'Tab ×n', async () => `${await tabUntil(/TMDL of Customers/, 15)} Tab presses`, /TMDL of Customers/)
+  // NVDA may switch to browse mode with a sound instead of words, so the focus report shows
+  // whether the first Escape closed the dialog.
+  await step('S38', 'A2 Esc closes Compare and focus goes back to Compare', 'Escape, focus report', async () => {
+    await escape()
+    await settle(1000)
+    await sr.clearSpokenPhraseLog()
+    await focus()
+    if (!/dialog|TMDL of|Objects that differ/i.test(await said())) return 'one Escape'
+    await press('Escape')
+    await settle(1000)
+    await sr.clearSpokenPhraseLog()
+    await focus()
+    return 'two Escapes'
+  }, (heard) => /\bCompare\b(?! ?Acme| in the bar)/.test(heard) && !/dialog/i.test(heard))
+  await step('S39', 'A1 Reload in the bar rereads the project and says so', 'Shift+Tab ×n, Enter', async () => {
+    const presses = await tabUntil(/Reload/, 3, true)
+    await press('Enter')
+    await settle(5000)
+    return `${presses} Shift+Tab presses`
+  }, /Reloaded/)
+
+  // M8: an unsaved edit survives a crash; Document recovery on the next start.
+  await step('S40', 'A1 an unsaved edit before the app stops', `${SEARCH}, "Total Sales", Enter, Tab ×n, " + 0", Enter`, async () => {
+    await press(SEARCH)
+    await type('Total Sales')
+    await settle(1500)
+    await press('Enter')
+    const presses = await tabUntil(/Measure formula/, 40)
+    await press(LINE_END)
+    await type(' + 0')
+    await press('Enter')
+    await settle(1500)
+    return `${presses} Tab presses`
+  }, /Edit measure/)
+  app.kill()
+  await sleep(3000)
+  startApp()
+  await waitForDocument()
+  await step('S41', 'A1 the next start shows Document recovery with the focus in it', 'focus report', async () => {
+    await settle(2000)
+    await focus()
+  }, /Document recovery|Restore Acme ?Outfitters/i)
+  await step('S42', 'A2 Tab reaches Restore, named with the file', 'Tab ×n', async () => `${await tabUntil(/Restore Acme ?Outfitters/i, 8)} Tab presses`, /Restore Acme ?Outfitters/i)
+  await step('S43', 'A1 Restore announces the restored edit', 'Enter', async () => {
+    await press('Enter')
+    await settle(6000)
+  }, /Restored 1 unsaved edit/)
+  await step('S44', 'A1 the title marks the restored edit unsaved', 'title', title, DIRTY, { required: false })
 }
 
 /**
@@ -353,11 +439,7 @@ try {
   // full capture polls AppleScript until the phrase is stable (seconds per key), so it keeps the
   // first phrase there; settle() captures everything for the late announcements.
   await startReader({ capture: mac ? 'initial' : true })
-  const log = openSync(join(out, 'app.log'), 'w')
-  // A fresh data folder: no Auto recovery journals of an earlier run (Document recovery dialog).
-  const env = { ...process.env, DASHCRAFT_BLOB_MAP: join(copy, 'blob-map.json'), DASHCRAFT_DATA_DIR: join(out, 'data') }
-  if (platform === 'linux') Object.assign(env, { WEBKIT_DISABLE_DMABUF_RENDERER: '1', WEBKIT_DISABLE_COMPOSITING_MODE: '1' })
-  app = spawn(exe, [join(copy, 'AcmeOutfitters.pbip')], { env, stdio: ['ignore', log, log] })
+  startApp()
   await journey()
 } catch (e) {
   const error = [e, e?.cause].filter(Boolean).map((x) => x?.stack ?? String(x)).join('\nCaused by: ')

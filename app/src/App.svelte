@@ -191,6 +191,8 @@
   /** A document that does not track its files (not a PBIP project folder): not polled again. */
   let externalUntracked: string | null = null
   const EXTERNAL_POLL_MS = 1500
+  /** How long after a focus move an outcome goes to the status bar (`announce`). */
+  const ANNOUNCE_DELAY_MS = 500
   let explainTarget = $state.raw<ExplainTarget | null>(null)
   let explainSeq = 0
   let suggestOpen = $state(false)
@@ -1307,6 +1309,7 @@
     if (!(await confirmDiscard())) return
     const seq = ++openSeq
     recoveryPending = id
+    let done: string | null = null
     busy = true
     busyLabel = 'Restoring unsaved edits…'
     status = { message: busyLabel, isError: false }
@@ -1326,12 +1329,17 @@
       if (failed) {
         toast('warning', `Restored ${replayed} of ${plural(edits, 'edit')} of ${name}: ${failed.command} failed (${failed.message}). Its recovery file is kept until you discard it.`)
       } else {
-        status = { message: `Restored ${plural(edits, 'unsaved edit')} of ${name}: save to keep them`, isError: false }
+        done = `Restored ${plural(edits, 'unsaved edit')} of ${name}: save to keep them`
       }
     } finally {
       recoveryPending = null
       if (seq === openSeq) busy = false
       await checkRecovery()
+    }
+    // Said once Document recovery has closed and the focus has moved.
+    if (done && seq === openSeq) {
+      await focusAfterBar()
+      void announce(done)
     }
   }
 
@@ -1380,7 +1388,13 @@
         return
       }
       const key = changes.map((c) => `${c.change}:${c.path}`).join('\n')
-      if (external?.key !== key) external = { docId, changes, key }
+      if (external?.key !== key) {
+        external = { docId, changes, key }
+        // The bar's own status role is not announced when it appears with its text: the status
+        // bar's live region says it.
+        const what = changes.length === 1 ? `${changes[0].path} was` : `${changes.length} project files were`
+        status = { message: `Files changed on disk: ${what} changed by another program. Reload, Keep mine or Compare in the bar below the ribbon.`, isError: false }
+      }
     } finally {
       externalChecking = false
     }
@@ -1420,8 +1434,8 @@
         return
       }
       showDocument(result.value)
-      status = { message: `Reloaded ${fileName} from disk`, isError: false }
-      void focusAfterBar()
+      await focusAfterBar()
+      if (seq === openSeq) void announce(`Reloaded ${fileName} from disk`)
     } finally {
       reloading = false
       if (seq === openSeq) busy = false
@@ -1436,12 +1450,24 @@
     void focusAfterBar()
   }
 
-  /** The bar left with the focused button: focus goes to the ribbon tab before it, not the page. */
+  /**
+   * The bar or a dialog left with the focused button: focus goes to the ribbon tab (before the
+   * bar), not the page.
+   */
   async function focusAfterBar() {
     await new Promise((resolve) => setTimeout(resolve))
     const now = document.activeElement
     if (now && now !== document.body && now.isConnected) return
     document.querySelector<HTMLElement>('.ribbon [role="tab"][aria-selected="true"]')?.focus()
+  }
+
+  /**
+   * Shows an outcome in the status bar once a focus move has been spoken: VoiceOver and Orca drop
+   * a live-region change made just before the focus moves.
+   */
+  async function announce(message: string) {
+    await new Promise((resolve) => setTimeout(resolve, ANNOUNCE_DELAY_MS))
+    status = { message, isError: false }
   }
 
   /** Compare: the document, unsaved edits included, object by object with its files on disk. */
@@ -1958,6 +1984,12 @@
         {journals}
         pending={recoveryPending}
         onrestore={(id) => void restoreRecovery(id)}
+        onopensaved={(id) => {
+          const path = journals.find((j) => j.recoveryId === id)?.path
+          if (!path) return
+          recovery = null
+          void openPath(path)
+        }}
         ondiscard={(id) => {
           const journal = journals.find((j) => j.recoveryId === id)
           if (journal) void discardRecovery(journal)

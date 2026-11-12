@@ -1,7 +1,7 @@
 name: Screen readers
 
 # A6 (docs/accessibility/): drives the debug app with a real screen reader through Guidepup and
-# checks what it says along the M6 editing and M7 formula-bar journeys
+# checks what it says along the M6 editing, M7 formula-bar and M8 external changes and recovery journeys
 # (scripts/app-checks/screen-reader.mjs; docs/ci.md#screen-readers; ADR-0030). NVDA on Windows
 # gates the job; VoiceOver on macOS and Orca on Linux are informational (continue-on-error).
 # Narrator has no automation API: its evidence is the UI Automation tree (scripts/app-checks/uia.ps1).

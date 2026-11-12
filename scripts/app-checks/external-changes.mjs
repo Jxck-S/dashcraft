@@ -55,6 +55,9 @@ try {
   check('the bar names the changed file', shown?.includes('Orders.tmdl'), shown ?? 'no bar')
   const role = await evaluate(`${bar}?.getAttribute('role')`)
   check('the bar is a status region (announced politely)', role === 'status', role ?? 'none')
+  // A status region inserted with its text is not announced: the status bar's live region says it.
+  const said = await evaluate(`document.querySelector('.status-bar .message')?.textContent ?? ''`)
+  check('the status bar announces the change and the bar', said.includes('Files changed on disk') && said.includes('Orders.tmdl'), said || 'no message')
 
   // Accessibility (ADR-0015, A1 to A5) of the bar and Compare, with the IBM checker when installed.
   const focusedName = `(document.activeElement?.textContent ?? '').trim()`
@@ -127,6 +130,10 @@ try {
   await evaluate(click('[aria-label="Reload from disk"] button', 'Reload and discard edits'))
   check('the reloaded document is saved (no *)', await waitFor(`!document.querySelector('[aria-label="Reload from disk"]') && ${title}.includes('AcmeOutfitters') && !${title}.includes('*')`, 30000))
   check('the bar is gone', await waitFor(`!${bar}`, 5000))
+  const reloadedSaid = await waitFor(`(() => { const m = document.querySelector('.status-bar .message')?.textContent ?? ''; return m.startsWith('Reloaded') && m })()`, 5000)
+  check('A1 the status bar says Reloaded (after the focus moved)', !!reloadedSaid, reloadedSaid || 'no message')
+  const reloadFocus = await evaluate(`document.activeElement?.getAttribute('role') === 'tab' ? 'ribbon tab' : (document.activeElement?.tagName ?? 'none')`)
+  check('A2 after Reload the focus is on the ribbon tab, not the page', reloadFocus === 'ribbon tab', reloadFocus)
   const reloaded = await selectTotalSales(session)
   check('the formula bar shows the version on disk', reloaded === EXTERNAL, reloaded ?? 'no formula')
   await sleep(2000)
