@@ -1380,7 +1380,13 @@
         return
       }
       const key = changes.map((c) => `${c.change}:${c.path}`).join('\n')
-      if (external?.key !== key) external = { docId, changes, key }
+      if (external?.key !== key) {
+        external = { docId, changes, key }
+        // The bar's own status role is not announced when it appears with its text: the status
+        // bar's live region says it.
+        const what = changes.length === 1 ? `${changes[0].path} was` : `${changes.length} project files were`
+        status = { message: `Files changed on disk: ${what} changed by another program. Reload, Keep mine or Compare in the bar below the ribbon.`, isError: false }
+      }
     } finally {
       externalChecking = false
     }

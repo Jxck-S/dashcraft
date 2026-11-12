@@ -395,8 +395,10 @@ DashCraft) into `target/tmp/screen-reader/tools`, runs `guidepup setup --ci` (ma
 `scripts/app-checks/screen-reader.mjs`. The script opens a copy of the Acme Outfitters example,
 brings the window to the front and walks the M6 editing journey (search, measure formula, commit,
 undo and redo) and the M7 formula-bar journey (suggestions, insert, problems, Ctrl+K Ctrl+I, Tab
-mode, the Properties description, the File menu and its "Unsaved changes" question, save), using
-the platform's keys (⌘ and ⌥ on macOS). Each step clears the reader's log, acts, and checks
+mode, the Properties description, the File menu and its "Unsaved changes" question, save), then
+the M8 journeys: another program changes the saved project (the announcement, the bar's Compare,
+the changed measure's TMDL, Esc, Reload), and an unsaved edit outlives a killed app (Document
+recovery on the next start, Restore). It uses the platform's keys (⌘ and ⌥ on macOS). Each step clears the reader's log, acts, and checks
 what the reader said against a pattern; steps that depend on a reader's verbosity are marked
 informational in the report. The job fails when a required step fails.
 

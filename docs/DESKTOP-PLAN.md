@@ -1082,7 +1082,7 @@ version; compare two versions of a project.
   rereads it under the same `docId` at a newer revision; a failed reload changes nothing). The
   app checks the project every 1.5 seconds (a size and timestamp scan, `doc.externalChanges`)
   and shows a notification bar with Reload (asking before it discards unsaved edits), Keep mine
-  and Compare (`scripts/app-checks/external-changes.mjs`: 49 checks on Windows; the bar appears
+  and Compare (`scripts/app-checks/external-changes.mjs`: 50 checks on Windows; the bar appears
   about one second after an external TMDL edit; A1 to A5 and the IBM checker pass for the bar and
   Compare). `serve` and `mcp` push the same scan to their clients: a `doc/externalChanged`
   notification (MCP: a `notice` log message) when a document's set of changed files changes,
@@ -1103,7 +1103,7 @@ version; compare two versions of a project.
   change, its text with the differing lines marked, each property's value on disk and here, and
   the file and line of each; File → Compare shows the same view against the disk, another
   Power BI file or a PBIP / TMDL folder picked in the native dialog
-  (`scripts/app-checks/external-changes.mjs`: 49 checks, the IBM checker clean on all three
+  (`scripts/app-checks/external-changes.mjs`: 50 checks, the IBM checker clean on all three
   surfaces). Left: the A6 screen-reader steps for Compare.
 
 **Crates and layers.** `pbi-ops` (journal, watcher, commands), `pbi-core` (diff), `dashcraft-app`.
