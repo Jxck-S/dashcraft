@@ -5,6 +5,7 @@
 //! `column` or `measure` (case-insensitive). Visuals are named like
 //! `render.visual`: `report`, `page` and the visual's name.
 
+use pbi_core::ReportSource;
 use pbi_model::{
     Annotation, Cardinality, ChangeEvent, Column, ColumnKind, ColumnRef, CommandGroup,
     CreateColumn, CreateHierarchy, CreateMeasure, CreateRelationship, CreateTable, CrossFilter,
@@ -746,6 +747,108 @@ impl Command for ReportVisualMove {
             (None, None),
         )
         .await
+    }
+}
+
+/// `report.state.persist`.
+#[derive(Debug)]
+pub struct ReportStatePersist;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PersistStateParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+}
+
+/// Result of `report.state.persist`.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PersistStateOut {
+    pub changed: bool,
+    pub revision: u64,
+    pub dirty: bool,
+    pub changed_object_ids: Vec<u64>,
+    /// The slicers (visual names) whose applied selection is now saved.
+    pub visuals: Vec<String>,
+    /// The filter cards (filter names) whose condition is now saved.
+    pub filters: Vec<String>,
+    /// Selections and filters that cannot be saved, with the reason.
+    pub skipped: Vec<String>,
+}
+
+impl Command for ReportStatePersist {
+    type Params = PersistStateParams;
+    type Output = PersistStateOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "report.state.persist",
+            title: "Save reading state",
+            summary: "Writes the applied slicer selections and changed filters into the report as one undoable edit, so a save keeps them; refused when persistent filters are off.",
+            category: Category::Edit,
+            mutates_document: true,
+            examples: &[("Keep the slicer selections", r#"{"docId": "d1"}"#)],
+            ..BASE
+        }
+    }
+
+    async fn run(ws: &Workspace, params: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let entry = doc(ws, &params.doc_id)?;
+        let session = entry.session();
+        let index = resolve::report_index(session, params.report.as_deref())?;
+        let revision = session.revision_snapshot();
+        let report = resolve::report_in(&revision.document, index)?;
+        if report
+            .settings
+            .get("isPersistentUserStateDisabled")
+            .and_then(serde_json::Value::as_bool)
+            == Some(true)
+        {
+            return Err(OpError::unsupported(format!(
+                "report `{}` disables persistent filters (isPersistentUserStateDisabled): its slicer and filter state is not saved",
+                report.name
+            )));
+        }
+        if matches!(
+            session.opened().report_sources.get(index),
+            Some(ReportSource::Legacy { .. })
+        ) {
+            return Err(OpError::unsupported(format!(
+                "report `{}` uses the legacy layout (report.json or a PBIX Layout), which DashCraft cannot update yet",
+                report.name
+            )));
+        }
+        let plan = entry.canvas.persist_plan(&revision, index)?;
+        let (visuals, filters, skipped) = (plan.visuals, plan.filters, plan.skipped);
+        let edit = if plan.group.commands.is_empty() {
+            DocumentEditOut {
+                changed: false,
+                revision: revision.revision,
+                dirty: session.is_document_dirty(),
+                changed_object_ids: Vec::new(),
+                recalculated: Vec::new(),
+                warnings: Vec::new(),
+            }
+        } else {
+            let result = session.execute_document_command(plan.group).await?;
+            entry
+                .canvas
+                .drop_saved_overrides(&session.revision_snapshot(), index);
+            DocumentEditOut::committed(ctx, &entry, &result)
+        };
+        Ok(PersistStateOut {
+            changed: edit.changed,
+            revision: edit.revision,
+            dirty: edit.dirty,
+            changed_object_ids: edit.changed_object_ids,
+            visuals,
+            filters,
+            skipped,
+        })
     }
 }
 

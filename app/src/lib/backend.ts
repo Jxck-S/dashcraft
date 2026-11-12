@@ -1009,6 +1009,28 @@ export async function applyEdits(edits: EditOperation[], label: string): Promise
 }
 
 /**
+ * Writes the reading state of every report (applied slicer selections, changed filters) into
+ * the document (`report.state.persist`), as Power BI Desktop saves it with the file. Reports
+ * that cannot keep it (persistent filters off, legacy layouts) are skipped. Resolves to the
+ * number of visuals and filters written.
+ */
+export async function persistState(): Promise<Outcome<number>> {
+  const doc = current?.docId
+  if (!doc) return NO_DOCUMENT
+  let written = 0
+  for (const [index, report] of (current?.reports ?? []).entries()) {
+    const target = names(report.id, null)
+    const result = await ops.reportStatePersist({ docId: doc, report: target?.report ?? String(index + 1) })
+    if (!result.ok) {
+      if (result.kind === 'unsupported') continue
+      return result
+    }
+    written += result.value.visuals.length + result.value.filters.length
+  }
+  return { ok: true, value: written }
+}
+
+/**
  * Saves the edits into the opened PBIP project (`doc.save`). Fails with `conflict` when project
  * files changed on disk since the open or last save (retry with `overwrite` after asking), and
  * with `unsupported` for any other format (use `saveAs`).

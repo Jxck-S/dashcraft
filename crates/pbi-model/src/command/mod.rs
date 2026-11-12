@@ -28,8 +28,8 @@ use crate::ids::ObjectId;
 use crate::semantic::Model;
 
 pub use edit::{
-    MoveVisual, SetColumnProperties, SetDescription, SetMeasureExpression, SetMeasureProperties,
-    SetVisualPosition,
+    MoveVisual, SetColumnProperties, SetDescription, SetFilterDefinition, SetMeasureExpression,
+    SetMeasureProperties, SetVisualObjects, SetVisualPosition,
 };
 pub use history::{History, HistoryResult};
 pub use rename::{RenameColumn, RenameExpression, RenameMeasure, RenameTable};

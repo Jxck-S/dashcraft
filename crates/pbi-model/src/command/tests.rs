@@ -567,6 +567,58 @@ fn property_edits_round_trip() {
 }
 
 #[test]
+fn visual_objects_and_filter_definitions_round_trip() {
+    let mut doc = sample_document();
+    let slicer = doc.reports[0].pages[0].visuals[0].id;
+    let objects = serde_json::json!({"general": [{"properties": {"filter": {"filter": {}}}}]});
+    assert_round_trip(
+        &mut doc,
+        SetVisualObjects {
+            visual: slicer,
+            objects: objects.clone(),
+        },
+        |doc, events| {
+            assert_eq!(doc.reports[0].pages[0].visuals[0].objects, objects);
+            assert_eq!(events, [ChangeEvent::ObjectChanged { id: slicer }]);
+        },
+    );
+
+    let condition = Condition::In {
+        exprs: vec![FieldExpr::column("Sales", "Region")],
+        values: vec![vec![crate::query::Literal::text("East")]],
+    };
+    let raw = serde_json::json!({"name": "f", "filter": {"Version": 2}});
+    for filter in [
+        doc.reports[0].filters[0].id,
+        doc.reports[0].pages[0].filters[0].id,
+    ] {
+        assert_round_trip(
+            &mut doc,
+            SetFilterDefinition {
+                filter,
+                condition: Some(condition.clone()),
+                raw: raw.clone(),
+            },
+            |doc, events| {
+                let Some(crate::ObjectRef::Filter { filter: f, .. }) = doc.find(filter) else {
+                    panic!("filter missing");
+                };
+                assert_eq!((f.condition.as_ref(), &f.raw), (Some(&condition), &raw));
+                assert_eq!(events, [ChangeEvent::ObjectChanged { id: filter }]);
+            },
+        );
+    }
+    let err = SetFilterDefinition {
+        filter: slicer,
+        condition: None,
+        raw: serde_json::Value::Null,
+    }
+    .apply(&mut doc)
+    .unwrap_err();
+    assert!(matches!(err, CommandError::WrongKind { .. }), "{err:?}");
+}
+
+#[test]
 fn history_tracks_dirty_state_and_labels() {
     let mut doc = sample_document();
     let slicer = doc.reports[0].pages[0].visuals[0].id;

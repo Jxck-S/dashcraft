@@ -7,6 +7,19 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.11 save the reading state into the report
+
+- **What**: `pbi-render` `query::persist` (`filter_definition`, `slicer_objects`, `filter_with`:
+  conditions back to PBIR filter JSON); `pbi-model` commands `SetVisualObjects` and
+  `SetFilterDefinition`; `pbi-core` save in place patches visual `objects` and filter
+  definitions of PBIR reports; `pbi-ops` `report.state.persist` (one "Save reading state" undo
+  group, `CanvasStore::persist_plan`, canvas state follows the saved selections); the app runs
+  it before Save and Save as.
+- **Why**: DESKTOP-PLAN M9.11 (ADR-0006's step from view state to document edits); GAPS §6
+  persisting selections.
+- **Numbers**: 3 writer unit tests, 1 model, 1 save-in-place and 1 registry test; 1 new
+  registry command. Refused for `isPersistentUserStateDisabled` and legacy layouts.
+
 ### M9.10 measure filters at every level, query reduction and Apply slicers
 
 - **What**: `pbi-render` `query::reduction::QueryReduction` (report `slowDataSourceSettings`,

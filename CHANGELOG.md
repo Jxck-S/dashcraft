@@ -22,6 +22,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - Opening and saving a PBIP project fingerprints its files faster: the size and file-count caps are checked before any file is read, and the files are read on up to 8 threads (Acme Outfitters: 8.8 → 5.8 ms per scan).
 
 ### Added
+- Saving keeps the reading state: `report.state.persist` writes the applied slicer selections and the filters a bookmark changed into the report as one undoable edit (honouring the report's persistent-filters setting), and the app runs it before Save and Save as (M9.11).
 - Measure filters at report and page level filter each visual's rows; query-reduction options work: Apply buttons on slicers and visible "Apply all slicers" buttons keep slicer selections pending until applied (`canvas.applySlicers`, an Apply button in the app), and disabled cross-highlighting stops selected points from filtering by default (M9.10).
 - Report-level measures (`reportExtensions.json`) evaluate in visuals; registered images draw as image visuals, page backgrounds, wallpapers and button images; PBIX, PBIT and PBIR-Legacy reports use their themes in the CLI and `render.*` (M9.9).
 - Visual header and right-click menus (M9.8): focus mode, show as a table, spotlight, sort axis, copy value and selection, and export data (summarized or underlying, CSV); registry commands `canvas.focus`, `canvas.showAsTable`, `canvas.setSpotlight`, `canvas.sortVisual`, `canvas.contextMenu` and `export.visualData`; bookmarks in focus mode now apply it.

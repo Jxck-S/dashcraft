@@ -3823,6 +3823,27 @@ export interface PeopleSampleOut {
   outcome: string
 }
 
+/** Result of `report.state.persist`. */
+export interface PersistStateOut {
+  changed: boolean
+  revision: number
+  dirty: boolean
+  changedObjectIds: number[]
+  /** The slicers (visual names) whose applied selection is now saved. */
+  visuals: string[]
+  /** The filter cards (filter names) whose condition is now saved. */
+  filters: string[]
+  /** Selections and filters that cannot be saved, with the reason. */
+  skipped: string[]
+}
+
+export interface PersistStateParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+}
+
 export interface PositionOut {
   x: number
   y: number
@@ -5483,6 +5504,8 @@ export interface OpsCommands {
   'report.visual.move': { params: MoveVisualParams; output: VisualPositionOut }
   /** Resizes a visual or a visual group (top-left corner fixed; the visuals in a group scale with it unless it scrolls) as one undoable edit. */
   'report.visual.resize': { params: ResizeVisualParams; output: VisualPositionOut }
+  /** Writes the applied slicer selections and changed filters into the report as one undoable edit, so a save keeps them; refused when persistent filters are off. */
+  'report.state.persist': { params: PersistStateParams; output: PersistStateOut }
   /** Applies a group of document edits atomically as one undoable history step. */
   'doc.applyEdits': { params: ApplyEditsParams; output: DocumentEditOut }
   /** Undoes the latest document edit. */
@@ -5687,6 +5710,7 @@ export const OPS_META = {
   'model.dependencies': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visual.move': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'report.visual.resize': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
+  'report.state.persist': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.applyEdits': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.undo': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.redo': { category: 'edit', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
@@ -5862,6 +5886,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     reportVisualMove: (params: MoveVisualParams, options?: O) => run('report.visual.move', params, options),
     /** Resizes a visual or a visual group (top-left corner fixed; the visuals in a group scale with it unless it scrolls) as one undoable edit. */
     reportVisualResize: (params: ResizeVisualParams, options?: O) => run('report.visual.resize', params, options),
+    /** Writes the applied slicer selections and changed filters into the report as one undoable edit, so a save keeps them; refused when persistent filters are off. */
+    reportStatePersist: (params: PersistStateParams, options?: O) => run('report.state.persist', params, options),
     /** Applies a group of document edits atomically as one undoable history step. */
     docApplyEdits: (params: ApplyEditsParams, options?: O) => run('doc.applyEdits', params, options),
     /** Undoes the latest document edit. */

@@ -1926,3 +1926,83 @@ async fn query_reduction_and_page_measure_filters() {
         .await;
     assert!(page["svg"].as_str().unwrap().contains(">610<"));
 }
+
+/// `report.state.persist` writes the applied slicer selection into the
+/// report: one undoable edit that a save keeps; refused when the report
+/// disables persistent filters.
+#[tokio::test(flavor = "multi_thread")]
+async fn reading_state_is_saved_with_the_report() {
+    let dir = tmp_dir("pbi-ops-persist-");
+    let pbip = mini_pbip(dir.path());
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let has = |page: &Value, text: &str| page["svg"].as_str().unwrap().contains(text);
+    let all = format!(">{MINI_TOTAL}<");
+
+    // Nothing to save yet.
+    r.run("canvas.render", json!({"docId": doc})).await;
+    let out = r.run("report.state.persist", json!({"docId": doc})).await;
+    assert_eq!(
+        (&out["changed"], &out["visuals"]),
+        (&json!(false), &json!([]))
+    );
+
+    let page = r
+        .run(
+            "canvas.setSlicer",
+            json!({"docId": doc, "visual": "region", "values": ["North"]}),
+        )
+        .await;
+    assert!(has(&page, ">610<"));
+    let out = r.run("report.state.persist", json!({"docId": doc})).await;
+    assert_eq!(out["changed"], true, "{out}");
+    assert_eq!(out["dirty"], true);
+    assert_eq!(out["visuals"], json!(["region"]));
+    assert_eq!(out["skipped"], json!([]));
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    assert_eq!(
+        page["isDefault"], true,
+        "the selection is the saved one now"
+    );
+
+    // Undo: the saved selection is the old one again; the reader's stays.
+    r.run("doc.undo", json!({"docId": doc})).await;
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    assert!(has(&page, ">610<"));
+    assert_eq!(page["isDefault"], false);
+    let reset = r.run("canvas.reset", json!({"docId": doc})).await;
+    assert!(has(&reset, &all));
+    r.run("doc.redo", json!({"docId": doc})).await;
+    let reset = r.run("canvas.reset", json!({"docId": doc})).await;
+    assert!(has(&reset, ">610<"), "reset goes to the saved selection");
+
+    r.run("doc.save", json!({"docId": doc})).await;
+    let slicer = std::fs::read_to_string(
+        dir.path()
+            .join("Mini.Report/definition/pages/overview/visuals/region/visual.json"),
+    )
+    .unwrap();
+    assert!(slicer.contains("'North'"), "{slicer}");
+    let reopened = r.open(json!({"path": pbip})).await;
+    let page = r.run("canvas.render", json!({"docId": reopened})).await;
+    assert!(has(&page, ">610<"));
+    assert_eq!(page["isDefault"], true);
+
+    // Persistent filters off: refused.
+    let report = json!({
+        "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.0.0/schema.json",
+        "settings": {"isPersistentUserStateDisabled": true}
+    });
+    std::fs::write(
+        dir.path().join("Mini.Report/definition/report.json"),
+        serde_json::to_string_pretty(&report).unwrap(),
+    )
+    .unwrap();
+    let doc = r.open(json!({"path": pbip})).await;
+    let err = r
+        .try_run("report.state.persist", json!({"docId": doc}))
+        .await
+        .unwrap_err();
+    assert_eq!(err.code, OpErrorCode::Unsupported, "{err:?}");
+    assert!(err.message.contains("persistent filters"), "{err:?}");
+}

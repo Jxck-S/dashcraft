@@ -266,7 +266,9 @@ results and DTOs. Locations below refer to the Desktop shell above.
   - **Undo / Redo**: Quick Access Toolbar or Ctrl/⌘+Z, Ctrl/⌘+Y (Ctrl/⌘+Shift+Z); the tooltips
     name the step (`doc.history`). In a text field these keys undo its typing instead.
   - **Save** (Quick Access Toolbar, File → Save, Ctrl/⌘+S): writes only the changed files into the
-    opened PBIP project (`doc.save`). When the files changed on disk since opening, it asks to
+    opened PBIP project (`doc.save`), after writing the applied slicer selections and changed
+    filters into the report (`report.state.persist`, skipped when the report turns persistent
+    filters off; Save as does the same). When the files changed on disk since opening, it asks to
     overwrite or cancel. A PBIX, PBIT or BIM is saved as a new project instead, after saying that
     imported data is not carried over.
   - **Save as** (File → Save as, Ctrl/⌘+Shift+S): the document, edits included, as a new PBIP
@@ -540,6 +542,7 @@ Svelte components ──► lib/backend.ts ──► lib/ops.ts  ops.dataPage({�
 | `canvas.render`, `canvas.click`, `canvas.scroll`, `canvas.toggleMatrixRow`, `canvas.clearSelections`, `canvas.applySlicers`, `canvas.setSlicerSearch`, `canvas.closePopups`, `canvas.reset`, `canvas.tooltip` | the interactive report canvas |
 | `doc.applyEdits`, `doc.undo`, `doc.redo`, `doc.history` | formula bar and Properties edits, Undo / Redo and their tooltips, the `*` marker |
 | `doc.save`, `doc.saveAs` | File → Save, Save as (Ctrl+S, Ctrl+Shift+S), the unsaved-changes prompt |
+| `report.state.persist` | Before Save and Save as: keeps the reading state in the report |
 | `convert.pbip`, `convert.pbit` | File → Export |
 | `ai.status`, `ai.settings.set`, `ai.apiKey.set`, `ai.apiKey.clear`, `ai.consent.revoke` | Options → AI (opt-in; see [AI features](#ai-features-opt-in)) |
 | `ai.preview`, `ai.consent.grant` | the consent dialog (the only place a consent is granted) |

@@ -44,7 +44,8 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
 use pbi_model::{
-    Document, FieldExpr, Model, ObjectId, Position, Rename, Report, SourceFormat, names_eq,
+    Document, FieldExpr, Filter, Model, ObjectId, Position, Rename, Report, SourceFormat, Visual,
+    names_eq,
 };
 use pbi_pbir::{JsonStyle, PbirReport, ReportExtensionsJson};
 use serde::Serialize;
@@ -344,10 +345,11 @@ pub fn edited_document(
         }
         _ => Vec::new(),
     };
-    let expected = expected_reports(&baseline.document, current, &renames);
+    let renamed = renamed_reports(&baseline.document, &renames);
+    let expected = expected_reports(&renamed, current);
     check_reports(&expected, &current.reports)?;
     let mut edited = baseline.clone();
-    edited.report_sources = sync_reports(baseline, &expected, &renames)?;
+    edited.report_sources = sync_reports(baseline, &renamed, &expected, &renames)?;
     edited.document = current.clone();
     Ok(edited)
 }
@@ -1028,20 +1030,10 @@ fn deleted_renames(
     }
 }
 
-/// The baseline reports with the renames applied and the current visual
-/// positions: what the current reports must be for the save to write all
-/// of their changes.
-fn expected_reports(baseline: &Document, current: &Document, renames: &[Rename]) -> Vec<Report> {
-    let positions: HashMap<ObjectId, &Position> = current
-        .reports
-        .iter()
-        .flat_map(|r| &r.pages)
-        .flat_map(|p| &p.visuals)
-        .filter(|v| v.id.is_assigned())
-        .map(|v| (v.id, &v.position))
-        .collect();
+/// The baseline reports with the renames applied.
+fn renamed_reports(baseline: &Document, renames: &[Rename]) -> Vec<Report> {
     let mut reports = baseline.reports.clone();
-    for (i, report) in reports.iter_mut().enumerate() {
+    for report in &mut reports {
         for rename in renames {
             rename.apply_to_report_measures(&mut report.measures);
             rename.apply_to_filters(&mut report.filters);
@@ -1052,9 +1044,41 @@ fn expected_reports(baseline: &Document, current: &Document, renames: &[Rename])
                 }
             }
         }
+    }
+    reports
+}
+
+/// The renamed baseline reports with the current visual positions, visual
+/// `objects` (persisted slicer state) and filter definitions: what the
+/// current reports must be for the save to write all of their changes.
+fn expected_reports(renamed: &[Report], current: &Document) -> Vec<Report> {
+    let visuals: HashMap<ObjectId, &Visual> = current
+        .reports
+        .iter()
+        .flat_map(|r| &r.pages)
+        .flat_map(|p| &p.visuals)
+        .filter(|v| v.id.is_assigned())
+        .map(|v| (v.id, v))
+        .collect();
+    let filters: HashMap<ObjectId, &Filter> = current
+        .reports
+        .iter()
+        .flat_map(all_filters)
+        .filter(|f| f.id.is_assigned())
+        .map(|f| (f.id, f))
+        .collect();
+    let mut reports = renamed.to_vec();
+    for (i, report) in reports.iter_mut().enumerate() {
         for visual in report.pages.iter_mut().flat_map(|p| &mut p.visuals) {
-            if let Some(position) = positions.get(&visual.id) {
-                (*position).clone_into(&mut visual.position);
+            if let Some(now) = visuals.get(&visual.id) {
+                now.position.clone_into(&mut visual.position);
+                now.objects.clone_into(&mut visual.objects);
+            }
+        }
+        for filter in all_filters_mut(report) {
+            if let Some(now) = filters.get(&filter.id) {
+                now.condition.clone_into(&mut filter.condition);
+                now.raw.clone_into(&mut filter.raw);
             }
         }
         // The DAX of report-level measures is rewritten by renames (and
@@ -1068,6 +1092,28 @@ fn expected_reports(baseline: &Document, current: &Document, renames: &[Rename])
         }
     }
     reports
+}
+
+fn all_filters(report: &Report) -> impl Iterator<Item = &Filter> {
+    report
+        .filters
+        .iter()
+        .chain(report.pages.iter().flat_map(|p| {
+            p.filters
+                .iter()
+                .chain(p.visuals.iter().flat_map(|v| &v.filters))
+        }))
+}
+
+fn all_filters_mut(report: &mut Report) -> impl Iterator<Item = &mut Filter> {
+    report
+        .filters
+        .iter_mut()
+        .chain(report.pages.iter_mut().flat_map(|p| {
+            p.filters
+                .iter_mut()
+                .chain(p.visuals.iter_mut().flat_map(|v| &mut v.filters))
+        }))
 }
 
 /// Refuses report changes the save cannot write.
@@ -1112,9 +1158,11 @@ fn check_reports(expected: &[Report], current: &[Report]) -> Result<(), CoreErro
 }
 
 /// The baseline report sources with `renames` applied and the visual
-/// positions of `expected`.
+/// positions, visual `objects` and filter definitions of `expected`
+/// (`renamed`: the baseline reports with the renames applied).
 fn sync_reports(
     baseline: &OpenedDocument,
+    renamed: &[Report],
     expected: &[Report],
     renames: &[Rename],
 ) -> Result<Vec<ReportSource>, CoreError> {
@@ -1132,6 +1180,9 @@ fn sync_reports(
                 for (page, visual, old, new) in moved_visuals(before, after) {
                     patch_position(report, page, visual, old, new)?;
                 }
+                if let Some(renamed) = renamed.get(i) {
+                    patch_state(report, renamed, after)?;
+                }
                 if before.measures != after.measures {
                     let Some(extensions) = report.extensions.as_mut() else {
                         return Err(CoreError::Save(format!(
@@ -1145,7 +1196,7 @@ fn sync_reports(
             ReportSource::Legacy { .. } => {
                 if before != after {
                     return Err(CoreError::Save(format!(
-                        "report `{}` uses the legacy layout (report.json or a PBIX Layout), which DashCraft cannot update yet: undo the renames that reach its visuals and the visual moves before saving",
+                        "report `{}` uses the legacy layout (report.json or a PBIX Layout), which DashCraft cannot update yet: undo the renames that reach its visuals, the visual moves and the saved slicer and filter state before saving",
                         after.name
                     )));
                 }
@@ -1427,6 +1478,91 @@ fn patch_position(
     }
     if old.angle != new.angle {
         pos.angle = new.angle.map(number).transpose()?;
+    }
+    Ok(())
+}
+
+/// Writes the visual `objects` and filter definitions that differ between
+/// `before` (renamed baseline) and `after` into the PBIR files: only the
+/// `visual.objects` and `filterConfig.filters[].filter` values.
+fn patch_state(report: &mut PbirReport, before: &Report, after: &Report) -> Result<(), CoreError> {
+    let name = after.name.clone();
+    let missing = |what: String| {
+        CoreError::Save(format!(
+            "report `{name}`: {what} is not in the report files"
+        ))
+    };
+    if before.filters != after.filters {
+        let json = report
+            .report
+            .as_mut()
+            .ok_or_else(|| missing("report.json".into()))?;
+        patch_filters(&mut json.filter_config, &before.filters, &after.filters)
+            .map_err(|f| missing(format!("report filter `{f}`")))?;
+    }
+    for (bp, ap) in before.pages.iter().zip(&after.pages) {
+        if bp == ap {
+            continue;
+        }
+        let page_name = ap.name.as_str();
+        let pbir_page = report
+            .pages
+            .iter_mut()
+            .find(|p| p.page.name.as_deref().unwrap_or(&p.dir) == page_name)
+            .ok_or_else(|| missing(format!("page `{page_name}`")))?;
+        if bp.filters != ap.filters {
+            patch_filters(&mut pbir_page.page.filter_config, &bp.filters, &ap.filters)
+                .map_err(|f| missing(format!("filter `{f}` of page `{page_name}`")))?;
+        }
+        for (bv, av) in bp.visuals.iter().zip(&ap.visuals) {
+            if bv.objects == av.objects && bv.filters == av.filters {
+                continue;
+            }
+            let visual_name = av.name.as_str();
+            let pbir_visual = pbir_page
+                .visuals
+                .iter_mut()
+                .find(|v| v.visual.name.as_deref().unwrap_or(&v.dir) == visual_name)
+                .ok_or_else(|| missing(format!("visual `{visual_name}`")))?;
+            if bv.objects != av.objects {
+                let json = pbir_visual.visual.visual.as_mut().ok_or_else(|| {
+                    missing(format!("the configuration of visual `{visual_name}`"))
+                })?;
+                json.objects = (!av.objects.is_null()).then(|| av.objects.clone());
+            }
+            if bv.filters != av.filters {
+                patch_filters(
+                    &mut pbir_visual.visual.filter_config,
+                    &bv.filters,
+                    &av.filters,
+                )
+                .map_err(|f| missing(format!("filter `{f}` of visual `{visual_name}`")))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Writes the `filter` definition of every filter in `after` that differs
+/// from `before`; the error is the name of a filter not in `config`.
+fn patch_filters(
+    config: &mut Option<pbi_pbir::pbir::FilterConfigJson>,
+    before: &[Filter],
+    after: &[Filter],
+) -> Result<(), String> {
+    for (b, a) in before.iter().zip(after) {
+        if b.condition == a.condition && b.raw == a.raw {
+            continue;
+        }
+        let json = config
+            .as_mut()
+            .and_then(|c| c.filters.as_mut())
+            .and_then(|list| list.iter_mut().find(|f| f.name.as_deref() == Some(&a.name)))
+            .ok_or_else(|| a.name.clone())?;
+        json.filter = match a.raw.get("filter") {
+            Some(def) => Some(serde_json::from_value(def.clone()).map_err(|_| a.name.clone())?),
+            None => None,
+        };
     }
     Ok(())
 }
