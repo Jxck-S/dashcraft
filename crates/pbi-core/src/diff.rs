@@ -13,7 +13,10 @@
 //! TMDL, written by the TMDL writer from each side's model (so formatting
 //! never differs, only content), report objects as their properties in
 //! JSON. A changed table or report object leaves out the children compared
-//! on their own; an added or removed one keeps them.
+//! on their own; an added or removed one keeps them. [`diff_projects`]
+//! shows report objects as their PBIR files instead (`report.json`,
+//! `page.json`, `visual.json`, as a save writes them) where both sides have
+//! one.
 
 use std::collections::HashMap;
 
@@ -25,6 +28,9 @@ use pbi_model::{
 };
 use serde::Serialize;
 use serde_json::{Map, Value};
+
+use crate::container::path::join;
+use crate::reader::{OpenedDocument, ReportSource};
 
 /// The kind of a compared object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
@@ -217,6 +223,78 @@ pub fn diff_documents(before: &Document, after: &Document) -> DocumentDiff {
         }
     }
     DocumentDiff { objects: out }
+}
+
+/// [`diff_documents`] of two opened documents, with each report, page and
+/// visual shown as its PBIR file (`report.json`, `page.json`,
+/// `visual.json`) as a save writes it, where every side the object is on
+/// has one; otherwise (legacy layouts, objects without a file of their
+/// own) as its properties in JSON. Pass an edited document as
+/// [`edited_document`](crate::edited_document) returns it, so the files
+/// carry the unsaved edits.
+#[must_use]
+pub fn diff_projects(before: &OpenedDocument, after: &OpenedDocument) -> DocumentDiff {
+    let mut diff = diff_documents(&before.document, &after.document);
+    if !diff.objects.iter().any(|o| is_report_kind(o.kind)) {
+        return diff;
+    }
+    let (b, a) = (pbir_texts(before), pbir_texts(after));
+    let text = |files: &HashMap<String, String>, origin: Option<&Origin>| {
+        origin
+            .filter(|o| o.pointer.is_none())
+            .and_then(|o| files.get(&o.path))
+            .map(|t| capped(t.lines()))
+    };
+    // `Some(None)`: the object is not on that side; `None`: it has no file.
+    let side = |on_side: bool, files: &HashMap<String, String>, origin: Option<&Origin>| {
+        if on_side {
+            text(files, origin).map(Some)
+        } else {
+            Some(None)
+        }
+    };
+    for object in diff.objects.iter_mut().filter(|o| is_report_kind(o.kind)) {
+        let before = side(
+            object.change != DiffChange::Added,
+            &b,
+            object.before.as_ref(),
+        );
+        let after = side(
+            object.change != DiffChange::Removed,
+            &a,
+            object.after.as_ref(),
+        );
+        let (Some(before), Some(after)) = (before, after) else {
+            continue;
+        };
+        if object.change == DiffChange::Changed && before == after {
+            continue;
+        }
+        object.snippet = Some(Snippet {
+            language: SnippetLanguage::Json,
+            before,
+            after,
+        });
+    }
+    diff
+}
+
+/// The JSON files of `doc`'s PBIR reports as a save writes them, by path in
+/// the container.
+fn pbir_texts(doc: &OpenedDocument) -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    for source in &doc.report_sources {
+        let ReportSource::Pbir { folder, report } = source else {
+            continue;
+        };
+        for (path, bytes) in pbi_pbir::write_pbir(report) {
+            if path.ends_with(".json") {
+                let text = String::from_utf8_lossy(&bytes).into_owned();
+                out.insert(join(folder, &path), text);
+            }
+        }
+    }
+    out
 }
 
 // ---------------------------------------------------------------------------

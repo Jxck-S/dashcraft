@@ -5,7 +5,9 @@
 
 use std::path::{Path, PathBuf};
 
-use pbi_core::{DiffChange, DiffKind, OpenOptions, SnippetLanguage, diff_documents, open_path};
+use pbi_core::{
+    DiffChange, DiffKind, OpenOptions, SnippetLanguage, diff_documents, diff_projects, open_path,
+};
 use pbi_model::Document;
 use pretty_assertions::assert_eq;
 
@@ -245,4 +247,63 @@ fn diff_of_acme_variants_lists_exactly_the_scripted_changes() {
     ));
     assert_eq!(visual.after, None);
     assert!(visual.before.unwrap().contains(REMOVED_VISUAL));
+}
+
+#[test]
+fn project_diff_shows_report_objects_as_their_pbir_files() {
+    let (_dir, root) = project();
+    let open = |root: &Path| open_path(&root.join("AcmeOutfitters.pbip"), &OpenOptions::default());
+    let before = open(&root).unwrap();
+    let page_json = format!("{OVERVIEW}/{RENAMED_PAGE}/page.json");
+    let visual_dir = format!("{OVERVIEW}/{EDITED_PAGE}/visuals/{REMOVED_VISUAL}");
+    let read = |rel: &str| std::fs::read_to_string(root.join(rel)).unwrap();
+    let original_page = read(&page_json);
+    let original_visual = read(&format!("{visual_dir}/visual.json"));
+    let (from, to) = (
+        "\"displayName\": \"Product Detail\"",
+        "\"displayName\": \"Renamed Page\"",
+    );
+    replace(&root, &page_json, from, to);
+    std::fs::remove_dir_all(root.join(&visual_dir)).unwrap();
+    let after = open(&root).unwrap();
+
+    let diff = diff_projects(&before, &after);
+    let objects = |d: &pbi_core::DocumentDiff| {
+        d.objects
+            .iter()
+            .map(|o| (o.kind, o.path.clone(), o.change))
+            .collect::<Vec<_>>()
+    };
+    let plain = diff_documents(&before.document, &after.document);
+    assert_eq!(objects(&diff), objects(&plain));
+    assert_eq!(objects(&diff).len(), 2);
+    let snippet = |kind: DiffKind| {
+        diff.objects
+            .iter()
+            .find(|o| o.kind == kind)
+            .and_then(|o| o.snippet.clone())
+            .unwrap()
+    };
+    // The files as a save writes them: here as they are on disk.
+    let page = snippet(DiffKind::Page);
+    assert_eq!(page.language, SnippetLanguage::Json);
+    let trimmed = |s: &str| s.trim_end().to_owned();
+    assert_eq!(
+        page.before.as_deref().map(trimmed),
+        Some(trimmed(&original_page))
+    );
+    assert_eq!(
+        page.after.as_deref().map(trimmed),
+        Some(trimmed(&original_page.replacen(from, to, 1)))
+    );
+    let visual = snippet(DiffKind::Visual);
+    assert_eq!(visual.after, None);
+    let lines: Vec<&str> = original_visual.lines().collect();
+    assert!(lines.len() > pbi_core::MAX_SNIPPET_LINES);
+    let cut = format!(
+        "{}\n… ({} more lines)",
+        lines[..pbi_core::MAX_SNIPPET_LINES].join("\n"),
+        lines.len() - pbi_core::MAX_SNIPPET_LINES
+    );
+    assert_eq!(visual.before, Some(cut));
 }

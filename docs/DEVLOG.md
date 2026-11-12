@@ -7,6 +7,20 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M8.3: report objects in the diff as their PBIR files
+
+- **What:** `pbi_core::diff_projects` diffs two opened documents like `diff_documents`, then
+  replaces each report, page and visual snippet with its PBIR file (`report.json`, `page.json`,
+  `visual.json`) from `pbi_pbir::write_pbir`, in the source's own formatting, when every side the
+  object is on has one (legacy layouts keep the JSON of the properties). `Session::read_opened`
+  reads a file with its report sources; `doc.diff` compares `edited_opened()` (unsaved edits
+  written as files) with disk, a path or another open document, and falls back to the plain diff
+  when a side's report edits cannot be written yet.
+- **Why:** the last headless gap of M8.3 ("report snippets in the PBIR file's form").
+- **Numbers:** `crates/pbi-core/tests/diff.rs` (a renamed page shows its edited `page.json`; a
+  removed 219-line `visual.json` is cut after 200 lines) and `crates/pbi-ops/tests/save.rs` (an
+  unsaved visual move shows `visual.json` on disk and as saved); `ops.gen.ts` regenerated.
+
 ### M8.2: external changes pushed to serve and MCP clients
 
 - **What:** `pbi-ops` gets a `watch` module: every `external_poll` (default 1.5 s, new in
@@ -21,6 +35,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 - **Numbers:** two new tests (`rpc.rs`: pushed once per set, empty after `doc.reload`; `mcp.rs`:
   held back below `notice`, sent after `logging/setLevel`), each under a second; `pbi-ops` and
   `dashcraft-cli` suites pass; `docs/COMMANDS.md` regenerated.
+
 ### M8.3: File → Compare with another file or folder
 
 - **What:** a File → Compare page (`Backstage.svelte`) compares the document, unsaved edits

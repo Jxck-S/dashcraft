@@ -3275,9 +3275,11 @@ export interface ObjectDiffOut {
   after?: OriginOut | null
   /**
    * The object as text on each side: TMDL for model objects (as DashCraft
-   * writes them, so only content differs), JSON properties for report
-   * objects; a changed table, report or page leaves out its children
-   * listed on their own. Each side is cut after 200 lines.
+   * writes them, so only content differs); for report objects of a PBIR
+   * report its file (`report.json`, `page.json`, `visual.json`) as a save
+   * writes it, else the JSON of its properties; a changed table, report or
+   * page leaves out its children listed on their own. Each side is cut
+   * after 200 lines.
    */
   snippet?: SnippetOut | null
 }
