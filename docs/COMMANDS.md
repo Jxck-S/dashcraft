@@ -174,7 +174,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.toggleMatrixRow`](#canvastogglematrixrow) | Expands or collapses the matrix row of a cell hit and returns the re-rendered page. | M L A |
 | [`canvas.closePopups`](#canvasclosepopups) | Closes the open slicer dropdowns of a page. | M A |
 | [`canvas.reset`](#canvasreset) | Back to the report's saved slicer selections, no cross-filter, scroll and dropdowns reset; returns the re-rendered page. | M L A |
-| [`canvas.applyBookmark`](#canvasapplybookmark) | Applies a report bookmark to the canvas (page, slicers, filters, visibility and sort; all or only its target visuals) and renders the page it shows; lists the parts not applied yet. | M L A |
+| [`canvas.applyBookmark`](#canvasapplybookmark) | Applies a report bookmark to the canvas (page, slicers, filters, visibility, sort, drill and spotlight; all or only its target visuals) and renders the page it shows; lists the parts not applied yet. | M L A |
 | [`canvas.tooltip`](#canvastooltip) | The hover tooltip (category, series, values) of a data point hit, from the last render. | A |
 | [`canvas.tooltipPage`](#canvastooltippage) | Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. | A |
 | [`canvas.drill`](#canvasdrill) | Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page. | M L A |
@@ -2147,7 +2147,7 @@ Examples:
 
 ### `canvas.applyBookmark`
 
-**Apply a bookmark.** Applies a report bookmark to the canvas (page, slicers, filters, visibility and sort; all or only its target visuals) and renders the page it shows; lists the parts not applied yet.
+**Apply a bookmark.** Applies a report bookmark to the canvas (page, slicers, filters, visibility, sort, drill and spotlight; all or only its target visuals) and renders the page it shows; lists the parts not applied yet.
 
 _mutates the document, long-running, agent-safe; since 0.2.0._
 
@@ -2168,7 +2168,7 @@ Result:
 | `displayName` | string |  |
 | `navigated` | boolean | The bookmark shows another page than `page` (`rendered.page`). |
 | `changedPages` | string[] | Pages whose slicer or cross-filter state the bookmark changed (internal names). |
-| `notApplied` | string[] | Parts of the bookmark DashCraft does not apply yet (Top N filter changes, drill state, spotlight, formatting, …). |
+| `notApplied` | string[] | Parts of the bookmark DashCraft does not apply yet (Top N filter changes, focus mode, matrix expansion, cross-highlights, formatting, …). |
 | `rendered` | CanvasPageOut | The page the bookmark shows (else `page`), rendered. |
 
 Examples:

@@ -7,6 +7,12 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.5: drill state and spotlight in bookmarks
+
+- **What:** `pbi-render` `query::bookmark` restores a captured visual's drill levels (`singleVisual.activeProjections` of its drill role) and drill path (its `howCreated` Drill filters) into `InteractionState::drill`, and the `spotlight` display mode into the new `InteractionState::spotlight`; the page render fades the other visuals (`SPOTLIGHT_FADE`). Closes M9.5.
+- **Why:** M9.5 in `docs/DESKTOP-PLAN.md`; GAPS bookmarks and drill rows.
+- **Numbers:** 2 new tests (`bookmark` unit test, `visuals_basics`); render snapshots unchanged.
+
 ### M9.1: highlighted values in labels and tooltips
 
 - **What:** `pbi-render` charts (bar, column, pie, donut, funnel, treemap) label the highlighted value while another visual highlights them (`SeriesData::label_value`, `format::shown_value`; a blank highlight gets no label); `pbi-ops` `canvas.tooltip` adds a "Highlighted" line. Closes M9.1.

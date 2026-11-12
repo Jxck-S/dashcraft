@@ -1189,18 +1189,21 @@ in focus mode or as a table and export its data; see images and report-level mea
   app follows drillthrough buttons and right-click Drill through, and Back returns. Acme's
   Store Detail is a drillthrough page on Region (`expected.json` `drillthrough`). Next: the
   source visual's own filters, cross-report drillthrough.
-- [ ] **M9.5 Bookmarks.** Read `bookmarks/*.bookmark.json` and groups; apply data, display and
+- [x] **M9.5 Bookmarks.** Read `bookmarks/*.bookmark.json` and groups; apply data, display and
   current-page parts and "selected visuals only"; Bookmarks pane in view mode with a slideshow;
   bookmark buttons; bookmark and page navigators drawn as lists of buttons. *Progress:* bookmarks
   and groups are read from PBIR and PBIR-Legacy/PBIX reports (`Report::bookmarks`), listed by
   `report.bookmarks` and applied by bookmark buttons and `canvas.applyBookmark`: the current page,
   slicer selections and cross-filter, filter cards, hidden visuals and groups, sort orders, "selected visuals only"
-  and the data and display switches; Top N filter changes, drill and formatting parts are reported as not applied. The Acme
+  and the data and display switches; Top N filter changes and formatting parts are reported as not applied. The Acme
   Stores bookmarks' states are in the generator (`expected.json` `bookmarks`). The app's
   Bookmarks pane lists them (groups as sections) and applies one on click; its slideshow steps
   through them from a bar above the page tabs (`scripts/app-checks/bookmarks.mjs`). Page and
   bookmark navigators draw one button per page or bookmark (the current page or the bookmark
-  applied last selected) and navigate or apply it on click. Next: drill state and spotlight.
+  applied last selected) and navigate or apply it on click. *Done:* bookmarks restore drill state
+  (the drill role's `activeProjections` and the visual's `howCreated` Drill filters as the drill
+  path) and spotlight (the other visuals faded); focus mode, matrix expansion state,
+  cross-highlights and Top N filter changes are reported as not applied.
 - [x] **M9.6 Synced slicers.** `syncGroup` (field and filter sync), slicers synced from other
   pages including hidden ones; `selfFilter`. *Done:* a slicer's selection (click, `canvas.setSlicer`,
   clear, Clear all slicers) is copied to every slicer of its sync group over the same fields on

@@ -183,6 +183,10 @@ pub struct InteractionState {
     /// (see [`drill`](super::drill::drill)).
     #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub drill: IndexMap<String, DrillState>,
+    /// The spotlighted visual (a bookmark's `spotlight` display mode): the
+    /// other visuals of the page are drawn faded.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spotlight: Option<String>,
 }
 
 /// Where a filter card lives.
