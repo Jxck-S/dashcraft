@@ -94,6 +94,7 @@ fn main() {
     let opts = PageRenderOptions {
         frames: FrameOptions::default(),
         limits: QueryLimits::default(),
+        active_bookmark: None,
     };
     let ms = |t: Instant| t.elapsed().as_secs_f64() * 1e3;
     let scroll = |cache: Option<&VisualCache>, label: &str| {

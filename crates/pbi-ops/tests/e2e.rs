@@ -2089,6 +2089,71 @@ fn ids(page: &Value, key: &str) -> Vec<String> {
         .collect()
 }
 
+/// The page navigator of the example's Executive Summary: one button per page (the current one
+/// selected), and clicking a button navigates to its page.
+#[tokio::test(flavor = "multi_thread")]
+async fn page_navigator_on_the_example_report() {
+    let (Some(pbip), Some(map), Some(exp)) = (fixture(PBIP), fixture(BLOB_MAP), expected()) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let at = |extra: Value| {
+        let mut body = json!({"docId": doc, "report": exp.report_name("Overview"),
+                              "page": "Executive Summary"});
+        body.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        body
+    };
+    let page = r.run("canvas.render", at(json!({}))).await;
+    let nav = page["visuals"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|v| v["visualType"] == "pageNavigator")
+        .unwrap()["name"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let svg = page["svg"].as_str().unwrap();
+    let hits = ids(&page, "hitRegions");
+    let labels: Vec<Vec<String>> = (0..3)
+        .map(|i| {
+            let hit = format!("{nav}|navItem|{i}");
+            assert!(hits.contains(&hit), "{hit} not in {hits:?}");
+            group_texts(svg, &hit)
+        })
+        .collect();
+    assert!(!hits.contains(&format!("{nav}|navItem|3")));
+    assert_eq!(
+        labels,
+        [
+            ["Executive Summary"],
+            ["Product Detail"],
+            ["Time Intelligence"]
+        ]
+    );
+    assert!(
+        svg.contains(&format!(
+            r#"class="pbi-nav-item pbi-selected" data-hit="{nav}|navItem|0""#
+        )) || svg.contains(&format!(
+            r#"data-hit="{nav}|navItem|0" class="pbi-nav-item pbi-selected""#
+        )),
+        "the current page is selected"
+    );
+    let clicked = r
+        .run(
+            "canvas.click",
+            at(json!({"hitId": format!("{nav}|navItem|1")})),
+        )
+        .await;
+    assert_eq!(clicked["action"]["kind"], "navigate", "{clicked}");
+    assert_eq!(clicked["action"]["displayName"], "Product Detail");
+}
+
 /// The interactive canvas on the example's reports: SVG pages with the expected card values,
 /// the Back button's action, slicer dropdown + item selection, chart cross-filtering (and
 /// clearing it), the effective filters feeding `measures.values`, table scrolling, tooltips

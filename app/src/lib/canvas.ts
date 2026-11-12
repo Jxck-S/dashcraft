@@ -48,7 +48,7 @@ export function sanitizeSvg(text: string, prefix: string): SVGSVGElement | null 
   return document.importNode(root, true) as unknown as SVGSVGElement
 }
 
-export type HitKind = 'visual' | 'dataPoint' | 'slicerItem' | 'button'
+export type HitKind = 'visual' | 'dataPoint' | 'slicerItem' | 'button' | 'navItem'
 
 export interface Hit {
   id: string
@@ -67,7 +67,8 @@ export function parseHit(id: string): Hit | null {
     case 'button':
       return parts.length === 2 ? { id, visual, kind: parts[1] } : null
     case 'slicerItem':
-      return parts.length === 3 ? { id, visual, kind: 'slicerItem', index: Number(parts[2]) } : null
+    case 'navItem':
+      return parts.length === 3 ? { id, visual, kind: parts[1], index: Number(parts[2]) } : null
     case 'dataPoint':
       return parts.length === 4 ? { id, visual, kind: 'dataPoint', series: Number(parts[2]), index: Number(parts[3]) } : null
     default:

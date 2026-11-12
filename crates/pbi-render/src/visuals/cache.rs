@@ -20,7 +20,9 @@
 //!   search);
 //! - the selection state it reads: its own slicer selection and the point
 //!   selection when it is the cross-filter source (other visuals see
-//!   selections only through their filtered data).
+//!   selections only through their filtered data);
+//! - for navigators, the page and bookmark list, the current page and the
+//!   applied bookmark ([`super::navigator::Navigation`]).
 //!
 //! Keys are content hashes, not revision counters, so a cached group is
 //! reused exactly when the inputs are equal (scrolling one table re-renders
@@ -142,6 +144,12 @@ impl VisualKey {
                     .as_ref()
                     .filter(|p| p.source == *name),
             );
+        if matches!(
+            ctx.visual.visual_type.as_str(),
+            "pageNavigator" | "bookmarkNavigator"
+        ) {
+            fp.add(ctx.nav);
+        }
         let base = fp.finish()?;
         let fingerprint = Fingerprint::new()
             .add_u64(base)

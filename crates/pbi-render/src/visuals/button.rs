@@ -1,7 +1,7 @@
-//! Action buttons (`actionButton`) and navigators (`pageNavigator`,
-//! `bookmarkNavigator`): shape + vector icon + text, with a
-//! [`HitKind::Button`](crate::scene::HitKind::Button) hit region. (owner:
-//! visuals-basics)
+//! Action buttons (`actionButton`): shape + vector icon + text, with a
+//! [`HitKind::Button`](crate::scene::HitKind::Button) hit region. Navigators
+//! (`pageNavigator`, `bookmarkNavigator`) are in [`super::navigator`] and
+//! draw each item with this module's button shape. (owner: visuals-basics)
 //!
 //! # Formatting objects (default state)
 //!
@@ -29,9 +29,6 @@
 //! (`webUrl`), `QnA`, `ApplyAllSlicers`, `ClearAllSlicers`; `show = false`
 //! disables it. The canvas resolves a click on a `button` hit region through
 //! [`action`] (or [`super::page::VisualRenderInfo::action`]).
-//!
-//! Navigators render as one labelled tab button: the page / bookmark list
-//! is not available to visual renderers yet.
 
 use pbi_model::Visual;
 use serde::{Deserialize, Serialize};
@@ -195,24 +192,16 @@ pub fn render(ctx: &VisualCtx<'_>) -> Option<Group> {
         .with_clip(Clip::rect(area));
     // Invisible, so the hit region covers the whole button.
     g.push(RectNode::new(area).fill(Paint::new(Color::BLACK, 0.0)));
-    let navigator = match ctx.visual.visual_type.as_str() {
-        "pageNavigator" => Some("Page navigator"),
-        "bookmarkNavigator" => Some("Bookmark navigator"),
-        _ => None,
-    };
-    button_shape(ctx, &o, area, navigator.is_some(), &mut g);
+    button_shape(ctx, &o, area, false, None, None, &mut g);
 
     let c = ctx.frame.content;
-    let text = match navigator {
-        Some(label) => Some(label.to_owned()),
-        None => o
-            .bool("text", "show")
-            .unwrap_or(false)
-            .then(|| o.text("text", "text"))
-            .flatten()
-            .filter(|t| !t.trim().is_empty()),
-    };
-    let icon = if navigator.is_some() || !o.bool("icon", "show").unwrap_or(true) {
+    let text = o
+        .bool("text", "show")
+        .unwrap_or(false)
+        .then(|| o.text("text", "text"))
+        .flatten()
+        .filter(|t| !t.trim().is_empty());
+    let icon = if !o.bool("icon", "show").unwrap_or(true) {
         IconKind::Blank
     } else {
         o.text("icon", "shapeType")
@@ -302,12 +291,16 @@ pub fn render(ctx: &VisualCtx<'_>) -> Option<Group> {
     Some(g)
 }
 
-/// The button's fill and outline.
-fn button_shape(
+/// The button's fill and outline. `navigator` turns both on by default
+/// (navigator items); `fill_color` / `line_color` override the formatted
+/// colors (a navigator's selected item) and turn them on.
+pub(super) fn button_shape(
     ctx: &VisualCtx<'_>,
     o: &PropLookup<'_>,
     area: Rect,
     navigator: bool,
+    fill_color: Option<Color>,
+    line_color: Option<Color>,
     g: &mut Group,
 ) {
     let kind = o
@@ -315,19 +308,19 @@ fn button_shape(
         .and_then(|n| ShapeKind::parse(&n))
         .filter(|k| !k.is_line())
         .unwrap_or(ShapeKind::Rectangle);
-    let fill = o
-        .bool("fill", "show")
-        .unwrap_or(navigator)
+    let fill = (fill_color.is_some() || o.bool("fill", "show").unwrap_or(navigator))
         .then(|| {
-            let color = o.color("fill", "fillColor").unwrap_or_else(|| {
-                if navigator {
-                    ctx.theme
-                        .named_color("backgroundLight")
-                        .unwrap_or(Color::rgb(0xF3, 0xF2, 0xF1))
-                } else {
-                    ctx.theme.background()
-                }
-            });
+            let color = fill_color
+                .or_else(|| o.color("fill", "fillColor"))
+                .unwrap_or_else(|| {
+                    if navigator {
+                        ctx.theme
+                            .named_color("backgroundLight")
+                            .unwrap_or(Color::rgb(0xF3, 0xF2, 0xF1))
+                    } else {
+                        ctx.theme.background()
+                    }
+                });
             let t = o
                 .number("fill", "transparency")
                 .unwrap_or(0.0)
@@ -335,17 +328,17 @@ fn button_shape(
             Paint::with_transparency(color, t)
         })
         .filter(Paint::is_visible);
-    let stroke = o
-        .bool("outline", "show")
-        .unwrap_or(navigator)
+    let stroke = (line_color.is_some() || o.bool("outline", "show").unwrap_or(navigator))
         .then(|| {
-            let color = o.color("outline", "lineColor").unwrap_or_else(|| {
-                if navigator {
-                    Color::rgb(0xC8, 0xC6, 0xC4)
-                } else {
-                    ctx.theme.foreground()
-                }
-            });
+            let color = line_color
+                .or_else(|| o.color("outline", "lineColor"))
+                .unwrap_or_else(|| {
+                    if navigator {
+                        Color::rgb(0xC8, 0xC6, 0xC4)
+                    } else {
+                        ctx.theme.foreground()
+                    }
+                });
             let w = o
                 .number("outline", "weight")
                 .unwrap_or(1.0)

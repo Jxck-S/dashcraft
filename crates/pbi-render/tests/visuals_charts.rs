@@ -188,6 +188,7 @@ fn render_with(visual_type: &str, dv: &DataView, objs: Json, w: f64, h: f64) -> 
         fonts: FontBook::shared(),
         data: Some(&data),
         state: &state,
+        nav: &pbi_render::visuals::navigator::EMPTY,
     };
     charts::render(&ctx).unwrap_or_default()
 }
@@ -785,6 +786,7 @@ fn selection_dims_other_points() {
         fonts: FontBook::shared(),
         data: Some(&data),
         state: &state,
+        nav: &pbi_render::visuals::navigator::EMPTY,
     };
     let g = charts::render(&ctx).unwrap();
     let mut opacities = Vec::new();

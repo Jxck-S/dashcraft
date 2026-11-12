@@ -751,8 +751,8 @@ on Windows 10 and 11.
 - The DAX query view has no IntelliSense, formatter, find / replace or command palette; results
   are capped at 1000 rows per `EVALUATE` and use the model's format strings for model columns.
 - Report canvas: highlight interactions (`HighlightFilter`) filter instead of highlighting, and a
-  cross-filter source dims its other points but other visuals are not highlighted; bookmark
-  navigators, a bookmark's filter, visibility and sort parts, drillthrough, Q&A and Web URL
+  cross-filter source dims its other points but other visuals are not highlighted; a bookmark's
+  filter, visibility and sort parts, drillthrough, Q&A and Web URL
   buttons are not executed; bookmarks cannot be added or updated; synced
   slicers (`syncGroup`) and the newer slicers' `selfFilter` are not read, so each page keeps its
   own selection; range and relative-date slicers draw but their sliders / date pickers are not

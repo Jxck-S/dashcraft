@@ -133,13 +133,15 @@ The conditional color replaces the column's background (`columnFormatting.backCo
 - **Verified**: synthetic tests (`visuals_basics.rs`: full-container fills, outlines, rotation, lines, text) and the Acme Outfitters render snapshots.
 - **Interaction**: none.
 
-### `actionButton` — Full; `pageNavigator`, `bookmarkNavigator` — Partial
+### `actionButton`, `pageNavigator`, `bookmarkNavigator` — Full
 
 - **Honoured** (default state only): `shape.tileShape`, `roundEdge`; `fill`; `outline`; `icon` (`show`, `shapeType`: blank, back, forward, left/right arrow, information, help, Q&A, bookmark, reset, filter, clear, apply; `lineColor`, `lineWeight`, `lineTransparency`, `fillColor`, `padding`); `text` (font, alignment; the icon sits on its left).
 - **Service behaviour reproduced**: the icon is a square of the content's shorter side; the Back icon is an arrow in a circle (10% strokes, `#605E5C`), as on the service's 40×40 button.
 - **Actions** (`visualLink`): `Back`, `PageNavigation`, `Bookmark`, `Drillthrough`, `WebUrl`, `QnA`, `ApplyAllSlicers`, `ClearAllSlicers`; `show = false` disables it.
 - **Interaction**: Back returns to the previous page in the app's navigation history; page navigation opens the target page; Clear all slicers clears them; Apply all slicers does nothing (selections apply at once); Web URL shows the URL with Copy link (never opened); a bookmark button applies its bookmark (page, slicer selections, cross-filter; the status bar names the parts not applied yet); drillthrough and Q&A show "not available".
-- **Gaps**: hover/pressed/disabled states are not drawn. Navigators render as one labelled button (the page or bookmark list is not available to visuals) and have no navigation action.
+- **Navigators**: one button per page (`pageNavigator`; hidden and tooltip pages only with `pages.showHiddenPages` / `showTooltipPages`) or per bookmark (`bookmarkNavigator`; the group `bookmarks.bookmarkGroup`, else every bookmark; `hideDeselectedBookmark`), laid out by `layout.orientation` (horizontal, vertical, grid with `rowCount` / `columnCount`) `cellPadding` apart, each with the button `shape`, `fill`, `outline` and `text`. The current page, or the bookmark applied last (else `bookmarks.selectedBookmark`), uses the `"$id": "selected"` fill, text and outline colours, by default the theme foreground with background-coloured text (an assumption: Desktop's default selected style is not verified). Clicking a button goes to its page or applies its bookmark; clicking the selected bookmark applies `deselectionBookmark` when `allowDeselectionBookmark` is on.
+- **Verified**: synthetic tests (`visuals_basics.rs`: icons, text, actions; navigator items, selection, orientation, bookmark groups and deselection); the navigator click (`page_navigator_on_the_example_report`); the Acme render snapshots.
+- **Gaps**: hover/pressed/disabled states are not drawn; navigators ignore per-page `pages.showPage`.
 
 ### `cardVisual` (new card) — Full
 
@@ -272,7 +274,8 @@ The interactive canvas is in the app ([app/README.md](../app/README.md#the-inter
 | Table | rows | yes (group columns) | both axes | row tooltips |
 | Matrix | rows | yes (row path) | both axes | expand/collapse, tooltips |
 | Action buttons | — | — | — | Back, page navigation, clear all slicers; Web URL shown only |
-| Cards, textbox, shape, navigators, placeholders | — | — | — | clicking selects the visual for the panes |
+| Page and bookmark navigators | one button per page or bookmark | — | — | goes to the page or applies the bookmark |
+| Cards, textbox, shape, placeholders | — | — | — | clicking selects the visual for the panes |
 
 `visualInteractions`: `NoFilter` skips a target; `DataFilter` (default) filters; `HighlightFilter` filters instead of highlighting (with a warning). Clicking the selected point again, the visual background, the empty canvas or Esc clears the cross-filter.
 
@@ -307,7 +310,7 @@ Every visual region and the whole page must reach the default threshold, SSIM �
 ## Known gaps
 
 - Highlight interactions filter instead of highlighting; a visual's own selection dims but does not highlight.
-- Bookmark navigators, a bookmark's filter, visibility and sort parts, drillthrough, Q&A, report-page tooltips, visual header menus (focus mode, show as table, sort, export), drill-down/up and right-click menus are not available.
+- A bookmark's filter, visibility and sort parts, drillthrough, Q&A, report-page tooltips, visual header menus (focus mode, show as table, sort, export), drill-down/up and right-click menus are not available.
 - Synced slicers, range-slider dragging, relative-date pickers.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.
 - Scatter play axes are not animated (the first frame is drawn); `ribbonChart` and maps are placeholders.
