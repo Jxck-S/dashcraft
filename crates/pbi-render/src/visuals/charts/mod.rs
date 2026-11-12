@@ -182,11 +182,19 @@ pub struct SeriesData {
     pub formats: Vec<Option<String>>,
     /// Conditional fill per category (empty without conditional colors).
     pub fills: Vec<Option<Color>>,
+    /// Highlighted value per category when another visual's selection
+    /// highlights this one (empty otherwise; `None`: nothing highlighted).
+    pub highlights: Vec<Option<f64>>,
 }
 
 impl SeriesData {
     pub fn value(&self, i: usize) -> Option<f64> {
         self.values.get(i).copied().flatten()
+    }
+
+    /// The highlighted value of category `i`.
+    pub fn highlight(&self, i: usize) -> Option<f64> {
+        self.highlights.get(i).copied().flatten()
     }
 
     pub fn formatted(&self, i: usize) -> &str {
@@ -355,15 +363,19 @@ impl ChartData {
                 Some(s) => cell_label(Some(s)),
                 None => meta.display_name.clone(),
             };
-            let values = (0..n)
-                .map(|i| {
-                    vc.values
-                        .get(i)
-                        .filter(|c| c.raw.is_numeric())
-                        .and_then(|c| c.raw.as_f64())
-                        .filter(|v| v.is_finite())
-                })
-                .collect();
+            let number = |cells: &[CellValue]| -> Vec<Option<f64>> {
+                (0..n)
+                    .map(|i| {
+                        cells
+                            .get(i)
+                            .filter(|c| c.raw.is_numeric())
+                            .and_then(|c| c.raw.as_f64())
+                            .filter(|v| v.is_finite())
+                    })
+                    .collect()
+            };
+            let values = number(&vc.values);
+            let highlights = vc.highlights.as_deref().map(number).unwrap_or_default();
             let formatted = (0..n)
                 .map(|i| {
                     vc.values
@@ -392,6 +404,7 @@ impl ChartData {
                 formatted,
                 formats,
                 fills: Vec::new(),
+                highlights,
             });
         }
         Self {
@@ -449,6 +462,11 @@ impl ChartData {
     /// No category or no series.
     pub fn is_empty(&self) -> bool {
         self.categories.is_empty() || self.series.is_empty()
+    }
+
+    /// Another visual's selection highlights this one.
+    pub fn has_highlights(&self) -> bool {
+        self.series.iter().any(|s| !s.highlights.is_empty())
     }
 
     /// `true` when no series has a value.

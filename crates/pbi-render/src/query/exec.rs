@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use indexmap::IndexMap;
 use pbi_dax::DaxError;
-use pbi_engine::{Value, ValueKey};
+use pbi_engine::{FilterContext, Value, ValueKey};
 use pbi_model::names::names_eq;
 use pbi_model::{Condition, DataType, FieldExpr, Model, Page, Report, SortDirection, Visual};
 
@@ -551,19 +551,23 @@ impl Exec<'_> {
     }
 
     fn run(&self, layout: &Layout) -> Result<Vec<Row>, VisualQueryError> {
+        self.run_in(layout, &self.filters.context)
+    }
+
+    fn run_in(
+        &self,
+        layout: &Layout,
+        context: &FilterContext,
+    ) -> Result<Vec<Row>, VisualQueryError> {
         let groups: Vec<&ColumnRef> = layout.groups.iter().collect();
         let values: Vec<&str> = layout.values.iter().map(|v| v.dax.as_str()).collect();
         if groups.is_empty() && values.is_empty() {
             return Ok(Vec::new());
         }
-        let mut rows =
-            match self
-                .env
-                .summarize(&self.filters.context, &groups, &values, self.limits)
-            {
-                Ok(rows) => rows,
-                Err(e) => return Err(self.diagnose(e, &summarize_dax(&groups, &values), layout)),
-            };
+        let mut rows = match self.env.summarize(context, &groups, &values, self.limits) {
+            Ok(rows) => rows,
+            Err(e) => return Err(self.diagnose(e, &summarize_dax(&groups, &values), layout)),
+        };
         if let (Some(at), Some(h)) = (layout.having_at, &self.having) {
             let g = layout.groups.len();
             rows.retain(|r| h.pred.eval(r.get(g + at..).unwrap_or_default()));
@@ -965,11 +969,38 @@ impl Exec<'_> {
         }
         let categories = self.category_columns(&rows, &layout);
         let hidden = self.hidden_values(&hidden, &rows, &layout, None);
+        let ncat = cats.len();
 
         let mut value_columns = Vec::new();
         let mut series_meta_idx = None;
         if series.is_empty() {
+            // Highlighted values: the same groups under the highlight
+            // context (no measure filter: it picks the categories).
+            let highlighted = match &self.filters.highlight {
+                Some(context) => {
+                    let hl_layout = self.layout(&cats, &values, &[], false);
+                    let hl_rows = self.run_in(&hl_layout, context)?;
+                    Some((hl_layout, hl_rows))
+                }
+                None => None,
+            };
+            let hl_index: HashMap<Vec<ValueKey>, &Row> = highlighted
+                .iter()
+                .flat_map(|(_, rows)| rows)
+                .map(|r| (keys_of(r.get(..ncat).unwrap_or_default()), r))
+                .collect();
             for &f in &values {
+                let highlights = highlighted.as_ref().map(|(hl_layout, _)| {
+                    rows.iter()
+                        .map(|r| {
+                            hl_index
+                                .get(&keys_of(r.get(..ncat).unwrap_or_default()))
+                                .map_or_else(CellValue::blank, |h| {
+                                    self.cell_at(h, hl_layout, f, false)
+                                })
+                        })
+                        .collect()
+                });
                 value_columns.push(ValueColumn {
                     meta_idx: f,
                     series: None,
@@ -977,7 +1008,7 @@ impl Exec<'_> {
                         .iter()
                         .map(|r| self.cell_at(r, &layout, f, false))
                         .collect(),
-                    highlights: None,
+                    highlights,
                 });
             }
         } else {
@@ -991,7 +1022,10 @@ impl Exec<'_> {
             let groups: Vec<usize> = cats.iter().chain(&series).copied().collect();
             let layout_s = self.layout(&groups, &values, &[], false);
             let rows_s = self.run(&layout_s)?;
-            let ncat = cats.len();
+            let hl_rows = match &self.filters.highlight {
+                Some(context) => Some(self.run_in(&layout_s, context)?),
+                None => None,
+            };
             let nser = series.len();
             let cat_index: HashMap<Vec<ValueKey>, usize> = rows
                 .iter()
@@ -1033,23 +1067,30 @@ impl Exec<'_> {
                 .map(|(i, (k, _))| (k.clone(), i))
                 .collect();
             let nvals = values.len();
-            let mut grid: Vec<Vec<CellValue>> =
-                vec![vec![CellValue::blank(); rows.len()]; ordered.len() * nvals];
-            for r in &rows_s {
-                let cat = cat_index.get(&keys_of(r.get(..ncat).unwrap_or_default()));
-                let ser = series_pos.get(&keys_of(r.get(ncat..ncat + nser).unwrap_or_default()));
-                let (Some(&ci), Some(&si)) = (cat, ser) else {
-                    continue;
-                };
-                for (q, &f) in values.iter().enumerate() {
-                    if let Some(slot) = grid.get_mut(si * nvals + q).and_then(|col| col.get_mut(ci))
-                    {
-                        *slot = self.cell_at(r, &layout_s, f, false);
+            // One column per (series, value), one cell per category.
+            let grid_of = |rows_s: &[Row]| {
+                let mut grid: Vec<Vec<CellValue>> =
+                    vec![vec![CellValue::blank(); rows.len()]; ordered.len() * nvals];
+                for r in rows_s {
+                    let cat = cat_index.get(&keys_of(r.get(..ncat).unwrap_or_default()));
+                    let ser =
+                        series_pos.get(&keys_of(r.get(ncat..ncat + nser).unwrap_or_default()));
+                    let (Some(&ci), Some(&si)) = (cat, ser) else {
+                        continue;
+                    };
+                    for (q, &f) in values.iter().enumerate() {
+                        if let Some(slot) =
+                            grid.get_mut(si * nvals + q).and_then(|col| col.get_mut(ci))
+                        {
+                            *slot = self.cell_at(r, &layout_s, f, false);
+                        }
                     }
                 }
-            }
+                grid
+            };
+            let mut grid = grid_of(&rows_s).into_iter();
+            let mut hl_grid = hl_rows.as_deref().map(|r| grid_of(r).into_iter());
             let first_series = series.first().copied().unwrap_or_default();
-            let mut grid = grid.into_iter();
             for (_, s) in &ordered {
                 let label = self.cell(s.first().cloned().unwrap_or_default(), first_series, true);
                 for &f in &values {
@@ -1057,7 +1098,7 @@ impl Exec<'_> {
                         meta_idx: f,
                         series: Some(label.clone()),
                         values: grid.next().unwrap_or_default(),
-                        highlights: None,
+                        highlights: hl_grid.as_mut().map(|g| g.next().unwrap_or_default()),
                     });
                 }
             }
