@@ -105,10 +105,10 @@ Report filters: 'Stores'[Channel] in ['Retail', 'Outlet']
 
 - `stores` (tableEx): Per store: Target is the store's region target (many-to-many); the total is not the sum of the rows
   - total: Total Sales $111,981.75, Target $102,500, Target Attainment % 109.3%
-  - Store Name Seattle Flagship, Total Sales $36,369.45, Target $102,500, Target Attainment % 35.5%
-  - Store Name Portland Pearl, Total Sales $27,001.60, Target $102,500, Target Attainment % 26.3%
-  - Store Name Salt Lake City Sugar House, Total Sales $26,465.85, Target $102,500, Target Attainment % 25.8%
-  - Store Name Boise Outlet, Total Sales $22,144.85, Target $102,500, Target Attainment % 21.6%
+  - Store Name Seattle Flagship, Region West, Total Sales $36,369.45, Target $102,500, Target Attainment % 35.5%
+  - Store Name Portland Pearl, Region West, Total Sales $27,001.60, Target $102,500, Target Attainment % 26.3%
+  - Store Name Salt Lake City Sugar House, Region West, Total Sales $26,465.85, Target $102,500, Target Attainment % 25.8%
+  - Store Name Boise Outlet, Region West, Total Sales $22,144.85, Target $102,500, Target Attainment % 21.6%
 - `gauge` (gauge): 
   - value $111,981.75, target $102,500, max $123,000
 
@@ -194,6 +194,25 @@ Each bookmark applied to its page as saved (it changes only its target slicer):
 | kpis | cardVisual | Target Attainment % | 106.3% |
 | kpis | cardVisual | Return Rate | 4.3% |
 | kpis | cardVisual | Gross Margin | $151,445.31 |
+
+## Drillthrough
+
+Drill through from a data point: its values replace the page's saved drillthrough value and,
+with "Keep all filters", the source page's filters and slicers apply too.
+
+**Store Performance → Store Detail** (Acme Outfitters - Stores): from `stores` (Store Name Seattle Flagship, Region West); drillthrough filter 'Stores'[Region] in ['West']; kept: 'Stores'[Region] in ['West']; 'Date'[Date] >= 2025-01-01 and < 2026-01-01.
+
+- `stores` (multiRowCard)
+  - Store Name Seattle Flagship, Store Manager Riley Chen, City Seattle, Total Sales $36,369.45
+  - Store Name Portland Pearl, Store Manager Morgan Price, City Portland, Total Sales $27,001.60
+  - Store Name Boise Outlet, Store Manager Casey Nguyen, City Boise, Total Sales $22,144.85
+  - Store Name Salt Lake City Sugar House, Store Manager Riley Chen, City Salt Lake City, Total Sales $26,465.85
+- `returns` (tableEx)
+  - total: Returns Count 19, Refunds $2,906.65
+  - Reason Changed Mind, Returns Count 6, Refunds $904.80
+  - Reason Damaged In Transit, Returns Count 4, Refunds $603.05
+  - Reason Not As Described, Returns Count 2, Refunds $339.60
+  - Reason Wrong Size, Returns Count 7, Refunds $1,059.20
 
 ## Calculation group
 

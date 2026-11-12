@@ -1169,9 +1169,9 @@ in focus mode or as a table and export its data; see images and report-level mea
   source page's filters, slicer selections and cross-filter as conditions (Top N listed as not
   kept). `canvas.drillthroughTargets` and `canvas.drillthrough` (from a hit or the page's
   selection) and drillthrough buttons use it; the Filters pane shows a Drillthrough card; the
-  app follows drillthrough buttons and right-click Drill through, and Back returns. Next:
-  a drillthrough page in the Acme example, the source visual's own filters, cross-report
-  drillthrough.
+  app follows drillthrough buttons and right-click Drill through, and Back returns. Acme's
+  Store Detail is a drillthrough page on Region (`expected.json` `drillthrough`). Next: the
+  source visual's own filters, cross-report drillthrough.
 - [ ] **M9.5 Bookmarks.** Read `bookmarks/*.bookmark.json` and groups; apply data, display and
   current-page parts and "selected visuals only"; Bookmarks pane in view mode with a slideshow;
   bookmark buttons; bookmark and page navigators drawn as lists of buttons. *Progress:* bookmarks

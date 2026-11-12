@@ -266,7 +266,7 @@ const OVERVIEW_PAGES: [(&str, usize); 3] = [
 ];
 const STORES_PAGES: [(&str, usize); 3] = [
     ("ef3ce6b6fadf22960137", 14),
-    ("50c645140e8e10eea677", 5),
+    ("50c645140e8e10eea677", 6),
     ("58db5b3f75d059fec1fb", 1),
 ];
 const ONLINE_PAGES: [(&str, usize); 2] =

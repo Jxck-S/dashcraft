@@ -4091,3 +4091,106 @@ async fn bookmarks_on_the_example_report() {
     assert_eq!(e.code, OpErrorCode::NotFound);
     assert_eq!(e.data.unwrap()["bookmarks"].as_array().unwrap().len(), 2);
 }
+
+/// Drillthrough on the example's Stores report: a Store Performance table row lists Store Detail
+/// (bound to Region, "Keep all filters") and drilling filters it on the row's region plus the
+/// source's slicers; the page's visuals match `expected.json`.
+#[tokio::test(flavor = "multi_thread")]
+async fn drillthrough_on_the_example_report() {
+    let (Some(pbip), Some(map), Some(exp)) = (fixture(PBIP), fixture(BLOB_MAP), expected()) else {
+        return;
+    };
+    let r = Runner::new();
+    let doc = r
+        .open(json!({"path": pbip, "blobMap": map, "source": "query", "autoRefresh": false}))
+        .await;
+    let refresh = r.run("data.refresh", json!({"docId": doc})).await;
+    assert_eq!(refresh["ok"], true, "{refresh}");
+    let report = exp.report_name("Stores");
+    let wanted = exp.0["drillthrough"].as_array().unwrap();
+    assert_eq!(wanted.len(), 1);
+    let want = &wanted[0];
+    let src = want["sourcePageId"].as_str().unwrap();
+    let table = want["sourceVisual"].as_str().unwrap();
+    let store = want["point"]["Store Name"].as_str().unwrap();
+    let at = |extra: Value| {
+        let mut body = json!({"docId": doc, "report": report, "page": src});
+        body.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        body
+    };
+
+    let page = r.run("canvas.render", at(json!({}))).await;
+    let mut cell = None;
+    for id in ids(&page, "hitRegions") {
+        if !id.starts_with(&format!("{table}|dataPoint|")) {
+            continue;
+        }
+        let tip = r.run("canvas.tooltip", at(json!({"hitId": id}))).await;
+        if tip["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|l| l["value"] == store)
+        {
+            cell = Some(id);
+            break;
+        }
+    }
+    let cell = cell.unwrap_or_else(|| panic!("no {store} row"));
+    let targets = r
+        .run("canvas.drillthroughTargets", at(json!({"hitId": cell})))
+        .await;
+    assert_eq!(
+        targets["targets"],
+        json!([{"page": want["pageId"], "displayName": want["page"],
+                "fields": ["Stores.Region"], "keepAllFilters": want["keepAllFilters"]}]),
+        "{targets}"
+    );
+
+    let drilled = r
+        .run(
+            "canvas.drillthrough",
+            at(json!({"hitId": cell, "target": want["pageId"]})),
+        )
+        .await;
+    assert_eq!(drilled["page"], want["pageId"]);
+    assert_eq!(drilled["notApplied"], json!([]), "{drilled}");
+    let rendered = &drilled["rendered"];
+    assert_eq!(rendered["page"], want["pageId"]);
+    let svg = rendered["svg"].as_str().unwrap();
+    for visual in want["visuals"].as_array().unwrap() {
+        let texts = group_texts(
+            svg,
+            &format!("{}|visual", visual["visual"].as_str().unwrap()),
+        );
+        let mut expect: Vec<&str> = Vec::new();
+        for row in visual["rows"].as_array().unwrap() {
+            for v in row.as_object().unwrap().values() {
+                expect.push(v["formatted"].as_str().or(v.as_str()).unwrap());
+            }
+        }
+        for v in visual["total"]
+            .as_object()
+            .into_iter()
+            .flat_map(|t| t.values())
+        {
+            expect.push(v["formatted"].as_str().unwrap());
+        }
+        for text in expect {
+            assert!(
+                texts.iter().any(|t| t == text),
+                "{}: no {text} in {texts:?}",
+                visual["visualKey"]
+            );
+        }
+    }
+    let kinds: Vec<&Value> = rendered["selections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| &s["kind"])
+        .collect();
+    assert!(kinds.contains(&&json!("drillthrough")), "{kinds:?}");
+}

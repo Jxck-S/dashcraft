@@ -304,12 +304,12 @@ Reports (3):
 Diagnostics: errors 0, warnings 0, infos 2
   …
 
-Totals: tables 11, columns 81, measures 33, relationships 8, reports 3, pages 8, visuals 80
+Totals: tables 11, columns 81, measures 33, relationships 8, reports 3, pages 8, visuals 81
 ```
 
 ```sh
 $ dashcraft inspect --json reference/examples/acme-outfitters/AcmeOutfitters.pbip | jq -c .counts
-{"tables":11,"columns":81,"calculatedColumns":11,"calculatedTables":2,"measures":33,"relationships":8,"expressions":3,"parameters":1,"reports":3,"pages":8,"visuals":80,"filters":12,"errors":0,"warnings":0,"infos":2}
+{"tables":11,"columns":81,"calculatedColumns":11,"calculatedTables":2,"measures":33,"relationships":8,"expressions":3,"parameters":1,"reports":3,"pages":8,"visuals":81,"filters":12,"errors":0,"warnings":0,"infos":2}
 
 $ dashcraft inspect --json --no-expressions model.pbix > model-outline.json   # safe to share: no DAX/M
 $ dashcraft convert reference/examples/acme-outfitters/AcmeOutfitters.pbip --to pbit \
@@ -387,7 +387,7 @@ $ dashcraft render reference/examples/acme-outfitters/AcmeOutfitters.pbip \
     --report Stores --all-pages --out-dir target/tmp/stores --format both
 Store Performance: target/tmp/stores/01-Store-Performance.png (2560x1440, 14 visuals, 0 errors)
 Store Performance: target/tmp/stores/01-Store-Performance.svg (14 visuals, 0 errors)
-Store Detail: target/tmp/stores/02-Store-Detail.png (2560x1800, 5 visuals, 0 errors)
+Store Detail: target/tmp/stores/02-Store-Detail.png (2560x1800, 6 visuals, 0 errors)
 …
 ```
 

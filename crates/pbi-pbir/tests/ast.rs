@@ -68,7 +68,7 @@ fn pages_are_in_page_order_with_sizes_and_visual_counts() {
             "stores",
             &[
                 (PERFORMANCE, "Store Performance", 1280.0, 720.0, false, 14),
-                (DETAIL, "Store Detail", 1280.0, 900.0, true, 5),
+                (DETAIL, "Store Detail", 1280.0, 900.0, true, 6),
                 (TOOLTIP, "Store Tooltip", 320.0, 240.0, true, 1),
             ],
         ),

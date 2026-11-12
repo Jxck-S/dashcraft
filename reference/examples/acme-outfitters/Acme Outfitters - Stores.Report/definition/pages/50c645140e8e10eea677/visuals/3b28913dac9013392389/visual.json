@@ -115,7 +115,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'East stores'"
+                  "Value": "'Stores in the region'"
                 }
               }
             },

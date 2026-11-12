@@ -1173,12 +1173,14 @@ class Visual:
 class Page:
     def __init__(self, report: "Report", key: str, display: str, width: int, height: int,
                  option: str, *, filters=(), visibility: str | None = None,
-                 page_type: str | None = None):
+                 page_type: str | None = None, drillthrough: bool = False):
         self.report, self.key, self.display = report, key, display
         self.id = hex20(report.key, "page", key)
         self.width, self.height, self.option = width, height, option
         self.filters: list[F] = list(filters)
         self.visibility, self.page_type = visibility, page_type
+        # A drillthrough page: its page filters are the drillthrough fields ("Keep all filters" on).
+        self.drillthrough = drillthrough
         self.visuals: list[Visual] = []
         self.interactions: list[tuple[str, str, str]] = []
         self.expect: list[dict] = []
@@ -1254,8 +1256,16 @@ class Page:
             "width": self.width,
         }
         if self.filters:
-            page["filterConfig"] = {"filters": [f.card(hex20(self.id, "filter", str(i)))
+            how = {"howCreated": "Drillthrough"} if self.drillthrough else {}
+            page["filterConfig"] = {"filters": [f.card(hex20(self.id, "filter", str(i)), **how)
                                                 for i, f in enumerate(self.filters)]}
+        if self.drillthrough:
+            page["pageBinding"] = {
+                "name": hex20(self.id, "binding"), "type": "Drillthrough", "referenceScope": "Default",
+                "parameters": [{"name": hex20(self.id, "parameter", str(i)),
+                                "boundFilter": hex20(self.id, "filter", str(i)),
+                                "fieldExpr": col(f.table, f.column)} for i, f in enumerate(self.filters)],
+                "acceptsFilterContext": "Default"}
         if self.page_type == "Tooltip":
             page["pageBinding"] = {"name": hex20(self.id, "binding"), "type": "Tooltip", "parameters": []}
             page["type"] = "Tooltip"
@@ -2183,7 +2193,8 @@ def stores_report() -> Report:
     rep = Report("stores", [F("Stores", "Channel", "in", ["Retail", "Outlet"])], "2.11.0")
     pg = rep.page("performance", "Store Performance", 1280, 720, "FitToPage")
     detail = rep.page("detail", "Store Detail", 1280, 900, "FitToWidth",
-                      filters=[F("Stores", "Region", "in", ["East"])], visibility="HiddenInViewMode")
+                      filters=[F("Stores", "Region", "in", ["East"])], visibility="HiddenInViewMode",
+                      drillthrough=True)
     tip = rep.page("tooltip", "Store Tooltip", 320, 240, "ActualSize", visibility="HiddenInViewMode",
                    page_type="Tooltip")
     banner(pg, "Store performance")
@@ -2204,7 +2215,8 @@ def stores_report() -> Report:
                            M("Gross Margin")]},
            objects=card_visual_objects(5, size=18), container=vco(None, shadow=True, radius=12))
     pg.add("stores", "tableEx", (24, 228, 560, 236),
-           roles={"Values": [C("Stores", "Store Name"), M("Total Sales"), M("Target"), M("Target Attainment %")]},
+           roles={"Values": [C("Stores", "Store Name"), C("Stores", "Region"), M("Total Sales"), M("Target"),
+                             M("Target Attainment %")]},
            sort=[(M("Total Sales"), "Descending")],
            objects={"values": [
                values_entry("Orders.Total Sales", {"backColor": fill_rule_gradient("Total Sales", "#FFFFFF", "#9CC5AE")}),
@@ -2244,18 +2256,19 @@ def stores_report() -> Report:
     ]
 
     pg = detail
-    banner(pg, "Store detail (hidden page, East region)")
+    banner(pg, "Store detail (drillthrough on Region; saved: East)")
     pg.add("stores", "multiRowCard", (24, 80, 1232, 280),
            roles={"Values": [C("Stores", "Store Name"), C("Stores", "Store Manager"), C("Stores", "City"),
                              M("Total Sales")]},
            objects={"card": [{"properties": {"barShow": L(True), "barColor": color(GREEN)}}]},
-           container=vco("East stores"))
+           container=vco("Stores in the region"))
     pg.add("returns", "tableEx", (24, 376, 600, 300),
            roles={"Values": [C("Returns", "Reason"), M("Returns Count"), M("Refunds")]},
            sort=[(M("Returns Count"), "Descending")], container=vco("Returns by reason"))
     pg.add("reasons", "clusteredColumnChart", (640, 376, 616, 300),
            roles={"Category": [C("Returns", "Reason")], "Y": [M("Returns Count")]},
            objects=chart_objects(), container=vco("Returns by reason"))
+    button(pg, "back", (1208, 12, 48, 40), {"type": "Back"}, icon="back")
 
     pg = tip
     pg.add("tip", "cardVisual", (8, 8, 304, 224), roles={"Data": [M("Total Sales"), M("Target Attainment %")]},
@@ -2376,6 +2389,34 @@ def bookmark_expectations(e: Engine, rep: Report) -> list[dict]:
     return out
 
 
+def drillthrough_expectations(e: Engine, rep: Report) -> list[dict]:
+    """Drilling through from the top row of the Stores table on Store Performance to each
+    drillthrough page: the row's value replaces the saved drillthrough value and, with "Keep all
+    filters", the source page's filters and slicer selections apply too."""
+    if rep.key != "stores":
+        return []
+    src = rep.page_by("performance")
+    table = page_expectations(e, rep, src)["visuals"][0]
+    row = table["rows"][0]
+    carried = list(src.filters) + [v.selection for v in src.visuals if v.selection is not None]
+    out = []
+    for pg in (p for p in rep.pages if p.drillthrough):
+        saved = pg.filters
+        drilled = [F(f.table, f.column, "in", [row[f.column]]) for f in saved]
+        pg.filters = drilled + carried
+        try:
+            visuals = page_expectations(e, rep, pg)["visuals"]
+        finally:
+            pg.filters = saved
+        out.append({"report": rep.name, "sourcePage": src.display, "sourcePageId": src.id,
+                    "sourceVisual": table["visual"], "sourceVisualKey": table["visualKey"],
+                    "point": {k: v for k, v in row.items() if not isinstance(v, dict)},
+                    "page": pg.display, "pageId": pg.id, "keepAllFilters": True,
+                    "drillthroughFilters": [f.describe() for f in drilled],
+                    "keptFilters": [f.describe() for f in carried], "visuals": visuals})
+    return out
+
+
 def page_expectations(e: Engine, rep: Report, pg: Page) -> dict:
     cards: list[dict] = []
     visuals: list[dict] = []
@@ -2442,7 +2483,7 @@ def page_expectations(e: Engine, rep: Report, pg: Page) -> dict:
         ctx = pg.ctx("stores")
         names = ["Total Sales", "Target", "Target Attainment %"]
         stores = [s for s in e.t["Stores"] if ctx.ok("Stores", s)]
-        rows = [{"Store Name": s["Store Name"],
+        rows = [{"Store Name": s["Store Name"], "Region": s["Region"],
                  **{n: e.value(n, ctx_plus(ctx, "Stores", "Store Name", s["Store Name"])) for n in names}}
                 for s in stores]
         rows.sort(key=lambda r: -(r["Total Sales"]["value"] or 0))
@@ -2611,6 +2652,7 @@ def build_expected(e: Engine, tables: dict, targets: list[dict], reports: list[R
                      "reportFilters": [f.describe() for f in r.filters],
                      "pages": [page_expectations(e, r, p) for p in r.pages]} for r in reports],
         "bookmarks": [b for r in reports for b in bookmark_expectations(e, r)],
+        "drillthrough": [d for r in reports for d in drillthrough_expectations(e, r)],
     }
 
 
@@ -2807,6 +2849,23 @@ def write_expected_md(out: Path, exp: dict) -> None:
                       md_table(["Visual", "Type", "Measure", "Expected"],
                                [[c["visualKey"], c["visualType"], c["measure"], c["formatted"]] for c in b["cards"]]),
                       ""]
+    if exp["drillthrough"]:
+        lines += ["## Drillthrough", "",
+                  "Drill through from a data point: its values replace the page's saved drillthrough value and,",
+                  "with \"Keep all filters\", the source page's filters and slicers apply too.", ""]
+        for d in exp["drillthrough"]:
+            point = ", ".join(f"{k} {v}" for k, v in d["point"].items())
+            lines += [f"**{d['sourcePage']} → {d['page']}** ({d['report']}): from `{d['sourceVisualKey']}` "
+                      f"({point}); drillthrough filter {'; '.join(d['drillthroughFilters'])}; kept: "
+                      f"{'; '.join(d['keptFilters']) or 'none'}.", ""]
+            for v in d["visuals"]:
+                lines.append(f"- `{v['visualKey']}` ({v['visualType']})")
+                if "total" in v:
+                    lines.append("  - total: " + ", ".join(f"{k} {x['formatted']}" for k, x in v["total"].items()))
+                for row in v.get("rows", [])[:12]:
+                    lines.append("  - " + ", ".join(
+                        f"{k} {x['formatted'] if isinstance(x, dict) else x}" for k, x in row.items()))
+            lines.append("")
     cg = exp["calculationGroup"]
     lines += ["## Calculation group", "", f"`'{cg['table']}'[{cg['column']}]` applied to [{cg['measure']}]; "
               + cg["context"] + ".", "",

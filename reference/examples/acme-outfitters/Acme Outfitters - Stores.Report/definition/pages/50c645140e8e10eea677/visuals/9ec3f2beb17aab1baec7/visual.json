@@ -27,7 +27,7 @@
                     }
                   },
                   {
-                    "value": "  |  Store detail (hidden page, East region)",
+                    "value": "  |  Store detail (drillthrough on Region; saved: East)",
                     "textStyle": {
                       "fontSize": "14pt",
                       "color": "#D9C9A3"
