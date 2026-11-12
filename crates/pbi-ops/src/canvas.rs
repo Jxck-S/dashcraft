@@ -5,8 +5,8 @@
 //! The desktop app, the CLI (`dashcraft run`/`serve`) and agents all use it
 //! (ADR-0006, ADR-0007):
 //!
-//! - **State.** Per page: an `InteractionState` (slicer selections and
-//!   selected data points) seeded from the report's saved selections, and a
+//! - **State.** Per page: an `InteractionState` (slicer selections,
+//!   selected data points, visuals a bookmark shows or hides) seeded from the report's saved selections, and a
 //!   `PageViewState` (table / matrix scroll and expansion, open dropdowns
 //!   with their search text). `canvas.reset` goes back to the saved state.
 //! - **Renders.** Every render bumps the page's generation and runs on a

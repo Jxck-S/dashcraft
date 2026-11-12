@@ -1161,13 +1161,13 @@ in focus mode or as a table and export its data; see images and report-level mea
   bookmark buttons; bookmark and page navigators drawn as lists of buttons. *Progress:* bookmarks
   and groups are read from PBIR and PBIR-Legacy/PBIX reports (`Report::bookmarks`), listed by
   `report.bookmarks` and applied by bookmark buttons and `canvas.applyBookmark`: the current page,
-  slicer selections and cross-filter, "selected visuals only" and the data and display switches;
-  filter, visibility, sort, drill and formatting parts are reported as not applied. The Acme
+  slicer selections and cross-filter, hidden visuals and groups, "selected visuals only" and the data
+  and display switches; filter, sort, drill and formatting parts are reported as not applied. The Acme
   Stores bookmarks' states are in the generator (`expected.json` `bookmarks`). The app's
   Bookmarks pane lists them (groups as sections) and applies one on click; its slideshow steps
   through them from a bar above the page tabs (`scripts/app-checks/bookmarks.mjs`). Page and
   bookmark navigators draw one button per page or bookmark (the current page or the bookmark
-  applied last selected) and navigate or apply it on click. Next: the remaining parts.
+  applied last selected) and navigate or apply it on click. Next: the filter and sort parts.
 - [ ] **M9.6 Synced slicers.** `syncGroup` (field and filter sync), slicers synced from other
   pages including hidden ones; `selfFilter`.
 - [ ] **M9.7 Range and relative slicers.** Dragging range sliders, typing numeric and date bounds,

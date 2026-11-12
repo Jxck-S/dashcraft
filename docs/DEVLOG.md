@@ -7,6 +7,22 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M9.5: bookmarks show and hide visuals
+
+- **What:** `InteractionState::visibility` (visual or group → hidden, only where it differs
+  from the saved `isHidden`; `set_hidden`, `page_with_visibility`); `query_page_data` and the
+  page render use the page with it applied, so hidden visuals are neither queried nor drawn and
+  a hidden group hides its children. `pbi_render::query::apply_bookmark` now applies the data
+  and display parts independently: the display part sets visibility from each captured
+  visual's `singleVisual.display.mode` and each group's `visualContainerGroups.*.isHidden`
+  (nested `children` too; shapes from Microsoft's MIT bookmark schema 2.1.0), from the saved
+  state for "All visuals" and from the current state for "Selected visuals"; with Display
+  unchecked the current visibility stays. Other display modes (spotlight, maximize, elevation)
+  are listed as not applied.
+- **Why:** M9.5 "apply data, display and current-page parts"; GAPS Bookmarks rows (next steps
+  now filter and sort).
+- **Numbers:** 1 new render test (all, target-only and Display-off bookmarks; query and scene
+  checks); the Acme bookmark tests are unchanged.
 ### M9.5: page and bookmark navigators as lists
 
 - **What:** `pbi-render/src/visuals/navigator.rs`: `Navigation` (pages with hidden/tooltip
