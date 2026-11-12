@@ -283,6 +283,12 @@ export function diffWithDisk(): Promise<Outcome<DocumentDiff>> {
   return docId ? ops.docDiff({ docId }) : Promise.resolve(NO_DOCUMENT)
 }
 
+/** The current document, unsaved edits included, compared object by object with another file or folder (`doc.diff`, `againstPath`). */
+export function diffWithPath(path: string): Promise<Outcome<DocumentDiff>> {
+  const docId = current?.docId
+  return docId ? ops.docDiff({ docId, againstPath: path }) : Promise.resolve(NO_DOCUMENT)
+}
+
 /**
  * Closes document `docId` (default: the current one), cancelling its refresh and renders. A
  * document with unsaved edits closes only with `discard` (the caller asked first); else it fails
@@ -970,15 +976,15 @@ export async function pickFile(title: string, filters: Array<{ name: string; ext
 }
 
 /** Native "Open" dialog. Returns `null` when cancelled or without a backend. */
-export async function pickPath(kind: 'file' | 'folder'): Promise<string | null> {
+export async function pickPath(kind: 'file' | 'folder', title?: string): Promise<string | null> {
   if (!hasBackend) return null
   const selected = await open(
     kind === 'folder'
-      ? { directory: true, multiple: false, title: 'Open PBIP / TMDL folder' }
+      ? { directory: true, multiple: false, title: title ?? 'Open PBIP / TMDL folder' }
       : {
           directory: false,
           multiple: false,
-          title: 'Open Power BI file',
+          title: title ?? 'Open Power BI file',
           filters: [
             { name: 'Power BI files', extensions: POWER_BI_EXTENSIONS },
             { name: 'All files', extensions: ['*'] },

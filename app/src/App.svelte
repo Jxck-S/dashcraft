@@ -183,8 +183,9 @@
   /** The external changes "Keep mine" dismissed (their key); the bar comes back when others appear. */
   let externalKept = $state<string | null>(null)
   let reloading = $state(false)
-  /** Compare: the document against its files on disk (`diff` is `null` while it runs). */
-  let compare = $state.raw<{ docId: string; diff: backend.DocumentDiff | null; error: string | null } | null>(null)
+  /** Compare: the document against its files on disk or another file or folder (`against`, its
+   *  name shown); `diff` is `null` while it runs. */
+  let compare = $state.raw<{ docId: string; against: string | null; diff: backend.DocumentDiff | null; error: string | null } | null>(null)
   let externalChecking = false
   let externalEpoch = 0
   /** A document that does not track its files (not a PBIP project folder): not polled again. */
@@ -1446,9 +1447,34 @@
   /** Compare: the document, unsaved edits included, object by object with its files on disk. */
   async function compareWithDisk() {
     if (!doc) return
-    const request = { docId: doc.summary.docId, diff: null, error: null }
+    backstage = null
+    const request = { docId: doc.summary.docId, against: null, diff: null, error: null }
     compare = request
     const result = await backend.diffWithDisk()
+    if (compare !== request) return
+    compare = result.ok ? { ...request, diff: result.value } : { ...request, error: result.error }
+  }
+
+  /** File > Compare: the document, unsaved edits included, with another file or folder the user picks. */
+  async function compareWithPath(kind: 'file' | 'folder') {
+    if (!doc) return
+    const docId = doc.summary.docId
+    let path: string | null
+    try {
+      path = await backend.pickPath(kind, kind === 'folder' ? 'Compare with a PBIP or TMDL folder' : 'Compare with a Power BI file')
+    } catch (e) {
+      fail(`Open dialog failed: ${String(e)}`)
+      return
+    }
+    if (!path || docId !== doc?.summary.docId) return
+    backstage = null
+    // The other side's label: its name, with its folder when it is named as this document.
+    const parts = path.split(/[\\/]/).filter((s) => s)
+    const base = parts.at(-1) ?? path
+    const name = base === doc.summary.fileName && parts.length > 1 ? `${parts.at(-2)}/${base}` : base
+    const request = { docId, against: name, diff: null, error: null }
+    compare = request
+    const result = await backend.diffWithPath(path)
     if (compare !== request) return
     compare = result.ok ? { ...request, diff: result.value } : { ...request, error: result.error }
   }
@@ -1946,11 +1972,12 @@
     {#await import('./components/CompareDialog.svelte') then { default: CompareDialog }}
       <CompareDialog
         fileName={doc.summary.fileName}
-        changes={external?.docId === c.docId ? external.changes : []}
+        against={c.against}
+        changes={c.against === null && external?.docId === c.docId ? external.changes : []}
         diff={c.diff}
         error={c.error}
-        onreload={() => void reloadFromDisk()}
-        onkeep={keepMine}
+        onreload={c.against === null && external?.docId === c.docId ? () => void reloadFromDisk() : null}
+        onkeep={c.against === null && external?.docId === c.docId ? keepMine : null}
         onclose={() => (compare = null)}
       />
     {/await}
@@ -2029,6 +2056,7 @@
     onsaveas={canEdit && !saving ? () => void saveAsProject() : null}
     canExport={localModel}
     onexport={(kind) => void exportDocument(kind)}
+    oncompare={doc ? (kind) => void (kind === 'disk' ? compareWithDisk() : compareWithPath(kind)) : null}
     onoptions={openAiOptions}
     aiEnabled={aiStatus?.enabled ?? false}
   />

@@ -4,12 +4,14 @@
   import { plural } from '../lib/format'
   import { diffLines } from '../lib/lineDiff'
 
-  // Compare (M8.2, M8.3): the project files another program changed on disk and the document
-  // compared object by object with them (`doc.diff`: "before" is the disk, "after" this window,
-  // unsaved edits included). Reload takes the disk's version; Keep mine keeps this one (Save then
+  // Compare (M8.2, M8.3): the document compared object by object (`doc.diff`: "before" is the other
+  // side, "after" this window, unsaved edits included) with its files on disk or, from File >
+  // Compare, another file or folder (`against`). With the disk after another program changed the
+  // files, it also lists them: Reload takes the disk's version; Keep mine keeps this one (Save then
   // asks before overwriting the files).
   let {
     fileName,
+    against = null,
     changes,
     diff,
     error,
@@ -18,18 +20,24 @@
     onclose,
   }: {
     fileName: string
+    /** The other file or folder's name; `null`: the document's own files on disk. */
+    against?: string | null
+    /** Files another program changed on disk (shown when not empty). */
     changes: FileChange[]
     /** `null` while the comparison runs. */
     diff: DocumentDiff | null
     error: string | null
-    onreload: () => void
-    onkeep: () => void
+    /** Reload from disk / Keep mine; `null` hides the button (no external change to resolve). */
+    onreload: (() => void) | null
+    onkeep: (() => void) | null
     onclose: () => void
   } = $props()
 
   const FILE_CHANGE = { added: 'Added', modified: 'Changed', removed: 'Deleted' } as const
-  // `added`: only in this window; `removed`: only on disk.
-  const OBJECT_CHANGE = { added: 'Only here', removed: 'Only on disk', changed: 'Different' } as const
+  // `added`: only in this window; `removed`: only on the other side.
+  const other = $derived(against === null ? 'on disk' : `in ${against}`)
+  const OTHER = $derived(against === null ? 'On disk' : `In ${against}`)
+  const OBJECT_CHANGE = $derived({ added: 'Only here', removed: `Only ${other}`, changed: 'Different' } as const)
   const MAX_VALUE = 4000
 
   const KIND_LABEL: Record<ObjectDiff['kind'], string> = {
@@ -67,23 +75,25 @@
   const summary = $derived(
     diff
       ? diff.identical
-        ? 'The model and reports are the same on disk and here.'
-        : [diff.changed > 0 ? `${diff.changed} different` : '', diff.removed > 0 ? `${diff.removed} only on disk` : '', diff.added > 0 ? `${diff.added} only here` : '']
+        ? `The model and reports are the same ${other} and here.`
+        : [diff.changed > 0 ? `${diff.changed} different` : '', diff.removed > 0 ? `${diff.removed} only ${other}` : '', diff.added > 0 ? `${diff.added} only here` : '']
             .filter((s) => s)
             .join(', ')
       : '',
   )
 </script>
 
-<Modal title={`Compare ${fileName} with the files on disk`} width={820} {onclose}>
-  <section aria-labelledby="compare-files">
-    <h3 id="compare-files">{plural(changes.length, 'file')} changed on disk by another program</h3>
-    <ul class="files">
-      {#each changes as c (c.path)}
-        <li><span class="badge {c.change}">{FILE_CHANGE[c.change]}</span> <code>{c.path}</code></li>
-      {/each}
-    </ul>
-  </section>
+<Modal title={against === null ? `Compare ${fileName} with the files on disk` : `Compare ${fileName} with ${against}`} width={820} {onclose}>
+  {#if changes.length > 0}
+    <section aria-labelledby="compare-files">
+      <h3 id="compare-files">{plural(changes.length, 'file')} changed on disk by another program</h3>
+      <ul class="files">
+        {#each changes as c (c.path)}
+          <li><span class="badge {c.change}">{FILE_CHANGE[c.change]}</span> <code>{c.path}</code></li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
   <section aria-labelledby="compare-objects" aria-busy={diff === null && error === null}>
     <h3 id="compare-objects">Objects</h3>
     {#if error}
@@ -104,14 +114,14 @@
                 </summary>
                 {#if o.before || o.after}
                   <p class="origins">
-                    {#if o.before}On disk: <code>{origin(o.before)}</code>{/if}
+                    {#if o.before}{OTHER}: <code>{origin(o.before)}</code>{/if}
                     {#if o.before && o.after}; {/if}
                     {#if o.after}Here: <code>{origin(o.after)}</code>{/if}
                   </p>
                 {/if}
                 {#if o.snippet}
                   {@const lines = diffLines(o.snippet.before ?? '', o.snippet.after ?? '')}
-                  <div class="snippet" role="textbox" aria-readonly="true" aria-multiline="true" aria-label={`${o.snippet.language === 'tmdl' ? 'TMDL' : 'JSON'} of ${o.path}: lines with a minus are on disk only, with a plus here only`} tabindex="0">
+                  <div class="snippet" role="textbox" aria-readonly="true" aria-multiline="true" aria-label={`${o.snippet.language === 'tmdl' ? 'TMDL' : 'JSON'} of ${o.path}: lines with a minus are ${other} only, with a plus here only`} tabindex="0">
                     {#each lines as l, k (k)}
                       <div class="line {l.kind}"><span class="mark">{l.kind === 'removed' ? '-' : l.kind === 'added' ? '+' : ' '}</span>{l.text}</div>
                     {/each}
@@ -120,7 +130,7 @@
                 {#if o.properties.length > 0}
                   <table>
                     <thead>
-                      <tr><th scope="col">Property</th><th scope="col">On disk</th><th scope="col">Here</th></tr>
+                      <tr><th scope="col">Property</th><th scope="col">{OTHER}</th><th scope="col">Here</th></tr>
                     </thead>
                     <tbody>
                       {#each o.properties as p (p.name)}
@@ -141,9 +151,13 @@
     {/if}
   </section>
   {#snippet footer()}
-    <button class="primary" onclick={onreload} title="Reread the files on disk; your unsaved edits are discarded">Reload from disk</button>
-    <button onclick={onkeep} title="Keep this version; Save asks before overwriting the files on disk">Keep mine</button>
-    <button onclick={onclose}>Close</button>
+    {#if onreload}
+      <button class="primary" onclick={onreload} title="Reread the files on disk; your unsaved edits are discarded">Reload from disk</button>
+    {/if}
+    {#if onkeep}
+      <button onclick={onkeep} title="Keep this version; Save asks before overwriting the files on disk">Keep mine</button>
+    {/if}
+    <button class={onreload ? '' : 'primary'} onclick={onclose}>Close</button>
   {/snippet}
 </Modal>
 

@@ -289,12 +289,17 @@ results and DTOs. Locations below refer to the Desktop shell above.
     disk (`doc.diff`), each property's value on both sides, the file and line of each, and the
     object's text (TMDL for model objects, JSON for report objects) with the lines that differ
     marked - for lines on disk only, + for lines here only.
+  - **Compare** (File → Compare, not in Desktop): the same view for the document, unsaved edits
+    included, against its files on disk, another Power BI file or a PBIP / TMDL folder
+    (`doc.diff` with `againstPath`); the other side is labelled with its name, and Reload / Keep
+    mine appear only when another program changed the files.
   - Checks: `cargo test -p dashcraft-app` (`edits_save_and_close_through_the_registry`),
     `npm run check` (`tests/editing.test.ts`, `tests/daxEditor.test.ts`), and on Windows the UI
     smoke, IntelliSense (`formula-intellisense.mjs`), editor keys (`formula-keys.mjs`), Auto
     recovery (`recovery.mjs`: edit, crash, restore, crash, discard), external changes
-    (`external-changes.mjs`: an external TMDL edit, Compare, Keep mine, Save's question, Reload;
-    with accessibility checks of the bar and Compare) and
+    (`external-changes.mjs`: an external TMDL edit, Compare, Keep mine, Save's question, Reload,
+    File → Compare with the disk and with another folder picked in the native dialog; with
+    accessibility checks of the bar, Compare and File → Compare) and
     accessibility scripts of [`scripts/app-checks/`](../scripts/app-checks/) against a debug
     build (results: [M6](../docs/accessibility/m6-editing.md),
     [M7](../docs/accessibility/m7-formula-bar.md)).

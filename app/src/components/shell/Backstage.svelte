@@ -1,5 +1,5 @@
 <script module lang="ts">
-  export type BackstageSection = 'home' | 'open' | 'export' | 'options' | 'about'
+  export type BackstageSection = 'home' | 'open' | 'export' | 'compare' | 'options' | 'about'
 </script>
 
 <script lang="ts">
@@ -12,7 +12,8 @@
   // File menu (backstage), as in Desktop: a left command column and a content page. Save writes
   // the edits into the opened PBIP project and Save as into a new one (`doc.save`, `doc.saveAs`);
   // Export writes new files (PBIP project, PBIT template) through the registry's `convert.*`
-  // commands and leaves the document as it is.
+  // commands and leaves the document as it is. Compare (not in Desktop) diffs the document, unsaved
+  // edits included, with its files on disk or another file or folder (`doc.diff`).
   let {
     section,
     recent,
@@ -32,6 +33,7 @@
     onsaveas,
     canExport = false,
     onexport,
+    oncompare = null,
     onoptions,
     aiEnabled = false,
   }: {
@@ -56,6 +58,8 @@
     /** The open document can be written as PBIP / PBIT (it has a local model). */
     canExport?: boolean
     onexport?: (kind: 'pbip' | 'pbit') => void
+    /** File → Compare: with the files on disk or a picked file or folder; `null` without a document. */
+    oncompare?: ((against: 'disk' | 'file' | 'folder') => void) | null
     /** Options and settings → Options (the AI page). */
     onoptions?: () => void
     /** The opt-in AI features are on (shown on the Options entry). */
@@ -74,6 +78,7 @@
     { id: 'getdata', label: 'Get data', icon: 'getData', enabled: false },
     { id: 'import', label: 'Import', icon: 'importTheme', enabled: false },
     { id: 'export', label: 'Export', icon: 'export', section: 'export', enabled: true },
+    { id: 'compare', label: 'Compare', icon: 'arrowBoth', section: 'compare', enabled: true },
     { id: 'publish', label: 'Publish', icon: 'publish', enabled: false },
     null,
     { id: 'options', label: 'Options and settings', icon: 'settings', section: 'options', enabled: true },
@@ -197,6 +202,23 @@
         <button class="action" disabled title={NOT_AVAILABLE}>
           <Icon name="document" size={24} />
           <span><strong>Export to PDF</strong><span class="muted">{NOT_AVAILABLE}</span></span>
+        </button>
+      </div>
+    {:else if section === 'compare'}
+      <h1>Compare</h1>
+      <p class="muted">Lists what differs between this document, unsaved edits included, and another version of it, object by object: tables, columns, measures, relationships, roles, pages and visuals, with the TMDL or JSON of each change. Nothing is changed. The <code>dashcraft</code> command-line tool runs the same command (<code>doc.diff</code>).</p>
+      <div class="open-actions">
+        <button class="action" disabled={!hasBackend || !oncompare} onclick={() => oncompare?.('disk')} title={oncompare ? 'Compare with the saved files' : 'Open a document first'}>
+          <Icon name="document" size={24} />
+          <span><strong>With the files on disk</strong><span class="muted">Your unsaved edits and any change another program made</span></span>
+        </button>
+        <button class="action" disabled={!hasBackend || !oncompare} onclick={() => oncompare?.('file')} title={oncompare ? 'Choose a Power BI file to compare with' : 'Open a document first'}>
+          <Icon name="open" size={24} />
+          <span><strong>With another file</strong><span class="muted">PBIX, PBIT, PBIP, BIM, TMDL…</span></span>
+        </button>
+        <button class="action" disabled={!hasBackend || !oncompare} onclick={() => oncompare?.('folder')} title={oncompare ? 'Choose a PBIP or TMDL folder to compare with' : 'Open a document first'}>
+          <Icon name="folder" size={24} />
+          <span><strong>With another folder</strong><span class="muted">A PBIP project or TMDL folder, for example another copy or branch</span></span>
         </button>
       </div>
     {:else if section === 'options'}

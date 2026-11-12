@@ -7,6 +7,21 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M8.3: File → Compare with another file or folder
+
+- **What:** a File → Compare page (`Backstage.svelte`) compares the document, unsaved edits
+  included, with its files on disk, a Power BI file or a PBIP / TMDL folder picked in the native
+  dialog (`backend.diffWithPath`: `doc.diff` with `againstPath`). `CompareDialog.svelte` is now
+  generic: the other side is labelled with its name (its folder too when it has the document's
+  file name), and the changed-files list, Reload and Keep mine show only for external changes on
+  disk. `scripts/app-checks/pick.ps1` answers a native open dialog (UI Automation finds it; the
+  path and the click go as Win32 messages, since the classic edit box and button expose no
+  patterns and the Tauri invoke bridge cannot be stubbed from the page).
+- **Why:** the last app part of M8.3 ("compare two versions of a project").
+- **Numbers:** `external-changes.mjs` 34 → 49 checks on Windows, all pass, the IBM checker clean on
+  the bar, Compare and File → Compare; `npm run check` 0 errors, 51 tests. M8.3 stays open for
+  report snippets in PBIR form and the A6 screen-reader steps.
+
 ### M8.3: TMDL and JSON snippets in doc.diff and Compare
 
 - **What:** `pbi_core::diff_documents` gives each object a `Snippet` (before and after text):
