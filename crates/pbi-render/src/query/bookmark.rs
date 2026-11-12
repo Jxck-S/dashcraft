@@ -1,5 +1,5 @@
 //! Applying a bookmark: the page it shows, the slicer selections it
-//! captures and the visuals it hides, as [`InteractionState`]s.
+//! captures and the visuals it hides or sorts, as [`InteractionState`]s.
 //!
 //! # What a PBIR bookmark holds
 //!
@@ -19,6 +19,10 @@
 //! does not capture keep their saved `isHidden`
 //! ([`InteractionState::visibility`] holds the differences).
 //!
+//! Sort: a captured visual's `singleVisual.orderBy` (semantic-query sort
+//! clauses) replaces its `sortDefinition`; without one it keeps its saved
+//! order ([`InteractionState::sort`]).
+//!
 //! `options`:
 //! - `applyOnlyToTargetVisuals` + `targetVisualNames` ("Selected
 //!   visuals"): only those visuals change; the rest of the page keeps its
@@ -32,8 +36,8 @@
 //!   change.
 //!
 //! Not applied yet (reported in [`BookmarkEffect::not_applied`]): filter
-//! pane state, the spotlight, focus and elevation display modes, sort,
-//! drill and expansion state, projection changes, cross-highlights and
+//! pane state, the spotlight, focus and elevation display modes, drill
+//! and expansion state, projection changes, cross-highlights and
 //! formatting of other visuals.
 
 use indexmap::IndexMap;
@@ -42,6 +46,7 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 
 use super::interaction::{InteractionState, is_slicer_type, persisted_selection};
+use super::semantic::sort_clauses;
 
 /// The result of applying a bookmark.
 #[derive(Debug, Clone, PartialEq, Default, Serialize)]
@@ -118,7 +123,9 @@ pub fn apply_bookmark(
         let mut new_state = if data && !target_only {
             let mut s = InteractionState::from_page(page).0;
             if !display {
-                s.visibility = current(page).visibility;
+                let now = current(page);
+                s.visibility = now.visibility;
+                s.sort = now.sort;
             }
             s
         } else {
@@ -188,6 +195,7 @@ pub fn apply_bookmark(
         if display {
             if !target_only {
                 new_state.visibility.clear();
+                new_state.sort.clear();
             }
             for (name, c) in containers.iter().filter(|(n, _)| applies_to(n)) {
                 let single = c.get("singleVisual").unwrap_or(&Value::Null);
@@ -204,8 +212,16 @@ pub fn apply_bookmark(
                 if let Some(mode) = mode.filter(|m| *m != "hidden") {
                     note(&mut effect, format!("{label}: {mode} display mode"));
                 }
-                if single.get("orderBy").is_some() {
-                    note(&mut effect, format!("{label}: sort"));
+                match single.get("orderBy") {
+                    None => {
+                        new_state.set_sort(page, name, None);
+                    }
+                    Some(order) => match sort_clauses(order) {
+                        Some(sort) => {
+                            new_state.set_sort(page, name, Some(sort));
+                        }
+                        None => note(&mut effect, format!("{label}: sort")),
+                    },
                 }
                 if single.get("expansionStates").is_some()
                     || single.get("drillFilterOtherVisuals").is_some()

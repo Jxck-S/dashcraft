@@ -7,6 +7,18 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M9.5: bookmarks sort visuals
+
+- **What:** `InteractionState::sort` (visual → sort order replacing its `sortDefinition`, kept
+  only where it differs; `set_sort`); `QueryEnv::query_visual` queries with it, so every query
+  path (page data, single visual, exports) follows it and the DataView metadata carries the new
+  sort indicators. `apply_bookmark`'s display part reads `singleVisual.orderBy` (semantic-query
+  sort clauses, direction 1 ascending, 2 descending; `semantic::sort_clauses`): a readable order
+  is set, a missing one resets the saved order, an unreadable one is listed as not applied.
+  `pbi-ops` renames the sort fields with the model like slicer selections.
+- **Why:** M9.5 display parts; GAPS Bookmarks row (next step now the filter parts).
+- **Numbers:** 1 new query test (set, saved-order and reset bookmarks, unreadable clause).
+
 ### M9.5: bookmarks show and hide visuals
 
 - **What:** `InteractionState::visibility` (visual or group → hidden, only where it differs
@@ -23,6 +35,7 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
   now filter and sort).
 - **Numbers:** 1 new render test (all, target-only and Display-off bookmarks; query and scene
   checks); the Acme bookmark tests are unchanged.
+
 ### M9.5: page and bookmark navigators as lists
 
 - **What:** `pbi-render/src/visuals/navigator.rs`: `Navigation` (pages with hidden/tooltip

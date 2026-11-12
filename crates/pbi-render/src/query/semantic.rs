@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 use pbi_model::{
     AggregationFunction, ComparisonKind, Condition, FieldExpr, Literal, PropertyVariation,
+    SortDirection, SortItem,
 };
 use serde_json::Value as Json;
 
@@ -225,6 +226,26 @@ pub(crate) fn condition(expr: &Json, aliases: &Aliases) -> Condition {
         };
     }
     unknown()
+}
+
+/// A bookmark's `orderBy` (`[{Expression, Direction}]`, entities named in
+/// `SourceRef.Entity`; direction 1 ascending, 2 descending). `None` when a
+/// clause cannot be read.
+pub(crate) fn sort_clauses(order: &Json) -> Option<Vec<SortItem>> {
+    let aliases = Aliases::default();
+    order
+        .as_array()?
+        .iter()
+        .map(|clause| {
+            let direction = match clause.get("Direction").and_then(Json::as_i64)? {
+                1 => SortDirection::Ascending,
+                2 => SortDirection::Descending,
+                _ => return None,
+            };
+            let field = field(clause.get("Expression")?, &aliases);
+            (!matches!(field, FieldExpr::Unknown(_))).then_some(SortItem { field, direction })
+        })
+        .collect()
 }
 
 /// The `Where` conditions of a filter definition, combined with `And`.

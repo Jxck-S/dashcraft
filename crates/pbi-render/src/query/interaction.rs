@@ -1,5 +1,6 @@
 //! Report interaction state: slicer selections, the selected data points
-//! of one visual (cross-filtering) and the visuals a bookmark shows or hides.
+//! of one visual (cross-filtering) and the visuals a bookmark shows, hides or
+//! sorts.
 //!
 //! # Where slicer selections live in PBIR
 //!
@@ -40,7 +41,7 @@ use std::borrow::Cow;
 
 use indexmap::IndexMap;
 use pbi_engine::Value;
-use pbi_model::{Condition, FieldExpr, LiteralValue, Page, Visual};
+use pbi_model::{Condition, FieldExpr, LiteralValue, Page, SortItem, Visual};
 use serde::{Deserialize, Serialize};
 
 use crate::dataview::value_serde;
@@ -156,6 +157,10 @@ pub struct InteractionState {
     /// `isHidden` (see [`InteractionState::set_hidden`]).
     #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub visibility: IndexMap<String, bool>,
+    /// Visual name → the sort order that replaces its `sortDefinition`,
+    /// where a bookmark changed it (see [`InteractionState::set_sort`]).
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub sort: IndexMap<String, Vec<SortItem>>,
 }
 
 impl InteractionState {
@@ -206,6 +211,23 @@ impl InteractionState {
                 self.visibility.shift_remove(name);
             } else {
                 self.visibility.insert(v.name.clone(), hidden);
+            }
+        }
+        self
+    }
+
+    /// Sorts visual `name` of `page` by `sort` (`None`: its saved
+    /// `sortDefinition`); only a change from the saved order is kept.
+    /// Unknown names are ignored.
+    pub fn set_sort(&mut self, page: &Page, name: &str, sort: Option<Vec<SortItem>>) -> &mut Self {
+        if let Some(v) = page.visuals.iter().find(|v| v.name == name) {
+            match sort {
+                Some(sort) if sort != v.sort => {
+                    self.sort.insert(v.name.clone(), sort);
+                }
+                _ => {
+                    self.sort.shift_remove(name);
+                }
             }
         }
         self
