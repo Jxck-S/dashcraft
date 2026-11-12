@@ -103,8 +103,8 @@ Update **2026-11-11** (A6 in CI, [ADR-0030](adr/0030-screen-readers-in-ci.md)): 
 | 2 | [M language and library](#2-m-language-and-library) | 3.3 | 7 / 3 / 3 | Library breadth (384 of Desktop's 941 functions), the M formatter, cultures, other data sources |
 | 3 | [DAX](#3-dax) | 3.8 | 5 / 6 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; relationship overrides in `RELATED`/`SUMMARIZE` |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh, drill-down |
-| 5 | [Visuals](#5-visuals) | 2.1 | 15 / 6 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
-| 6 | [Interactions](#6-interactions) | 1.8 | 7 / 3 / 9 | Highlighting, drillthrough, drill-down, synced slicers, bookmark navigators |
+| 5 | [Visuals](#5-visuals) | 2.1 | 16 / 5 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
+| 6 | [Interactions](#6-interactions) | 1.8 | 7 / 3 / 9 | Highlighting, drillthrough, drill-down, synced slicers, report-page tooltips |
 | 7 | [Rendering fidelity](#7-rendering-fidelity) | 3.2 | 4 / 0 / 2 | No golden images (Power BI exports of the Acme Outfitters pages); DIN font |
 | 8 | [Performance](#8-performance) | 4.8 | 12 / 0 / 1 | No app-open or webview canvas-latency scenarios; P09–P12 not in the baseline yet |
 | 9 | [Command registry, MCP, AI](#9-command-registry-mcp-ai) | 3.4 | 8 / 3 / 1 | Broader editing commands |
@@ -242,7 +242,7 @@ golden images exist yet, §7).
 | `textbox` | ✅ | 3 | synthetic tests (`visuals_basics.rs`: runs, lists, wrapping, line pitch); Acme Outfitters render snapshots (`render_snapshots.rs`) | Golden of an Acme page |
 | `shape`, `basicShape` (22 kinds) | ✅ | 3 | synthetic tests (`visuals_basics.rs`); Acme render snapshots | Golden of an Acme page |
 | `actionButton` | ✅ | 3 | synthetic tests (`visuals_basics.rs`: icons, text, actions); the Acme buttons' actions (`buttons_carry_their_actions`); Acme render snapshots | Hover/press states; golden |
-| `pageNavigator`, `bookmarkNavigator` | 🟡 | 2 | drawn as one labelled button | Page/bookmark list |
+| `pageNavigator`, `bookmarkNavigator` | ✅ | 3 | one button per page (hidden and tooltip pages per `pages.*`) or bookmark (`bookmarks.bookmarkGroup`), horizontal, vertical or grid, the current page or applied bookmark selected (`page_navigators_*`, `bookmark_navigators_*` in `visuals_basics.rs`); clicking a button navigates (`page_navigator_on_the_example_report` in `crates/pbi-ops/tests/e2e.rs`); Acme render snapshots | Hover state, per-page `showPage`; golden |
 | `cardVisual` (new card) | ✅ | 3 | synthetic layout tests (`visuals_basics.rs`); every Acme card value drawn on the rendered pages (`visuals_basics_reference.rs`, 39 values of `expected.json`); render snapshots | Golden of an Acme page |
 | `card`, `multiRowCard` | ✅ | 3 | `crates/pbi-render/tests/visuals_basics*.rs` | Golden from the service |
 | `kpi` | 🟡 | 2 | synthetic tests; `TrendLine` is the trend axis (`kpi_trend_line_is_the_axis`); the Acme KPI's indicator and goal at the last trend point against `expected.json` (`query_reference.rs`, `visuals_charts_reference.rs`); basic layout | Compare the layout with a Power BI render |
@@ -281,9 +281,9 @@ Source: [VISUALS.md "Interaction summary"](VISUALS.md#interaction-summary), ADR-
 | Highlight interactions (`HighlightFilter`) | ❌ | 1 | filters instead, with a warning | Highlight values in DataViews (ROADMAP Next) |
 | Default tooltips (data points, ⚠ errors with DAX) | ✅ | 3 | `canvas.tooltip`; scatter points show Details, Legend, X, Y and Size (`scatter_tooltips_show_details_legend_x_y_and_size` in `crates/pbi-ops/tests/canvas.rs`) | Tooltip formatting objects (`tooltips.*`) |
 | Report-page tooltips | ❌ | 0 | not rendered | ROADMAP Next |
-| Back and page-navigation buttons, Clear all slicers | ✅ | 4 | `canvas.click` button actions | — |
+| Back and page-navigation buttons, page navigators, Clear all slicers | ✅ | 4 | `canvas.click` button and navigator actions | — |
 | Web URL buttons | ✅ | n/a | shown with Copy link, never opened (policy) | — |
-| Bookmarks (buttons, navigator, pane) | 🟡 | 3 | bookmark buttons and `canvas.applyBookmark` apply the page, slicer selections and cross-filter, "selected visuals only" and the data/display switches; the rest is listed as not applied (`bookmarks_on_the_example_report` in `crates/pbi-ops/tests/e2e.rs`, `bookmarks_set_the_slicer_and_cards_match_expected` in `crates/pbi-render/tests/query_reference.rs`); the app's Bookmarks pane (groups, click to apply) and slideshow (`scripts/app-checks/bookmarks.mjs`, with accessibility checks) | Navigator lists (M9.5); filter, visibility and sort parts |
+| Bookmarks (buttons, navigator, pane) | 🟡 | 3 | bookmark buttons and `canvas.applyBookmark` apply the page, slicer selections and cross-filter, "selected visuals only" and the data/display switches; the rest is listed as not applied (`bookmarks_on_the_example_report` in `crates/pbi-ops/tests/e2e.rs`, `bookmarks_set_the_slicer_and_cards_match_expected` in `crates/pbi-render/tests/query_reference.rs`); the app's Bookmarks pane (groups, click to apply) and slideshow (`scripts/app-checks/bookmarks.mjs`, with accessibility checks); bookmark navigators apply their bookmark and select the one applied last | Filter, visibility and sort parts |
 | Drillthrough | ❌ | 0 | "not available" | ROADMAP Next |
 | Drill-down/up on hierarchies | ❌ | 0 | — | — |
 | Matrix expand/collapse, table/matrix/slicer scrolling | ✅ | 4 | `canvas.toggleMatrixRow`, `canvas.scroll` | — |

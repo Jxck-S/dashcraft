@@ -7,6 +7,23 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M9.5: page and bookmark navigators as lists
+
+- **What:** `pbi-render/src/visuals/navigator.rs`: `Navigation` (pages with hidden/tooltip
+  flags, bookmarks with their group, the current page, the bookmark applied last) is built per
+  page render and passed to visuals in `VisualCtx::nav` (and the cache key of navigators);
+  `items` lists the buttons per `pages.*` / `bookmarks.*`, `render` lays them out
+  (`layout.orientation`, `rowCount`/`columnCount`, `cellPadding`) with the button shape and the
+  `"$id": "selected"` colours, and `item_action` resolves a click (deselection bookmark
+  included). New hit kind `NavItem` (`<visual>|navItem|<i>`); `pbi-ops` `canvas.click` handles
+  it and `CanvasStore` remembers each report's applied bookmark (`PageRenderOptions::
+  active_bookmark`). Property names come from Microsoft's MIT report-theme JSON schema; the
+  orientation codes (2 horizontal, 1 vertical, 0 grid) are from it, the default selected style
+  is an assumption.
+- **Why:** M9.5 "navigators drawn as lists"; GAPS Visuals row 🟡 2 → ✅ 3 (§5 15/6/8 → 16/5/8).
+- **Numbers:** 2 new render tests, 1 e2e test; the Acme Executive Summary snapshot now lists
+  the three Overview pages instead of "Page navigator" (reviewed, intended).
+
 ### M9.5: the Bookmarks pane and slideshow
 
 - **What:** `app/src/components/panes/BookmarksPane.svelte` (View → Bookmarks, now enabled):

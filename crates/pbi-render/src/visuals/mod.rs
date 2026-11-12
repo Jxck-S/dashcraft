@@ -8,7 +8,8 @@
 //! DAX text in a tooltip), never as a panic.
 //!
 //! Ownership (parallel development):
-//! - `common`, `textbox`, `shape`, `button`, `card`, `placeholder`, `page`
+//! - `common`, `textbox`, `shape`, `button`, `navigator`, `card`,
+//!   `placeholder`, `page`
 //!   — basics + page orchestration
 //! - `slicer`, `table`, `matrix` — slicers and grids
 //! - `charts/**` — pie/donut, bar/column, line/area, scatter, funnel,
@@ -20,6 +21,7 @@ pub mod card;
 pub mod charts;
 pub mod common;
 pub mod matrix;
+pub mod navigator;
 pub mod page;
 pub mod placeholder;
 pub mod shape;
@@ -61,6 +63,9 @@ pub struct VisualCtx<'a> {
     pub data: Option<&'a Result<DataView, VisualQueryError>>,
     /// Current slicer/point selections (for selected-state styling).
     pub state: &'a InteractionState,
+    /// Pages and bookmarks for navigators ([`navigator::EMPTY`] outside a
+    /// report).
+    pub nav: &'a navigator::Navigation,
 }
 
 /// Renders one visual's content group, dispatching on `visualType`.
@@ -71,7 +76,8 @@ pub fn render_visual(ctx: &VisualCtx<'_>) -> Option<Group> {
     match ctx.visual.visual_type.as_str() {
         "textbox" => textbox::render(ctx),
         "shape" | "basicShape" => shape::render(ctx),
-        "actionButton" | "pageNavigator" | "bookmarkNavigator" => button::render(ctx),
+        "actionButton" => button::render(ctx),
+        "pageNavigator" | "bookmarkNavigator" => navigator::render(ctx),
         "cardVisual" | "card" | "multiRowCard" | "kpi" => card::render(ctx),
         "slicer" | "advancedSlicerVisual" => slicer::render(ctx),
         "tableEx" | "table" => table::render(ctx),

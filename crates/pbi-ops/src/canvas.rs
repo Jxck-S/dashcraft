@@ -53,6 +53,7 @@ use pbi_render::svg::{SvgOptions, to_svg};
 use pbi_render::theme::{Theme, ThemeResolver};
 use pbi_render::visuals::button::{self, ButtonAction};
 use pbi_render::visuals::charts::{self, ChartData};
+use pbi_render::visuals::navigator::{self, Navigation};
 use pbi_render::visuals::slicer::{SELECT_ALL_INDEX, SlicerMode};
 use pbi_render::visuals::table::GridScroll;
 use pbi_render::visuals::{
@@ -308,6 +309,9 @@ pub struct CanvasStore {
     pages: Mutex<HashMap<PageKey, PageEntry>>,
     /// Theme of each report (by index), resolved once.
     themes: Mutex<HashMap<usize, Arc<ThemeResolver>>>,
+    /// The bookmark applied last in each report (by index): the selected
+    /// item of its bookmark navigators.
+    active_bookmarks: Mutex<HashMap<usize, String>>,
 }
 
 impl fmt::Debug for CanvasStore {
@@ -458,6 +462,7 @@ struct Job {
     state_version: u64,
     cached: Option<Arc<PageData>>,
     cancel: CancellationToken,
+    active_bookmark: Option<String>,
 }
 
 impl CanvasStore {
@@ -481,6 +486,7 @@ impl CanvasStore {
     /// Starts a render: a newer generation; cancels the running renders of
     /// an older interaction state (and the oldest beyond [`MAX_RUNNING`]).
     fn begin(&self, key: PageKey, page: &Page, env: &QueryEnv) -> Job {
+        let active_bookmark = self.active_bookmark(key.0);
         self.update(key, page, &env.model, |entry| {
             entry.generation = entry.generation.wrapping_add(1);
             let version = entry.state_version;
@@ -521,8 +527,21 @@ impl CanvasStore {
                 state_version: entry.state_version,
                 cached,
                 cancel,
+                active_bookmark,
             }
         })
+    }
+
+    /// Internal name of the bookmark applied last in report `report`.
+    fn active_bookmark(&self, report: usize) -> Option<String> {
+        lock(&self.active_bookmarks).get(&report).cloned()
+    }
+
+    /// Records `name` as the bookmark applied last; `true` if it changed.
+    fn set_active_bookmark(&self, report: usize, name: &str) -> bool {
+        lock(&self.active_bookmarks)
+            .insert(report, name.to_owned())
+            .is_none_or(|old| old != name)
     }
 
     /// Keeps a finished render if it was not cancelled and is newer than
@@ -573,6 +592,7 @@ impl CanvasStore {
         self.cancel_all();
         lock(&self.pages).clear();
         lock(&self.themes).clear();
+        lock(&self.active_bookmarks).clear();
     }
 }
 
@@ -785,6 +805,7 @@ fn run_job(
             ..FrameOptions::default()
         },
         limits,
+        active_bookmark: job.active_bookmark.clone(),
     };
     let rendered =
         render_interactive_page(report, page, theme, &job.state, &opts, &job.view, &data);
@@ -1007,13 +1028,15 @@ pub async fn click(
     let hit = hit.map(decode_hit).transpose()?;
     ensure_rendered(target).await?;
     let theme = target.theme();
+    let active = target.entry.canvas.active_bookmark(target.report);
     let (mut changed, mut action) = target.update(|entry, report, page| {
-        apply_click(entry, report, page, &theme, hit.as_ref(), mods)
+        let nav = Navigation::new(report, page, active.as_deref());
+        apply_click(entry, report, page, &theme, &nav, hit.as_ref(), mods)
     })??;
     if let Some(CanvasAction::Bookmark { name, .. }) = &action {
         action = Some(match apply_bookmark(&target.entry, target.report, name) {
             Ok(applied) => {
-                changed |= applied.changed.contains(&target.page);
+                changed |= applied.selection_changed || applied.changed.contains(&target.page);
                 applied.action
             }
             Err(e) if matches!(e.code, OpErrorCode::NotFound | OpErrorCode::InvalidParams) => {
@@ -1039,6 +1062,9 @@ pub struct AppliedBookmark {
     pub page: Option<usize>,
     /// Indexes of the pages whose interaction state changed.
     pub changed: Vec<usize>,
+    /// It replaced another bookmark as the one applied last (bookmark
+    /// navigators redraw their selection).
+    pub selection_changed: bool,
 }
 
 /// Applies bookmark `name` (internal or display name) of report `report`
@@ -1079,6 +1105,7 @@ pub fn apply_bookmark(
     }
     let page = effect.page.as_deref().and_then(index_of);
     let shown = page.and_then(|i| r.pages.get(i));
+    let selection_changed = store.set_active_bookmark(report, &bookmark.name);
     Ok(AppliedBookmark {
         action: CanvasAction::Bookmark {
             name: bookmark.name.clone(),
@@ -1089,6 +1116,7 @@ pub fn apply_bookmark(
         },
         page,
         changed,
+        selection_changed,
     })
 }
 
@@ -1319,6 +1347,7 @@ fn apply_click(
     report: &Report,
     page: &Page,
     theme: &ThemeResolver,
+    nav: &Navigation,
     hit: Option<&HitId>,
     mods: Modifiers,
 ) -> Result<(bool, Option<CanvasAction>), OpError> {
@@ -1373,6 +1402,11 @@ fn apply_click(
         }
         HitKind::Button => {
             if let Some(a) = button::action(visual, theme) {
+                action = button_action(entry, report, a, &mut changed);
+            }
+        }
+        HitKind::NavItem { index } => {
+            if let Some(a) = navigator::item_action(visual, theme, nav, *index) {
                 action = button_action(entry, report, a, &mut changed);
             }
         }

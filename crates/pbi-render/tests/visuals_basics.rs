@@ -1,6 +1,6 @@
 //! Basic visuals on synthetic visuals and DataViews (no fixture files):
 //! textbox paragraphs, lists and alignment; shapes; buttons and their
-//! actions; cards (single, multi, blank, error, label clipping); the
+//! actions; page and bookmark navigators; cards (single, multi, blank, error, label clipping); the
 //! placeholder; page orchestration; SVG output.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -8,7 +8,7 @@
 mod query_support;
 
 use pbi_engine::Value;
-use pbi_model::{Page, Position, Report, Visual};
+use pbi_model::{Bookmark, Page, Position, Report, Visual};
 use pbi_render::dataview::{
     CellValue, ColumnMeta, DataView, DataViewKind, FieldRef, FieldRefKind, TableData,
 };
@@ -21,6 +21,7 @@ use pbi_render::svg::{SvgOptions, to_svg};
 use pbi_render::text::{BundledFace, FontBook};
 use pbi_render::theme::ThemeResolver;
 use pbi_render::visuals::button::{self, ButtonAction};
+use pbi_render::visuals::navigator::{self, Navigation};
 use pbi_render::visuals::{
     PageRenderOptions, VisualCtx, render_report_page, render_visual, textbox,
 };
@@ -74,6 +75,7 @@ fn render_one(v: &Visual, data: Option<&Result<DataView, VisualQueryError>>) -> 
         fonts: FontBook::shared(),
         data,
         state: &state,
+        nav: &pbi_render::visuals::navigator::EMPTY,
     };
     (render_visual(&ctx).unwrap_or_default(), frame.content)
 }
@@ -104,6 +106,7 @@ fn scene_of(visuals: Vec<Visual>, data: &[(&str, DataView)]) -> Scene {
                     .find(|(n, _)| *n == visual.name)
                     .map(|(_, r)| r),
                 state: &state,
+                nav: &pbi_render::visuals::navigator::EMPTY,
             };
             render_visual(&ctx)
         },
@@ -535,6 +538,146 @@ fn button_actions_text_and_disabled_links() {
             .is_some_and(|f| f.color == Color::rgb(0xEE, 0xEE, 0xEE))
     }));
     assert!(p.iter().any(|p| p.stroke.is_some()), "icon");
+}
+
+// ------------------------------------------------------------- navigators
+
+fn nav_report() -> (Report, Page) {
+    let page = |name: &str, display: &str, hidden: bool| Page {
+        name: name.into(),
+        display_name: display.into(),
+        is_hidden: hidden,
+        ..Page::default()
+    };
+    let mut tip = page("c", "Tip", true);
+    tip.extra
+        .insert("type".into(), pbi_model::PropValue::Json(json!("Tooltip")));
+    let bookmark = |name: &str, display: &str| Bookmark {
+        name: name.into(),
+        display_name: display.into(),
+        ..Bookmark::default()
+    };
+    let mut group = bookmark("g", "Views");
+    group.children = vec![bookmark("b1", "North"), bookmark("b2", "South")];
+    let report = Report {
+        pages: vec![
+            page("a", "Overview", false),
+            page("b", "Detail", true),
+            tip,
+            page("d", "Trends", false),
+        ],
+        bookmarks: vec![group, bookmark("b3", "All")],
+        ..Report::default()
+    };
+    let current = report.pages[3].clone();
+    (report, current)
+}
+
+/// Renders `v` with `nav`; the content and the item groups' fills.
+fn render_nav(v: &Visual, nav: &Navigation) -> (Group, Vec<(String, Option<Color>)>) {
+    let page = page_of(vec![v.clone()]);
+    let theme = ThemeResolver::default();
+    let layout = PageLayout::compute(&page, None);
+    let state = InteractionState::default();
+    let ctx = VisualCtx {
+        frame: layout.frame(&v.name).unwrap(),
+        visual: v,
+        theme: &theme,
+        fonts: FontBook::shared(),
+        data: None,
+        state: &state,
+        nav,
+    };
+    let g = render_visual(&ctx).unwrap();
+    let items = (0..)
+        .map_while(|i| find_group(&g, &HitId::nav_item(v.name.clone(), i)))
+        .map(|item| {
+            let label = texts(item).first().map(|t| t.1.text.clone()).unwrap();
+            (
+                label,
+                paths(item).first().and_then(|p| p.fill).map(|f| f.color),
+            )
+        })
+        .collect();
+    (g, items)
+}
+
+#[test]
+fn page_navigators_list_the_visible_pages_and_select_the_current_one() {
+    let (report, current) = nav_report();
+    let nav = Navigation::new(&report, &current, None);
+    let theme = ThemeResolver::default();
+    let v = visual("pn", "pageNavigator", (0.0, 0.0, 400.0, 40.0));
+    let (g, items) = render_nav(&v, &nav);
+    assert_eq!(g.id, None, "the frame is the visual's hit region");
+    let light = Color::rgb(0xF3, 0xF2, 0xF1);
+    assert_eq!(
+        items,
+        vec![
+            ("Overview".into(), Some(light)),
+            ("Trends".into(), Some(theme.foreground())),
+        ]
+    );
+    let first = find_group(&g, &HitId::nav_item("pn", 0)).unwrap();
+    let second = find_group(&g, &HitId::nav_item("pn", 1)).unwrap();
+    let x = |g: &Group| paths(g)[0].d.bounds().unwrap();
+    assert!(x(second).x > x(first).right(), "horizontal by default");
+    assert_eq!(
+        navigator::item_action(&v, &theme, &nav, 0),
+        Some(ButtonAction::PageNavigation { page: "a".into() })
+    );
+    assert_eq!(navigator::item_action(&v, &theme, &nav, 2), None);
+
+    let mut all = v.clone();
+    all.objects = json!({
+        "pages": [{"properties": {"showHiddenPages": lit("true"), "showTooltipPages": lit("true")}}],
+        "layout": [{"properties": {"orientation": lit("1D")}}],
+        "fill": [{"properties": {"fillColor": color("#00FF00")}, "selector": {"id": "selected"}}]
+    });
+    all.position.height = 200.0;
+    let (g, items) = render_nav(&all, &nav);
+    let labels: Vec<&str> = items.iter().map(|(l, _)| l.as_str()).collect();
+    assert_eq!(labels, ["Overview", "Detail", "Tip", "Trends"]);
+    assert_eq!(items[3].1, Some(Color::rgb(0, 0xFF, 0)), "selected fill");
+    let y = |i| {
+        paths(find_group(&g, &HitId::nav_item("pn", i)).unwrap())[0]
+            .d
+            .bounds()
+            .unwrap()
+    };
+    assert!(y(1).y > y(0).bottom(), "vertical");
+    let svg = to_svg(&scene_of(vec![v], &[]), &SvgOptions::default());
+    assert!(!svg.contains("Page navigator"), "{svg}");
+}
+
+#[test]
+fn bookmark_navigators_list_a_group_and_select_the_applied_bookmark() {
+    let (report, current) = nav_report();
+    let theme = ThemeResolver::default();
+    let mut v = visual("bn", "bookmarkNavigator", (0.0, 0.0, 300.0, 40.0));
+    let nav = Navigation::new(&report, &current, None);
+    let (_, items) = render_nav(&v, &nav);
+    let labels: Vec<&str> = items.iter().map(|(l, _)| l.as_str()).collect();
+    assert_eq!(labels, ["North", "South", "All"]);
+
+    v.objects = json!({"bookmarks": [{"properties": {
+        "bookmarkGroup": lit("'Views'"),
+        "allowDeselectionBookmark": lit("true"),
+        "deselectionBookmark": lit("'b3'")
+    }}]});
+    let nav = Navigation::new(&report, &current, Some("b2"));
+    let (_, items) = render_nav(&v, &nav);
+    assert_eq!(
+        items,
+        vec![
+            ("North".into(), Some(Color::rgb(0xF3, 0xF2, 0xF1))),
+            ("South".into(), Some(theme.foreground())),
+        ]
+    );
+    let bookmark = |b: &str| Some(ButtonAction::Bookmark { bookmark: b.into() });
+    assert_eq!(navigator::item_action(&v, &theme, &nav, 0), bookmark("b1"));
+    // Clicking the selected bookmark launches the deselection bookmark.
+    assert_eq!(navigator::item_action(&v, &theme, &nav, 1), bookmark("b3"));
 }
 
 // ------------------------------------------------------------------ cards

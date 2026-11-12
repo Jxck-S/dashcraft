@@ -1165,8 +1165,9 @@ in focus mode or as a table and export its data; see images and report-level mea
   filter, visibility, sort, drill and formatting parts are reported as not applied. The Acme
   Stores bookmarks' states are in the generator (`expected.json` `bookmarks`). The app's
   Bookmarks pane lists them (groups as sections) and applies one on click; its slideshow steps
-  through them from a bar above the page tabs (`scripts/app-checks/bookmarks.mjs`). Next:
-  navigators drawn as lists, the remaining parts.
+  through them from a bar above the page tabs (`scripts/app-checks/bookmarks.mjs`). Page and
+  bookmark navigators draw one button per page or bookmark (the current page or the bookmark
+  applied last selected) and navigate or apply it on click. Next: the remaining parts.
 - [ ] **M9.6 Synced slicers.** `syncGroup` (field and filter sync), slicers synced from other
   pages including hidden ones; `selfFilter`.
 - [ ] **M9.7 Range and relative slicers.** Dragging range sliders, typing numeric and date bounds,

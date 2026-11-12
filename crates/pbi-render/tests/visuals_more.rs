@@ -217,6 +217,7 @@ fn render_opts(visual_type: &str, dv: &DataView, o: &Opts) -> Group {
         fonts: FontBook::shared(),
         data: Some(&data),
         state: &o.state,
+        nav: &pbi_render::visuals::navigator::EMPTY,
     };
     render_visual(&ctx).unwrap_or_default()
 }

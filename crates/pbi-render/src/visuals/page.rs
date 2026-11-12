@@ -48,6 +48,7 @@ use super::button::{self, ButtonAction};
 use super::cache::{CachedVisual, GridKey, VisualCache, VisualKey, data_fingerprint};
 use super::common::error_tooltip;
 use super::matrix::{self, MatrixOptions, MatrixRowRef};
+use super::navigator::Navigation;
 use super::slicer::{self, SlicerLayout, SlicerMode, SlicerOptions};
 use super::table::{self, TableOptions};
 use super::{VisualCtx, render_visual, render_visual_with};
@@ -62,6 +63,9 @@ pub struct PageRenderOptions {
     pub frames: FrameOptions,
     /// Query limits (row caps, cancellation).
     pub limits: QueryLimits,
+    /// Internal name of the bookmark applied last (a bookmark navigator's
+    /// selected item).
+    pub active_bookmark: Option<String>,
 }
 
 /// What happened to one visual while rendering a page.
@@ -467,6 +471,7 @@ fn render_page_data(
     let mut popups: Vec<Group> = Vec::new();
     let mut interactions: Vec<VisualInteraction> = Vec::new();
     let mut reused: Vec<String> = Vec::new();
+    let nav = Navigation::new(report, page, opts.active_bookmark.as_deref());
     let scene = render_page_with(report, page, theme, &opts.frames, |frame, visual| {
         let start = Instant::now();
         let ctx = VisualCtx {
@@ -476,6 +481,7 @@ fn render_page_data(
             fonts,
             data: data.get(&visual.name),
             state,
+            nav: &nav,
         };
         let group = match view {
             Some(view) => {
@@ -550,10 +556,7 @@ fn render_page_data(
                 ),
                 None => (Vec::new(), None, None, false),
             };
-            let is_button = matches!(
-                v.visual_type.as_str(),
-                "actionButton" | "pageNavigator" | "bookmarkNavigator"
-            );
+            let is_button = v.visual_type == "actionButton";
             let action = is_button.then(|| button::action(v, theme)).flatten();
             if tooltip.is_none() && is_button {
                 tooltip = button::tooltip(v, theme);

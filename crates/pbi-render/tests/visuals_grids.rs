@@ -121,6 +121,7 @@ impl Fixture {
             fonts: FontBook::shared(),
             data: self.data.as_ref(),
             state: &self.state,
+            nav: &pbi_render::visuals::navigator::EMPTY,
         }
     }
 }

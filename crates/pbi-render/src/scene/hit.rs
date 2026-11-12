@@ -26,8 +26,10 @@ pub enum HitKind {
     DataPoint { series: usize, index: usize },
     /// A slicer item (list row, dropdown entry, tile).
     SlicerItem { index: usize },
-    /// A button (`actionButton`, page navigator entry, …).
+    /// An action button (`actionButton`).
     Button,
+    /// Item `index` of a page or bookmark navigator.
+    NavItem { index: usize },
 }
 
 // Deserialized through `serde_json::Value` (flattened, internally tagged
@@ -59,10 +61,13 @@ impl<'de> Deserialize<'de> for HitId {
                 index: index("index")?,
             },
             "button" => HitKind::Button,
+            "navItem" => HitKind::NavItem {
+                index: index("index")?,
+            },
             other => {
                 return Err(D::Error::unknown_variant(
                     other,
-                    &["visual", "dataPoint", "slicerItem", "button"],
+                    &["visual", "dataPoint", "slicerItem", "button", "navItem"],
                 ));
             }
         };
@@ -102,9 +107,17 @@ impl HitId {
         }
     }
 
+    pub fn nav_item(visual: impl Into<String>, index: usize) -> Self {
+        Self {
+            visual: visual.into(),
+            kind: HitKind::NavItem { index },
+        }
+    }
+
     /// Compact form used for the SVG `data-hit` attribute:
     /// `<visual>|visual`, `<visual>|dataPoint|<series>|<index>`,
-    /// `<visual>|slicerItem|<index>`, `<visual>|button`. `%` and `|` in the
+    /// `<visual>|slicerItem|<index>`, `<visual>|button`,
+    /// `<visual>|navItem|<index>`. `%` and `|` in the
     /// visual name are percent-encoded.
     pub fn encode(&self) -> String {
         let visual = self.visual.replace('%', "%25").replace('|', "%7C");
@@ -113,6 +126,7 @@ impl HitId {
             HitKind::DataPoint { series, index } => format!("{visual}|dataPoint|{series}|{index}"),
             HitKind::SlicerItem { index } => format!("{visual}|slicerItem|{index}"),
             HitKind::Button => format!("{visual}|button"),
+            HitKind::NavItem { index } => format!("{visual}|navItem|{index}"),
         }
     }
 
@@ -134,6 +148,9 @@ impl HitId {
                 index: parts.next()?.parse().ok()?,
             },
             "button" => HitKind::Button,
+            "navItem" => HitKind::NavItem {
+                index: parts.next()?.parse().ok()?,
+            },
             _ => return None,
         };
         if parts.next().is_some() {
@@ -163,6 +180,7 @@ mod tests {
             HitId::data_point("a|b%c", 2, 7),
             HitId::slicer_item("s", 3),
             HitId::button("btn"),
+            HitId::nav_item("nav", 4),
         ];
         for id in ids {
             let enc = id.encode();
@@ -179,5 +197,9 @@ mod tests {
         );
         let back: HitId = serde_json::from_str(&json).unwrap();
         assert_eq!(back, HitId::data_point("v", 1, 2));
+        let json = serde_json::to_string(&HitId::nav_item("n", 1)).unwrap();
+        assert_eq!(json, r#"{"visual":"n","kind":"navItem","index":1}"#);
+        let back: HitId = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, HitId::nav_item("n", 1));
     }
 }

@@ -3,7 +3,7 @@ source: crates/pbi-render/tests/render_snapshots.rs
 expression: text
 ---
 Acme Outfitters - Overview / Executive Summary (FitToPage, 1280×720, 14 visuals)
-page svg: 41737 bytes, fnv1a 2a65eb997bad87c3
+page svg: 42943 bytes, fnv1a ce272f477812cde7
 
 923adeb43119cf2eccfc shape 1280×64 at (0, 0): svg 0ba2991a9d328fe6, 0 data points
 
@@ -11,8 +11,10 @@ page svg: 41737 bytes, fnv1a 2a65eb997bad87c3
   | Acme Outfitters
   |   |  Executive summary
 
-4962619bce10ce9dfb1c pageNavigator 496×36 at (760, 14): svg 1b956932b9c44bdb, 0 data points
-  | Page navigator
+4962619bce10ce9dfb1c pageNavigator 496×36 at (760, 14): svg 1c33172b02bde411, 0 data points
+  | Executive Summary
+  | Product Detail
+  | Time Intelligence
 
 5db7384676d59b0fb322 slicer 360×64 at (24, 76): svg 5cafd873ff7f03d7, 0 data points
   | Year

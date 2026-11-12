@@ -675,6 +675,7 @@
   .page :global([data-hit*='|dataPoint|']),
   .page :global([data-hit*='|slicerItem|']),
   .page :global([data-hit$='|button']),
+  .page :global([data-hit*='|navItem|']),
   .page :global(.pbi-expander) {
     cursor: pointer;
   }
