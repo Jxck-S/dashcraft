@@ -485,3 +485,54 @@ fn every_field_reference_is_resolved() {
         assert_eq!(date_values, 2);
     }
 }
+
+#[test]
+fn bookmarks_follow_the_pane_order() {
+    let Some((_, report)) = load("stores") else {
+        return;
+    };
+    let names: Vec<_> = report
+        .bookmarks
+        .iter()
+        .map(|b| b.display_name.as_str())
+        .collect();
+    assert_eq!(names, ["West region", "All regions"]);
+    let west = report.bookmark("west REGION").unwrap();
+    assert_eq!(west.name, "831d0f1adb1c9f2ed1d0");
+    assert_eq!(report.bookmark("831d0f1adb1c9f2ed1d0"), Some(west));
+    assert_eq!(west.exploration_state["activeSection"], PERFORMANCE);
+    assert_eq!(west.options["applyOnlyToTargetVisuals"], true);
+    assert!(report.bookmark("Nope").is_none());
+}
+
+#[test]
+fn bookmark_groups_unlisted_and_missing_files() {
+    let bookmark = |name: &str| format!(r#"{{"name":"{name}","displayName":"{name} shown"}}"#);
+    let files = [
+        (
+            "definition/bookmarks/bookmarks.json".to_owned(),
+            r#"{"items":[{"name":"g","displayName":"Group","children":["b","gone"]},{"name":"a"}]}"#
+                .to_owned(),
+        ),
+        ("definition/bookmarks/a.bookmark.json".into(), bookmark("a")),
+        ("definition/bookmarks/b.bookmark.json".into(), bookmark("b")),
+        ("definition/bookmarks/c.bookmark.json".into(), bookmark("c")),
+        ("definition/bookmarks/d.bookmark.json".into(), "[]".into()),
+        ("definition/report.json".into(), "{}".into()),
+    ];
+    let src: pbi_pbir::MemoryFileSource = files.into_iter().collect();
+    let (report, diags) = to_report_ast(&read_pbir(&src).unwrap());
+    let codes: Vec<_> = diags.iter().map(|d| d.code.as_str()).collect();
+    assert_eq!(
+        codes,
+        [pbi_pbir::codes::INVALID_FILE, pbi_pbir::codes::MISSING_FILE],
+        "{diags:?}"
+    );
+    let top: Vec<_> = report.bookmarks.iter().map(|b| b.name.as_str()).collect();
+    assert_eq!(top, ["g", "a", "c"], "listed, then unlisted");
+    assert!(report.bookmarks[0].is_group());
+    assert_eq!(report.bookmarks[0].display_name, "Group");
+    let all: Vec<_> = report.all_bookmarks().map(|b| b.name.as_str()).collect();
+    assert_eq!(all, ["b", "a", "c"]);
+    assert_eq!(report.bookmark("b shown").unwrap().name, "b");
+}

@@ -99,12 +99,12 @@ Update **2026-11-11** (A6 in CI, [ADR-0030](adr/0030-screen-readers-in-ci.md)): 
 
 | # | Area | Avg score | Rows ✅ / 🟡 / ❌ | Biggest gaps |
 |---|---|---|---|---|
-| 1 | [File formats](#1-file-formats) | 3.2 | 11 / 9 / 6 | Bookmarks, images, `DataMashup` only kept; report-level measures not evaluated; Fabric remote mode |
+| 1 | [File formats](#1-file-formats) | 3.3 | 11 / 10 / 5 | Images and `DataMashup` only kept; bookmarks partly applied; report-level measures not evaluated; Fabric remote mode |
 | 2 | [M language and library](#2-m-language-and-library) | 3.3 | 7 / 3 / 3 | Library breadth (384 of Desktop's 941 functions), the M formatter, cultures, other data sources |
 | 3 | [DAX](#3-dax) | 3.8 | 5 / 6 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; relationship overrides in `RELATED`/`SUMMARIZE` |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh, drill-down |
 | 5 | [Visuals](#5-visuals) | 2.1 | 15 / 6 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
-| 6 | [Interactions](#6-interactions) | 1.6 | 7 / 2 / 10 | Highlighting, bookmarks, drillthrough, drill-down, synced slicers |
+| 6 | [Interactions](#6-interactions) | 1.7 | 7 / 3 / 9 | Highlighting, drillthrough, drill-down, synced slicers, the Bookmarks pane |
 | 7 | [Rendering fidelity](#7-rendering-fidelity) | 3.2 | 4 / 0 / 2 | No golden images (Power BI exports of the Acme Outfitters pages); DIN font |
 | 8 | [Performance](#8-performance) | 4.8 | 12 / 0 / 1 | No app-open or webview canvas-latency scenarios; P09–P12 not in the baseline yet |
 | 9 | [Command registry, MCP, AI](#9-command-registry-mcp-ai) | 3.4 | 8 / 3 / 1 | Broader editing commands |
@@ -144,7 +144,7 @@ Source: [FORMATS.md](../FORMATS.md), `crates/pbi-core/src/reader/`.
 | Executing custom visuals or connectors | ❌ | n/a | never executed (AGENTS.md rule 6) | Out of scope |
 | Themes (base + custom, `ThemeDataColor`, `visualStyles`) | ✅ | 4 | `pbi-render::theme`, `crates/pbi-render/tests/theme.rs` | Legacy reports use the default theme in the CLI |
 | `diagramLayout.json` | 🟡 | 3 | Model view positions (app) | Table colours; saving layouts |
-| PBIR bookmarks | ❌ | 1 | kept verbatim on save (`pbi-pbir`) | Read and apply (ROADMAP Next) |
+| PBIR bookmarks | 🟡 | 3 | read into the report AST (`Report::bookmarks`, groups, PBIR `bookmarks/` and PBIR-Legacy/PBIX `config.bookmarks`; `crates/pbi-pbir/tests/{ast,legacy}.rs`), kept verbatim on save; `report.bookmarks` lists them | Apply their filter, visibility, sort and drill parts (M9.5) |
 | `reportExtensions.json` (report-level measures) | 🟡 | 2 | typed in `pbi-pbir` and kept in the report AST (`Report::measures`); the linter counts them as defined, renames rewrite their table, DAX and `references`, saves write them back (`crates/pbi-pbir/tests/roundtrip.rs`, `crates/pbi-core/tests/{lint,save_in_place}.rs`, `crates/pbi-ops/tests/save.rs`; Power BI Desktop loads the renamed report and its card values are unchanged, GT-6) | Evaluate them in visuals and queries (M9.9); PBIR-Legacy/PBIX `modelExtensions` |
 | `RegisteredResources` images | ❌ | 1 | kept verbatim | Draw `image` visuals and wallpapers |
 | PBIX `DataMashup` | ❌ | 1 | listed with an Info diagnostic | Decode the package (partitions already carry the M) |
@@ -283,7 +283,7 @@ Source: [VISUALS.md "Interaction summary"](VISUALS.md#interaction-summary), ADR-
 | Report-page tooltips | ❌ | 0 | not rendered | ROADMAP Next |
 | Back and page-navigation buttons, Clear all slicers | ✅ | 4 | `canvas.click` button actions | — |
 | Web URL buttons | ✅ | n/a | shown with Copy link, never opened (policy) | — |
-| Bookmarks (buttons, navigator, pane) | ❌ | 0 | "not available" | ROADMAP Next |
+| Bookmarks (buttons, navigator, pane) | 🟡 | 2 | bookmark buttons and `canvas.applyBookmark` apply the page, slicer selections and cross-filter, "selected visuals only" and the data/display switches; the rest is listed as not applied (`bookmarks_on_the_example_report` in `crates/pbi-ops/tests/e2e.rs`, `bookmarks_set_the_slicer_and_cards_match_expected` in `crates/pbi-render/tests/query_reference.rs`) | Bookmarks pane, slideshow and navigator lists (M9.5); filter, visibility and sort parts |
 | Drillthrough | ❌ | 0 | "not available" | ROADMAP Next |
 | Drill-down/up on hierarchies | ❌ | 0 | — | — |
 | Matrix expand/collapse, table/matrix/slicer scrolling | ✅ | 4 | `canvas.toggleMatrixRow`, `canvas.scroll` | — |
@@ -294,7 +294,7 @@ Source: [VISUALS.md "Interaction summary"](VISUALS.md#interaction-summary), ADR-
 | Visual header menus (focus mode, show as table, sort, export), right-click menus | ❌ | 0 | — | — |
 | Q&A | ❌ | 0 | "not available" | After the AI layer |
 | Persisting selections (save with the report, bookmarks) | ❌ | 0 | view state only (ADR-0006) | Commands that turn view state into document edits |
-| Headless interaction (`canvas.*` registry commands) | ✅ | 4 | 11 `canvas.*` commands (`docs/COMMANDS.md`), the same ones the app uses; legacy reports' themes resolved | — |
+| Headless interaction (`canvas.*` registry commands) | ✅ | 4 | 12 `canvas.*` commands (`docs/COMMANDS.md`), the same ones the app uses; legacy reports' themes resolved | — |
 
 ## 7. Rendering fidelity
 

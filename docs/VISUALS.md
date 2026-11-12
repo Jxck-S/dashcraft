@@ -138,7 +138,7 @@ The conditional color replaces the column's background (`columnFormatting.backCo
 - **Honoured** (default state only): `shape.tileShape`, `roundEdge`; `fill`; `outline`; `icon` (`show`, `shapeType`: blank, back, forward, left/right arrow, information, help, Q&A, bookmark, reset, filter, clear, apply; `lineColor`, `lineWeight`, `lineTransparency`, `fillColor`, `padding`); `text` (font, alignment; the icon sits on its left).
 - **Service behaviour reproduced**: the icon is a square of the content's shorter side; the Back icon is an arrow in a circle (10% strokes, `#605E5C`), as on the service's 40×40 button.
 - **Actions** (`visualLink`): `Back`, `PageNavigation`, `Bookmark`, `Drillthrough`, `WebUrl`, `QnA`, `ApplyAllSlicers`, `ClearAllSlicers`; `show = false` disables it.
-- **Interaction**: Back returns to the previous page in the app's navigation history; page navigation opens the target page; Clear all slicers clears them; Apply all slicers does nothing (selections apply at once); Web URL shows the URL with Copy link (never opened); bookmarks, drillthrough and Q&A show "not available".
+- **Interaction**: Back returns to the previous page in the app's navigation history; page navigation opens the target page; Clear all slicers clears them; Apply all slicers does nothing (selections apply at once); Web URL shows the URL with Copy link (never opened); a bookmark button applies its bookmark (page, slicer selections, cross-filter; the status bar names the parts not applied yet); drillthrough and Q&A show "not available".
 - **Gaps**: hover/pressed/disabled states are not drawn. Navigators render as one labelled button (the page or bookmark list is not available to visuals) and have no navigation action.
 
 ### `cardVisual` (new card) — Full
@@ -307,7 +307,7 @@ Every visual region and the whole page must reach the default threshold, SSIM �
 ## Known gaps
 
 - Highlight interactions filter instead of highlighting; a visual's own selection dims but does not highlight.
-- Bookmarks, bookmark navigators, drillthrough, Q&A, report-page tooltips, visual header menus (focus mode, show as table, sort, export), drill-down/up and right-click menus are not available.
+- The Bookmarks pane, bookmark navigators, a bookmark's filter, visibility and sort parts, drillthrough, Q&A, report-page tooltips, visual header menus (focus mode, show as table, sort, export), drill-down/up and right-click menus are not available.
 - Synced slicers, range-slider dragging, relative-date pickers.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.
 - Scatter play axes are not animated (the first frame is drawn); `ribbonChart` and maps are placeholders.

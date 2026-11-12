@@ -1158,7 +1158,13 @@ in focus mode or as a table and export its data; see images and report-level mea
   reports open in the same workspace.
 - [ ] **M9.5 Bookmarks.** Read `bookmarks/*.bookmark.json` and groups; apply data, display and
   current-page parts and "selected visuals only"; Bookmarks pane in view mode with a slideshow;
-  bookmark buttons; bookmark and page navigators drawn as lists of buttons.
+  bookmark buttons; bookmark and page navigators drawn as lists of buttons. *Progress:* bookmarks
+  and groups are read from PBIR and PBIR-Legacy/PBIX reports (`Report::bookmarks`), listed by
+  `report.bookmarks` and applied by bookmark buttons and `canvas.applyBookmark`: the current page,
+  slicer selections and cross-filter, "selected visuals only" and the data and display switches;
+  filter, visibility, sort, drill and formatting parts are reported as not applied. The Acme
+  Stores bookmarks' states are in the generator (`expected.json` `bookmarks`). Next: the
+  Bookmarks pane and slideshow, navigators, the remaining parts.
 - [ ] **M9.6 Synced slicers.** `syncGroup` (field and filter sync), slicers synced from other
   pages including hidden ones; `selfFilter`.
 - [ ] **M9.7 Range and relative slicers.** Dragging range sliders, typing numeric and date bounds,

@@ -2,7 +2,7 @@
 //! slicers; and report themes.
 
 use pbi_core::ReportSource;
-use pbi_model::{Document, Model, Page, Report, Visual, dax_column_ref, names_eq};
+use pbi_model::{Bookmark, Document, Model, Page, Report, Visual, dax_column_ref, names_eq};
 use pbi_render::query::is_slicer_type;
 use pbi_render::theme::ThemeResolver;
 use pbi_session::Session;
@@ -162,6 +162,37 @@ pub fn visual<'a>(page: &'a Page, name: &str) -> Result<&'a Visual, OpError> {
             "visuals": page.visuals.iter().map(|v| json!({"name": v.name, "visualType": v.visual_type})).collect::<Vec<_>>()
         }))
     })
+}
+
+/// The bookmark named `name` (internal name, else display name,
+/// case-insensitive) of `report`.
+///
+/// # Errors
+/// `notFound` listing the bookmarks; `invalidParams` for a group.
+pub fn bookmark<'a>(report: &'a Report, name: &str) -> Result<&'a Bookmark, OpError> {
+    let list = || {
+        report
+            .all_bookmarks()
+            .map(|b| json!({"name": b.name, "displayName": b.display_name}))
+            .collect::<Vec<_>>()
+    };
+    if let Some(b) = report.bookmark(name) {
+        return Ok(b);
+    }
+    if report
+        .bookmarks
+        .iter()
+        .any(|g| g.is_group() && (g.name == name || names_eq(&g.display_name, name)))
+    {
+        return Err(OpError::invalid_params(format!(
+            "'{name}' is a bookmark group: apply one of its bookmarks"
+        ))
+        .with_data(json!({ "bookmarks": list() })));
+    }
+    Err(
+        OpError::not_found(format!("no bookmark '{name}' in report '{}'", report.name))
+            .with_data(json!({ "bookmarks": list() })),
+    )
 }
 
 /// The model spelling of table `name` (case-insensitive).

@@ -294,3 +294,23 @@ fn invalid_embedded_json_is_a_diagnostic() {
     assert_eq!(diags.len(), 1);
     assert_eq!(diags[0].code, codes::UNRESOLVED_QUERY_REF);
 }
+
+#[test]
+fn legacy_bookmarks_come_from_the_config() {
+    let mut doc: serde_json::Value = serde_json::from_str(LAYOUT).unwrap();
+    let mut config: serde_json::Value =
+        serde_json::from_str(doc["config"].as_str().unwrap()).unwrap();
+    config["bookmarks"] = serde_json::json!([
+        {"name": "b1", "displayName": "West", "options": {"targetVisualNames": [SLICER]},
+         "explorationState": {"activeSection": PERFORMANCE}},
+        {"name": "g1", "displayName": "Group", "children": [{"name": "b2", "displayName": "All"}]}
+    ]);
+    doc["config"] = config.to_string().into();
+    let report = convert(&read_legacy_layout(doc.to_string().as_bytes()).unwrap());
+    let all: Vec<_> = report.all_bookmarks().map(|b| b.name.as_str()).collect();
+    assert_eq!(all, ["b1", "b2"]);
+    assert!(report.bookmarks[1].is_group());
+    let west = report.bookmark("west").unwrap();
+    assert_eq!(west.options["targetVisualNames"][0], SLICER);
+    assert_eq!(west.exploration_state["activeSection"], PERFORMANCE);
+}

@@ -105,6 +105,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`model.relationships`](#modelrelationships) | Every relationship: id, from/to columns, cardinalities, cross-filter direction, active flag. | A |
 | [`report.list`](#reportlist) | The document's reports: name, dataset reference, theme, page and visual counts, report filters. | A |
 | [`report.pages`](#reportpages) | The pages of a report: names, size, visibility, visual and filter counts. | A |
+| [`report.bookmarks`](#reportbookmarks) | The bookmarks of a report in pane order: group, page shown, Data/Display/Current page options and target visuals. | A |
 | [`report.visuals`](#reportvisuals) | The visuals of a page: type, title, position, bound fields and visual filters. | A |
 | [`report.filters`](#reportfilters) | A report's filters (plus a page's) translated to column filters, with the ones that cannot be applied (Top N, relative date…). | A |
 | [`security.roles`](#securityroles) | The model's row-level security roles (permission, DAX table filters, members, dynamic or not) and the current "View as" state. | A |
@@ -173,6 +174,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.toggleMatrixRow`](#canvastogglematrixrow) | Expands or collapses the matrix row of a cell hit and returns the re-rendered page. | M L A |
 | [`canvas.closePopups`](#canvasclosepopups) | Closes the open slicer dropdowns of a page. | M A |
 | [`canvas.reset`](#canvasreset) | Back to the report's saved slicer selections, no cross-filter, scroll and dropdowns reset; returns the re-rendered page. | M L A |
+| [`canvas.applyBookmark`](#canvasapplybookmark) | Applies a report bookmark to the canvas (its page and slicer selections, all or only its target visuals) and renders the page it shows; lists the parts not applied yet. | M L A |
 | [`canvas.tooltip`](#canvastooltip) | The hover tooltip (category, series, values) of a data point hit, from the last render. | A |
 | [`canvas.state`](#canvasstate) | The page's current interaction state (slicer selections, cross-filter) and view state, as JSON. | A |
 | [`export.table`](#exporttable) | Writes one table's data as CSV or Parquet (with model metadata); loads the data on first use. | L A W |
@@ -732,6 +734,30 @@ Examples:
 
 - Pages of the first report: `{"docId":"d1"}`
 - Pages of a report by partial name: `{"docId":"d1","report":"Stores"}`
+
+### `report.bookmarks`
+
+**Report bookmarks.** The bookmarks of a report in pane order: group, page shown, Data/Display/Current page options and target visuals.
+
+_agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report name (exact, case-insensitive, or a unique part; or 1-based index). Default: the first report. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `report` | string |  |
+| `bookmarks` | BookmarkOut[] | Bookmarks in the Bookmarks pane's order, groups flattened. |
+
+Examples:
+
+- Bookmarks of a report: `{"docId":"d1","report":"Stores"}`
 
 ### `report.visuals`
 
@@ -2114,6 +2140,37 @@ Result:
 Examples:
 
 - Reset the active page: `{"docId":"d1"}`
+
+### `canvas.applyBookmark`
+
+**Apply a bookmark.** Applies a report bookmark to the canvas (its page and slicer selections, all or only its target visuals) and renders the page it shows; lists the parts not applied yet.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `bookmark` | string | Bookmark: internal name, else display name (case-insensitive); see `report.bookmarks`. |
+| `page` (optional) | string \| null | The page shown now, rendered when the bookmark does not change the page (internal name, display name, 1-based index or a unique part). Default: the active page. |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `bookmark` | string | Internal name of the bookmark. |
+| `displayName` | string |  |
+| `navigated` | boolean | The bookmark shows another page than `page` (`rendered.page`). |
+| `changedPages` | string[] | Pages whose slicer or cross-filter state the bookmark changed (internal names). |
+| `notApplied` | string[] | Parts of the bookmark DashCraft does not apply yet (filter pane, visibility, sort, drill state, formatting, …). |
+| `rendered` | CanvasPageOut | The page the bookmark shows (else `page`), rendered. |
+
+Examples:
+
+- By display name: `{"docId":"d1","report":"Stores","bookmark":"West region"}`
+- Keep the current page: `{"docId":"d1","report":"Stores","bookmark":"831d0f1adb1c9f2ed1d0","page":"Store Performance"}`
 
 ### `canvas.tooltip`
 

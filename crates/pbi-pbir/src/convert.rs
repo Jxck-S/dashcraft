@@ -27,7 +27,7 @@ pub(crate) struct Ctx {
 }
 
 impl Ctx {
-    fn warn(&mut self, code: &str, message: String, origin: &Origin) {
+    pub(crate) fn warn(&mut self, code: &str, message: String, origin: &Origin) {
         self.diags
             .push(Diagnostic::warning(code, message).with_origin(origin.clone()));
     }
@@ -529,6 +529,7 @@ pub fn to_report_ast(pbir: &PbirReport) -> (Report, Vec<Diagnostic>) {
         report.measures = report_measures(ext);
     }
     report.pages = pbir.pages.iter().map(|p| page(p, &mut ctx)).collect();
+    report.bookmarks = crate::bookmarks::pbir_bookmarks(&pbir.files, &mut ctx);
     (report, ctx.diags)
 }
 

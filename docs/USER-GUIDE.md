@@ -129,7 +129,7 @@ The Report view behaves like Power BI's reading view:
 - **Cross-filtering**: click a pie slice, bar, column, line point, table row or matrix row. The other visuals on the page filter per the page's interaction settings, and the source dims its other points. Ctrl/⌘+click adds or removes points. Click the point again, the visual's background, the empty canvas or press Esc to clear. Highlight interactions filter instead of highlighting.
 - **Tooltips**: hover a data point for its category, series, value and tooltip fields; hover a visual with ⚠ for the error and the measure's DAX.
 - **Tables and matrices**: scroll with the wheel (Shift+wheel horizontally); double-click a matrix row or click its +/− to expand or collapse.
-- **Buttons**: Back returns to the previous page you visited; page navigation buttons go to their page; Clear all slicers clears them. Web URL buttons show the address with **Copy link**; DashCraft never opens links. Bookmarks, drillthrough and Q&A are not available.
+- **Buttons**: Back returns to the previous page you visited; page navigation buttons go to their page; Clear all slicers clears them. Bookmark buttons apply their bookmark: its page, slicer selections and cross-filter (the status bar names the parts DashCraft does not apply yet, such as filters or hidden visuals). Web URL buttons show the address with **Copy link**; DashCraft never opens links. Drillthrough and Q&A are not available.
 - **Selection**: click a visual to select it for the Filters, Visualizations, Data and Properties panes. Tab and Enter select visuals with the keyboard.
 - **Reset to default** (View tab): back to the selections saved in the report, with no cross-filter.
 

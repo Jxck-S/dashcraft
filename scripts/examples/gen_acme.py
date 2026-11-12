@@ -2356,6 +2356,26 @@ def ctx_plus(ctx: Ctx, table: str, column: str, value) -> Ctx:
     return ctx.add(table, column, lambda r, v=value: r.get(column) == v)
 
 
+def bookmark_expectations(e: Engine, rep: Report) -> list[dict]:
+    """Each bookmark applied to its page's saved state: its slicer's selection replaced (or
+    removed), then the page's KPI cards."""
+    out = []
+    for b in rep.bookmarks:
+        pg = next(p for p in rep.pages if p.id == b["page"])
+        slicer = next(v for v in pg.visuals if v.id == b["slicer"])
+        saved = slicer.selection
+        slicer.selection = b["selection"]
+        try:
+            out.append({"report": rep.name, "bookmark": b["name"], "name": b["id"], "page": pg.display,
+                        "pageId": pg.id, "slicer": slicer.id, "slicerKey": slicer.key,
+                        "selection": b["selection"].describe() if b["selection"] is not None else None,
+                        "cards": card_entries(e, pg, "kpis", ["Total Sales", "Target", "Target Attainment %",
+                                                              "Return Rate", "Gross Margin"])})
+        finally:
+            slicer.selection = saved
+    return out
+
+
 def page_expectations(e: Engine, rep: Report, pg: Page) -> dict:
     cards: list[dict] = []
     visuals: list[dict] = []
@@ -2590,6 +2610,7 @@ def build_expected(e: Engine, tables: dict, targets: list[dict], reports: list[R
         "reports": [{"report": r.name, "folder": f"{r.name}.Report",
                      "reportFilters": [f.describe() for f in r.filters],
                      "pages": [page_expectations(e, r, p) for p in r.pages]} for r in reports],
+        "bookmarks": [b for r in reports for b in bookmark_expectations(e, r)],
     }
 
 
@@ -2777,6 +2798,15 @@ def write_expected_md(out: Path, exp: dict) -> None:
                     lines.append("  - " + ", ".join(
                         f"{k} {x['formatted'] if isinstance(x, dict) else x}" for k, x in col_.items()))
             lines.append("")
+    if exp["bookmarks"]:
+        lines += ["## Bookmarks", "",
+                  "Each bookmark applied to its page as saved (it changes only its target slicer):", ""]
+        for b in exp["bookmarks"]:
+            what = f"slicer `{b['slicerKey']}` " + (b["selection"] if b["selection"] else "cleared (all)")
+            lines += [f"**{b['bookmark']}** ({b['report']}, {b['page']}): {what}.", "",
+                      md_table(["Visual", "Type", "Measure", "Expected"],
+                               [[c["visualKey"], c["visualType"], c["measure"], c["formatted"]] for c in b["cards"]]),
+                      ""]
     cg = exp["calculationGroup"]
     lines += ["## Calculation group", "", f"`'{cg['table']}'[{cg['column']}]` applied to [{cg['measure']}]; "
               + cg["context"] + ".", "",

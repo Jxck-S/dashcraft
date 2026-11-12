@@ -1924,5 +1924,111 @@
       ]
     }
   ],
+  "bookmarks": [
+    {
+      "report": "Acme Outfitters - Stores",
+      "bookmark": "West region",
+      "name": "831d0f1adb1c9f2ed1d0",
+      "page": "Store Performance",
+      "pageId": "ef3ce6b6fadf22960137",
+      "slicer": "ba3b1b7c5a9cede8452c",
+      "slicerKey": "region",
+      "selection": "'Stores'[Region] in ['West']",
+      "cards": [
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Total Sales",
+          "value": 111981.75,
+          "formatted": "$111,981.75"
+        },
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Target",
+          "value": 102500,
+          "formatted": "$102,500"
+        },
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Target Attainment %",
+          "value": 1.092504878,
+          "formatted": "109.3%"
+        },
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Return Rate",
+          "value": 0.0387755102,
+          "formatted": "3.9%"
+        },
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Gross Margin",
+          "value": 50094.88,
+          "formatted": "$50,094.88"
+        }
+      ]
+    },
+    {
+      "report": "Acme Outfitters - Stores",
+      "bookmark": "All regions",
+      "name": "1d7aa4f39d8a8805d20b",
+      "page": "Store Performance",
+      "pageId": "ef3ce6b6fadf22960137",
+      "slicer": "ba3b1b7c5a9cede8452c",
+      "slicerKey": "region",
+      "selection": null,
+      "cards": [
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Total Sales",
+          "value": 334715.85,
+          "formatted": "$334,715.85"
+        },
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Target",
+          "value": 315000,
+          "formatted": "$315,000"
+        },
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Target Attainment %",
+          "value": 1.06259,
+          "formatted": "106.3%"
+        },
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Return Rate",
+          "value": 0.0432432432,
+          "formatted": "4.3%"
+        },
+        {
+          "visual": "c81376feb163c3047446",
+          "visualKey": "kpis",
+          "visualType": "cardVisual",
+          "measure": "Gross Margin",
+          "value": 151445.31,
+          "formatted": "$151,445.31"
+        }
+      ]
+    }
+  ],
   "knownEngineGaps": []
 }
