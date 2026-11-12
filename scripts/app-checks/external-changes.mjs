@@ -2,16 +2,19 @@
 // TMDL file of the open project; the notification bar appears within two seconds; Compare lists
 // the changed measure; Keep mine hides the bar and Save then refuses to overwrite silently; a
 // second external edit brings the bar back and Reload (discarding the unsaved edit) rereads it.
-// Accessibility A1, A2 and A5 of the bar and Compare always; A3 (the IBM checker) and A4 when the
-// checker is installed.
+// File > Compare then compares with the files on disk (the same: no Reload / Keep mine) and with a
+// changed copy of the project folder, picked in the native dialog by pick.ps1 (UI Automation).
+// Accessibility A1, A2 and A5 of the bar and Compare always; A3 (the IBM checker, also on File >
+// Compare) and A4 when the checker is installed.
 //
 //   (cd app && npx tauri build --debug --no-bundle)
 //   npm install --prefix target/tmp/a11y --no-save accessibility-checker-engine   # optional
 //   node scripts/app-checks/external-changes.mjs [path/to/dashcraft-app.exe]
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { aceJs, installChecker } from './a11y.mjs'
-import { CTRL, launch, reporter, selectTotalSales, sleep, title } from './cdp.mjs'
+import { CTRL, launch, openFileMenu, reporter, root, selectTotalSales, sleep, title } from './cdp.mjs'
 
 const { check, finish } = reporter()
 const PORT = 9338
@@ -22,6 +25,9 @@ const bar = `document.querySelector('.bar.external')`
 const compare = `document.querySelector('[role="dialog"][aria-label^="Compare "]')`
 const click = (selector, text) =>
   `(() => { const b = [...document.querySelectorAll(${JSON.stringify(selector)})].find((b) => b.textContent.trim() === ${JSON.stringify(text)}); if (!b || b.disabled) return false; b.click(); return true })()`
+/** Clicks the File menu action whose heading is `heading`. */
+const action = (heading) =>
+  `(() => { const b = [...document.querySelectorAll('.backstage .action')].find((b) => b.querySelector('strong')?.textContent.trim() === ${JSON.stringify(heading)}); if (!b || b.disabled) return false; b.click(); return true })()`
 /** Edits a file of the project copy as another program would. */
 const edit = (copy, table, from, to) => {
   const file = join(copy, 'AcmeOutfitters.SemanticModel', 'definition', 'tables', `${table}.tmdl`)
@@ -89,9 +95,9 @@ try {
   check('Compare lists the changed measure as different', listed?.includes('Orders[Total Sales]') && listed.includes('Different'), listed?.slice(0, 200) ?? 'no list')
   check('Compare shows both expressions', listed?.includes('SUM(Orders[Line Amount]) * 1') && listed.includes('expression'), listed?.slice(0, 200) ?? '')
   check('Compare names the changed file', listed?.includes('Orders.tmdl'))
-const lines = await evaluate(`[...${compare}.querySelectorAll('.snippet .line')].map((l) => l.textContent)`)
-check('Compare shows the TMDL: the disk line minus, this line plus', lines?.includes("-measure 'Total Sales' = SUM(Orders[Line Amount]) * 1") && lines.includes("+measure 'Total Sales' = SUM(Orders[Line Amount])"), JSON.stringify(lines?.slice(0, 4)))
-check('unchanged TMDL lines are kept once', lines?.some((l) => l.startsWith(' \tformatString')), JSON.stringify(lines?.slice(0, 6)))
+  const lines = await evaluate(`[...${compare}.querySelectorAll('.snippet .line')].map((l) => l.textContent)`)
+  check('Compare shows the TMDL: the disk line minus, this line plus', lines?.includes("-measure 'Total Sales' = SUM(Orders[Line Amount]) * 1") && lines.includes("+measure 'Total Sales' = SUM(Orders[Line Amount])"), JSON.stringify(lines?.slice(0, 4)))
+  check('unchanged TMDL lines are kept once', lines?.some((l) => l.startsWith(' \tformatString')), JSON.stringify(lines?.slice(0, 6)))
   check('Keep mine in Compare', await evaluate(click('[role="dialog"][aria-label^="Compare "] button', 'Keep mine')))
   check('Keep mine closes Compare and the bar', await waitFor(`!${compare} && !${bar}`, 5000))
   await sleep(300)
@@ -125,6 +131,46 @@ check('unchanged TMDL lines are kept once', lines?.some((l) => l.startsWith(' \t
   check('the formula bar shows the version on disk', reloaded === EXTERNAL, reloaded ?? 'no formula')
   await sleep(2000)
   check('after Reload nothing is reported', !(await evaluate(`!!${bar}`)))
+
+  // File > Compare (M8.3): with the files on disk (nothing to resolve) and with another folder, a
+  // copy of the project where another program changed the measure, picked in the native folder
+  // dialog through UI Automation (pick.ps1).
+  const other = join(copy, '..', 'acme-outfitters-other')
+  rmSync(other, { recursive: true, force: true })
+  cpSync(copy, other, { recursive: true })
+  edit(other, 'Orders', "measure 'Total Sales' = SUM(Orders[Line Amount]) * 1", "measure 'Total Sales' = SUM(Orders[Line Amount]) * 2")
+  const compareSection = async () => (await openFileMenu(session)) && evaluate(click('.backstage .nav-item', 'Compare')) && waitFor(`!!document.querySelector('.backstage .page h1')?.textContent.includes('Compare')`, 3000)
+  check('File > Compare', await compareSection())
+  if (existsSync(aceJs)) {
+    const issues = await evaluate(`__a11y.check('.backstage')`)
+    const violations = issues.filter((i) => i.level === 'VIOLATION/FAIL')
+    check('A3 checker (WCAG 2.2 A and AA), File > Compare: no violation', violations.length === 0, violations.map((i) => `${i.rule} on ${i.where}: ${i.msg}`).join('; '))
+  }
+  check('With the files on disk', await evaluate(action('With the files on disk')))
+  const same = await waitFor(`!document.querySelector('.backstage') && ${compare}?.querySelector('[role="status"]')?.textContent.includes('same') && ${compare}.textContent`, 15000)
+  check('the saved document is the same as on disk', same?.includes('The model and reports are the same on disk and here.'), same?.slice(0, 200) ?? 'no dialog')
+  const buttons = await evaluate(`[...${compare}.querySelectorAll('button')].map((b) => b.textContent.trim()).filter((t) => t)`)
+  check('no Reload or Keep mine without an external change', !buttons.includes('Reload from disk') && !buttons.includes('Keep mine'), buttons.join(', '))
+  check('no changed-files list', !(await evaluate(`!!${compare}.querySelector('#compare-files')`)))
+  await key('Escape', 'Escape', 27)
+  check('Esc closes it', await waitFor(`!${compare}`, 3000))
+
+  check('File > Compare again', await compareSection())
+  check('With another folder', await evaluate(action('With another folder')))
+  const pick = spawnSync('pwsh', ['-NoProfile', '-File', join(root, 'scripts', 'app-checks', 'pick.ps1'), String(session.app.pid), 'Compare with a PBIP or TMDL folder', other], { encoding: 'utf8' })
+  const picked = `${pick.stdout}${pick.stderr}`.trim()
+  check('the folder is picked in the native dialog', picked === 'PICKED', picked || `status ${pick.status}, ${pick.error ?? 'no error'}`)
+  const versus = await waitFor(`${compare}?.querySelector('.objects') && ${compare}.getAttribute('aria-label')`, 15000)
+  check('the dialog names the other folder', versus === 'Compare AcmeOutfitters.pbip with acme-outfitters-other', versus ?? 'no dialog')
+  const text = await evaluate(`${compare}.textContent`)
+  check('the changed measure is different, labelled with the folder', text.includes('Orders[Total Sales]') && text.includes('1 different') && text.includes('In acme-outfitters-other'), text.slice(0, 300))
+  const otherLines = await evaluate(`[...${compare}.querySelectorAll('.snippet .line')].map((l) => l.textContent)`)
+  check("its TMDL: the other folder's line minus, this line plus", otherLines.includes("-measure 'Total Sales' = SUM(Orders[Line Amount]) * 2") && otherLines.includes("+measure 'Total Sales' = SUM(Orders[Line Amount]) * 1"), JSON.stringify(otherLines.slice(0, 4)))
+  const otherButtons = await evaluate(`[...${compare}.querySelectorAll('button')].map((b) => b.textContent.trim()).filter((t) => t)`)
+  check('only Close, no Reload or Keep mine', !otherButtons.includes('Reload from disk') && !otherButtons.includes('Keep mine') && otherButtons.includes('Close'), otherButtons.join(', '))
+  await evaluate(click('[role="dialog"][aria-label^="Compare "] button', 'Close'))
+  check('Close closes it and nothing changed', (await waitFor(`!${compare}`, 3000)) && !(await evaluate(`!!${bar} || ${title}.includes('*')`)))
+  rmSync(other, { recursive: true, force: true })
 } catch (e) {
   check('no exception', false, e?.stack ?? String(e))
 } finally {

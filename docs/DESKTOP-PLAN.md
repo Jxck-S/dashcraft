@@ -1082,7 +1082,7 @@ version; compare two versions of a project.
   rereads it under the same `docId` at a newer revision; a failed reload changes nothing). The
   app checks the project every 1.5 seconds (a size and timestamp scan, `doc.externalChanges`)
   and shows a notification bar with Reload (asking before it discards unsaved edits), Keep mine
-  and Compare (`scripts/app-checks/external-changes.mjs`: 34 checks on Windows; the bar appears
+  and Compare (`scripts/app-checks/external-changes.mjs`: 49 checks on Windows; the bar appears
   about one second after an external TMDL edit; A1 to A5 and the IBM checker pass for the bar and
   Compare). Next: the A6 screen-reader steps for the bar, and push notifications of external
   changes for `serve` and MCP clients (they poll `doc.externalChanges` meanwhile).
@@ -1096,8 +1096,12 @@ version; compare two versions of a project.
   for model objects as DashCraft writes it, so only content differs; JSON for report objects).
   The app's Compare (from the external changes bar) shows the diff against disk: per object, the
   change, its text with the differing lines marked, each property's value on disk and here, and
-  the file and line of each (`scripts/app-checks/external-changes.mjs`: 34 checks). Next:
-  comparing two documents or folders from the app.
+  the file and line of each; File → Compare shows the same view against the disk, another
+  Power BI file or a PBIP / TMDL folder picked in the native dialog
+  (`scripts/app-checks/external-changes.mjs`: 49 checks, the IBM checker clean on all three
+  surfaces). Left: report snippets in the PBIR file's form (they are the JSON of the object's
+  properties: in-memory report objects have no PBIR text until saved), and the A6 screen-reader
+  steps for Compare.
 
 **Crates and layers.** `pbi-ops` (journal, watcher, commands), `pbi-core` (diff), `dashcraft-app`.
 
