@@ -3606,6 +3606,69 @@ export interface RecalculatedOut {
   status: StatusOut
 }
 
+export interface RecoveryDiscardOut {
+  recoveryId: string
+  /** `false` when there was no such journal. */
+  discarded: boolean
+}
+
+export interface RecoveryIdParams {
+  /** A recovery id from `doc.recovery.list`. */
+  recoveryId: string
+}
+
+/**
+ * A recovery journal: the unsaved edits of a document that was not saved,
+ * reloaded or closed (DashCraft stopped unexpectedly).
+ */
+export interface RecoveryJournalOut {
+  /** The id to pass to `doc.recovery.restore` and `doc.recovery.discard`. */
+  recoveryId: string
+  /** The document's path. */
+  path?: string | null
+  /** The document still exists at `path`. */
+  sourceExists: boolean
+  /** When the first edit was journaled (RFC 3339, UTC). */
+  created?: string | null
+  /** When the last edit was journaled (RFC 3339, UTC). */
+  updated?: string | null
+  /** Journaled commands (edits, undos and redos). */
+  edits: number
+  /** What the last edit did (its undo label). */
+  lastEdit?: string | null
+  /** Why it cannot be restored (unreadable, written by a newer DashCraft). */
+  problem?: string | null
+}
+
+export interface RecoveryListOut {
+  /** Recovery is on in this workspace. */
+  enabled: boolean
+  /** The journal folder (in the per-user data folder, never in a project). */
+  location?: string | null
+  /** Journals not held by an open document, oldest first. */
+  journals: RecoveryJournalOut[]
+}
+
+export interface RecoveryRestoreOut {
+  recoveryId: string
+  /** The reopened document with the recovered edits (unsaved). */
+  docId: string
+  document: DocSummary
+  /** Journaled commands. */
+  edits: number
+  /** Commands replayed; fewer than `edits` when one failed. */
+  replayed: number
+  /**
+   * The command that failed; the document keeps the edits before it and
+   * the journal is kept (discard it explicitly).
+   */
+  failed?: ReplayFailureOut | null
+  /** The document revision after the replay. */
+  revision: number
+  /** The document has unsaved edits. */
+  dirty: boolean
+}
+
 /**
  * A rectangle in page units (canvas pixels at 100% zoom without a
  * viewport).
@@ -3856,6 +3919,16 @@ export interface RenderedPageInfo {
   /** Page size in page units. */
   width: number
   height: number
+}
+
+/** The journaled command that could not be replayed. */
+export interface ReplayFailureOut {
+  /** Its position in the journal (0-based). */
+  index: number
+  command: string
+  /** The error code (`invalidParams`, `notFound`, …). */
+  code: string
+  message: string
 }
 
 /** A report of an open document. */
@@ -4827,6 +4900,12 @@ export interface OpsCommands {
   'doc.reload': { params: DocReloadParams; output: DocReloadOut }
   /** Semantic diff of a document against its files on disk, another open document or a path: the objects added, removed and changed, with the differing properties. */
   'doc.diff': { params: DocDiffParams; output: DocDiffOut }
+  /** The recovery journals of unsaved edits left by documents that were not saved or closed (e.g. after a crash). */
+  'doc.recovery.list': { params: NoParams; output: RecoveryListOut }
+  /** Reopens the document of a recovery journal and replays its unsaved edits; the result is unsaved until doc.save. */
+  'doc.recovery.restore': { params: RecoveryIdParams; output: RecoveryRestoreOut }
+  /** Deletes a recovery journal and the unsaved edits it holds. */
+  'doc.recovery.discard': { params: RecoveryIdParams; output: RecoveryDiscardOut }
   /** The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). */
   'doc.inspect': { params: DocInspectParams; output: Inspect }
   /** Every model table with its columns, measure names, partitions, hierarchies and loaded row count. */
@@ -5028,6 +5107,9 @@ export const OPS_META = {
   'doc.externalChanges': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'doc.reload': { category: 'workspace', mutatesDocument: true, longRunning: false, agentSafe: false, writesFiles: false },
   'doc.diff': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'doc.recovery.list': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: false, writesFiles: false },
+  'doc.recovery.restore': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: false, writesFiles: false },
+  'doc.recovery.discard': { category: 'workspace', mutatesDocument: false, longRunning: false, agentSafe: false, writesFiles: true },
   'doc.inspect': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'model.tables': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'model.measures': { category: 'inspect', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -5152,6 +5234,12 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     docReload: (params: DocReloadParams, options?: O) => run('doc.reload', params, options),
     /** Semantic diff of a document against its files on disk, another open document or a path: the objects added, removed and changed, with the differing properties. */
     docDiff: (params: DocDiffParams, options?: O) => run('doc.diff', params, options),
+    /** The recovery journals of unsaved edits left by documents that were not saved or closed (e.g. after a crash). */
+    docRecoveryList: (params: NoParams = {}, options?: O) => run('doc.recovery.list', params, options),
+    /** Reopens the document of a recovery journal and replays its unsaved edits; the result is unsaved until doc.save. */
+    docRecoveryRestore: (params: RecoveryIdParams, options?: O) => run('doc.recovery.restore', params, options),
+    /** Deletes a recovery journal and the unsaved edits it holds. */
+    docRecoveryDiscard: (params: RecoveryIdParams, options?: O) => run('doc.recovery.discard', params, options),
     /** The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1). */
     docInspect: (params: DocInspectParams, options?: O) => run('doc.inspect', params, options),
     /** Every model table with its columns, measure names, partitions, hierarchies and loaded row count. */

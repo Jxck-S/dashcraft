@@ -453,7 +453,7 @@ fn commands_that_invoke_others_get_the_catalog_hints() {
         .filter(|s| s.meta.invokes_other_commands)
         .map(|s| s.meta.id)
         .collect();
-    assert_eq!(flagged, ["commands.batch"]);
+    assert_eq!(flagged, ["commands.batch", "doc.recovery.restore"]);
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -25,6 +25,8 @@
 //!   the JSON-lines RPC server; [`markdown`]: the catalog as Markdown.
 //! - [`mcp`]: the Model Context Protocol server (`dashcraft mcp`), a thin
 //!   adapter exposing the agent catalog as MCP tools.
+//! - [`recovery`]: opt-in recovery journals of unsaved edits
+//!   ([`Workspace::set_recovery`], `doc.recovery.*`).
 //!
 //! ```no_run
 //! # async fn demo() -> Result<(), pbi_ops::OpError> {
@@ -57,6 +59,7 @@ pub mod inspect_model;
 pub mod markdown;
 pub mod mcp;
 mod path_policy;
+pub mod recovery;
 mod registry;
 pub mod resolve;
 pub mod rpc;

@@ -15,6 +15,9 @@ use crate::canvas::CanvasStore;
 use crate::ctx::Ctx;
 use crate::error::OpError;
 use crate::path_policy::PathPolicy;
+use crate::recovery::{
+    JOURNAL_FORMAT, JOURNAL_VERSION, JournalDepth, JournalEntry, JournalHeader, RecoveryStore,
+};
 
 /// Default cap on open documents.
 pub const DEFAULT_MAX_DOCUMENTS: usize = 32;
@@ -75,6 +78,24 @@ pub struct DocEntry {
     /// Orders the mutating commands of this document.
     op_lock: Arc<tokio::sync::Mutex<()>>,
     pub(crate) canvas: CanvasStore,
+    /// The recovery journal of its unsaved edits ([`crate::recovery`]).
+    journal: Mutex<JournalState>,
+}
+
+/// Where a document's edits are journaled.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+enum JournalState {
+    /// No journal yet: the first journaled edit starts one.
+    #[default]
+    None,
+    /// Edits append to journal `id`, which holds `depth` undo/redo steps.
+    Active { id: String, depth: JournalDepth },
+    /// A journal is being replayed into the document: nothing is written.
+    Replaying,
+    /// It has edits no journal holds (made while recovery was off, or a
+    /// replay that stopped early): a journal of later edits alone would not
+    /// replay, so nothing is journaled until a save or reload.
+    Untracked,
 }
 
 impl fmt::Debug for DocEntry {
@@ -150,6 +171,139 @@ impl DocEntry {
     #[must_use]
     pub fn op_lock(&self) -> Arc<tokio::sync::Mutex<()>> {
         Arc::clone(&self.op_lock)
+    }
+
+    /// The id of the recovery journal of its unsaved edits, if any.
+    #[must_use]
+    pub fn recovery_id(&self) -> Option<String> {
+        match &*lock(&self.journal) {
+            JournalState::Active { id, .. } => Some(id.clone()),
+            JournalState::None | JournalState::Replaying | JournalState::Untracked => None,
+        }
+    }
+
+    /// The `doc.open` parameters that reopen the document (absolute paths).
+    fn open_params(&self) -> serde_json::Value {
+        let absolute = |p: &Path| {
+            std::path::absolute(p)
+                .unwrap_or_else(|_| p.to_path_buf())
+                .to_string_lossy()
+                .into_owned()
+        };
+        let o = &self.options;
+        let mut params = serde_json::json!({
+            "path": absolute(&self.path()),
+            "source": crate::commands::workspace::source_name(o.source),
+            "loadPbixSchema": o.load_pbix_schema,
+            "includeSystemTables": o.include_system_tables,
+            "autoRefresh": o.auto_refresh,
+        });
+        if let Some(map) = &o.blob_map {
+            params["blobMap"] = absolute(map).into();
+        }
+        if let Some(now) = &o.now {
+            params["now"] = now.clone().into();
+        }
+        params
+    }
+
+    /// Journals `command` (it changed the revision; the document had unsaved
+    /// edits before it when `dirty_before`) to `store`, starting the journal
+    /// on the first edit of a saved document. Failures are logged, never
+    /// returned: a journal must not make an edit fail.
+    pub(crate) fn journal_edit(
+        &self,
+        store: &RecoveryStore,
+        command: &str,
+        params: serde_json::Value,
+        dirty_before: bool,
+    ) {
+        let mut state = lock(&self.journal);
+        let depth = match &*state {
+            JournalState::Replaying | JournalState::Untracked => return,
+            JournalState::None if dirty_before => {
+                *state = JournalState::Untracked;
+                return;
+            }
+            JournalState::None => JournalDepth::default(),
+            JournalState::Active { depth, .. } => *depth,
+        };
+        let Some(depth) = depth.after(command) else {
+            // It undid an edit made before the journal: drop the journal, which
+            // can no longer be replayed.
+            Self::untrack(&mut state, store);
+            return;
+        };
+        let history = self.session.document_history();
+        let entry = JournalEntry {
+            command: command.to_owned(),
+            params,
+            revision: history.revision,
+            label: history.undo_label,
+        };
+        let id = match &*state {
+            JournalState::Active { id, .. } => id.clone(),
+            _ => {
+                let open = self.open_params();
+                let header = JournalHeader {
+                    format: JOURNAL_FORMAT.to_owned(),
+                    format_version: JOURNAL_VERSION,
+                    path: open["path"].as_str().unwrap_or_default().to_owned(),
+                    open,
+                    created: crate::recovery::rfc3339(chrono::Utc::now()),
+                    dashcraft_version: env!("CARGO_PKG_VERSION").to_owned(),
+                };
+                match store.create(&header) {
+                    Ok(id) => id,
+                    Err(e) => {
+                        tracing::warn!(
+                            "cannot start a recovery journal in {}: {e}",
+                            store.dir().display()
+                        );
+                        *state = JournalState::Untracked;
+                        return;
+                    }
+                }
+            }
+        };
+        let written = store.append(&id, &entry);
+        *state = JournalState::Active { id, depth };
+        if let Err(e) = written {
+            tracing::warn!("cannot write a recovery journal: {e}");
+            Self::untrack(&mut state, store);
+        }
+    }
+
+    /// Deletes the journal, if any, and stops journaling until a save.
+    fn untrack(state: &mut JournalState, store: &RecoveryStore) {
+        if let JournalState::Active { id, .. } = std::mem::replace(state, JournalState::Untracked)
+            && let Err(e) = store.discard(&id)
+        {
+            tracing::warn!("cannot delete the recovery journal {id}: {}", e.message);
+        }
+    }
+
+    /// Deletes the recovery journal (after a save, reload or close).
+    pub(crate) fn end_journal(&self, store: &RecoveryStore) {
+        let mut state = lock(&self.journal);
+        if let JournalState::Active { id, .. } = std::mem::take(&mut *state)
+            && let Err(e) = store.discard(&id)
+        {
+            tracing::warn!("cannot delete the recovery journal {id}: {}", e.message);
+        }
+    }
+
+    /// Stops journaling while a journal is replayed into the document.
+    pub(crate) fn begin_replay(&self) {
+        *lock(&self.journal) = JournalState::Replaying;
+    }
+
+    /// Ends a replay: later edits append to `journal` (`None`: nothing is
+    /// journaled until a save).
+    pub(crate) fn end_replay(&self, journal: Option<(String, JournalDepth)>) {
+        *lock(&self.journal) = journal.map_or(JournalState::Untracked, |(id, depth)| {
+            JournalState::Active { id, depth }
+        });
     }
 
     /// `true` once data was loaded.
@@ -299,6 +453,7 @@ pub struct Workspace {
     policy: PathPolicy,
     max_documents: usize,
     open_hook: RwLock<Option<OpenHook>>,
+    recovery: RwLock<Option<RecoveryStore>>,
 }
 
 impl fmt::Debug for Workspace {
@@ -333,6 +488,7 @@ impl Workspace {
             policy,
             max_documents: DEFAULT_MAX_DOCUMENTS,
             open_hook: RwLock::new(None),
+            recovery: RwLock::new(None),
         }
     }
 
@@ -384,6 +540,34 @@ impl Workspace {
             .unwrap_or_else(PoisonError::into_inner) = hook;
     }
 
+    /// Turns recovery journals on (`Some`: unsaved edits are journaled to
+    /// the store, see [`crate::recovery`]) or off (the default; ADR-0013 §5).
+    /// Turning it off, or moving it, deletes the journals of open documents;
+    /// a document with unsaved edits is journaled again after its next save.
+    pub fn set_recovery(&self, store: Option<RecoveryStore>) {
+        let previous = std::mem::replace(
+            &mut *self
+                .recovery
+                .write()
+                .unwrap_or_else(PoisonError::into_inner),
+            store.clone(),
+        );
+        if let Some(previous) = previous.filter(|p| Some(p) != store.as_ref()) {
+            for doc in self.documents() {
+                doc.end_journal(&previous);
+            }
+        }
+    }
+
+    /// The recovery store, when recovery is on.
+    #[must_use]
+    pub fn recovery(&self) -> Option<RecoveryStore> {
+        self.recovery
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
     /// Applies the [open hook](Self::set_open_hook), if any.
     pub(crate) fn apply_open_hook(&self, options: &mut SessionOptions) {
         let hook = self
@@ -424,6 +608,7 @@ impl Workspace {
             loaded: tokio::sync::Mutex::new(false),
             op_lock: Arc::new(tokio::sync::Mutex::new(())),
             canvas: CanvasStore::default(),
+            journal: Mutex::new(JournalState::None),
         });
         docs.insert(n, Arc::clone(&entry));
         Ok(entry)

@@ -260,13 +260,36 @@ impl Registry {
             }),
             None => None,
         };
+        // Recovery journals (crate::recovery): the document and its revision
+        // before the command, while it holds the document's lock.
+        let journal = match ws.recovery() {
+            Some(store) if meta.mutates_document => params
+                .get("docId")
+                .and_then(Value::as_str)
+                .and_then(|d| ws.find(d))
+                .map(|entry| {
+                    let history = entry.session().document_history();
+                    (store, entry, history, params.clone())
+                }),
+            _ => None,
+        };
         tracing::debug!(command = meta.id, caller = ?ctx.caller(), "running");
         let run = CatchUnwind::new(spec.call(ws, params, &ctx), meta.id);
-        tokio::select! {
+        let result = tokio::select! {
             biased;
             () = ctx.cancel_token().cancelled() => Err(OpError::cancelled()),
             result = run => result,
+        };
+        if let (Ok(_), Some((store, entry, before, params))) = (&result, journal) {
+            match meta.id {
+                "doc.save" | "doc.saveAs" | "doc.reload" | "doc.close" => entry.end_journal(&store),
+                _ if entry.session().document_history().revision != before.revision => {
+                    entry.journal_edit(&store, meta.id, params, before.dirty);
+                }
+                _ => {}
+            }
         }
+        result
     }
 
     /// [`execute`](Self::execute) with serializable parameters and a typed
