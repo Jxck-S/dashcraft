@@ -137,7 +137,7 @@ impl VisualKey {
             .add(ctx.frame)
             .add(ctx.visual)
             .add_u64(data)
-            .add(&ctx.state.slicer_selections.get(name))
+            .add(&ctx.state.shown_selection(name))
             .add(
                 &ctx.state
                     .selected_points

@@ -795,7 +795,7 @@ impl Exec<'_> {
             all_selected: true,
             ..SlicerData::default()
         };
-        if let Some(sel) = state.slicer_selections.get(&self.visual.name) {
+        if let Some(sel) = state.shown_selection(&self.visual.name) {
             let wanted: Vec<Vec<ValueKey>> = sel
                 .values
                 .iter()

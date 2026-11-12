@@ -819,6 +819,11 @@ export function clearSelections(reportId: number, pageId: number, visual: string
   return onPage(reportId, pageId, (t) => ops.canvasClearSelections({ ...t, visual }))
 }
 
+/** Applies a slicer's pending selection (its Apply button); `null`: every slicer of the page. */
+export function applySlicers(reportId: number, pageId: number, visual: string | null): Promise<Outcome<RenderedPage>> {
+  return onPage(reportId, pageId, (t) => ops.canvasApplySlicers({ ...t, visual }))
+}
+
 export function setSlicerSearch(reportId: number, pageId: number, visual: string, text: string): Promise<Outcome<RenderedPage>> {
   return onPage(reportId, pageId, (t) => ops.canvasSetSlicerSearch({ ...t, visual, text }))
 }

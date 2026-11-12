@@ -152,6 +152,7 @@ pub fn catalog() -> Registry {
         .with::<canvas::CanvasSetSpotlight>()
         .with::<canvas::CanvasSortVisual>()
         .with::<canvas::CanvasClearSelections>()
+        .with::<canvas::CanvasApplySlicers>()
         .with::<canvas::CanvasSetSlicerSearch>()
         .with::<canvas::CanvasToggleMatrixRow>()
         .with::<canvas::CanvasClosePopups>()

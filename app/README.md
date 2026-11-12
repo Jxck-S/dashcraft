@@ -366,7 +366,9 @@ page keeps them.
 - **Buttons and navigation.** Action buttons return an action: **Back** goes to the previous page
   of the navigation history (page tabs, Ctrl+Page Up / Down and page navigation buttons push to
   it; nothing to go back to shows a toast), **Page navigation** goes to the page, *Clear all
-  slicers* clears them, *Apply all slicers* does nothing (selections apply at once). **Web URL**
+  slicers* clears them, *Apply all slicers* applies the pending slicer selections (while it is
+  visible, slicer selections wait for it; a report with an Apply button on every slicer shows
+  **Apply** at the bottom right of a slicer with a pending selection, `canvas.applySlicers`). **Web URL**
   opens a dialog that shows the URL with **Copy link**: DashCraft never opens links. **Bookmark**
   buttons apply their bookmark (`canvas.click` → `canvas.applyBookmark`: page, slicer
   selections, cross-filter) and the status bar names the parts not applied yet; **Drillthrough**
@@ -535,7 +537,7 @@ Svelte components ──► lib/backend.ts ──► lib/ops.ts  ops.dataPage({�
 | `data.page`, `data.columnStats` | Table view grid pages (sort, SQL filter), column statistics |
 | `data.loadCsv`, `text.previewPeople`, `data.addDerivedColumn`, `data.removeDerivedColumn` | Load CSV manually…, Parse people field…, Remove derived column |
 | `dax.query`, `measures.values`, `report.filters` | DAX query view, Measures panel (canvas, report or page filters) |
-| `canvas.render`, `canvas.click`, `canvas.scroll`, `canvas.toggleMatrixRow`, `canvas.clearSelections`, `canvas.setSlicerSearch`, `canvas.closePopups`, `canvas.reset`, `canvas.tooltip` | the interactive report canvas |
+| `canvas.render`, `canvas.click`, `canvas.scroll`, `canvas.toggleMatrixRow`, `canvas.clearSelections`, `canvas.applySlicers`, `canvas.setSlicerSearch`, `canvas.closePopups`, `canvas.reset`, `canvas.tooltip` | the interactive report canvas |
 | `doc.applyEdits`, `doc.undo`, `doc.redo`, `doc.history` | formula bar and Properties edits, Undo / Redo and their tooltips, the `*` marker |
 | `doc.save`, `doc.saveAs` | File → Save, Save as (Ctrl+S, Ctrl+Shift+S), the unsaved-changes prompt |
 | `convert.pbip`, `convert.pbit` | File → Export |

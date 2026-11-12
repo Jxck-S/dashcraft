@@ -525,6 +525,56 @@ impl Command for CanvasClearSelections {
 
 // ---------------------------------------------------------------------------
 
+/// `canvas.applySlicers`.
+#[derive(Debug)]
+pub struct CanvasApplySlicers;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CanvasApplySlicersParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+    /// Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page.
+    #[serde(default)]
+    pub page: Option<String>,
+    /// The slicer whose pending selection to apply (its Apply button);
+    /// absent: every slicer of the page ("Apply all slicers").
+    #[serde(default)]
+    pub visual: Option<String>,
+}
+
+impl Command for CanvasApplySlicers {
+    type Params = CanvasApplySlicersParams;
+    type Output = CanvasPageOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.applySlicers",
+            title: "Apply slicers",
+            summary: "Applies pending slicer selections (made while the page has an \"Apply all slicers\" button or the report adds an Apply button to slicers), and returns the re-rendered page.",
+            long_running: true,
+            examples: &[
+                ("Apply every pending slicer", r#"{"docId": "d1"}"#),
+                (
+                    "Apply one slicer",
+                    r#"{"docId": "d1", "visual": "9a5c3f0e1b"}"#,
+                ),
+            ],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        canvas::apply_slicers(&t, p.visual.as_deref()).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+
 /// `canvas.focus`.
 #[derive(Debug)]
 pub struct CanvasFocus;

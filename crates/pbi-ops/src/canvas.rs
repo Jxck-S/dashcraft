@@ -30,7 +30,7 @@
 //!   caller saw); a page that was never rendered is rendered first.
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -51,9 +51,10 @@ use pbi_render::layout::{FrameOptions, auto_title};
 use pbi_render::query::relative::{RelativeAnchor, RelativeDateSpec, RelativePeriod};
 use pbi_render::query::{
     DATA_TABLE_SUFFIX, DrillAction, DrillthroughPage, FocusState, InteractionState, PointField,
-    PointSelection, QueryEnv, QueryLimits, ReportModels, SlicerSelection, VisualTable,
-    allows_cross_report_drillthrough, cross_report_targets, drill_through, drillthrough_page,
-    is_slicer_type, slicer_fields, source_name, synced_slicers, tooltip_state, visual_tooltip_page,
+    PointSelection, QueryEnv, QueryLimits, QueryReduction, ReportModels, SlicerSelection,
+    VisualTable, allows_cross_report_drillthrough, cross_report_targets, drill_through,
+    drillthrough_page, is_slicer_type, slicer_fields, source_name, synced_slicers, tooltip_state,
+    visual_tooltip_page,
 };
 use pbi_render::scene::{HitId, HitKind, HitRegion, Rect};
 use pbi_render::svg::{SvgOptions, to_svg};
@@ -304,8 +305,16 @@ pub struct CanvasInteractionOut {
     pub search: Option<RectOut>,
     pub dropdown_open: bool,
     pub search_text: String,
-    /// The slicer filters something (not "All").
+    /// The slicer shows a selection (not "All"; pending or applied).
     pub has_selection: bool,
+    /// The slicer has a selection that is not applied yet
+    /// (`canvas.applySlicers` applies it).
+    #[serde(default)]
+    pub pending: bool,
+    /// The report adds an Apply button to each slicer (query reduction):
+    /// selections stay pending until applied.
+    #[serde(default)]
+    pub apply_button: bool,
     /// Range slicers: value boxes, slider and bounds.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub range: Option<RangeOut>,
@@ -1361,10 +1370,11 @@ fn page_dto(
                 .and_then(|visual| visual_sort(visual, &job.state)),
         })
         .collect();
+    let apply_button = QueryReduction::of(report).slicer_apply_button;
     let interactions = rendered
         .interactions
         .iter()
-        .map(|i| interaction_out(i, job))
+        .map(|i| interaction_out(i, job, apply_button))
         .collect();
     let (selections, effective) = selections(report, page, theme, &job.state, data);
     let overlay = rendered.overlay.as_ref();
@@ -1454,7 +1464,7 @@ fn is_value_field(field: &FieldExpr) -> bool {
     field.is_measure() || matches!(field, FieldExpr::Aggregation { .. })
 }
 
-fn interaction_out(i: &VisualInteraction, job: &Job) -> CanvasInteractionOut {
+fn interaction_out(i: &VisualInteraction, job: &Job, apply_button: bool) -> CanvasInteractionOut {
     let kind = if is_slicer_type(&i.visual_type) {
         "slicer"
     } else if matches!(i.visual_type.as_str(), "pivotTable" | "matrix") {
@@ -1499,9 +1509,10 @@ fn interaction_out(i: &VisualInteraction, job: &Job) -> CanvasInteractionOut {
         search_text: view.map(|v| v.slicer.search.clone()).unwrap_or_default(),
         has_selection: job
             .state
-            .slicer_selections
-            .get(&i.name)
+            .shown_selection(&i.name)
             .is_some_and(|s| !s.is_all()),
+        pending: job.state.pending_slicers.contains_key(&i.name),
+        apply_button: apply_button && kind == "slicer",
         range: slicer.and_then(|s| s.range.as_ref()).map(|r| RangeOut {
             low_box: r.low_box.as_ref().map(rect_out),
             high_box: r.high_box.as_ref().map(rect_out),
@@ -1591,24 +1602,21 @@ pub async fn click(
     ensure_rendered(target).await?;
     let theme = target.theme();
     let active = target.entry.canvas.active_bookmark(target.report);
-    let (mut changed, mut action, cleared) = target.update(|entry, report, page| {
+    let (mut changed, mut action, applied) = target.update(|entry, report, page| {
         let nav = Navigation::new(report, page, active.as_deref());
-        let before: Vec<String> = entry.state.slicer_selections.keys().cloned().collect();
+        let before = entry.state.slicer_selections.clone();
         let (changed, action) = apply_click(entry, report, page, &theme, &nav, hit.as_ref(), mods)?;
-        let cleared: Vec<String> = before
-            .into_iter()
-            .filter(|s| !entry.state.slicer_selections.contains_key(s))
+        let after = &entry.state.slicer_selections;
+        let applied: Vec<String> = before
+            .keys()
+            .chain(after.keys())
+            .filter(|s| before.get(*s) != after.get(*s))
+            .cloned()
             .collect();
-        Ok::<_, OpError>((changed, action, cleared))
+        Ok::<_, OpError>((changed, action, applied))
     })??;
-    let clicked = match &hit {
-        Some(HitId {
-            visual,
-            kind: HitKind::SlicerItem { .. },
-        }) => Some(visual),
-        _ => None,
-    };
-    for slicer in clicked.into_iter().chain(cleared.iter()) {
+    let mut synced = HashSet::new();
+    for slicer in applied.iter().filter(|s| synced.insert(s.as_str())) {
         changed |= target.sync_slicer(slicer)?;
     }
     if let Some(CanvasAction::Bookmark { name, .. }) = &action {
@@ -2038,12 +2046,19 @@ pub async fn clear_selections(
     target: &Target,
     visual: Option<&str>,
 ) -> Result<CanvasPageOut, OpError> {
-    target.update(|entry, _, page| {
+    let theme = target.theme();
+    let applied = target.update(|entry, report, page| {
         let mut state = entry.state.clone();
+        let mut applied = false;
         match visual {
             Some(v) => {
-                resolve::visual(page, v)?;
-                state.clear_slicer(v);
+                let found = resolve::visual(page, v)?;
+                if is_slicer_type(&found.visual_type) {
+                    let deferred = SlicerApply::of(report, page, &state, &theme).deferred();
+                    applied = choose(&mut state, deferred, v, None);
+                } else {
+                    state.clear_slicer(v);
+                }
                 if state
                     .selected_points
                     .as_ref()
@@ -2058,10 +2073,36 @@ pub async fn clear_selections(
             }
         }
         entry.set_state(state);
-        Ok::<(), OpError>(())
+        Ok::<bool, OpError>(applied)
     })??;
-    if let Some(v) = visual {
+    if let Some(v) = visual.filter(|_| applied) {
         target.sync_slicer(v)?;
+    }
+    render(target).await
+}
+
+/// `canvas.applySlicers`: applies the pending selection of slicer
+/// `visual`, or of every slicer of the page (`None`; the "Apply all
+/// slicers" button).
+///
+/// # Errors
+/// `notFound`, `invalidParams` for a visual that is not a slicer.
+pub async fn apply_slicers(
+    target: &Target,
+    visual: Option<&str>,
+) -> Result<CanvasPageOut, OpError> {
+    let applied = target.update(|entry, _, page| {
+        let name = match visual {
+            Some(v) => Some(resolve::slicer(page, Some(v), None)?.name.clone()),
+            None => None,
+        };
+        let mut state = entry.state.clone();
+        let applied = state.apply_pending(name.as_deref());
+        entry.set_state(state);
+        Ok::<_, OpError>(applied)
+    })??;
+    for name in &applied {
+        target.sync_slicer(name)?;
     }
     render(target).await
 }
@@ -2078,18 +2119,23 @@ pub async fn set_slicer(
     values: Vec<serde_json::Value>,
     invert: bool,
 ) -> Result<CanvasPageOut, OpError> {
-    let name = target.update(|entry, _, page| {
+    let theme = target.theme();
+    let (name, applied) = target.update(|entry, report, page| {
         let slicer = resolve::slicer(page, visual, field)?;
         let mut state = entry.state.clone();
-        if values.is_empty() && !invert {
-            state.clear_slicer(&slicer.name);
+        let selection = if values.is_empty() && !invert {
+            None
         } else {
-            state.select(slicer.name.clone(), selection_of(values, invert)?);
-        }
+            Some(selection_of(values, invert)?)
+        };
+        let deferred = SlicerApply::of(report, page, &state, &theme).deferred();
+        let applied = choose(&mut state, deferred, &slicer.name, selection);
         entry.set_state(state);
-        Ok::<String, OpError>(slicer.name.clone())
+        Ok::<_, OpError>((slicer.name.clone(), applied))
     })??;
-    target.sync_slicer(&name)?;
+    if applied {
+        target.sync_slicer(&name)?;
+    }
     render(target).await
 }
 
@@ -2108,27 +2154,26 @@ pub async fn set_range(
     high: Option<RangeBound>,
 ) -> Result<CanvasPageOut, OpError> {
     let model = target.entry.session().revision_snapshot().model;
-    let name = target.update(|entry, _, page| {
+    let theme = target.theme();
+    let (name, applied) = target.update(|entry, report, page| {
         let slicer = resolve::slicer(page, visual, field)?;
         let field = single_field(slicer)?;
         let data_type = field_type(&model, &field);
         let condition = range_condition(&field, data_type.as_ref(), low, high)?;
         let mut state = entry.state.clone();
-        match condition {
-            Some(condition) => state.select(
-                slicer.name.clone(),
-                SlicerSelection {
-                    values: Vec::new(),
-                    inverted: false,
-                    condition: Some(condition),
-                },
-            ),
-            None => state.clear_slicer(&slicer.name),
-        };
+        let selection = condition.map(|condition| SlicerSelection {
+            values: Vec::new(),
+            inverted: false,
+            condition: Some(condition),
+        });
+        let deferred = SlicerApply::of(report, page, &state, &theme).deferred();
+        let applied = choose(&mut state, deferred, &slicer.name, selection);
         entry.set_state(state);
-        Ok::<String, OpError>(slicer.name.clone())
+        Ok::<_, OpError>((slicer.name.clone(), applied))
     })??;
-    target.sync_slicer(&name)?;
+    if applied {
+        target.sync_slicer(&name)?;
+    }
     render(target).await
 }
 
@@ -2153,7 +2198,8 @@ pub async fn set_relative_date(
         )));
     }
     let model = target.entry.session().revision_snapshot().model;
-    let name = target.update(|entry, _, page| {
+    let theme = target.theme();
+    let (name, applied) = target.update(|entry, report, page| {
         let slicer = resolve::slicer(page, visual, field)?;
         let field = single_field(slicer)?;
         if spec.is_some() && field_type(&model, &field).is_some_and(|t| t != DataType::DateTime) {
@@ -2163,21 +2209,19 @@ pub async fn set_relative_date(
             )));
         }
         let mut state = entry.state.clone();
-        match spec {
-            Some(spec) => state.select(
-                slicer.name.clone(),
-                SlicerSelection {
-                    values: Vec::new(),
-                    inverted: false,
-                    condition: Some(spec.normalized().condition(&field)),
-                },
-            ),
-            None => state.clear_slicer(&slicer.name),
-        };
+        let selection = spec.map(|spec| SlicerSelection {
+            values: Vec::new(),
+            inverted: false,
+            condition: Some(spec.normalized().condition(&field)),
+        });
+        let deferred = SlicerApply::of(report, page, &state, &theme).deferred();
+        let applied = choose(&mut state, deferred, &slicer.name, selection);
         entry.set_state(state);
-        Ok::<String, OpError>(slicer.name.clone())
+        Ok::<_, OpError>((slicer.name.clone(), applied))
     })??;
-    target.sync_slicer(&name)?;
+    if applied {
+        target.sync_slicer(&name)?;
+    }
     render(target).await
 }
 
@@ -2860,14 +2904,12 @@ fn apply_click(
             let dv = last.dataview(&visual.name).ok_or_else(|| {
                 OpError::invalid_params(format!("slicer {} has no data to click", visual.name))
             })?;
-            let current = entry.state.slicer_selections.get(&visual.name);
+            let current = entry.state.shown_selection(&visual.name);
             let (next, single) = slicer_click(current, visual, theme, dv, *index, mods.ctrl)?;
             let mut state = entry.state.clone();
-            if next == SlicerSelection::default() {
-                state.clear_slicer(&visual.name);
-            } else {
-                state.select(visual.name.clone(), next);
-            }
+            let deferred = SlicerApply::of(report, page, &state, theme).deferred();
+            let next = (next != SlicerSelection::default()).then_some(next);
+            choose(&mut state, deferred, &visual.name, next);
             changed |= entry.set_state(state);
             if single {
                 let s = &mut entry.view.visual_mut(&visual.name).slicer;
@@ -2971,11 +3013,16 @@ fn button_action(
         ButtonAction::WebUrl { url } => Some(CanvasAction::WebUrl {
             url: truncate(&url, 2048),
         }),
-        // Slicer selections apply immediately: nothing is pending.
-        ButtonAction::ApplyAllSlicers => None,
+        ButtonAction::ApplyAllSlicers => {
+            let mut state = entry.state.clone();
+            state.apply_pending(None);
+            *changed |= entry.set_state(state);
+            None
+        }
         ButtonAction::ClearAllSlicers => {
             let mut state = entry.state.clone();
             state.slicer_selections.clear();
+            state.pending_slicers.clear();
             *changed |= entry.set_state(state);
             None
         }
@@ -2983,6 +3030,69 @@ fn button_action(
             unavailable(&format!("The '{}' action", truncate(&kind, 40)))
         }
     }
+}
+
+/// How slicer selections apply on a page: at once, or pending until an
+/// Apply button applies them.
+#[derive(Debug, Clone, Copy, Default)]
+struct SlicerApply {
+    /// The report adds an Apply button to each slicer
+    /// ([`QueryReduction::slicer_apply_button`]).
+    per_slicer: bool,
+    /// The page shows an "Apply all slicers" button.
+    apply_all: bool,
+}
+
+impl SlicerApply {
+    fn of(report: &Report, page: &Page, state: &InteractionState, theme: &ThemeResolver) -> Self {
+        let per_slicer = QueryReduction::of(report).slicer_apply_button;
+        let mut shown = Cow::Borrowed(page);
+        if !state.visibility.is_empty() {
+            let mut p = page.clone();
+            for v in &mut p.visuals {
+                if let Some(hidden) = state.visibility.get(&v.name) {
+                    v.is_hidden = *hidden;
+                }
+            }
+            shown = Cow::Owned(p);
+        }
+        let hidden = pbi_render::visuals::page::hidden_visuals(&shown);
+        let apply_all = shown.visuals.iter().any(|v| {
+            !hidden.contains(v.name.as_str())
+                && matches!(
+                    button::action(v, theme),
+                    Some(ButtonAction::ApplyAllSlicers)
+                )
+        });
+        Self {
+            per_slicer,
+            apply_all,
+        }
+    }
+
+    fn deferred(self) -> bool {
+        self.per_slicer || self.apply_all
+    }
+}
+
+/// Sets slicer `name`'s selection (`None` clears it), as a pending
+/// selection when `deferred`; `true` when the applied selection was set
+/// (the synced slicers follow it).
+fn choose(
+    state: &mut InteractionState,
+    deferred: bool,
+    name: &str,
+    selection: Option<SlicerSelection>,
+) -> bool {
+    if deferred {
+        state.stage(name, selection);
+        return false;
+    }
+    match selection {
+        Some(s) => state.select(name.to_owned(), s),
+        None => state.clear_slicer(name),
+    };
+    true
 }
 
 fn values_match(a: &Value, b: &Value) -> bool {

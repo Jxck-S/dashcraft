@@ -1248,9 +1248,22 @@ in focus mode or as a table and export its data; see images and report-level mea
   (theme files and images, PBIR and legacy) serves every renderer. Approximations: the scaling
   modes' exact placement and the page transparency applied to the background image are not
   checked against Desktop; web-URL and data-bound images are not drawn.
-- [ ] **M9.10 Remaining filter semantics.** Relative date and time, Top N and measure filters at
+- [x] **M9.10 Remaining filter semantics.** Relative date and time, Top N and measure filters at
   report and page level; the Apply button and query-reduction behaviour of the filter pane and
   slicers. *Partly done with M9.7:* relative date and time filters now apply at every level.
+  *Done:* measure (value) filters of the report and page apply to each visual's rows, as
+  visual-level ones do (not yet to matrices, which warn); Top N already did at every level.
+  `pbi_render::query::QueryReduction` reads the report's `slowDataSourceSettings` (PBIR) or
+  legacy `config` query-reduction options. Slicer selections become pending
+  (`InteractionState::pending_slicers`, shown by the slicer, not applied to other visuals) when
+  the report adds an Apply button to every slicer or a visible "Apply all slicers" button is on
+  the page; that button, the per-slicer Apply button in the app and `canvas.applySlicers` apply
+  them, and the interaction DTO reports `pending` and `applyButton`. With cross-highlighting
+  disabled, selected data points filter nothing unless an interaction is set explicitly. Tests:
+  `apply_all_slicers_button_defers_selections` and `query_reduction_and_page_measure_filters`
+  (`crates/pbi-ops/tests/canvas.rs`). Not checked against Desktop: measure filters above visual
+  level (Desktop's UI only adds them on visuals), pending selections not syncing until applied,
+  and the filter pane's Apply settings, read but unused while the pane is read-only (M20.1).
 - [ ] **M9.11 Persist reading state.** On save, the current slicer selections and filter states
   are written to the report as Desktop does, through document transactions (the step foreseen by
   ADR-0006), honouring the "persistent filters" setting.

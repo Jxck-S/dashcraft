@@ -176,6 +176,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 | [`canvas.setSpotlight`](#canvassetspotlight) | Spotlights a visual (the other visuals fade); without a visual ends the spotlight. | M L A |
 | [`canvas.sortVisual`](#canvassortvisual) | Sorts a visual by one of its fields (the header's "Sort axis"), changes the sort direction or restores the saved sort. | M L A |
 | [`canvas.clearSelections`](#canvasclearselections) | Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page. | M L A |
+| [`canvas.applySlicers`](#canvasapplyslicers) | Applies pending slicer selections (made while the page has an "Apply all slicers" button or the report adds an Apply button to slicers), and returns the re-rendered page. | M L A |
 | [`canvas.setSlicerSearch`](#canvassetslicersearch) | Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page. | M L A |
 | [`canvas.toggleMatrixRow`](#canvastogglematrixrow) | Expands or collapses the matrix row of a cell hit and returns the re-rendered page. | M L A |
 | [`canvas.closePopups`](#canvasclosepopups) | Closes the open slicer dropdowns of a page. | M A |
@@ -2288,6 +2289,52 @@ Examples:
 
 - Clear the cross-filter: `{"docId":"d1"}`
 - Clear one slicer: `{"docId":"d1","visual":"9a5c3f0e1b"}`
+
+### `canvas.applySlicers`
+
+**Apply slicers.** Applies pending slicer selections (made while the page has an "Apply all slicers" button or the report adds an Apply button to slicers), and returns the re-rendered page.
+
+_mutates the document, long-running, agent-safe; since 0.2.0._
+
+Parameters:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string | The document id from `doc.open` (`d1`, …). |
+| `report` (optional) | string \| null | Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. |
+| `page` (optional) | string \| null | Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. |
+| `visual` (optional) | string \| null | The slicer whose pending selection to apply (its Apply button); absent: every slicer of the page ("Apply all slicers"). |
+
+Result:
+
+| Field | Type | Description |
+|---|---|---|
+| `docId` | string |  |
+| `report` | string | Report name. |
+| `page` | string | Page internal name. |
+| `pageDisplayName` | string |  |
+| `generation` | integer | Render number of this page (increasing): drop older responses. |
+| `documentRevision` | integer | The semantic document revision the report, the page and its data were read at (one revision, even while edits commit). |
+| `svg` | string | The page as a standalone SVG document (deterministic; `data-hit` attributes on interactive groups). |
+| `overlaySvg` | string \| null | Open slicer dropdown popups, drawn above the page; `null` when none is open. |
+| `width` | number |  |
+| `height` | number |  |
+| `hitRegions` | HitRegionOut[] | Hit regions in paint order (hit-test from the end). |
+| `overlayHitRegions` | HitRegionOut[] | Hit regions of the overlay (above every page region). |
+| `visuals` | CanvasVisualOut[] | Every visual of the page (hidden ones included), in page order. |
+| `interactions` | CanvasInteractionOut[] |  |
+| `selections` | SelectionOut[] | Slicer selections and the cross-filter. |
+| `effectiveFilters` | FilterSpecOut | Report + page filters + selections as a filter spec (what cards are evaluated in, ignoring per-visual interactions). |
+| `isDefault` | boolean | The state equals the report's saved state. |
+| `warnings` | string[] | Unreadable saved slicer selections. |
+| `durationMs` | integer | Query + render wall time. |
+| `focus`? | FocusOut \| null | The visual in focus mode (`canvas.focus`). |
+| `spotlight`? | string \| null | The spotlighted visual (`canvas.setSpotlight`, bookmarks). |
+
+Examples:
+
+- Apply every pending slicer: `{"docId":"d1"}`
+- Apply one slicer: `{"docId":"d1","visual":"9a5c3f0e1b"}`
 
 ### `canvas.setSlicerSearch`
 

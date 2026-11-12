@@ -486,8 +486,7 @@ impl Slicer {
         let mode_text = o.text("data", "mode").map(|m| m.to_ascii_lowercase());
         let selected_condition = ctx
             .state
-            .slicer_selections
-            .get(&ctx.visual.name)
+            .shown_selection(&ctx.visual.name)
             .and_then(|s| s.condition.as_ref());
         let relative_selected = selected_condition.is_some_and(relative::is_relative);
         let mode = match mode_text.as_deref() {
@@ -1248,8 +1247,7 @@ fn range_spec(
         .fold(f64::NEG_INFINITY, f64::max);
     let condition = ctx
         .state
-        .slicer_selections
-        .get(&ctx.visual.name)
+        .shown_selection(&ctx.visual.name)
         .and_then(|s| s.condition.as_ref());
     let (mut lo, mut hi) = condition.map_or((None, None), |c| condition_bounds(c, data_type));
     let is_date = data_type == Some(&pbi_model::DataType::DateTime);

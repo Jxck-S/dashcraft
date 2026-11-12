@@ -13,7 +13,12 @@
 //! (the default interaction, or `HighlightFilter`, unless the report sets
 //! `defaultFilterActionIsDataFilter`): [`VisualFilters::highlight`] is the
 //! visual's filter context plus the selection, and the visual keeps its
-//! unselected values. Other targets are filtered.
+//! unselected values. Other targets are filtered. With the report's
+//! "Disable cross highlighting/filtering by default"
+//! ([`QueryReduction::cross_highlighting_disabled`]) only the targets whose
+//! interaction the page sets explicitly react. Measure conditions of report,
+//! page and visual filters are [`VisualFilters::value_conditions`] (applied
+//! to the visual's rows).
 
 use pbi_engine::FilterContext;
 use pbi_model::{Condition, Filter, InteractionKind, Page, Report, Visual};
@@ -27,7 +32,7 @@ use super::interaction::{
 };
 use super::plan::{same_field, value_field};
 use super::semantic::TopNSpec;
-use super::{QueryEnv, QueryLimits};
+use super::{QueryEnv, QueryLimits, QueryReduction};
 
 /// Everything that filters one visual.
 #[derive(Debug, Clone, Default)]
@@ -169,6 +174,7 @@ pub(crate) fn visual_filters(
             Some(InteractionKind::NoFilter) => None,
             Some(InteractionKind::HighlightFilter) => Some(true),
             Some(_) => Some(false),
+            None if QueryReduction::of(report).cross_highlighting_disabled => None,
             None => Some(!filters_by_default(report)),
         };
         match highlight {
@@ -218,14 +224,9 @@ fn apply_plan(
     for filter in plan.filters {
         out.context.add(filter);
     }
-    if scope == WarningScope::Visual {
-        out.value_conditions.extend(plan.value_conditions);
-    } else if !plan.value_conditions.is_empty() {
-        out.warnings.push(
-            warn("filter not applied: measure filters are only supported on visuals".into())
-                .not_applied(),
-        );
-    }
+    // Report and page measure filters apply to each visual's rows, like
+    // the visual's own.
+    out.value_conditions.extend(plan.value_conditions);
     if let Some(spec) = plan.top_n {
         top_n.push(Pending {
             scope,
