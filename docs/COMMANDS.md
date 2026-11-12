@@ -204,7 +204,7 @@ Flags: **M** mutates an open document (ordered per document) · **L** long-runni
 
 **List commands.** Lists every command with its metadata (and JSON Schemas with `schemas`).
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -230,7 +230,7 @@ Examples:
 
 **Describe a command.** One command's metadata, examples and parameter/result JSON Schemas.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -263,7 +263,7 @@ Examples:
 
 **Run a batch.** Runs ordered steps on the shared workspace; strings like "${d.docId}" reference earlier results named with "as".
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -289,7 +289,7 @@ Examples:
 
 **Detect format.** Content-based format detection of a file or folder (signals, models, reports) without reading it fully.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -315,7 +315,7 @@ Examples:
 
 **Open a document.** Opens a Power BI file or folder into the workspace (no data loaded yet) and returns its docId and summary.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -361,7 +361,7 @@ Examples:
 
 **Close a document.** Closes an open document and frees its data; unsaved edits require explicit discardChanges.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -385,7 +385,7 @@ Examples:
 
 **List open documents.** The open documents of the workspace with their summaries.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -405,7 +405,7 @@ Examples:
 
 **Document status.** Revision, unsaved edits, undo/redo, whether doc.save can save in place, and the project files changed on disk by other programs since the open or last save.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -438,7 +438,7 @@ Examples:
 
 **External changes.** The project files added, changed or removed on disk by other programs (Git, editors, Power BI Desktop) since the open or last save.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -463,7 +463,7 @@ Examples:
 
 **Reload from disk.** Rereads an open document from its files (e.g. after external changes), keeping its docId; drops its undo history, loaded data and canvas state. Unsaved edits require explicit discardChanges.
 
-_mutates the document, not offered to agents; since 0.2.0._
+_mutates the document, not offered to agents; since 0.3.0._
 
 Parameters:
 
@@ -491,7 +491,7 @@ Examples:
 
 **Compare documents.** Semantic diff of a document against its files on disk, another open document or a path: the objects added, removed and changed, with the differing properties.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -525,7 +525,7 @@ Examples:
 
 **List recoverable edits.** The recovery journals of unsaved edits left by documents that were not saved or closed (e.g. after a crash).
 
-_not offered to agents; since 0.2.0._
+_not offered to agents; since 0.3.0._
 
 Parameters:
 
@@ -547,7 +547,7 @@ Examples:
 
 **Restore recoverable edits.** Reopens the document of a recovery journal and replays its unsaved edits; the result is unsaved until doc.save.
 
-_not offered to agents; since 0.2.0._
+_not offered to agents; since 0.3.0._
 
 Parameters:
 
@@ -576,7 +576,7 @@ Examples:
 
 **Discard recoverable edits.** Deletes a recovery journal and the unsaved edits it holds.
 
-_not offered to agents, writes files; since 0.2.0._
+_not offered to agents, writes files; since 0.3.0._
 
 Parameters:
 
@@ -601,7 +601,7 @@ Examples:
 
 **Inspect a document.** The full model, reports and reader diagnostics: the `dashcraft inspect --json` schema (schemaVersion 1).
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -637,7 +637,7 @@ Examples:
 
 **Model tables.** Every model table with its columns, measure names, partitions, hierarchies and loaded row count.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -660,7 +660,7 @@ Examples:
 
 **Model measures.** Every measure with its table, DAX, format string, description and display folder.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -684,7 +684,7 @@ Examples:
 
 **Model relationships.** Every relationship: id, from/to columns, cardinalities, cross-filter direction, active flag.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -706,7 +706,7 @@ Examples:
 
 **Reports.** The document's reports: name, dataset reference, theme, page and visual counts, report filters.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -728,7 +728,7 @@ Examples:
 
 **Report pages.** The pages of a report: names, size, visibility, visual and filter counts.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -753,7 +753,7 @@ Examples:
 
 **Report bookmarks.** The bookmarks of a report in pane order: group, page shown, Data/Display/Current page options and target visuals.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -777,7 +777,7 @@ Examples:
 
 **Page visuals.** The visuals of a page: type, title, position, bound fields and visual filters.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -805,7 +805,7 @@ Examples:
 
 **Report filters.** A report's filters (plus a page's) translated to column filters, with the ones that cannot be applied (Top N, relative date…).
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -832,7 +832,7 @@ Examples:
 
 **Security roles.** The model's row-level security roles (permission, DAX table filters, members, dynamic or not) and the current "View as" state.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -855,7 +855,7 @@ Examples:
 
 **Object dependents.** Lists what refers to a table, column, measure or relationship: DAX, relationships, hierarchies, sort-by columns, roles and report fields.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -890,7 +890,7 @@ Examples:
 
 **Lint a document.** Broken-reference checks (visual fields, queryRefs, filters, DAX/M, relationships, layout) as the `lint --json` report.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -924,7 +924,7 @@ Examples:
 
 **Refresh data.** Loads the data offline (PBIP cache, M partitions with the blob map, embedded PBIX data, calculated objects); per-table rows, time and status.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -956,7 +956,7 @@ Examples:
 
 **Data status.** Loaded rows, columns and last refresh status of every table, the derived columns and the local data cache.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -981,7 +981,7 @@ Examples:
 
 **Table rows.** One page of a table's rows (sorted, SQL-filtered), raw or formatted; loads the data on first use.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1015,7 +1015,7 @@ Examples:
 
 **Column statistics.** Rows, blanks, distinct count, min and max of one column; loads the data on first use.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1049,7 +1049,7 @@ Examples:
 
 **Load a CSV.** Replaces a table's data with a CSV ("Load CSV manually…") and recomputes what depends on it.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1081,7 +1081,7 @@ Examples:
 
 **Add a derived column.** Adds a session-only column (people parsing or a DAX expression), re-applied after every refresh; never saved to the model.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1114,7 +1114,7 @@ Examples:
 
 **Remove a derived column.** Removes a session derived column from the table data and the session model.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1145,7 +1145,7 @@ Examples:
 
 **View as roles.** Views the data as security roles and/or a user (row-level security, union of roles); empty roles and no user stop it. Visible rows per table.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1176,7 +1176,7 @@ Examples:
 
 **Run a DAX query.** Evaluates a DAX query (EVALUATE …) and returns columns and rows per result table; loads the data on first use.
 
-_long-running, agent-safe; since 0.2.0._
+_long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1206,7 +1206,7 @@ Examples:
 
 **Evaluate a measure.** One measure's value (raw and formatted, or ⚠ error with its DAX) under report/page and column filters.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1235,7 +1235,7 @@ Examples:
 
 **Measure values.** Every measure's formatted value under optional report/page filters; failed measures show ⚠ and their DAX.
 
-_long-running, agent-safe; since 0.2.0._
+_long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1267,7 +1267,7 @@ Examples:
 
 **Check DAX.** Syntax errors, unknown tables, columns and measures (with a did-you-mean suggestion), wrong argument counts and functions DashCraft cannot evaluate, for a DAX expression or query; no data is loaded.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1295,7 +1295,7 @@ Examples:
 
 **DAX signature help.** The DAX function call around a cursor: its signature, parameters, return type, description and the parameter the cursor is in; works on text that does not parse yet.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1318,7 +1318,7 @@ Examples:
 
 **DAX hover.** Describes the DAX function, table, column, measure, variable or keyword at a cursor: signature and description, data type, expression, format string; no data is loaded.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1344,7 +1344,7 @@ Examples:
 
 **DAX completion.** The DAX functions, tables, columns, measures, variables and keywords that fit at a cursor, best match first, with the text to insert; works on text that does not parse yet.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1375,7 +1375,7 @@ Examples:
 
 **DAX semantic tokens.** What every token of a DAX text is (keyword, function, table, column, measure, variable, parameter, literal, comment) for highlighting, with declarations and unknown names marked.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1400,7 +1400,7 @@ Examples:
 
 **DAX references.** The symbol at a cursor in a DAX text, where the text declares it and every place it occurs (go to definition, find references); model objects carry their objectId.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1428,7 +1428,7 @@ Examples:
 
 **Format DAX.** Lays out a DAX expression or query within a line width, keeping comments and meaning (only whitespace and keyword/function case change); idempotent, no data is loaded.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1463,7 +1463,7 @@ Examples:
 
 **Check M.** Syntax errors, unknown names, wrong argument counts and unsupported names in an M query or section, with Power BI Desktop's messages.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1489,7 +1489,7 @@ Examples:
 
 **M hover.** Describes the M name at a cursor as Power BI Desktop binds it: step, parameter or field of the text, query, parameter or table of the model, library name or keyword.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1515,7 +1515,7 @@ Examples:
 
 **M signature help.** The M function call around a cursor: library function, #date-style constructor, function step or function query, its parameters and the one the cursor is in; works on unparsed text.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1541,7 +1541,7 @@ Examples:
 
 **M completion.** The M names that fit at a cursor, best match first, with the text to insert: steps and parameters in scope, the model's queries, keywords, library names, or types after as.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1572,7 +1572,7 @@ Examples:
 
 **Format M.** Lays out an M query or section within a line width, one let step per line, keeping comments and meaning (only whitespace changes); idempotent, nothing is evaluated.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1603,7 +1603,7 @@ Examples:
 
 **Check TMDL.** What Microsoft's TMDL reader rejects in TMDL files: unknown keywords, wrong forms and values, levels, duplicates and unresolved references, with the closest name.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1627,7 +1627,7 @@ Examples:
 
 **TMDL completion.** The TMDL keywords, values and object names that fit at a cursor, as Microsoft's TMDL reader accepts them there, best match first, with the text to insert.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1658,7 +1658,7 @@ Examples:
 
 **TMDL hover.** Describes the TMDL word at a cursor: a keyword's forms, value and level, an enumeration value, or the object a reference names and where it is declared.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1684,7 +1684,7 @@ Examples:
 
 **Format TMDL.** Lays out a TMDL file as Power BI Desktop writes it: indentation, spacing, blank lines, expression blocks; only white space changes, checked by reading the result back.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1714,7 +1714,7 @@ Examples:
 
 **Render a page.** Renders a report page to SVG or PNG (inline, base64 for PNG, or to outputPath) with per-visual status; loads the data on first use.
 
-_long-running, agent-safe, writes files; since 0.2.0._
+_long-running, agent-safe, writes files; since 0.3.0._
 
 Parameters:
 
@@ -1760,7 +1760,7 @@ Examples:
 
 **Render a visual.** Renders one visual of a page, cropped to its container, to SVG or PNG (with the page's filters, slicers and interactions).
 
-_long-running, agent-safe, writes files; since 0.2.0._
+_long-running, agent-safe, writes files; since 0.3.0._
 
 Parameters:
 
@@ -1807,7 +1807,7 @@ Examples:
 
 **Render the canvas.** Renders a page with its current interaction state: SVG, hit regions, visuals, slicer/cross-filter selections and effective filters.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1853,7 +1853,7 @@ Examples:
 
 **Click on the canvas.** Applies a click on a hit region (slicer item, data point, button, dropdown) and returns the re-rendered page and any button action.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1884,7 +1884,7 @@ Examples:
 
 **Scroll a visual.** Scrolls a table, matrix or slicer list by a delta (clamped to its range) and returns the re-rendered page.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1914,7 +1914,7 @@ Examples:
 
 **Set a slicer.** Replaces a slicer's selection by value (no hit ids needed) and returns the re-rendered page.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -1963,7 +1963,7 @@ Examples:
 
 **Set a range slicer.** Filters a numeric or date range slicer to a lower and/or upper bound (a date includes the whole day) and returns the re-rendered page.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2012,7 +2012,7 @@ Examples:
 
 **Set a relative date slicer.** Filters a date slicer to a relative period ("Last 3 months", "This year", "Next 2 hours") of the session clock and returns the re-rendered page.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2063,7 +2063,7 @@ Examples:
 
 **Focus mode.** Shows one visual filling the page (focus mode), optionally with its data as a table below it; without a visual goes back to the report.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2110,7 +2110,7 @@ Examples:
 
 **Show as a table.** Shows a visual with its data as a table below it, filling the page (focus mode); without a visual goes back to the report.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2155,7 +2155,7 @@ Examples:
 
 **Spotlight.** Spotlights a visual (the other visuals fade); without a visual ends the spotlight.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2201,7 +2201,7 @@ Examples:
 
 **Sort a visual.** Sorts a visual by one of its fields (the header's "Sort axis"), changes the sort direction or restores the saved sort.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2249,7 +2249,7 @@ Examples:
 
 **Clear selections.** Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2295,7 +2295,7 @@ Examples:
 
 **Apply slicers.** Applies pending slicer selections (made while the page has an "Apply all slicers" button or the report adds an Apply button to slicers), and returns the re-rendered page.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2341,7 +2341,7 @@ Examples:
 
 **Search a slicer.** Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2387,7 +2387,7 @@ Examples:
 
 **Expand/collapse a matrix row.** Expands or collapses the matrix row of a cell hit and returns the re-rendered page.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2432,7 +2432,7 @@ Examples:
 
 **Close dropdowns.** Closes the open slicer dropdowns of a page.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2459,7 +2459,7 @@ Examples:
 
 **Reset to default.** Back to the report's saved slicer selections, no cross-filter, scroll and dropdowns reset; returns the re-rendered page.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2503,7 +2503,7 @@ Examples:
 
 **Apply a bookmark.** Applies a report bookmark to the canvas (page, slicers, filters, visibility, sort, drill and spotlight; all or only its target visuals) and renders the page it shows; lists the parts not applied yet.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2534,7 +2534,7 @@ Examples:
 
 **Data point tooltip.** The hover tooltip (category, series, values) of a data point hit, from the last render.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2559,7 +2559,7 @@ Examples:
 
 **Report-page tooltip.** Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2584,7 +2584,7 @@ Examples:
 
 **Data point context menu.** What a data point's context menu can copy ("Copy value", "Copy selection"), from the last render.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2611,7 +2611,7 @@ Examples:
 
 **Drill down or up.** Drills a visual with several axis (or matrix row) fields: down on a data point, up, to the next level or expanded one level; returns the re-rendered page.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2659,7 +2659,7 @@ Examples:
 
 **Drillthrough targets.** The drillthrough pages a data point hit can drill through to (the "Drill through" menu).
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2684,7 +2684,7 @@ Examples:
 
 **Drill through.** Drills through from a data point (or the page's selection) to a drillthrough page (also of another report): filters it on the point's values, keeps the source's filters if set and renders it.
 
-_mutates the document, long-running, agent-safe; since 0.2.0._
+_mutates the document, long-running, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2717,7 +2717,7 @@ Examples:
 
 **Canvas state.** The page's current interaction state (slicer selections, cross-filter) and view state, as JSON.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2745,7 +2745,7 @@ Examples:
 
 **Export a table.** Writes one table's data as CSV or Parquet (with model metadata); loads the data on first use.
 
-_long-running, agent-safe, writes files; since 0.2.0._
+_long-running, agent-safe, writes files; since 0.3.0._
 
 Parameters:
 
@@ -2782,7 +2782,7 @@ Examples:
 
 **Export a visual's data.** Exports a visual's summarized data or its underlying rows as CSV, with the page's filters, slicers and selections applied.
 
-_long-running, agent-safe, writes files; since 0.2.0._
+_long-running, agent-safe, writes files; since 0.3.0._
 
 Parameters:
 
@@ -2819,7 +2819,7 @@ Examples:
 
 **Document the model.** The model documentation as JSON (model doc) or a Markdown data dictionary, inline or to a file; no data needed.
 
-_agent-safe, writes files; since 0.2.0._
+_agent-safe, writes files; since 0.3.0._
 
 Parameters:
 
@@ -2854,7 +2854,7 @@ Examples:
 
 **Save as PBIP.** Writes the document, unsaved edits included, as a PBIP project (TMDL + PBIR) into a folder; the open document keeps its source (doc.saveAs moves it).
 
-_long-running, agent-safe, writes files; since 0.2.0._
+_long-running, agent-safe, writes files; since 0.3.0._
 
 Parameters:
 
@@ -2880,7 +2880,7 @@ Examples:
 
 **Export a PBIT template.** Writes a PBIT template (model schema and one report, no data), unsaved edits included.
 
-_long-running, agent-safe, writes files; since 0.2.0._
+_long-running, agent-safe, writes files; since 0.3.0._
 
 Parameters:
 
@@ -2910,7 +2910,7 @@ Examples:
 
 **Parse a people field.** Parses one people-picker cell (a Python-style list of dicts) into `First Last` names (the "Parse people field" transform).
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2934,7 +2934,7 @@ Examples:
 
 **Preview "Parse people field".** Parses every cell of a text column as a people list: outcome counts and distinct samples with their parsed form (before data.addDerivedColumn).
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2968,7 +2968,7 @@ Examples:
 
 **Edit a measure expression.** Replaces a measure's DAX expression as one undoable document edit.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -2997,7 +2997,7 @@ Examples:
 
 **Rename a table, column, measure or query.** Renames a table, column, measure or M query/parameter as one undoable edit; DAX, M and report references follow and loaded data is kept. dryRun previews it.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3041,7 +3041,7 @@ Examples:
 
 **Set an object's description.** Sets or clears the description of a table, column, measure or other model object as one undoable edit.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3074,7 +3074,7 @@ Examples:
 
 **Create a measure.** Adds a DAX measure to a table as one undoable edit and returns its id.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3113,7 +3113,7 @@ Examples:
 
 **Update a measure.** Changes a measure's expression, format string, display folder, description or visibility as one undoable edit.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3154,7 +3154,7 @@ Examples:
 
 **Delete a measure.** Deletes a measure as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3191,7 +3191,7 @@ Examples:
 
 **Create a relationship.** Adds a relationship between two columns as one undoable edit; filters follow it at once and warnings report what the engine finds in the loaded data.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3237,7 +3237,7 @@ Examples:
 
 **Update a relationship.** Changes a relationship's cardinality, cross-filter direction, security filtering or active state as one undoable edit; filters follow it at once.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3283,7 +3283,7 @@ Examples:
 
 **Delete a relationship.** Deletes a relationship as one undoable edit and lists the DAX that names it (USERELATIONSHIP, CROSSFILTER); dryRun only lists it.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3325,7 +3325,7 @@ Examples:
 
 **Create a calculated column.** Adds a DAX calculated column to a table as one undoable edit, computes it over the loaded data and infers its data type unless dataType is given.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3364,7 +3364,7 @@ Examples:
 
 **Update a column.** Changes a calculated column's expression or data type, or a column's format, folder, description or visibility; what depends on it is recomputed over the loaded data.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3405,7 +3405,7 @@ Examples:
 
 **Delete a calculated column.** Deletes a calculated column as one undoable edit and lists what referred to it; refuses data columns and columns used by relationships, hierarchies or sort orders. dryRun only checks.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3444,7 +3444,7 @@ Examples:
 
 **Create a calculated table.** Adds a DAX calculated table as one undoable edit: its columns and their data types come from the expression's result over the loaded data, and it is computed at once.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3477,7 +3477,7 @@ Examples:
 
 **Update a table.** Changes a calculated table's DAX expression, its columns following the result, or a table's description or visibility; the table and what depends on it are recomputed.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3514,7 +3514,7 @@ Examples:
 
 **Delete a table.** Deletes a table with its columns, measures, relationships and role row filters as one undoable edit and lists what referred to it (DAX, report fields); dryRun only lists them.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3552,7 +3552,7 @@ Examples:
 
 **Create a hierarchy.** Adds a user hierarchy over columns of a table as one undoable edit; levels are listed top first and named after their columns unless named.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3587,7 +3587,7 @@ Examples:
 
 **Delete a hierarchy.** Deletes a user hierarchy with its levels as one undoable edit and lists the report fields that used it; dryRun only lists them.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3626,7 +3626,7 @@ Examples:
 
 **Move a visual.** Moves a visual or a visual group (with the visuals in it) on its page as one undoable edit.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3659,7 +3659,7 @@ Examples:
 
 **Resize a visual.** Resizes a visual or a visual group (top-left corner fixed; the visuals in a group scale with it unless it scrolls) as one undoable edit.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3692,7 +3692,7 @@ Examples:
 
 **Save reading state.** Writes the applied slicer selections and changed filters into the report as one undoable edit, so a save keeps them; refused when persistent filters are off.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3721,7 +3721,7 @@ Examples:
 
 **Apply document edits.** Applies a group of document edits atomically as one undoable history step.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3751,7 +3751,7 @@ Examples:
 
 **Undo document edit.** Undoes the latest document edit.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3778,7 +3778,7 @@ Examples:
 
 **Redo document edit.** Reapplies the latest undone document edit.
 
-_mutates the document, agent-safe; since 0.2.0._
+_mutates the document, agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3805,7 +3805,7 @@ Examples:
 
 **Document edit history.** Returns the document revision, dirty state and undo/redo availability.
 
-_agent-safe; since 0.2.0._
+_agent-safe; since 0.3.0._
 
 Parameters:
 
@@ -3832,7 +3832,7 @@ Examples:
 
 **Save.** Saves the edits into the opened PBIP project, writing only changed files; files changed on disk since the open are a conflict unless overwrite.
 
-_mutates the document, agent-safe, writes files; since 0.2.0._
+_mutates the document, agent-safe, writes files; since 0.3.0._
 
 Parameters:
 
@@ -3861,7 +3861,7 @@ Examples:
 
 **Save As.** Saves the document, edits included, as a new PBIP project from any format and continues editing there: later doc.save writes to it; imported data is not carried over.
 
-_mutates the document, long-running, agent-safe, writes files; since 0.2.0._
+_mutates the document, long-running, agent-safe, writes files; since 0.3.0._
 
 Parameters:
 

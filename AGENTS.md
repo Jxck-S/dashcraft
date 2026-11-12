@@ -13,11 +13,12 @@ Power BI Desktop-style shell. v1 is read-only; the architecture is built to grow
 reimplementation of Power BI Desktop ([ADR-0004](docs/adr/0004-desktop-ready-architecture.md)).
 
 - Status: Phase 1 (Data Explorer) released as `v0.1.0`; Phase 2 (Report Renderer), M5 formats,
-  docs and packaging released as `v0.2.0` (installers unsigned until certificates exist). Since
-  then (`[Unreleased]`): the command registry, `run`/`serve`/`mcp`, the opt-in AI layer (also in
-  the app), the app on the registry, perf budgets, the DashCraft name, scatter/funnel/gauge/
-  treemap/waterfall visuals, conditional formatting, calculation groups, many-to-many
-  relationships, RLS "View as" and 299 DAX functions. Details:
+  docs and packaging released as `v0.2.0` (installers unsigned until certificates exist).
+  `v0.3.0` adds the command registry, `run`/`serve`/`mcp`/`lsp`, the opt-in AI layer, the app on
+  the registry, perf budgets, the DashCraft name, more visuals, conditional formatting,
+  calculation groups, many-to-many relationships, RLS "View as", 299 DAX functions, and
+  milestones M6 (editing and save), M7 (language services, formula bar), M8 (recovery, external
+  changes, diff) and M9 (reading-view parity). Later work is under `[Unreleased]`. Details:
   [docs/ROADMAP.md](docs/ROADMAP.md), [CHANGELOG.md](CHANGELOG.md), [docs/GAPS.md](docs/GAPS.md).
 - Product name: **DashCraft** (§10, [ADR-0009](docs/adr/0009-naming-dashcraft.md),
   [ADR-0010](docs/adr/0010-dashcraft-everywhere.md)). The CLI binary is `dashcraft`, the app

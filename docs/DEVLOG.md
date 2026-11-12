@@ -7,6 +7,18 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### Release v0.3.0
+
+- **What**: version 0.3.0 (`scripts/set-version.sh`: `Cargo.toml`, `Cargo.lock`, `app/package.json`,
+  `app/package-lock.json`); CHANGELOG `[Unreleased]` moved under `[0.3.0]` with a summary, its
+  repeated `Changed` and `Documentation` sections merged and one duplicate entry dropped; the
+  registry catalog's `since` corrected from 0.2.0 to 0.3.0 (`pbi-ops` `SINCE`; the registry
+  first ships in 0.3.0, as `pbi-ai` already said) and `docs/COMMANDS.md` regenerated; README,
+  AGENTS.md and ROADMAP release status; THIRD_PARTY_NOTICES says MIT OR Apache-2.0.
+- **Why**: DESKTOP-PLAN M6, M7 and M9 are complete and M8's features have shipped (its A6
+  screen-reader steps for the bar and Compare are still open); 183 commits since v0.2.0.
+- **Numbers**: 161 changelog entries; 112 command `since` lines updated.
+
 ### Reliable external-change announcement (screen-reader CI)
 
 - **What**: the app sets the "Files changed on disk" status message `ANNOUNCE_DELAY_MS` after the

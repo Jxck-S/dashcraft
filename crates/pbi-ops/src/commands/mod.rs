@@ -30,7 +30,7 @@ use crate::registry::Registry;
 use crate::workspace::{DocEntry, Workspace};
 
 /// Version that introduced the v1 catalog.
-pub const SINCE: &str = "0.2.0";
+pub const SINCE: &str = "0.3.0";
 
 /// Defaults of [`CommandMeta`]: agent-safe, read-only, quick.
 pub(crate) const BASE: CommandMeta = CommandMeta {

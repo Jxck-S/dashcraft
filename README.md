@@ -15,7 +15,7 @@
   <img alt="Rust" src="https://img.shields.io/badge/Rust-b7410e?style=flat-square&logo=rust">
   <img alt="macOS · Windows · Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-2f7bf5?style=flat-square">
   <img alt="License: MIT OR Apache-2.0" src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-3a3a3a?style=flat-square">
-  <img alt="Status: read-only viewer" src="https://img.shields.io/badge/status-read--only%20viewer-d69e2e?style=flat-square">
+  <img alt="Status: viewer, early editing" src="https://img.shields.io/badge/status-viewer%2C%20early%20editing-d69e2e?style=flat-square">
 </p>
 
 <br>
@@ -172,12 +172,16 @@ Installers for macOS, Windows and Linux are built by the release workflow
 ## Status
 
 > [!IMPORTANT]
-> DashCraft is a **read-only viewer** today. It opens, refreshes, queries and renders Power BI
-> files, but it does not edit or save reports yet. The goal is a full Rust reimplementation of
-> Power BI Desktop: report and model editing, Power Query, Save and undo.
+> DashCraft is mainly a **viewer** today. It opens, refreshes, queries and renders Power BI
+> files, and makes a first set of undoable edits (tables, columns, measures, relationships,
+> renames, descriptions, visual position and size) that it saves back to PBIP projects; report
+> authoring, the modeling editors and Power Query editing are not there yet. The goal is a full
+> Rust reimplementation of Power BI Desktop.
 
-- **Released:** v0.1.0 (Data Explorer) and v0.2.0 (Report Renderer, remaining formats,
-  installers); later work is in `main` under `[Unreleased]` in the [CHANGELOG](CHANGELOG.md).
+- **Released:** v0.1.0 (Data Explorer), v0.2.0 (Report Renderer, remaining formats,
+  installers) and v0.3.0 (editing and save, language services and the formula bar, recovery
+  and external changes, reading-view parity); later work is in `main` under `[Unreleased]` in
+  the [CHANGELOG](CHANGELOG.md).
 - **Where it stands:** each area is scored 0–5 against Power BI Desktop in
   [docs/GAPS.md](docs/GAPS.md). The viewer scores 3–5; editing, modeling and Power Query, 0–1.
 - **Where it is going:** milestones M6 to M31, from editable documents to 1.0, in
