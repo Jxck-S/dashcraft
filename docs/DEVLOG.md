@@ -7,6 +7,13 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.6: slicer `selfFilter`
+
+- **What:** `pbi-render` `query::context` applies a visual's `general.selfFilter` filter
+  definition to its own query only (warnings when it cannot be read or applied).
+- **Why:** the last open part of M9.6 and the GAPS "Synced slicers" row (🟡 3 → ✅ 4).
+- **Numbers:** 1 new query test (`a_self_filter_narrows_only_its_own_visual`).
+
 ### M9.2: drill down and up
 
 - **What:** `pbi-render` `query::drill` (drill levels, saved `active` level, drill state in

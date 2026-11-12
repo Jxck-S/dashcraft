@@ -224,6 +224,32 @@ fn slicers_list_values_under_other_filters_and_show_their_selection() {
 }
 
 #[test]
+fn a_self_filter_narrows_only_its_own_visual() {
+    let env = env();
+    let mut page = page();
+    let format = page
+        .visuals
+        .iter_mut()
+        .find(|v| v.name == "format")
+        .unwrap();
+    format.objects = json!({"general": [{"properties": {"selfFilter": {"filter": {
+        "Version": 2,
+        "From": [{"Name": "s", "Entity": "Stores", "Type": 0}],
+        "Where": [{"Condition": {"In": {
+            "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "s"}}, "Property": "Format"}}],
+            "Values": [[{"Literal": {"Value": "'Outlet'"}}], [{"Literal": {"Value": "'Pop-up'"}}]]
+        }}}]
+    }}}}]});
+    let report = report(page);
+    let none = InteractionState::new();
+    let dv = query(&env, &report, "format", &none);
+    assert_eq!(categories(&dv), ["Outlet", "Pop-up"]);
+    assert!(dv.warnings.is_empty(), "{:?}", dv.warnings);
+    // Other visuals are not narrowed by it.
+    assert_eq!(single(&query(&env, &report, "total", &none)), "5");
+}
+
+#[test]
 fn slicer_selections_filter_cards_except_unrelated_tables() {
     let env = env();
     let report = report(page());

@@ -3,8 +3,10 @@
 //! selections of the other slicers, cross-filter from the selected visual
 //! (honouring `visualInteractions`), then Top N filters. A drillthrough
 //! page adds the drilled points and the filters the drillthrough carried
-//! after its page filters. Drill-down paths (the visual's own, and
-//! those of visuals that drill-filter the page) follow the visual filters.
+//! after its page filters. The visual's own `general.selfFilter` (the
+//! filter newer slicers keep on their item list) applies to it alone.
+//! Drill-down paths (the visual's own, and those of visuals that
+//! drill-filter the page) follow the visual filters.
 //!
 //! Points selected in another visual highlight bar, column, combo, pie,
 //! donut, treemap and funnel charts
@@ -110,6 +112,7 @@ pub(crate) fn visual_filters(
             apply_drillthrough(&builder, &mut out, drill);
         }
     }
+    apply_self_filter(&builder, &mut out, visual);
     for path in super::drill::drill_paths(report, page, visual, state) {
         apply_selection(
             &builder,
@@ -278,6 +281,38 @@ fn apply_slicer(
             out.warnings
                 .push(warn(format!("selection not applied: {reason}")).not_applied());
         }
+    }
+}
+
+/// A visual's own `general.selfFilter` (the newer slicers keep the filter
+/// that narrows their own item list there): applied to that visual only,
+/// never to the visuals it filters.
+fn apply_self_filter(builder: &FilterBuilder<'_>, out: &mut VisualFilters, visual: &Visual) {
+    let Some(def) = pbi_pbir::objects::property(&visual.objects, "general", "selfFilter")
+        .and_then(|f| f.get("filter"))
+    else {
+        return;
+    };
+    let warn = |message: String| {
+        QueryWarning::new(WarningScope::Visual, message)
+            .with_source(visual.name.clone())
+            .not_applied()
+    };
+    let Some(condition) = super::semantic::where_condition(def) else {
+        out.warnings.push(warn(
+            "self filter not applied: cannot read its condition".into(),
+        ));
+        return;
+    };
+    let mut plan = FilterPlan::default();
+    builder.plan_condition(&condition, &mut plan);
+    for f in plan.filters {
+        out.context.add(f);
+    }
+    out.value_conditions.extend(plan.value_conditions);
+    for reason in plan.skipped {
+        out.warnings
+            .push(warn(format!("self filter not applied: {reason}")));
     }
 }
 
