@@ -281,10 +281,18 @@ results and DTOs. Locations below refer to the Desktop shell above.
     *Document recovery*: Restore reopens the file with the edits (unsaved, undoable), Discard
     deletes them, Decide later asks again next time. The choice is kept in the app config
     folder's `auto-recovery.json`.
+  - **External changes** (PBIP projects): the project's files are checked every 1.5 seconds
+    (`doc.externalChanges`, a size and timestamp scan). When another program changes one, a
+    notification bar offers *Reload* (`doc.reload`; asks first when unsaved edits would be
+    discarded), *Keep mine* (hides the bar until other files change; Save still asks before
+    overwriting) and *Compare*: the objects that differ between the document and the files on
+    disk (`doc.diff`), each property's value on both sides and the file and line of each.
   - Checks: `cargo test -p dashcraft-app` (`edits_save_and_close_through_the_registry`),
     `npm run check` (`tests/editing.test.ts`, `tests/daxEditor.test.ts`), and on Windows the UI
     smoke, IntelliSense (`formula-intellisense.mjs`), editor keys (`formula-keys.mjs`), Auto
-    recovery (`recovery.mjs`: edit, crash, restore, crash, discard) and
+    recovery (`recovery.mjs`: edit, crash, restore, crash, discard), external changes
+    (`external-changes.mjs`: an external TMDL edit, Compare, Keep mine, Save's question, Reload;
+    with accessibility checks of the bar and Compare) and
     accessibility scripts of [`scripts/app-checks/`](../scripts/app-checks/) against a debug
     build (results: [M6](../docs/accessibility/m6-editing.md),
     [M7](../docs/accessibility/m7-formula-bar.md)).

@@ -7,6 +7,22 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-11
 
+### M8.2 and M8.3 app: external-changes bar, Compare
+
+- **What:** `App.svelte` polls `doc.externalChanges` every 1.5 s while the window is visible
+  (not for documents that do not track their files; checks that straddle a save are dropped)
+  and shows a notification bar with Reload (`doc.reload`, asking before it discards unsaved
+  edits), Keep mine (hidden until another set of files changes; Save keeps asking) and Compare
+  (`CompareDialog.svelte` over `doc.diff` against disk). When the bar closes under the focus,
+  focus goes to the ribbon tab before it. New `backend.ts` wrappers `externalChanges`,
+  `reloadDocument`, `diffWithDisk`; new `scripts/app-checks/external-changes.mjs`.
+- **Why:** M8.2 and M8.3 (ROADMAP "Next"); the commands existed headless only.
+- **Numbers:** `external-changes.mjs` 32 of 32 on Windows (bar about 1 s after an external TMDL
+  edit, acceptance limit 2 s; IBM checker WCAG 2.2: no violation on the bar or Compare; lowest
+  text contrast ≥ 4.5:1); `recovery.mjs` 16 of 16 and `editing-smoke.mjs` 23 of 23 unchanged.
+- **Open:** the A6 screen-reader steps for the bar; TMDL/PBIR snippets in Compare and comparing
+  two projects; push notifications of external changes for `serve` and MCP clients.
+
 ### M8.1 app: Auto recovery, Document recovery
 
 - **What:** `app/src-tauri/src/auto_recovery.rs` turns recovery on at startup (journals in
