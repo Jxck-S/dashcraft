@@ -37,7 +37,8 @@
 //!   layout under `singleVisual`) links slicers across pages: a selection
 //!   made in one is copied to the others ([`synced_slicers`]). Saved files
 //!   already carry the same filter on every synced slicer.
-//! - Not read yet: the `selfFilter` of the newer slicer visuals.
+//! - `general.selfFilter` (newer slicers) narrows the slicer's own item
+//!   list only and is not its selection (applied in `context`).
 //!
 //! A drillthrough page keeps what it was drilled with in
 //! [`InteractionState::drillthrough`] ([`super::drillthrough`]).

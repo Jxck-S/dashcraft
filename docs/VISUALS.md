@@ -167,7 +167,7 @@ The conditional color replaces the column's background (`columnFormatting.backCo
 - **Service behaviour reproduced**: header in DIN 10 pt `#252423`, one line starting 8 px inside, ellipsized before a 26 px reserve for the eraser icon; controls start 23 px below the content top; dropdown box inset 5 px, `#EAEAEA` border, summary "All" / the single value / "Multiple selections", chevron 6.5 px from the right; list rows `line height + padding + 3` tall with checkboxes (multi-select) or radio buttons (single select) and a scrollbar.
 - **Verified**: synthetic tests (`visuals_grids.rs`: dropdown, list, search, inverted and single selection, tiles, ranges) and the saved selections of the Acme Outfitters slicers (`visuals_grids_reference.rs`). DIN headers render in Selawik ([fonts](#fonts-and-text)).
 - **Interaction**: click selects (single select replaces; multi-select with Ctrl replaces on click and toggles on Ctrl/⌘+click; otherwise every click toggles); Select all toggles all/none; inverted mode unchecks to exclude; dropdowns open a popup drawn above the page; search box filters items; wheel scrolls the list; the eraser clears the selection. The CLI selects headlessly with `render --slicer`.
-- **Gaps**: range sliders and relative-date pickers are drawn but not draggable; tiles of a button slicer select like list items; the newer slicers' `selfFilter` is not read. Synced slicers (`syncGroup`) share their selection: selecting, clearing or Clear all slicers in one copies it to the slicers of the same sync group and fields on every page, hidden ones included (not those with `filterChanges: false`).
+- **Gaps**: range sliders and relative-date pickers are drawn but not draggable; tiles of a button slicer select like list items. A `general.selfFilter` narrows the slicer's own items only. Synced slicers (`syncGroup`) share their selection: selecting, clearing or Clear all slicers in one copies it to the slicers of the same sync group and fields on every page, hidden ones included (not those with `filterChanges: false`).
 
 ### `tableEx`, `table` — Full
 
@@ -312,7 +312,7 @@ Every visual region and the whole page must reach the default threshold, SSIM �
 
 - Data labels and tooltips of highlighted charts show the full values; the lines of combo charts are not highlighted. How Desktop sizes a highlighted pie slice and treemap tile (radius or area, which edge) is not documented: DashCraft scales the radius and fills the tile from the bottom.
 - A bookmark's changed Top N filters, its spotlight and focus modes, cross-report drillthrough, Q&A, visual header menus (focus mode, show as table, sort, export) and the right-click menu's other items are not available; drill works on chart axes and matrix rows, not on matrix columns, and bookmarks do not apply drill state.
-- Range-slider dragging, relative-date pickers, the newer slicers' `selfFilter`.
+- Range-slider dragging, relative-date pickers.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.
 - Scatter play axes are not animated (the first frame is drawn); `ribbonChart` and maps are placeholders.
 - `image` visuals and page wallpaper images are not drawn; button hover/press states are not drawn.

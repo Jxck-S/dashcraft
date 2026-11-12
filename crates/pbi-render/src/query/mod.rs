@@ -127,8 +127,8 @@
 //!   on them adds a warning. A visual's own selection dims its other
 //!   points.
 //! - Synced slicers (`syncGroup`) are synced by the caller
-//!   ([`synced_slicers`]); the `selfFilter` of newer slicers is not read;
-//!   drill-down state is not modelled beyond `active` projections.
+//!   ([`synced_slicers`]); a visual's `general.selfFilter` narrows its own
+//!   query only; drill state is [`drill`] view state.
 //! - Drillthrough ([`drillthrough`]) filters the target page by the
 //!   drilled points and the conditions it carries; cross-report
 //!   drillthrough and drillthrough on measures are not modelled.
