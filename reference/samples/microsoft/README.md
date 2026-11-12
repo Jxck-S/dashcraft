@@ -224,7 +224,7 @@ Reported, not fixed here (the crates belong to other owners).
 
 Known gaps seen (not bugs): the placeholder types above; conditional formatting on objects listed in
 the render warnings; the relative-date slicer (AdventureWorks, `mode: 'RelativeDatePicker'`) is drawn
-as a clipped list of dates; new-card callouts are clipped rather than shrunk when the value is wider
+as a date range unless it has a relative setting; new-card callouts are clipped rather than shrunk when the value is wider
 than the card (Revenue, Store Sales, Regional Sales); M `Table.ExpandTableColumn` and
 `Binary.Decompress` ("Enter data" tables); `refresh --include-system-tables` reports every `H$`, `R$`
 and `U$` table as an error ("unsupported dictionary encoding: type 0").

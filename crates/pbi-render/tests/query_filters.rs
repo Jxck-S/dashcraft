@@ -215,12 +215,29 @@ fn plans_separate_measure_topn_and_unsupported_filters() {
     assert_eq!(plan.value_conditions, vec![measure_cond]);
     assert!(plan.skipped.is_empty());
 
-    let relative = b.plan(&filter(
-        FilterKind::RelativeDate,
-        Some(in_values("Stores", "Opened", &["null"])),
-    ));
+    // Relative dates need the current date.
+    let last_2_months = pbi_render::query::relative::RelativeDateSpec {
+        duration: 2,
+        period: pbi_render::query::relative::RelativePeriod::CalendarMonths,
+        ..Default::default()
+    }
+    .condition(&col("Stores", "Opened"));
+    let relative_filter = filter(FilterKind::RelativeDate, Some(last_2_months));
+    let relative = b.plan(&relative_filter);
     assert!(relative.is_empty());
     assert_eq!(relative.skipped.len(), 1);
+    let now = chrono::NaiveDate::from_ymd_opt(2026, 4, 10)
+        .and_then(|d| d.and_hms_opt(12, 0, 0))
+        .unwrap();
+    let relative = b.with_now(Some(now)).plan(&relative_filter);
+    assert!(relative.skipped.is_empty(), "{relative:?}");
+    let mut ctx = FilterContext::new();
+    for f in relative.filters {
+        ctx.add(f);
+    }
+    // February and March 2026: stores 2 and 3.
+    let count = pbi_dax::evaluate_measure(&env.snapshot, &env.model, "Store Count", &ctx).unwrap();
+    assert_eq!(count, Value::Integer(2));
 
     let unknown = b.plan(&filter(
         FilterKind::Advanced,

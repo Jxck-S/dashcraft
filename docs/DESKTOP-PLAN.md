@@ -1214,8 +1214,14 @@ in focus mode or as a table and export its data; see images and report-level mea
   any page (`pbi_render::query::synced_slicers`), hidden ones included, unless
   `filterChanges` is false; a visual's `general.selfFilter` narrows its own query only (field
   changes sync in editing, with the Sync slicers pane in M20.5).
-- [ ] **M9.7 Range and relative slicers.** Dragging range sliders, typing numeric and date bounds,
-  relative date and time slicers with their pickers.
+- [x] **M9.7 Range and relative slicers.** Dragging range sliders, typing numeric and date bounds,
+  relative date and time slicers with their pickers. *Done:* `canvas.setRange` (numeric or date
+  bounds, a date bound includes its whole day) and `canvas.setRelativeDate` (Last / Next / This, a
+  number, minutes to calendar years, include today); `canvas.render` returns the slider, boxes and
+  relative controls (`range`, `relative`); relative date and time conditions resolve against the
+  session clock (`--now`, `doc.open` `now`) everywhere a filter applies, and renders without a clock
+  skip them with a warning; the app drags the handles (mouse and arrow keys), edits the boxes and
+  shows the relative pickers.
 - [ ] **M9.8 Visual header and context menus.** Focus mode, show as table (visual plus data),
   sort by and sort direction from the menu (view state), spotlight, copy value and copy selection,
   export data (summarized and underlying, CSV first), context menu on data points (the Analyze
@@ -1227,7 +1233,7 @@ in focus mode or as a table and export its data; see images and report-level mea
   CLI.
 - [ ] **M9.10 Remaining filter semantics.** Relative date and time, Top N and measure filters at
   report and page level; the Apply button and query-reduction behaviour of the filter pane and
-  slicers.
+  slicers. *Partly done with M9.7:* relative date and time filters now apply at every level.
 - [ ] **M9.11 Persist reading state.** On save, the current slicer selections and filter states
   are written to the report as Desktop does, through document transactions (the step foreseen by
   ADR-0006), honouring the "persistent filters" setting.

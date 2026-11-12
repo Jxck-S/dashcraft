@@ -59,6 +59,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::dataview::{BLANK_LABEL, CellValue, DataView, SlicerData};
 use crate::query::coerce_literal;
+use crate::query::relative::{self, RelativeAnchor, RelativeDateSpec, RelativePeriod};
 use crate::scene::{
     Clip, Color, Group, HitId, Paint, PathBuilder, PathNode, Rect, RectNode, Stroke, TextAnchor,
 };
@@ -119,6 +120,8 @@ const CHECK_GAP: f64 = 8.0;
 const POPUP_MAX_ROWS: usize = 10;
 /// Gap between tiles.
 const TILE_GAP: f64 = 8.0;
+/// Range slider handle radius.
+const HANDLE_RADIUS: f64 = 6.0;
 
 /// How the slicer presents its values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -132,6 +135,8 @@ pub enum SlicerMode {
     Tile,
     /// Numeric / date range: value boxes and a slider.
     Range,
+    /// Relative date or time: `[Last ▾] [3] [Months ▾]`.
+    Relative,
 }
 
 /// Interactive state of a slicer.
@@ -172,6 +177,63 @@ pub struct SlicerLayout {
     pub rows_height: f64,
     pub max_scroll: f64,
     pub single_select: bool,
+    /// Range mode: value boxes, slider and bounds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub range: Option<RangeLayout>,
+    /// Relative mode: the three controls and the current setting.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relative: Option<RelativeLayout>,
+}
+
+/// Geometry and bounds of a range slicer. Values are numbers, or OADate
+/// days (days since 1899-12-30) for dates.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RangeLayout {
+    /// The lower bound's box (not in "Before" mode).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub low_box: Option<Rect>,
+    /// The upper bound's box (not in "After" mode).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub high_box: Option<Rect>,
+    /// The slider track (handles centred on its vertical middle).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub track: Option<Rect>,
+    /// Smallest and largest value of the field (`None` without data).
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    /// The current lower and upper bound (the data range when unset).
+    pub low: Option<f64>,
+    pub high: Option<f64>,
+    pub low_text: String,
+    pub high_text: String,
+    /// A date field (values are OADate days).
+    pub is_date: bool,
+    /// A whole-number field.
+    pub integer: bool,
+}
+
+/// Geometry and setting of a relative date / time slicer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RelativeLayout {
+    /// The Last / Next / This box.
+    pub anchor_box: Rect,
+    /// The number box (not for "This").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_box: Option<Rect>,
+    /// The period box.
+    pub period_box: Rect,
+    pub anchor: RelativeAnchor,
+    /// The number of periods, when set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration: Option<u32>,
+    pub period: RelativePeriod,
+    pub include_today: bool,
+    /// Relative time (minutes and hours only).
+    pub time: bool,
+    /// A relative condition is applied.
+    pub active: bool,
 }
 
 /// One value row.
@@ -203,6 +265,18 @@ struct Slicer {
     all_checked: bool,
     summary: String,
     range: Option<RangeSpec>,
+    relative: Option<RelativeView>,
+}
+
+/// The setting a relative slicer shows.
+#[derive(Debug, Clone, Copy)]
+struct RelativeView {
+    anchor: RelativeAnchor,
+    duration: Option<u32>,
+    period: RelativePeriod,
+    include_today: bool,
+    time: bool,
+    active: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -223,6 +297,12 @@ struct RangeSpec {
     high: f64,
     show_low: bool,
     show_high: bool,
+    min: Option<f64>,
+    max: Option<f64>,
+    low_value: Option<f64>,
+    high_value: Option<f64>,
+    is_date: bool,
+    integer: bool,
 }
 
 /// Renders the visual content (see module docs).
@@ -252,6 +332,7 @@ pub fn render_with(ctx: &VisualCtx<'_>, opts: &SlicerOptions) -> Option<Group> {
         }
         SlicerMode::Tile => s.draw_tiles(ctx, &mut g, control_top),
         SlicerMode::Range => s.draw_range(ctx, &mut g, control_top),
+        SlicerMode::Relative => s.draw_relative(ctx, &mut g, control_top),
     }
     Some(g)
 }
@@ -301,9 +382,39 @@ pub fn layout(ctx: &VisualCtx<'_>, opts: &SlicerOptions) -> SlicerLayout {
                 (c.bottom() - control_top).max(0.0),
             )),
         ),
-        SlicerMode::Tile | SlicerMode::Range => (None, None, None),
+        SlicerMode::Tile | SlicerMode::Range | SlicerMode::Relative => (None, None, None),
     };
     let geometry = list_area.map(|a| s.list_geometry(ctx, a, opts));
+    let range = s.range.as_ref().map(|r| {
+        let (low_box, high_box, track) = s.range_geometry(r, control_top);
+        RangeLayout {
+            low_box,
+            high_box,
+            track,
+            min: r.min,
+            max: r.max,
+            low: r.low_value,
+            high: r.high_value,
+            low_text: r.low_text.clone(),
+            high_text: r.high_text.clone(),
+            is_date: r.is_date,
+            integer: r.integer,
+        }
+    });
+    let relative = s.relative.map(|rv| {
+        let (anchor_box, duration_box, period_box) = s.relative_boxes(&rv, control_top);
+        RelativeLayout {
+            anchor_box,
+            duration_box,
+            period_box,
+            anchor: rv.anchor,
+            duration: rv.duration,
+            period: rv.period,
+            include_today: rv.include_today,
+            time: rv.time,
+            active: rv.active,
+        }
+    });
     SlicerLayout {
         mode: s.mode,
         header,
@@ -315,6 +426,8 @@ pub fn layout(ctx: &VisualCtx<'_>, opts: &SlicerOptions) -> SlicerLayout {
         rows_height: geometry.as_ref().map_or(0.0, |g| g.rows_height),
         max_scroll: geometry.as_ref().map_or(0.0, |g| g.max_scroll),
         single_select: s.single_select,
+        range,
+        relative,
     }
 }
 
@@ -371,9 +484,21 @@ impl Slicer {
         let horizontal = number_or_text(&o, "general", "orientation")
             .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("horizontal"));
         let mode_text = o.text("data", "mode").map(|m| m.to_ascii_lowercase());
+        let selected_condition = ctx
+            .state
+            .slicer_selections
+            .get(&ctx.visual.name)
+            .and_then(|s| s.condition.as_ref());
+        let relative_selected = selected_condition.is_some_and(relative::is_relative);
         let mode = match mode_text.as_deref() {
             Some("dropdown") => SlicerMode::Dropdown,
-            Some("between" | "before" | "after" | "relative") => SlicerMode::Range,
+            Some("relative" | "relativetime") => SlicerMode::Relative,
+            Some("relativedatepicker")
+                if relative_selected || o.text("data", "relativeRange").is_some() =>
+            {
+                SlicerMode::Relative
+            }
+            Some("between" | "before" | "after" | "relativedatepicker") => SlicerMode::Range,
             Some(_) if horizontal => SlicerMode::Tile,
             Some(_) => SlicerMode::List,
             None if ctx.visual.visual_type == "advancedSlicerVisual" || horizontal => {
@@ -477,6 +602,44 @@ impl Slicer {
                 first_meta.and_then(|m| m.data_type.as_ref()),
             )
         });
+        let relative = (mode == SlicerMode::Relative).then(|| {
+            let time = mode_text.as_deref() == Some("relativetime");
+            let spec = selected_condition.and_then(RelativeDateSpec::from_condition);
+            let period_prop = if time {
+                o.text("data", "relativeTimePeriod")
+            } else {
+                o.text("data", "relativePeriod")
+            };
+            RelativeView {
+                anchor: spec
+                    .map(|s| s.anchor)
+                    .or_else(|| {
+                        o.text("data", "relativeRange")
+                            .as_deref()
+                            .and_then(RelativeAnchor::parse)
+                    })
+                    .unwrap_or_default(),
+                duration: spec.map(|s| s.duration).or_else(|| {
+                    o.number("data", "relativeDuration")
+                        .filter(|n| n.is_finite() && *n >= 1.0)
+                        .map(|n| n.min(1_000_000.0) as u32)
+                }),
+                period: spec
+                    .map(|s| s.period)
+                    .or_else(|| period_prop.as_deref().and_then(RelativePeriod::parse))
+                    .unwrap_or(if time {
+                        RelativePeriod::Hours
+                    } else {
+                        RelativePeriod::Days
+                    }),
+                include_today: spec
+                    .map(|s| s.include_today)
+                    .or_else(|| o.bool("dateRange", "includeToday"))
+                    .unwrap_or(true),
+                time,
+                active: relative_selected,
+            }
+        });
         Self {
             content: ctx.frame.content,
             visual: ctx.visual.name.clone(),
@@ -511,6 +674,7 @@ impl Slicer {
             all_checked,
             summary,
             range,
+            relative,
         }
     }
 
@@ -895,62 +1059,88 @@ impl Slicer {
         g.push(tiles);
     }
 
-    fn draw_range(&self, ctx: &VisualCtx<'_>, g: &mut Group, control_top: f64) {
-        let Some(r) = &self.range else {
-            return;
-        };
+    /// The low box, the high box and the slider track of a range slicer.
+    fn range_geometry(
+        &self,
+        r: &RangeSpec,
+        control_top: f64,
+    ) -> (Option<Rect>, Option<Rect>, Option<Rect>) {
         let c = self.content;
         let width = (c.width - 2.0 * INSET).max(0.0);
         let x = c.x + INSET;
         let h = self.box_height();
-        let (lh, ascent) = line_metrics(&self.items_style);
-        let boxes: Vec<(&str, Rect)> = match (r.show_low, r.show_high) {
+        let (low, high) = match (r.show_low, r.show_high) {
             (true, true) => {
                 let w = ((width - TILE_GAP) / 2.0).max(0.0);
-                vec![
-                    (r.low_text.as_str(), Rect::new(x, control_top, w, h)),
-                    (
-                        r.high_text.as_str(),
-                        Rect::new(x + w + TILE_GAP, control_top, w, h),
-                    ),
-                ]
+                (
+                    Some(Rect::new(x, control_top, w, h)),
+                    Some(Rect::new(x + w + TILE_GAP, control_top, w, h)),
+                )
             }
-            (true, false) => vec![(r.low_text.as_str(), Rect::new(x, control_top, width, h))],
-            _ => vec![(r.high_text.as_str(), Rect::new(x, control_top, width, h))],
+            (true, false) => (Some(Rect::new(x, control_top, width, h)), None),
+            _ => (None, Some(Rect::new(x, control_top, width, h))),
         };
-        for (text, b) in boxes {
-            g.push(
-                RectNode::new(b.inset_uniform(0.5))
-                    .fill(Paint::solid(self.items_bg.unwrap_or(Color::WHITE)))
-                    .stroke(Stroke::new(BOX_BORDER, 1.0)),
-            );
-            let shown = ellipsize(
-                ctx.fonts,
-                text,
+        let ty = control_top + h + 14.0;
+        let (x0, x1) = (x + HANDLE_RADIUS, x + width - HANDLE_RADIUS);
+        let track = (x1 > x0).then(|| Rect::new(x0, ty - 1.0, x1 - x0, 2.0));
+        (low, high, track)
+    }
+
+    /// A value box with its text and, for a list, a chevron.
+    fn value_box(&self, ctx: &VisualCtx<'_>, g: &mut Group, b: Rect, text: &str, list: bool) {
+        let (lh, ascent) = line_metrics(&self.items_style);
+        g.push(
+            RectNode::new(b.inset_uniform(0.5))
+                .fill(Paint::solid(self.items_bg.unwrap_or(Color::WHITE)))
+                .stroke(Stroke::new(BOX_BORDER, 1.0)),
+        );
+        let chevron_w = if list {
+            CHEVRON_RIGHT + CHEVRON_HALF_W
+        } else {
+            0.0
+        };
+        let shown = ellipsize(
+            ctx.fonts,
+            text,
+            &self.items_style,
+            (b.width - 2.0 * BOX_TEXT_INSET - chevron_w).max(0.0),
+        );
+        if !shown.is_empty() {
+            g.push(text_line(
+                b.x + BOX_TEXT_INSET,
+                b.y + (b.height - lh) / 2.0 + ascent,
+                shown,
                 &self.items_style,
-                (b.width - 2.0 * BOX_TEXT_INSET).max(0.0),
-            );
-            if !shown.is_empty() {
-                g.push(text_line(
-                    b.x + BOX_TEXT_INSET,
-                    b.y + (b.height - lh) / 2.0 + ascent,
-                    shown,
-                    &self.items_style,
-                    TextAnchor::Start,
-                ));
+                TextAnchor::Start,
+            ));
+        }
+        if list && b.width > 2.0 * CHEVRON_RIGHT {
+            g.push(chevron(
+                b.right() - CHEVRON_RIGHT,
+                b.y + b.height / 2.0,
+                false,
+                self.items_style.color,
+            ));
+        }
+    }
+
+    fn draw_range(&self, ctx: &VisualCtx<'_>, g: &mut Group, control_top: f64) {
+        let Some(r) = &self.range else {
+            return;
+        };
+        let (low_box, high_box, track) = self.range_geometry(r, control_top);
+        for (text, b) in [(&r.low_text, low_box), (&r.high_text, high_box)] {
+            if let Some(b) = b {
+                self.value_box(ctx, g, b, text, false);
             }
         }
-        // Slider.
-        let radius = 6.0;
-        let ty = control_top + h + 14.0;
-        let (x0, x1) = (x + radius, x + width - radius);
-        if x1 <= x0 {
+        let Some(track) = track else {
             return;
-        }
+        };
+        let (x0, x1) = (track.x, track.right());
+        let ty = track.y + track.height / 2.0;
         let color = self.items_style.color;
-        g.push(
-            RectNode::new(Rect::new(x0, ty - 1.0, x1 - x0, 2.0)).fill(Paint::solid(TRACK_COLOR)),
-        );
+        g.push(RectNode::new(track).fill(Paint::solid(TRACK_COLOR)));
         let lx = x0 + (x1 - x0) * r.low;
         let hx = x0 + (x1 - x0) * r.high;
         g.push(
@@ -964,11 +1154,48 @@ impl Slicer {
             .collect();
         for hx in handles {
             g.push(
-                PathNode::new(circle(hx, ty, radius))
+                PathNode::new(circle(hx, ty, HANDLE_RADIUS))
                     .fill(Paint::solid(Color::WHITE))
                     .stroke(Stroke::new(color, 1.0)),
             );
         }
+    }
+
+    /// The anchor, number and period boxes of a relative slicer.
+    fn relative_boxes(&self, rv: &RelativeView, control_top: f64) -> (Rect, Option<Rect>, Rect) {
+        let c = self.content;
+        let x = c.x + INSET;
+        let width = (c.width - 2.0 * INSET).max(0.0);
+        let h = self.box_height();
+        if rv.anchor == RelativeAnchor::This {
+            let w = ((width - TILE_GAP) / 2.0).max(0.0);
+            return (
+                Rect::new(x, control_top, w, h),
+                None,
+                Rect::new(x + w + TILE_GAP, control_top, w, h),
+            );
+        }
+        let avail = (width - 2.0 * TILE_GAP).max(0.0);
+        let (aw, dw) = (avail * 0.3, avail * 0.25);
+        let pw = avail - aw - dw;
+        (
+            Rect::new(x, control_top, aw, h),
+            Some(Rect::new(x + aw + TILE_GAP, control_top, dw, h)),
+            Rect::new(x + aw + dw + 2.0 * TILE_GAP, control_top, pw, h),
+        )
+    }
+
+    fn draw_relative(&self, ctx: &VisualCtx<'_>, g: &mut Group, control_top: f64) {
+        let Some(rv) = self.relative else {
+            return;
+        };
+        let (anchor, duration, period) = self.relative_boxes(&rv, control_top);
+        self.value_box(ctx, g, anchor, rv.anchor.label(), true);
+        if let Some(b) = duration {
+            let text = rv.duration.map(|d| d.to_string()).unwrap_or_default();
+            self.value_box(ctx, g, b, &text, false);
+        }
+        self.value_box(ctx, g, period, rv.period.label(), true);
     }
 }
 
@@ -1025,6 +1252,8 @@ fn range_spec(
         .get(&ctx.visual.name)
         .and_then(|s| s.condition.as_ref());
     let (mut lo, mut hi) = condition.map_or((None, None), |c| condition_bounds(c, data_type));
+    let is_date = data_type == Some(&pbi_model::DataType::DateTime);
+    let integer = data_type == Some(&pbi_model::DataType::Int64);
     if !min.is_finite() || !max.is_finite() {
         return RangeSpec {
             low_text: String::new(),
@@ -1033,6 +1262,12 @@ fn range_spec(
             high: 1.0,
             show_low: mode != "before",
             show_high: mode != "after",
+            min: None,
+            max: None,
+            low_value: None,
+            high_value: None,
+            is_date,
+            integer,
         };
     }
     lo = lo.map(|v| v.clamp(min, max));
@@ -1056,6 +1291,12 @@ fn range_spec(
         high: if span > 0.0 { pos(hi_v) } else { 1.0 },
         show_low: mode != "before",
         show_high: mode != "after",
+        min: Some(min),
+        max: Some(max),
+        low_value: Some(lo_v),
+        high_value: Some(hi_v),
+        is_date,
+        integer,
     }
 }
 

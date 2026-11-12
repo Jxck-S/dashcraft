@@ -7,6 +7,16 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+- **M9.7 range and relative slicers.** `pbi_render::query::relative` reads, resolves (against the
+  session clock: `RevisionSnapshot::local_now`, `QueryEnv.now`) and writes Power BI's relative
+  date/time conditions; `FilterBuilder` applies them at every level (no clock: skipped with a
+  warning, so `render` stays deterministic). The slicer draws relative controls and exposes the range
+  slider, boxes and pickers; `canvas.setRange` and `canvas.setRelativeDate` (pbi-ops) set them, with
+  filter pane summaries ("is between 1 and 10", "is in the last 3 months (calendar)"). App: draggable
+  handles (mouse, arrows, Home/End), editable bounds, Last/Next/This pickers (`lib/slicerRange.ts`).
+  Tests: 2 pbi-ops canvas tests, 3 relative unit tests, 4 app tests; the Acme time-intelligence
+  snapshot loses its "RelativeDate not supported" warning and draws "Last 10 Years".
+
 ### M9.4 done: cross-report drillthrough and the source visual's filters
 
 - **What**: `pbi_render::query::drillthrough` carries the source visual's own filters with "Keep

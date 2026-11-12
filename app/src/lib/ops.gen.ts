@@ -417,7 +417,7 @@ export interface CanvasInteractionOut {
   /** `slicer`, `table` or `matrix`. */
   kind: string
   scroll: ScrollOut | null
-  /** Slicers: `dropdown`, `list`, `tile` or `range`. */
+  /** Slicers: `dropdown`, `list`, `tile`, `range` or `relative`. */
   slicerMode: string | null
   /** Slicer header band. */
   header: RectOut | null
@@ -431,6 +431,10 @@ export interface CanvasInteractionOut {
   searchText: string
   /** The slicer filters something (not "All"). */
   hasSelection: boolean
+  /** Range slicers: value boxes, slider and bounds. */
+  range?: RangeOut | null
+  /** Relative date / time slicers: controls and setting. */
+  relative?: RelativeOut | null
 }
 
 /** A rendered page of the interactive canvas. */
@@ -531,6 +535,56 @@ export interface CanvasSearchParams {
   visual: string
   /** Search text (at most 256 characters; empty clears it). */
   text: string
+}
+
+export interface CanvasSetRangeParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /** The slicer's visual name… */
+  visual?: string | null
+  /** …or its field (display name, column, `Table[Column]`). */
+  field?: string | null
+  /**
+   * Lower bound (inclusive): a number, or for dates `YYYY-MM-DD` or an
+   * OADate day number. Absent: open.
+   */
+  low?: RangeBound | null
+  /**
+   * Upper bound (inclusive; a date includes the whole day). Absent:
+   * open. Both absent clear the slicer.
+   */
+  high?: RangeBound | null
+}
+
+export interface CanvasSetRelativeDateParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /** The slicer's visual name… */
+  visual?: string | null
+  /** …or its field (display name, column, `Table[Column]`). */
+  field?: string | null
+  /** `last`, `next` or `this`; absent clears the slicer. */
+  anchor?: RelativeAnchorArg | null
+  /** Number of periods (not for `this`). Default 1. */
+  duration?: number
+  /**
+   * `minutes`, `hours`, `days`, `weeks`, `calendarWeeks`, `months`,
+   * `calendarMonths`, `years` or `calendarYears`. Default `days`.
+   */
+  period?: RelativePeriodArg
+  /**
+   * Count today as one of the days (non-calendar date periods). Default
+   * `true`.
+   */
+  includeToday?: boolean
 }
 
 export interface CanvasSetSlicerParams {
@@ -3715,6 +3769,37 @@ export interface ProviderStatus {
   consented: Capability[]
 }
 
+/**
+ * A bound of `canvas.setRange`: a number, or an ISO date (`2025-03-01`)
+ * or OADate day number for date fields.
+ */
+export type RangeBound = number | string
+
+/**
+ * A range slicer's geometry and bounds; values are numbers, or OADate days
+ * (days since 1899-12-30) for dates.
+ */
+export interface RangeOut {
+  /** Lower bound box (not in "Before" mode). */
+  lowBox: RectOut | null
+  /** Upper bound box (not in "After" mode). */
+  highBox: RectOut | null
+  /** Slider track; the handles sit on its vertical middle. */
+  track: RectOut | null
+  /** The field's smallest and largest value. */
+  min: number | null
+  max: number | null
+  /** The current bounds (the data range when unset). */
+  low: number | null
+  high: number | null
+  lowText: string
+  highText: string
+  /** A date field: values are OADate days. */
+  isDate: boolean
+  /** A whole-number field. */
+  integer: boolean
+}
+
 export interface RdlDataSetOut {
   name: string
   dataSource?: string | null
@@ -3967,6 +4052,31 @@ export interface RelationshipOut {
   /** `oneDirection`, `bothDirections` or `none`. */
   securityFilteringBehavior: string
 }
+
+/** Last, next or this period of a relative date slicer. */
+export type RelativeAnchorArg = 'last' | 'next' | 'this'
+
+/** A relative date slicer's controls and setting. */
+export interface RelativeOut {
+  /** The Last / Next / This box. */
+  anchorBox: RectOut
+  /** The number box (not for "This"). */
+  durationBox: RectOut | null
+  /** The period box. */
+  periodBox: RectOut
+  anchor: RelativeAnchorArg
+  /** The number of periods, when set. */
+  duration: number | null
+  period: RelativePeriodArg
+  includeToday: boolean
+  /** Relative time: only minutes and hours. */
+  time: boolean
+  /** A relative condition filters the page. */
+  active: boolean
+}
+
+/** The period of a relative date slicer. */
+export type RelativePeriodArg = 'minutes' | 'hours' | 'days' | 'weeks' | 'calendarWeeks' | 'months' | 'calendarMonths' | 'years' | 'calendarYears'
 
 /** Result of `model.object.rename`. */
 export interface RenameObjectOut {
@@ -5276,6 +5386,10 @@ export interface OpsCommands {
   'canvas.scroll': { params: CanvasScrollParams; output: CanvasChangeOut }
   /** Replaces a slicer's selection by value (no hit ids needed) and returns the re-rendered page. */
   'canvas.setSlicer': { params: CanvasSetSlicerParams; output: CanvasPageOut }
+  /** Filters a numeric or date range slicer to a lower and/or upper bound (a date includes the whole day) and returns the re-rendered page. */
+  'canvas.setRange': { params: CanvasSetRangeParams; output: CanvasPageOut }
+  /** Filters a date slicer to a relative period ("Last 3 months", "This year", "Next 2 hours") of the session clock and returns the re-rendered page. */
+  'canvas.setRelativeDate': { params: CanvasSetRelativeDateParams; output: CanvasPageOut }
   /** Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page. */
   'canvas.clearSelections': { params: CanvasClearParams; output: CanvasPageOut }
   /** Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page. */
@@ -5422,6 +5536,8 @@ export const OPS_META = {
   'canvas.click': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.scroll': { category: 'canvas', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.setSlicer': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
+  'canvas.setRange': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
+  'canvas.setRelativeDate': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.clearSelections': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.setSlicerSearch': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.toggleMatrixRow': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
@@ -5628,6 +5744,10 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasScroll: (params: CanvasScrollParams, options?: O) => run('canvas.scroll', params, options),
     /** Replaces a slicer's selection by value (no hit ids needed) and returns the re-rendered page. */
     canvasSetSlicer: (params: CanvasSetSlicerParams, options?: O) => run('canvas.setSlicer', params, options),
+    /** Filters a numeric or date range slicer to a lower and/or upper bound (a date includes the whole day) and returns the re-rendered page. */
+    canvasSetRange: (params: CanvasSetRangeParams, options?: O) => run('canvas.setRange', params, options),
+    /** Filters a date slicer to a relative period ("Last 3 months", "This year", "Next 2 hours") of the session clock and returns the re-rendered page. */
+    canvasSetRelativeDate: (params: CanvasSetRelativeDateParams, options?: O) => run('canvas.setRelativeDate', params, options),
     /** Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page. */
     canvasClearSelections: (params: CanvasClearParams, options?: O) => run('canvas.clearSelections', params, options),
     /** Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page. */

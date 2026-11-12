@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use pbi_render::query::DrillAction;
+use pbi_render::query::relative::RelativeDateSpec;
 
 use super::{BASE, loaded_doc};
 use crate::canvas::{
@@ -327,6 +328,148 @@ impl Command for CanvasSetSlicer {
             p.invert,
         )
         .await
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.setRange`.
+#[derive(Debug)]
+pub struct CanvasSetRange;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CanvasSetRangeParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+    /// Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page.
+    #[serde(default)]
+    pub page: Option<String>,
+    /// The slicer's visual name…
+    #[serde(default)]
+    pub visual: Option<String>,
+    /// …or its field (display name, column, `Table[Column]`).
+    #[serde(default)]
+    pub field: Option<String>,
+    /// Lower bound (inclusive): a number, or for dates `YYYY-MM-DD` or an
+    /// OADate day number. Absent: open.
+    #[serde(default)]
+    pub low: Option<canvas::RangeBound>,
+    /// Upper bound (inclusive; a date includes the whole day). Absent:
+    /// open. Both absent clear the slicer.
+    #[serde(default)]
+    pub high: Option<canvas::RangeBound>,
+}
+
+impl Command for CanvasSetRange {
+    type Params = CanvasSetRangeParams;
+    type Output = CanvasPageOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.setRange",
+            title: "Set a range slicer",
+            summary: "Filters a numeric or date range slicer to a lower and/or upper bound (a date includes the whole day) and returns the re-rendered page.",
+            long_running: true,
+            examples: &[
+                (
+                    "Orders in the first quarter of 2025",
+                    r#"{"docId": "d1", "field": "Date", "low": "2025-01-01", "high": "2025-03-31"}"#,
+                ),
+                (
+                    "Quantity of at least 5",
+                    r#"{"docId": "d1", "field": "Quantity", "low": 5}"#,
+                ),
+            ],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        canvas::set_range(&t, p.visual.as_deref(), p.field.as_deref(), p.low, p.high).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.setRelativeDate`.
+#[derive(Debug)]
+pub struct CanvasSetRelativeDate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CanvasSetRelativeDateParams {
+    /// The document id from `doc.open` (`d1`, …).
+    pub doc_id: String,
+    /// Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report.
+    #[serde(default)]
+    pub report: Option<String>,
+    /// Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page.
+    #[serde(default)]
+    pub page: Option<String>,
+    /// The slicer's visual name…
+    #[serde(default)]
+    pub visual: Option<String>,
+    /// …or its field (display name, column, `Table[Column]`).
+    #[serde(default)]
+    pub field: Option<String>,
+    /// `last`, `next` or `this`; absent clears the slicer.
+    #[serde(default)]
+    pub anchor: Option<canvas::RelativeAnchorArg>,
+    /// Number of periods (not for `this`). Default 1.
+    #[serde(default = "one")]
+    pub duration: u32,
+    /// `minutes`, `hours`, `days`, `weeks`, `calendarWeeks`, `months`,
+    /// `calendarMonths`, `years` or `calendarYears`. Default `days`.
+    #[serde(default)]
+    pub period: canvas::RelativePeriodArg,
+    /// Count today as one of the days (non-calendar date periods). Default
+    /// `true`.
+    #[serde(default = "yes")]
+    pub include_today: bool,
+}
+
+fn one() -> u32 {
+    1
+}
+
+impl Command for CanvasSetRelativeDate {
+    type Params = CanvasSetRelativeDateParams;
+    type Output = CanvasPageOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.setRelativeDate",
+            title: "Set a relative date slicer",
+            summary: "Filters a date slicer to a relative period (\"Last 3 months\", \"This year\", \"Next 2 hours\") of the session clock and returns the re-rendered page.",
+            long_running: true,
+            examples: &[
+                (
+                    "The last 3 calendar months",
+                    r#"{"docId": "d1", "field": "Date", "anchor": "last", "duration": 3, "period": "calendarMonths"}"#,
+                ),
+                (
+                    "Clear a relative slicer",
+                    r#"{"docId": "d1", "field": "Date"}"#,
+                ),
+            ],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        let spec = p.anchor.map(|anchor| RelativeDateSpec {
+            anchor: anchor.into(),
+            duration: p.duration,
+            period: p.period.into(),
+            include_today: p.include_today,
+        });
+        canvas::set_relative_date(&t, p.visual.as_deref(), p.field.as_deref(), spec).await
     }
 }
 

@@ -755,9 +755,8 @@ on Windows 10 and 11.
 - Report canvas: highlights are drawn on bar, column, combo, pie, donut, treemap and funnel
   charts, whose data labels show the highlighted values and tooltips a "Highlighted" line; other visuals (tables, matrices, lines, …) are filtered instead; Q&A and Web URL
   buttons are not executed; bookmarks cannot be added or updated, and their focus-mode and
-  cross-highlight parts are not applied; range and
-  relative-date slicers draw but their sliders / date pickers are not interactive (tiles select
-  like list items); no visual header menus (focus mode, show as table, sort, export) or filter
+  cross-highlight parts are not applied; range slicers have no
+  calendar popup (tiles select like list items); no visual header menus (focus mode, show as table, sort, export) or filter
   card editing (the header shows drill buttons only); the right-click menu offers drill and
   Drill through only; cross-filters
   from matrices use the row path only; report-page tooltips show for chart data points only;
