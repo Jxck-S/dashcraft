@@ -1,6 +1,6 @@
 //! Basic visuals on synthetic visuals and DataViews (no fixture files):
 //! textbox paragraphs, lists and alignment; shapes; buttons and their
-//! actions; page and bookmark navigators; cards (single, multi, blank, error, label clipping); the
+//! actions; page and bookmark navigators; bookmark visibility; cards (single, multi, blank, error, label clipping); the
 //! placeholder; page orchestration; SVG output.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -8,12 +8,12 @@
 mod query_support;
 
 use pbi_engine::Value;
-use pbi_model::{Bookmark, Page, Position, Report, Visual};
+use pbi_model::{Bookmark, Page, Position, Report, Visual, VisualKind};
 use pbi_render::dataview::{
     CellValue, ColumnMeta, DataView, DataViewKind, FieldRef, FieldRefKind, TableData,
 };
 use pbi_render::layout::{FrameOptions, PageLayout, render_page_with};
-use pbi_render::query::{InteractionState, VisualQueryError};
+use pbi_render::query::{InteractionState, VisualQueryError, apply_bookmark};
 use pbi_render::scene::{
     Color, Group, HitId, HitKind, Node, PathNode, Rect, Scene, TextAnchor, TextNode,
 };
@@ -678,6 +678,101 @@ fn bookmark_navigators_list_a_group_and_select_the_applied_bookmark() {
     assert_eq!(navigator::item_action(&v, &theme, &nav, 0), bookmark("b1"));
     // Clicking the selected bookmark launches the deselection bookmark.
     assert_eq!(navigator::item_action(&v, &theme, &nav, 1), bookmark("b3"));
+}
+
+#[test]
+fn bookmarks_show_and_hide_visuals_and_groups() {
+    let env = env();
+    let card = |name: &str, x: f64, hidden: bool| {
+        let mut v = card_visual(name, 100.0);
+        v.position.x = x;
+        v.is_hidden = hidden;
+        v.projections = vec![projection("Data", measure("Store Count"))];
+        v
+    };
+    let mut group = visual("g", "", (600.0, 0.0, 300.0, 300.0));
+    group.kind = VisualKind::Group;
+    let mut child = card("c", 0.0, false);
+    child.parent_group_name = Some("g".into());
+    let page = page_of(vec![
+        card("a", 0.0, false),
+        card("b", 200.0, true),
+        group,
+        child,
+    ]);
+    let report = Report {
+        pages: vec![page.clone()],
+        ..Report::default()
+    };
+    let bookmark = |options: Json| Bookmark {
+        name: "bm".into(),
+        options,
+        exploration_state: json!({"activeSection": "p", "sections": {"p": {
+            "visualContainers": {
+                "a": {"singleVisual": {"visualType": "card", "display": {"mode": "hidden"}}},
+                "b": {"singleVisual": {"visualType": "card"}},
+                "c": {"singleVisual": {"visualType": "card"}}
+            },
+            "visualContainerGroups": {"g": {"isHidden": true}}
+        }}}),
+        ..Bookmark::default()
+    };
+    let saved = |p: &Page| InteractionState::from_page(p).0;
+    let visibility = |s: &InteractionState| -> Vec<(String, bool)> {
+        s.visibility.iter().map(|(k, v)| (k.clone(), *v)).collect()
+    };
+    let all = apply_bookmark(&report, &bookmark(Json::Null), &saved);
+    assert!(all.not_applied.is_empty(), "{:?}", all.not_applied);
+    let state = all.states["p"].clone();
+    assert_eq!(
+        visibility(&state),
+        [("a".into(), true), ("b".into(), false), ("g".into(), true)]
+    );
+
+    let render = |state: &InteractionState| {
+        let r = render_report_page(
+            &env,
+            &report,
+            &page,
+            &ThemeResolver::default(),
+            state,
+            &PageRenderOptions::default(),
+        );
+        let hidden = ["a", "b", "c"].map(|n| r.visual(n).unwrap().hidden);
+        let drawn = ["a", "b", "c"].map(|n| find_group(&r.scene.root, &HitId::visual(n)).is_some());
+        let queried: Vec<String> = r
+            .data
+            .iter()
+            .map(|(n, _)| n.clone())
+            .filter(|n| n != "g")
+            .collect();
+        (hidden, drawn, queried)
+    };
+    assert_eq!(
+        render(&saved(&page)),
+        (
+            [false, true, false],
+            [true, false, true],
+            vec!["a".into(), "c".into()]
+        )
+    );
+    // `c` is hidden with its group.
+    assert_eq!(
+        render(&state),
+        ([true, false, true], [false, true, false], vec!["b".into()])
+    );
+
+    // "Selected visuals": only `b` changes, from the current state.
+    let only_b = json!({"applyOnlyToTargetVisuals": true, "targetVisualNames": ["b"]});
+    let effect = apply_bookmark(&report, &bookmark(only_b), &saved);
+    assert_eq!(visibility(&effect.states["p"]), [("b".into(), false)]);
+    // "Display" unchecked: the current visibility stays.
+    let effect = apply_bookmark(
+        &report,
+        &bookmark(json!({"suppressDisplay": true})),
+        &|_| state.clone(),
+    );
+    assert_eq!(visibility(&effect.states["p"]), visibility(&state));
 }
 
 // ------------------------------------------------------------------ cards

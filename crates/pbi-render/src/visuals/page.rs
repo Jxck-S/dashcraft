@@ -2,9 +2,9 @@
 //! visuals into one scene, and collect per-visual information (timings,
 //! warnings, errors, button actions). (owner: visuals-basics)
 //!
-//! Hidden visuals (`isHidden`, or inside a hidden group) are neither
-//! queried nor drawn; groups only paint their container (see
-//! [`crate::layout`]). Timings are wall-clock and only reported in
+//! Hidden visuals (`isHidden`, inside a hidden group, or hidden by a
+//! bookmark: [`InteractionState::visibility`]) are neither queried nor
+//! drawn; groups only paint their container (see [`crate::layout`]). Timings are wall-clock and only reported in
 //! [`VisualRenderInfo`]; the scene itself is deterministic.
 //!
 //! # Interactive canvas
@@ -258,6 +258,7 @@ pub fn query_page_data(
     state: &InteractionState,
     limits: &QueryLimits,
 ) -> PageData {
+    let page = &*state.page_with_visibility(page);
     let hidden = hidden_visuals(page);
     let mut out = PageData {
         data: Vec::with_capacity(page.visuals.len()),
@@ -465,6 +466,7 @@ fn render_page_data(
     data: &PageData,
     cache: Option<&VisualCache>,
 ) -> InteractivePage {
+    let page = &*state.page_with_visibility(page);
     let hidden = hidden_visuals(page);
     let fonts = FontBook::shared();
     let mut render_times: HashMap<String, u64> = HashMap::new();

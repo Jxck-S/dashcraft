@@ -1,5 +1,5 @@
-//! Applying a bookmark: the page it shows and the slicer selections it
-//! captures, as [`InteractionState`]s.
+//! Applying a bookmark: the page it shows, the slicer selections it
+//! captures and the visuals it hides, as [`InteractionState`]s.
 //!
 //! # What a PBIR bookmark holds
 //!
@@ -12,6 +12,13 @@
 //! the diff to the saved visual and reading the selection back gives the
 //! bookmarked selection.
 //!
+//! Visibility: a captured visual is hidden when its
+//! `singleVisual.display.mode` is `hidden` and shown otherwise;
+//! `sections.<page>.visualContainerGroups.<group>.isHidden` (with nested
+//! `children`) does the same for groups. Visuals and groups the bookmark
+//! does not capture keep their saved `isHidden`
+//! ([`InteractionState::visibility`] holds the differences).
+//!
 //! `options`:
 //! - `applyOnlyToTargetVisuals` + `targetVisualNames` ("Selected
 //!   visuals"): only those visuals change; the rest of the page keeps its
@@ -20,13 +27,14 @@
 //! - `suppressData` ("Data" unchecked): selections and filters are not
 //!   applied.
 //! - `suppressDisplay` ("Display" unchecked): visibility, sort, drill and
-//!   formatting are not applied.
+//!   formatting are not applied (the page keeps its current visibility).
 //! - `suppressActiveSection` ("Current page" unchecked): the page does not
 //!   change.
 //!
 //! Not applied yet (reported in [`BookmarkEffect::not_applied`]): filter
-//! pane state, visibility, sort, drill and expansion state, projection
-//! changes, cross-highlights and formatting of other visuals.
+//! pane state, the spotlight, focus and elevation display modes, sort,
+//! drill and expansion state, projection changes, cross-highlights and
+//! formatting of other visuals.
 
 use indexmap::IndexMap;
 use pbi_model::{Bookmark, Page, Report};
@@ -102,19 +110,30 @@ pub fn apply_bookmark(
             .and_then(Value::as_object)
             .unwrap_or(&empty);
 
-        if !flag("suppressData") {
-            let mut new_state = if target_only {
-                let mut s = current(page);
-                if s.selected_points
+        let data = !flag("suppressData");
+        let display = !flag("suppressDisplay");
+        if !data && !display {
+            continue;
+        }
+        let mut new_state = if data && !target_only {
+            let mut s = InteractionState::from_page(page).0;
+            if !display {
+                s.visibility = current(page).visibility;
+            }
+            s
+        } else {
+            current(page)
+        };
+
+        if data {
+            if target_only
+                && new_state
+                    .selected_points
                     .as_ref()
                     .is_some_and(|p| applies_to(&p.source))
-                {
-                    s.selected_points = None;
-                }
-                s
-            } else {
-                InteractionState::from_page(page).0
-            };
+            {
+                new_state.selected_points = None;
+            }
             for visual in page
                 .visuals
                 .iter()
@@ -164,10 +183,12 @@ pub fn apply_bookmark(
             if highlights {
                 note(&mut effect, format!("{label}: cross-highlights"));
             }
-            effect.states.insert(page.name.clone(), new_state);
         }
 
-        if !flag("suppressDisplay") {
+        if display {
+            if !target_only {
+                new_state.visibility.clear();
+            }
             for (name, c) in containers.iter().filter(|(n, _)| applies_to(n)) {
                 let single = c.get("singleVisual").unwrap_or(&Value::Null);
                 let slicer = page
@@ -175,13 +196,13 @@ pub fn apply_bookmark(
                     .iter()
                     .find(|v| &v.name == name)
                     .is_some_and(|v| is_slicer_type(&v.visual_type));
-                if single
+                let mode = single
                     .get("display")
                     .and_then(|d| d.get("mode"))
-                    .and_then(Value::as_str)
-                    == Some("hidden")
-                {
-                    note(&mut effect, format!("{label}: visibility"));
+                    .and_then(Value::as_str);
+                new_state.set_hidden(page, name, mode == Some("hidden"));
+                if let Some(mode) = mode.filter(|m| *m != "hidden") {
+                    note(&mut effect, format!("{label}: {mode} display mode"));
                 }
                 if single.get("orderBy").is_some() {
                     note(&mut effect, format!("{label}: sort"));
@@ -199,9 +220,44 @@ pub fn apply_bookmark(
                     note(&mut effect, format!("{label}: formatting"));
                 }
             }
+            if let Some(groups) = captured
+                .get("visualContainerGroups")
+                .and_then(Value::as_object)
+            {
+                set_group_visibility(page, &mut new_state, groups, &applies_to, 0);
+            }
         }
+        effect.states.insert(page.name.clone(), new_state);
     }
     effect
+}
+
+/// Deepest `visualContainerGroups.*.children` nesting followed.
+const MAX_GROUP_DEPTH: usize = 32;
+
+/// Applies `isHidden` of each captured group (and its child groups).
+fn set_group_visibility(
+    page: &Page,
+    state: &mut InteractionState,
+    groups: &Map<String, Value>,
+    applies_to: &dyn Fn(&str) -> bool,
+    depth: usize,
+) {
+    if depth >= MAX_GROUP_DEPTH {
+        return;
+    }
+    for (name, group) in groups {
+        if applies_to(name) {
+            let hidden = group
+                .get("isHidden")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            state.set_hidden(page, name, hidden);
+        }
+        if let Some(children) = group.get("children").and_then(Value::as_object) {
+            set_group_visibility(page, state, children, applies_to, depth + 1);
+        }
+    }
 }
 
 fn note(effect: &mut BookmarkEffect, message: String) {

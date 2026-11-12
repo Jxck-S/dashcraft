@@ -1,5 +1,5 @@
-//! Report interaction state: slicer selections and the selected data
-//! points of one visual (cross-filtering).
+//! Report interaction state: slicer selections, the selected data points
+//! of one visual (cross-filtering) and the visuals a bookmark shows or hides.
 //!
 //! # Where slicer selections live in PBIR
 //!
@@ -35,6 +35,8 @@
 //! - Not read yet: `syncGroup` (selections synced across pages; pass the
 //!   same selection under each page's slicer name instead) and the
 //!   `selfFilter` of the newer slicer visuals.
+
+use std::borrow::Cow;
 
 use indexmap::IndexMap;
 use pbi_engine::Value;
@@ -150,6 +152,10 @@ pub struct InteractionState {
     /// Selected data points (cross-filter source).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub selected_points: Option<PointSelection>,
+    /// Visual or group name → hidden, where a bookmark changed the saved
+    /// `isHidden` (see [`InteractionState::set_hidden`]).
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub visibility: IndexMap<String, bool>,
 }
 
 impl InteractionState {
@@ -190,6 +196,39 @@ impl InteractionState {
     pub fn clear_slicer(&mut self, slicer: &str) -> &mut Self {
         self.slicer_selections.shift_remove(slicer);
         self
+    }
+
+    /// Shows or hides visual (or group) `name` of `page`; only a change
+    /// from its saved `isHidden` is kept. Unknown names are ignored.
+    pub fn set_hidden(&mut self, page: &Page, name: &str, hidden: bool) -> &mut Self {
+        if let Some(v) = page.visuals.iter().find(|v| v.name == name) {
+            if v.is_hidden == hidden {
+                self.visibility.shift_remove(name);
+            } else {
+                self.visibility.insert(v.name.clone(), hidden);
+            }
+        }
+        self
+    }
+
+    /// `page` with [`Self::visibility`] applied to its visuals' `isHidden`
+    /// (borrowed when nothing changes).
+    pub fn page_with_visibility<'a>(&self, page: &'a Page) -> Cow<'a, Page> {
+        let differs = |v: &Visual| {
+            self.visibility
+                .get(&v.name)
+                .is_some_and(|h| *h != v.is_hidden)
+        };
+        if !page.visuals.iter().any(differs) {
+            return Cow::Borrowed(page);
+        }
+        let mut page = page.clone();
+        for v in &mut page.visuals {
+            if let Some(hidden) = self.visibility.get(&v.name) {
+                v.is_hidden = *hidden;
+            }
+        }
+        Cow::Owned(page)
     }
 }
 

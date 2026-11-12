@@ -262,7 +262,7 @@ export interface CanvasBookmarkOut {
   changedPages: string[]
   /**
    * Parts of the bookmark DashCraft does not apply yet (filter pane,
-   * visibility, sort, drill state, formatting, …).
+   * sort, drill state, spotlight, formatting, …).
    */
   notApplied: string[]
   /** The page the bookmark shows (else `page`), rendered. */
@@ -5151,7 +5151,7 @@ export interface OpsCommands {
   'canvas.closePopups': { params: CanvasClosePopupsParams; output: CanvasChangeOut }
   /** Back to the report's saved slicer selections, no cross-filter, scroll and dropdowns reset; returns the re-rendered page. */
   'canvas.reset': { params: CanvasPageParams; output: CanvasPageOut }
-  /** Applies a report bookmark to the canvas (its page and slicer selections, all or only its target visuals) and renders the page it shows; lists the parts not applied yet. */
+  /** Applies a report bookmark to the canvas (its page, slicer selections and hidden visuals, all or only its target visuals) and renders the page it shows; lists the parts not applied yet. */
   'canvas.applyBookmark': { params: CanvasBookmarkParams; output: CanvasBookmarkOut }
   /** The hover tooltip (category, series, values) of a data point hit, from the last render. */
   'canvas.tooltip': { params: CanvasHitParams; output: TooltipOut }
@@ -5491,7 +5491,7 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasClosePopups: (params: CanvasClosePopupsParams, options?: O) => run('canvas.closePopups', params, options),
     /** Back to the report's saved slicer selections, no cross-filter, scroll and dropdowns reset; returns the re-rendered page. */
     canvasReset: (params: CanvasPageParams, options?: O) => run('canvas.reset', params, options),
-    /** Applies a report bookmark to the canvas (its page and slicer selections, all or only its target visuals) and renders the page it shows; lists the parts not applied yet. */
+    /** Applies a report bookmark to the canvas (its page, slicer selections and hidden visuals, all or only its target visuals) and renders the page it shows; lists the parts not applied yet. */
     canvasApplyBookmark: (params: CanvasBookmarkParams, options?: O) => run('canvas.applyBookmark', params, options),
     /** The hover tooltip (category, series, values) of a data point hit, from the last render. */
     canvasTooltip: (params: CanvasHitParams, options?: O) => run('canvas.tooltip', params, options),
