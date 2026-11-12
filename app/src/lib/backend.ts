@@ -36,7 +36,9 @@ import {
   hasBackend,
   NO_BACKEND,
   ops,
+  type BookmarkOut,
   type CanvasAction,
+  type CanvasBookmarkOut,
   type CanvasPageOut,
   type ColumnFilterOut,
   type ConvertPbipOut,
@@ -763,7 +765,7 @@ export const daxService: DaxService = {
 // ---------------------------------------------------------------------------
 
 export type RenderedPage = CanvasPageOut
-export type { CanvasAction }
+export type { BookmarkOut, CanvasAction, CanvasBookmarkOut }
 export type TooltipLine = TooltipLineOut
 
 export interface ClickResult {
@@ -822,6 +824,23 @@ export function resetPage(reportId: number, pageId: number): Promise<Outcome<Ren
 
 export function visualTooltip(reportId: number, pageId: number, hitId: string): Promise<Outcome<{ lines: TooltipLine[] }>> {
   return onPage(reportId, pageId, (t) => ops.canvasTooltip({ ...t, hitId }))
+}
+
+/** The bookmarks of a report in the Bookmarks pane's order (`report.bookmarks`). */
+export async function reportBookmarks(reportId: number): Promise<Outcome<BookmarkOut[]>> {
+  const doc = current?.docId
+  const target = names(reportId, null)
+  if (!doc) return NO_DOCUMENT
+  if (!target) return NO_PAGE
+  return map(await ops.reportBookmarks({ docId: doc, report: target.report }), (r) => r.bookmarks)
+}
+
+/**
+ * Applies bookmark `bookmark` (internal name) while page `pageId` is shown
+ * (`canvas.applyBookmark`); the result renders the page the bookmark shows.
+ */
+export function applyBookmark(reportId: number, pageId: number, bookmark: string): Promise<Outcome<CanvasBookmarkOut>> {
+  return onPage(reportId, pageId, (t) => ops.canvasApplyBookmark({ ...t, bookmark }))
 }
 
 /** The page id of `page` (internal name) in report `reportId` of the current document. */

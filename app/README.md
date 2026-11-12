@@ -299,7 +299,9 @@ results and DTOs. Locations below refer to the Desktop shell above.
     recovery (`recovery.mjs`: edit, crash, restore, crash, discard), external changes
     (`external-changes.mjs`: an external TMDL edit, Compare, Keep mine, Save's question, Reload,
     File → Compare with the disk and with another folder picked in the native dialog; with
-    accessibility checks of the bar, Compare and File → Compare) and
+    accessibility checks of the bar, Compare and File → Compare), bookmarks (`bookmarks.mjs`:
+    a bookmark button, the Bookmarks pane and the slideshow by keyboard, with the card values of
+    `expected.json`) and
     accessibility scripts of [`scripts/app-checks/`](../scripts/app-checks/) against a debug
     build (results: [M6](../docs/accessibility/m6-editing.md),
     [M7](../docs/accessibility/m7-formula-bar.md)).
@@ -365,8 +367,14 @@ page keeps them.
   of the navigation history (page tabs, Ctrl+Page Up / Down and page navigation buttons push to
   it; nothing to go back to shows a toast), **Page navigation** goes to the page, *Clear all
   slicers* clears them, *Apply all slicers* does nothing (selections apply at once). **Web URL**
-  opens a dialog that shows the URL with **Copy link**: DashCraft never opens links. Bookmarks,
-  drillthrough and Q&A show a "not available" toast.
+  opens a dialog that shows the URL with **Copy link**: DashCraft never opens links. **Bookmark**
+  buttons apply their bookmark (`canvas.click` → `canvas.applyBookmark`: page, slicer
+  selections, cross-filter) and the status bar names the parts not applied yet; drillthrough and
+  Q&A show a "not available" toast.
+- **Bookmarks pane** (View → Bookmarks, M9.5): the report's bookmarks in pane order, groups as
+  collapsible sections (`report.bookmarks`); a click applies one (`canvas.applyBookmark`) and
+  marks it current. **View** starts the slideshow: a bar above the page tabs with Previous, the
+  name, "n of N", Next and Exit (Esc); the focus moves into the bar and back to View on exit.
 - **Selection.** Clicking a visual selects it for the Visualizations (Build / Format), Data,
   Filters ("Filters on this visual") and Properties panes, with a thin Desktop-like outline.
   Visuals are keyboard-focusable too (Tab, Enter selects), with a focus ring on keyboard focus
@@ -743,15 +751,16 @@ on Windows 10 and 11.
 - The DAX query view has no IntelliSense, formatter, find / replace or command palette; results
   are capped at 1000 rows per `EVALUATE` and use the model's format strings for model columns.
 - Report canvas: highlight interactions (`HighlightFilter`) filter instead of highlighting, and a
-  cross-filter source dims its other points but other visuals are not highlighted; bookmarks
-  (and bookmark navigators), drillthrough, Q&A and Web URL buttons are not executed; synced
+  cross-filter source dims its other points but other visuals are not highlighted; bookmark
+  navigators, a bookmark's filter, visibility and sort parts, drillthrough, Q&A and Web URL
+  buttons are not executed; bookmarks cannot be added or updated; synced
   slicers (`syncGroup`) and the newer slicers' `selfFilter` are not read, so each page keeps its
   own selection; range and relative-date slicers draw but their sliders / date pickers are not
   interactive (tiles select like list items); no visual header menus (focus mode, show as table,
   sort, export), drill-down / drill-up, right-click menus or filter card editing; cross-filters
   from matrices use the row path only; tooltips are the default ones (report-page tooltips are
-  not rendered); interaction state lasts until the document closes. Bookmarks, Performance
-  analyzer, Sync slicers, Mobile layout and the Analytics pane are shown disabled.
+  not rendered); interaction state lasts until the document closes. Performance analyzer, Sync
+  slicers, Mobile layout and the Analytics pane are shown disabled.
 - The native window keeps the OS title bar; the in-app title bar row sits under it.
 - Single-instance forwarding is not wired: opening a file from Windows Explorer or a Linux file
   manager while the app runs starts a second window. (macOS Finder opens, `RunEvent::Opened`,

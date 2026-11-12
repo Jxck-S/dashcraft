@@ -130,6 +130,7 @@ The Report view behaves like Power BI's reading view:
 - **Tooltips**: hover a data point for its category, series, value and tooltip fields; hover a visual with ⚠ for the error and the measure's DAX.
 - **Tables and matrices**: scroll with the wheel (Shift+wheel horizontally); double-click a matrix row or click its +/− to expand or collapse.
 - **Buttons**: Back returns to the previous page you visited; page navigation buttons go to their page; Clear all slicers clears them. Bookmark buttons apply their bookmark: its page, slicer selections and cross-filter (the status bar names the parts DashCraft does not apply yet, such as filters or hidden visuals). Web URL buttons show the address with **Copy link**; DashCraft never opens links. Drillthrough and Q&A are not available.
+- **Bookmarks pane** (View → Bookmarks): lists the report's bookmarks, in groups as in Power BI; click one to apply it (the one applied last is highlighted). **View** starts a slideshow: a bar above the page tabs shows the bookmark's name and position, with **Previous**, **Next** and **Exit** (or Esc). Adding, updating and renaming bookmarks is not available.
 - **Selection**: click a visual to select it for the Filters, Visualizations, Data and Properties panes. Tab and Enter select visuals with the keyboard.
 - **Reset to default** (View tab): back to the selections saved in the report, with no cross-filter.
 
