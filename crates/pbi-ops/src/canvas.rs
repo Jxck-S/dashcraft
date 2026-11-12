@@ -46,8 +46,9 @@ use pbi_render::dataview::{
 use pbi_render::layout::{FrameOptions, auto_title};
 use pbi_render::query::{
     DrillAction, DrillthroughPage, InteractionState, PointField, PointSelection, QueryEnv,
-    QueryLimits, SlicerSelection, drill_through, drillthrough_page, is_slicer_type, slicer_fields,
-    synced_slicers, tooltip_state, visual_tooltip_page,
+    QueryLimits, SlicerSelection, allows_cross_report_drillthrough, cross_report_targets,
+    drill_through, drillthrough_page, is_slicer_type, slicer_fields, synced_slicers, tooltip_state,
+    visual_tooltip_page,
 };
 use pbi_render::scene::{HitId, HitKind, HitRegion, Rect};
 use pbi_render::svg::{SvgOptions, to_svg};
@@ -307,10 +308,13 @@ pub enum CanvasAction {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         not_applied: Vec<String>,
     },
-    /// A drillthrough filtered drillthrough page `page`: go to it.
+    /// A drillthrough filtered drillthrough page `page`: go to it (in
+    /// report `report` when it is another report).
     Drillthrough {
         page: String,
         display_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        report: Option<String>,
         /// Parts of the source's filter context not kept.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         not_applied: Vec<String>,
@@ -1192,7 +1196,7 @@ pub async fn click(
             None => CanvasAction::NotAvailable {
                 message: "Select a data point to drill through".to_owned(),
             },
-            Some(selection) => match drill_to(target, &selection, page) {
+            Some(selection) => match drill_to(target, &selection, page, None) {
                 Ok((a, _)) => a,
                 Err(e) if matches!(e.code, OpErrorCode::NotFound | OpErrorCode::InvalidParams) => {
                     CanvasAction::NotAvailable {
@@ -1303,11 +1307,16 @@ pub struct DrillthroughTargetOut {
     pub fields: Vec<String>,
     /// "Keep all filters": the source's filter context goes along.
     pub keep_all_filters: bool,
+    /// The report of the page, when it is another report (cross-report
+    /// drillthrough).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub report: Option<String>,
 }
 
 impl From<DrillthroughPage> for DrillthroughTargetOut {
     fn from(p: DrillthroughPage) -> Self {
         Self {
+            report: None,
             fields: p
                 .fields
                 .iter()
@@ -1321,7 +1330,9 @@ impl From<DrillthroughPage> for DrillthroughTargetOut {
 }
 
 /// `canvas.drillthroughTargets`: the drillthrough pages data point `hit`
-/// can drill through to (empty for other hits and points without fields).
+/// can drill through to (empty for other hits and points without fields):
+/// those of its report, then the cross-report drillthrough pages of the
+/// document's other reports that allow it.
 ///
 /// # Errors
 /// `invalidParams` for a malformed hit id, `notFound`.
@@ -1335,74 +1346,123 @@ pub async fn drillthrough_targets(
     };
     ensure_rendered(target).await?;
     let page_index = target.page;
+    let document = target.entry.session().document();
     target.update(|entry, report, page| {
         let visual = resolve::visual(page, &hit.visual)?;
         let Some(Some(point)) = data_point(entry, visual, series, index)? else {
             return Ok(Vec::new());
         };
-        Ok(
+        let mut out: Vec<DrillthroughTargetOut> =
             pbi_render::query::drillthrough_targets(report, page_index, &point)
                 .into_iter()
                 .map(DrillthroughTargetOut::from)
-                .collect(),
-        )
+                .collect();
+        for (_, other) in document
+            .reports
+            .iter()
+            .enumerate()
+            .filter(|&(i, _)| i != target.report)
+        {
+            out.extend(cross_report_targets(other, &point).into_iter().map(|p| {
+                DrillthroughTargetOut {
+                    report: Some(other.name.clone()),
+                    ..DrillthroughTargetOut::from(p)
+                }
+            }));
+        }
+        Ok(out)
     })?
 }
 
 /// Drills through from the points `selection` of page `src` to page
-/// `page_ref`: sets the target page's state and returns
-/// [`CanvasAction::Drillthrough`] and the target's index. Call it outside
-/// page entry updates (it updates two pages).
+/// `page_ref` of report `report_ref` (default: the source's report; another
+/// report only for its cross-report drillthrough pages): sets the target
+/// page's state and returns [`CanvasAction::Drillthrough`] and the target's
+/// key. Call it outside page entry updates (it updates two pages).
 fn drill_to(
     src: &Target,
     selection: &PointSelection,
     page_ref: &str,
-) -> Result<(CanvasAction, usize), OpError> {
-    let revision = src.entry.session().revision_snapshot();
+    report_ref: Option<&str>,
+) -> Result<(CanvasAction, PageKey), OpError> {
+    let session = src.entry.session();
+    let revision = session.revision_snapshot();
     let report = resolve::report_in(&revision.document, src.report)?;
-    let index = resolve::page_index(&report, Some(page_ref))?;
-    let page = drillthrough_page(&report, index)
-        .filter(|_| index != src.page)
+    let target_index = match report_ref {
+        Some(name) => resolve::report_index(session, Some(name))?,
+        None => src.report,
+    };
+    let cross = target_index != src.report;
+    let target_report = if cross {
+        resolve::report_in(&revision.document, target_index)?
+    } else {
+        report.clone()
+    };
+    let index = resolve::page_index(&target_report, Some(page_ref))?;
+    let page = drillthrough_page(&target_report, index)
+        .filter(|p| {
+            if cross {
+                p.cross_report
+            } else {
+                index != src.page
+            }
+        })
         .ok_or_else(|| {
-            OpError::invalid_params(format!(
-                "'{}' is not a drillthrough page of another page",
-                truncate(page_ref, 80)
-            ))
+            OpError::invalid_params(if cross {
+                format!(
+                    "'{}' is not a cross-report drillthrough page of {}",
+                    truncate(page_ref, 80),
+                    target_report.name
+                )
+            } else {
+                format!(
+                    "'{}' is not a drillthrough page of another page",
+                    truncate(page_ref, 80)
+                )
+            })
         })?;
+    if cross && !allows_cross_report_drillthrough(&target_report) {
+        return Err(OpError::invalid_params(format!(
+            "the report {} does not allow cross-report drillthrough",
+            target_report.name
+        )));
+    }
     let (Some(source_page), Some(target_page)) =
-        (report.pages.get(src.page), report.pages.get(index))
+        (report.pages.get(src.page), target_report.pages.get(index))
     else {
         return Err(OpError::not_found("the page is gone"));
     };
     let store = &src.entry.canvas;
     let model = &revision.model;
+    let key = (target_index, index);
     let source_state = store.update(src.key(), source_page, model, |e| e.state.clone());
-    let target_state = store.update((src.report, index), target_page, model, |e| e.state.clone());
+    let target_state = store.update(key, target_page, model, |e| e.state.clone());
     let (state, not_applied) = drill_through(
         &report,
         src.page,
         &source_state,
+        &target_report,
         &page,
         selection,
         &target_state,
     )
     .map_err(OpError::invalid_params)?;
-    store.update((src.report, index), target_page, model, |e| {
-        e.set_state(state)
-    });
+    store.update(key, target_page, model, |e| e.set_state(state));
     Ok((
         CanvasAction::Drillthrough {
             page: page.name,
             display_name: page.display_name,
+            report: cross.then(|| target_report.name.clone()),
             not_applied,
         },
-        index,
+        key,
     ))
 }
 
 /// `canvas.drillthrough`: drills through from data point `hit` of page
 /// `src` (`None`: the page's selected points) to drillthrough page
-/// `target_page`, and renders that page.
+/// `target_page` (of report `target_report`, default the source's), and
+/// renders that page.
 ///
 /// # Errors
 /// `invalidParams` (malformed hit, no selection, not a drillthrough page,
@@ -1411,6 +1471,7 @@ pub async fn drillthrough(
     src: &Target,
     hit: Option<&str>,
     target_page: &str,
+    target_report: Option<&str>,
 ) -> Result<(CanvasAction, CanvasPageOut), OpError> {
     let hit = hit.map(decode_hit).transpose()?;
     ensure_rendered(src).await?;
@@ -1421,11 +1482,11 @@ pub async fn drillthrough(
                 OpError::invalid_params("select a data point to drill through from")
             }),
         })??;
-    let (action, index) = drill_to(src, &selection, target_page)?;
+    let (action, (report, page)) = drill_to(src, &selection, target_page, target_report)?;
     let target = Target {
         entry: Arc::clone(&src.entry),
-        report: src.report,
-        page: index,
+        report,
+        page,
     };
     let page = render(&target).await?;
     Ok((action, page))
@@ -1918,6 +1979,7 @@ fn button_action(
         ButtonAction::Drillthrough { page } => Some(CanvasAction::Drillthrough {
             page,
             display_name: String::new(),
+            report: None,
             not_applied: Vec::new(),
         }),
         ButtonAction::Bookmark { bookmark } if bookmark.is_empty() => {
@@ -2689,9 +2751,12 @@ fn selections(
         .as_ref()
         .filter(|d| !d.selection.points.is_empty())
     {
-        let from = report
-            .find_page(&drill.source_page)
-            .map_or_else(|| drill.source_page.clone(), |p| p.display_name.clone());
+        let from = match &drill.source_report {
+            Some(other) => format!("the {other} report"),
+            None => report
+                .find_page(&drill.source_page)
+                .map_or_else(|| drill.source_page.clone(), |p| p.display_name.clone()),
+        };
         let label = format!("Drillthrough from {from}");
         if !drill.carried.is_empty() {
             spec.unsupported.push(UnsupportedFilter {

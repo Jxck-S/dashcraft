@@ -369,8 +369,10 @@ page keeps them.
   slicers* clears them, *Apply all slicers* does nothing (selections apply at once). **Web URL**
   opens a dialog that shows the URL with **Copy link**: DashCraft never opens links. **Bookmark**
   buttons apply their bookmark (`canvas.click` → `canvas.applyBookmark`: page, slicer
-  selections, cross-filter) and the status bar names the parts not applied yet; drillthrough and
-  Q&A show a "not available" toast.
+  selections, cross-filter) and the status bar names the parts not applied yet; **Drillthrough**
+  buttons and right-click **Drill through** go to the target page (`canvas.drillthrough`), also
+  a cross-report drillthrough page of another report of the document ("Page (Report)"), and
+  Back returns to the source page and report; Q&A shows a "not available" toast.
 - **Bookmarks pane** (View → Bookmarks, M9.5): the report's bookmarks in pane order, groups as
   collapsible sections (`report.bookmarks`); a click applies one (`canvas.applyBookmark`) and
   marks it current. **View** starts the slideshow: a bar above the page tabs with Previous, the

@@ -297,7 +297,7 @@
       items: [
         ...drillItems,
         ...(drillItems.length > 0 ? [{ label: '', separator: true }] : []),
-        ...drillthroughMenu(targets, (t) => void drill(reportId, pageId, hit.id, t.page)),
+        ...drillthroughMenu(targets, (t) => void drill(reportId, pageId, hit.id, t.page, t.report ?? null)),
       ],
     }
   }
@@ -332,8 +332,8 @@
     drillMode = drillMode.includes(visual) ? drillMode.filter((v) => v !== visual) : [...drillMode, visual]
   }
 
-  async function drill(reportId: number, pageId: number, hitId: string, target: string) {
-    const action = await run(() => backend.drillthrough(reportId, pageId, hitId, target))
+  async function drill(reportId: number, pageId: number, hitId: string, target: string, targetReport: string | null) {
+    const action = await run(() => backend.drillthrough(reportId, pageId, hitId, target, targetReport))
     if (action) onaction?.(action)
   }
 

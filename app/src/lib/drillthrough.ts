@@ -23,8 +23,8 @@ export function drillthroughMenu(targets: DrillthroughTargetOut[], pick: (target
   return [
     { label: 'Drill through', header: true },
     ...targets.map((t) => ({
-      label: t.displayName,
-      title: `Filtered on ${t.fields.join(', ')}${t.keepAllFilters ? ', keeping this page’s filters' : ''}`,
+      label: t.report ? `${t.displayName} (${t.report})` : t.displayName,
+      title: `${t.report ? `In the report ${t.report}. ` : ''}Filtered on ${t.fields.join(', ')}${t.keepAllFilters ? ', keeping this page’s filters' : ''}`,
       onclick: () => pick(t),
     })),
   ]

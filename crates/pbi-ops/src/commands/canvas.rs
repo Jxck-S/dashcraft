@@ -864,6 +864,10 @@ pub struct CanvasDrillthroughParams {
     pub hit_id: Option<String>,
     /// The drillthrough page (see `canvas.drillthroughTargets`).
     pub target: String,
+    /// The report of the drillthrough page, for a cross-report
+    /// drillthrough (`report` of the target). Default: the source's report.
+    #[serde(default)]
+    pub target_report: Option<String>,
 }
 
 /// Result of `canvas.drillthrough`.
@@ -873,6 +877,9 @@ pub struct CanvasDrillthroughOut {
     /// Internal name of the drillthrough page.
     pub page: String,
     pub display_name: String,
+    /// The report of the drillthrough page, when it is another report.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub report: Option<String>,
     /// Parts of the source's filter context not kept (Top N filters, …).
     pub not_applied: Vec<String>,
     /// The drillthrough page, filtered and rendered.
@@ -887,7 +894,7 @@ impl Command for CanvasDrillthrough {
         CommandMeta {
             id: "canvas.drillthrough",
             title: "Drill through",
-            summary: "Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when \"Keep all filters\" is on, and renders it.",
+            summary: "Drills through from a data point (or the page's selection) to a drillthrough page (also of another report): filters it on the point's values, keeps the source's filters if set and renders it.",
             long_running: true,
             examples: &[
                 (
@@ -898,6 +905,10 @@ impl Command for CanvasDrillthrough {
                     "From the selection",
                     r#"{"docId": "d1", "page": "Overview", "target": "Store details"}"#,
                 ),
+                (
+                    "To another report",
+                    r#"{"docId": "d1", "report": "Overview", "hitId": "1f2e3d|dataPoint|0|2", "target": "Store Detail", "targetReport": "Stores"}"#,
+                ),
             ],
             ..CANVAS
         }
@@ -905,10 +916,17 @@ impl Command for CanvasDrillthrough {
 
     async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
         let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
-        let (action, rendered) = canvas::drillthrough(&t, p.hit_id.as_deref(), &p.target).await?;
+        let (action, rendered) = canvas::drillthrough(
+            &t,
+            p.hit_id.as_deref(),
+            &p.target,
+            p.target_report.as_deref(),
+        )
+        .await?;
         let CanvasAction::Drillthrough {
             page,
             display_name,
+            report,
             not_applied,
         } = action
         else {
@@ -917,6 +935,7 @@ impl Command for CanvasDrillthrough {
         Ok(CanvasDrillthroughOut {
             page,
             display_name,
+            report,
             not_applied,
             rendered,
         })

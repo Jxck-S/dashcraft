@@ -840,11 +840,22 @@ export function drillthroughTargets(reportId: number, pageId: number, hitId: str
   return onPage(reportId, pageId, async (t) => map(await ops.canvasDrillthroughTargets({ ...t, hitId }), (r) => r.targets))
 }
 
-/** Drills through from a data point to `target`; returns the `drillthrough` action (the target page is filtered). */
-export function drillthrough(reportId: number, pageId: number, hitId: string, target: string): Promise<Outcome<CanvasAction>> {
+/**
+ * Drills through from a data point to page `target` (of report `targetReport` for a cross-report
+ * drillthrough); returns the `drillthrough` action (the target page is filtered).
+ */
+export function drillthrough(reportId: number, pageId: number, hitId: string, target: string, targetReport: string | null = null): Promise<Outcome<CanvasAction>> {
   return onPage(reportId, pageId, async (t) =>
-    map(await ops.canvasDrillthrough({ ...t, hitId, target }), (r): CanvasAction => ({ kind: 'drillthrough', page: r.page, displayName: r.displayName, notApplied: r.notApplied })),
+    map(
+      await ops.canvasDrillthrough({ ...t, hitId, target, targetReport }),
+      (r): CanvasAction => ({ kind: 'drillthrough', page: r.page, displayName: r.displayName, report: r.report, notApplied: r.notApplied }),
+    ),
   )
+}
+
+/** Id of the report named `name` in the open document. */
+export function reportIdOf(name: string): number | null {
+  return current?.reports.find((r) => r.name === name)?.id ?? null
 }
 
 /** Drills `visual` up, down on data point `hitId`, to the next level or expands it one level (`canvas.drill`). */

@@ -7,6 +7,19 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.4 done: cross-report drillthrough and the source visual's filters
+
+- **What**: `pbi_render::query::drillthrough` carries the source visual's own filters with "Keep
+  all filters" (the tooltip page's own loop moved there) and finds cross-report targets
+  (`cross_report_targets`, `allows_cross_report_drillthrough`); `drill_through` takes the target
+  report and carries the source report's filters across reports. `canvas.drillthroughTargets`
+  lists the other reports' pages, `canvas.drillthrough` takes `targetReport`, the Filters pane
+  card says "Drillthrough from the X report"; the app labels them "Page (Report)" and Back
+  switches report.
+- **Why**: DESKTOP-PLAN M9.4 (the service-only cross-report drillthrough, extended to the open
+  document until several documents open, M24.8); GAPS Interactions.
+- **Numbers**: pbi-render lib 106 tests, pbi-ops canvas 11, app vitest +1.
+
 ### M9.5: drill state and spotlight in bookmarks
 
 - **What:** `pbi-render` `query::bookmark` restores a captured visual's drill levels (`singleVisual.activeProjections` of its drill role) and drill path (its `howCreated` Drill filters) into `InteractionState::drill`, and the `spotlight` display mode into the new `InteractionState::spotlight`; the page render fades the other visuals (`SPOTLIGHT_FADE`). Closes M9.5.
