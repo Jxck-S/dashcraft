@@ -7,6 +7,15 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.4: right-click Drill through
+
+- **What:** the app's report canvas opens a context menu on a right-clicked data point: a
+  **Drill through** header and one item per page from `canvas.drillthroughTargets` (disabled
+  when there is none); choosing one runs `canvas.drillthrough` and follows the page
+  (`app/src/lib/drillthrough.ts`, `ReportCanvas.svelte`, `backend.ts`).
+- **Why:** M9.4; GAPS Interactions "Drillthrough" row (next step done).
+- **Numbers:** 2 new app unit tests (`app/tests/drillthrough.test.ts`); no Rust change.
+
 ### M9.4: drillthrough
 
 - **What:** new `pbi_render::query::drillthrough`: `drillthrough_page` (page filters created by

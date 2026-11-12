@@ -1,10 +1,13 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte'
   import Icon from '../Icon.svelte'
+  import Menu from '../shell/Menu.svelte'
   import * as backend from '../../lib/backend'
   import type { CanvasAction, FilterSpec, PageDto, RenderedPage, ReportDto, TooltipLine, VisualDto } from '../../lib/backend'
   import type { CanvasInteractionOut } from '../../lib/ops'
   import { contains, parseHit, sanitizeSvg, scrollableAt, wheelPixels, type Hit } from '../../lib/canvas'
+  import { drillthroughMenu } from '../../lib/drillthrough'
+  import type { MenuItem } from '../../lib/shell'
   import { visualKind } from '../../lib/visuals'
 
   /*
@@ -18,7 +21,8 @@
    * - Hit-testing uses the SVG's `data-hit` groups: slicer items select (Ctrl+click toggles),
    *   slicer dropdown boxes open their popup (drawn in an overlay layer above the page, not
    *   clipped to it), data points cross-filter the other visuals (click again or the empty
-   *   canvas to clear), action buttons report their action (`onaction`).
+   *   canvas to clear), action buttons report their action (`onaction`). Right-click on a data
+   *   point opens its "Drill through" menu (`canvas.drillthroughTargets`, `canvas.drillthrough`).
    * - Wheel over a table, matrix, slicer list or open popup scrolls it; hovering data points
    *   shows a tooltip; Esc closes popups, then clears the cross-filter.
    * - Every render is reported with `onrendered` (selections and effective filters for the
@@ -257,6 +261,30 @@
     void click(hit?.id ?? null, modifiers(event))
   }
 
+  let menu = $state<{ items: MenuItem[]; x: number; y: number } | null>(null)
+
+  async function oncontextmenu(event: MouseEvent) {
+    if (!rendered || wireframe) return
+    const hit = hitOf(event)
+    if (hit?.kind !== 'dataPoint') return
+    event.preventDefault()
+    tip = null
+    const { id: reportId } = report
+    const { id: pageId } = page
+    const at = { x: event.clientX, y: event.clientY }
+    const targets = await run(() => backend.drillthroughTargets(reportId, pageId, hit.id))
+    if (!targets || report.id !== reportId || page.id !== pageId) return
+    menu = {
+      ...at,
+      items: drillthroughMenu(targets, (t) => void drill(reportId, pageId, hit.id, t.page)),
+    }
+  }
+
+  async function drill(reportId: number, pageId: number, hitId: string, target: string) {
+    const action = await run(() => backend.drillthrough(reportId, pageId, hitId, target))
+    if (action) onaction?.(action)
+  }
+
   function ondblclick(event: MouseEvent) {
     const hit = hitOf(event)
     const type = hit ? visualInfo.get(hit.visual)?.visualType : undefined
@@ -465,7 +493,8 @@
   // ---------------------------------------------------------------------------------------------
 
   async function onkeydown(event: KeyboardEvent) {
-    if (event.key !== 'Escape' || event.defaultPrevented || !rendered) return
+    // An open context menu takes Esc for itself (its window listener is registered after this one).
+    if (event.key !== 'Escape' || event.defaultPrevented || !rendered || menu) return
     const target = event.target as HTMLElement | null
     if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return
     if (document.querySelector('[aria-modal="true"]')) return
@@ -517,6 +546,7 @@
   data-filter-count={filters?.filters.length ?? 0}
   {onclick}
   {ondblclick}
+  {oncontextmenu}
   {onpointermove}
   onpointerleave={onpointerleave}
 >
@@ -632,6 +662,10 @@
       <div class="tip-line"><span class="tip-label">{l.label}</span><span class="tip-value">{l.value}</span></div>
     {/each}
   </div>
+{/if}
+
+{#if menu}
+  <Menu items={menu.items} x={menu.x} y={menu.y} label="Data point" onclose={() => (menu = null)} />
 {/if}
 
 <style>
