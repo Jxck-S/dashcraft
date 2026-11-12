@@ -742,3 +742,127 @@ async fn people_field_into_a_derived_column() {
         .await;
     assert_eq!(page["columns"].as_array().unwrap().len(), 3);
 }
+
+/// Rewrites `visual.json` of `page`/`name` in the [`mini_pbip`] project.
+fn write_visual(dir: &std::path::Path, page: &str, name: &str, hidden: bool, visual: Value) {
+    let path = dir.join(format!(
+        "Mini.Report/definition/pages/{page}/visuals/{name}/visual.json"
+    ));
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let body = json!({
+        "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+        "name": name,
+        "position": {"x": 400, "y": 10, "z": 0, "width": 200, "height": 90, "tabOrder": 0},
+        "visual": visual,
+        "isHidden": hidden
+    });
+    std::fs::write(path, serde_json::to_string_pretty(&body).unwrap()).unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn synced_slicers_share_their_selection_across_pages() {
+    let dir = tmp_dir("pbi-ops-sync-");
+    let pbip = mini_pbip(dir.path());
+    let slicer = |filter_changes: bool| {
+        json!({
+            "visualType": "slicer",
+            "query": {"queryState": {"Values": {"projections": [{
+                "field": {"Column": {"Expression": {"SourceRef": {"Entity": "Sales"}}, "Property": "Region"}},
+                "queryRef": "Sales.Region", "nativeQueryRef": "Region", "active": true
+            }]}}},
+            "syncGroup": {"groupName": "Region", "fieldChanges": true, "filterChanges": filter_changes}
+        })
+    };
+    write_visual(dir.path(), "overview", "region", false, slicer(true));
+    write_visual(dir.path(), "details", "synced", true, slicer(true));
+    write_visual(dir.path(), "details", "unsynced", false, slicer(false));
+    write_visual(
+        dir.path(),
+        "overview",
+        "clear",
+        false,
+        json!({"visualType": "actionButton", "visualContainerObjects": {"visualLink": [{"properties": {
+            "show": {"expr": {"Literal": {"Value": "true"}}},
+            "type": {"expr": {"Literal": {"Value": "'ClearAllSlicers'"}}}
+        }}]}}),
+    );
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let details = json!({"docId": doc, "page": "Details"});
+
+    // A click on the Overview slicer selects the same region in the hidden
+    // synced slicer of Details, which filters that page.
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    let item = hit(&page, "region|slicerItem|").to_owned();
+    let clicked = r
+        .run("canvas.click", json!({"docId": doc, "hitId": item}))
+        .await;
+    assert_eq!(clicked["changed"], true);
+    let state = r.run("canvas.state", details.clone()).await;
+    let selections = &state["interaction"]["slicerSelections"];
+    assert_eq!(
+        selections["synced"],
+        r.run("canvas.state", json!({"docId": doc})).await["interaction"]["slicerSelections"]["region"],
+        "{state}"
+    );
+    assert!(selections.get("unsynced").is_none(), "{state}");
+    let rendered = r
+        .run("canvas.render", json!({"docId": doc, "page": "Details"}))
+        .await;
+    assert_eq!(
+        rendered["effectiveFilters"]["filters"][0]["column"], "Region",
+        "{rendered}"
+    );
+
+    // setSlicer on Details carries back to Overview; the unsynced slicer
+    // keeps its own selection.
+    r.run(
+        "canvas.setSlicer",
+        json!({"docId": doc, "page": "Details", "visual": "synced", "values": ["North"]}),
+    )
+    .await;
+    r.run(
+        "canvas.setSlicer",
+        json!({"docId": doc, "page": "Details", "visual": "unsynced", "values": ["West"]}),
+    )
+    .await;
+    let overview = r.run("canvas.state", json!({"docId": doc})).await;
+    assert_eq!(
+        overview["interaction"]["slicerSelections"]["region"]["values"],
+        json!([["North"]]),
+        "{overview}"
+    );
+
+    // Clearing one clears the others.
+    r.run(
+        "canvas.clearSelections",
+        json!({"docId": doc, "visual": "region"}),
+    )
+    .await;
+    let state = r.run("canvas.state", details.clone()).await;
+    let selections = &state["interaction"]["slicerSelections"];
+    assert!(selections.get("synced").is_none(), "{state}");
+    assert_eq!(
+        selections["unsynced"]["values"],
+        json!([["West"]]),
+        "{state}"
+    );
+
+    // So does the Clear all slicers button.
+    r.run(
+        "canvas.setSlicer",
+        json!({"docId": doc, "visual": "region", "values": ["East"]}),
+    )
+    .await;
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    let button = hit(&page, "clear|button").to_owned();
+    r.run("canvas.click", json!({"docId": doc, "hitId": button}))
+        .await;
+    let state = r.run("canvas.state", details.clone()).await;
+    assert!(
+        state["interaction"]["slicerSelections"]
+            .get("synced")
+            .is_none(),
+        "{state}"
+    );
+}

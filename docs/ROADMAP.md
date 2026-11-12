@@ -159,7 +159,8 @@ The items below predate the plan; each is annotated with the plan step that now 
 - [ ] Conditional formats of column headers, totals, titles, card callouts, gauges and KPIs (reported "not applied" today, [VISUALS.md](VISUALS.md#conditional-formatting)) (→ M21.7).
 - [ ] Per-legend conditional chart colors (a measure colors each legend value) and conditional colors of line, area, combo, waterfall and gauge charts (→ M21.7).
 - [ ] Expression-based titles and other `fx` text properties (titles, subtitles, button text from a measure) (→ M21.7).
-- [ ] Synced slicers (`syncGroup`) and draggable range / relative-date slicers (→ M9.6, M9.7).
+- [x] Synced slicers (`syncGroup`): selections copied across the sync group (→ M9.6).
+- [ ] Draggable range / relative-date slicers (→ M9.7).
 - [ ] DIN- and Calibri-metric fonts under a permissive license, to close the remaining golden-image gaps (→ M31.6).
 - [ ] Report-level measures (`reportExtensions.json`), `image` visuals and more visual types (maps, `ribbonChart`, AI visuals); scatter play-axis animation (→ M9.9, M22, M21.1, M23.2–M23.5, M21.8).
 - [ ] Object-level security; RLS role filters that read other secured tables (→ M11.5, M11.4).

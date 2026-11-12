@@ -123,8 +123,9 @@
 //!   selection added (BLANK where nothing is highlighted). Pies, donuts,
 //!   treemaps, funnels and combo charts are filtered instead, with a
 //!   warning. A visual's own selection dims its other points.
-//! - Synced slicers (`syncGroup`) and the `selfFilter` of newer slicers are
-//!   not read; drill-down / drill-through state is not modelled beyond
+//! - Synced slicers (`syncGroup`) are synced by the caller
+//!   ([`synced_slicers`]); the `selfFilter` of newer slicers is not read;
+//!   drill-down / drill-through state is not modelled beyond
 //!   `active` projections.
 //! - Totals and subtotals are re-evaluations with fewer group columns
 //!   (right for non-additive measures too). `ALLSELECTED` and `ISINSCOPE`
@@ -160,7 +161,7 @@ pub use filter::{
 };
 pub use interaction::{
     FilterLevel, FilterOverrides, InteractionState, PointField, PointSelection, SlicerSelection,
-    is_slicer_type, persisted_selection, slicer_fields,
+    is_slicer_type, persisted_selection, slicer_fields, sync_group, synced_slicers,
 };
 pub use semantic::TopNSpec;
 

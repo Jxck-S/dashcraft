@@ -7,6 +7,17 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.6: synced slicers
+
+- **What:** `pbi_render::query::sync_group` reads `syncGroup` (PBIR) and
+  `singleVisual.syncGroup` (PBIX layouts); `synced_slicers` lists the other slicers of the
+  group over the same fields on every page (`filterChanges: false` opts out). `pbi-ops` canvas
+  copies the selection after a slicer click, `canvas.setSlicer`, `canvas.clearSelections` and
+  Clear all slicers to those pages' interaction state, so hidden synced slicers filter their page.
+- **Why:** M9.6; GAPS Interactions "Synced slicers" row (❌ 0 → 🟡 3, area 1.9 → 2.1).
+- **Numbers:** 2 new tests (group, legacy key, fields and `filterChanges`; click, set, clear and
+  Clear all across two pages); render snapshots unchanged.
+
 ### M9.1: highlight interactions on bar and column charts
 
 - **What:** `context::visual_filters` no longer filters a bar or column chart (clustered,

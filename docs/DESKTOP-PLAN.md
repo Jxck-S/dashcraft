@@ -1175,7 +1175,10 @@ in focus mode or as a table and export its data; see images and report-level mea
   bookmark navigators draw one button per page or bookmark (the current page or the bookmark
   applied last selected) and navigate or apply it on click. Next: drill state and spotlight.
 - [ ] **M9.6 Synced slicers.** `syncGroup` (field and filter sync), slicers synced from other
-  pages including hidden ones; `selfFilter`.
+  pages including hidden ones; `selfFilter`. Progress: a slicer's selection (click, `canvas.setSlicer`,
+  clear, Clear all slicers) is copied to every slicer of its sync group over the same fields on
+  any page (`pbi_render::query::synced_slicers`), hidden ones included, unless
+  `filterChanges` is false. Next: `selfFilter`.
 - [ ] **M9.7 Range and relative slicers.** Dragging range sliders, typing numeric and date bounds,
   relative date and time slicers with their pickers.
 - [ ] **M9.8 Visual header and context menus.** Focus mode, show as table (visual plus data),

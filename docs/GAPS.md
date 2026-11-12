@@ -104,7 +104,7 @@ Update **2026-11-11** (A6 in CI, [ADR-0030](adr/0030-screen-readers-in-ci.md)): 
 | 3 | [DAX](#3-dax) | 3.8 | 5 / 6 / 0 | Financial, `INFO.*` and visual-calculation functions; exact auto-exist; relationship overrides in `RELATED`/`SUMMARIZE` |
 | 4 | [Engine features](#4-engine-features) | 3.4 | 9 / 3 / 4 | Object-level security, self-referencing relationships, incremental refresh, drill-down |
 | 5 | [Visuals](#5-visuals) | 2.1 | 16 / 5 / 8 | No visual checked against a Power BI render yet; image, maps, ribbon chart, conditional formats of headers/titles/cards and per-legend chart colors, Analytics pane, small multiples |
-| 6 | [Interactions](#6-interactions) | 1.9 | 7 / 4 / 8 | Highlighting of pies, treemaps and funnels, drillthrough, drill-down, synced slicers, report-page tooltips |
+| 6 | [Interactions](#6-interactions) | 2.1 | 7 / 5 / 7 | Highlighting of pies, treemaps and funnels, drillthrough, drill-down, report-page tooltips |
 | 7 | [Rendering fidelity](#7-rendering-fidelity) | 3.2 | 4 / 0 / 2 | No golden images (Power BI exports of the Acme Outfitters pages); DIN font |
 | 8 | [Performance](#8-performance) | 4.8 | 12 / 0 / 1 | No app-open or webview canvas-latency scenarios; P09–P12 not in the baseline yet |
 | 9 | [Command registry, MCP, AI](#9-command-registry-mcp-ai) | 3.4 | 8 / 3 / 1 | Broader editing commands |
@@ -287,7 +287,7 @@ Source: [VISUALS.md "Interaction summary"](VISUALS.md#interaction-summary), ADR-
 | Drillthrough | ❌ | 0 | "not available" | ROADMAP Next |
 | Drill-down/up on hierarchies | ❌ | 0 | — | — |
 | Matrix expand/collapse, table/matrix/slicer scrolling | ✅ | 4 | `canvas.toggleMatrixRow`, `canvas.scroll` | — |
-| Synced slicers (`syncGroup`), `selfFilter` | ❌ | 0 | not read | ROADMAP Next |
+| Synced slicers (`syncGroup`), `selfFilter` | 🟡 | 3 | a selection, clear or Clear all slicers in one slicer is copied to every slicer of its sync group over the same fields, on any page and hidden or not (`synced_slicers_share_their_selection_across_pages` in `crates/pbi-ops/tests/canvas.rs`, `synced_slicers_share_a_group_and_fields` in `pbi_render::query::interaction`); `filterChanges: false` opts out | `selfFilter`; the Sync slicers pane (M20.5) |
 | Range-slider drag, relative-date pickers | ❌ | 0 | drawn, not interactive | ROADMAP Next |
 | Filters pane: view cards (hidden, locked) | 🟡 | 3 | app Filters pane | Editing filter cards |
 | Relative-date and measure filters at report/page level | 🟡 | 2 | reported "not applied" (`pbi_render::query` filter matrix) | Apply them |
