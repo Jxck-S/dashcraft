@@ -68,7 +68,7 @@ pub mod save_in_place;
 
 pub use diff::{
     DiffChange, DiffKind, DocumentDiff, MAX_SNIPPET_LINES, ObjectDiff, PropertyDiff, Snippet,
-    SnippetLanguage, diff_documents,
+    SnippetLanguage, diff_documents, diff_projects,
 };
 pub use error::CoreError;
 pub use lint::{Finding, LintOptions, LintReport, LintSummary, lint, lint_document};

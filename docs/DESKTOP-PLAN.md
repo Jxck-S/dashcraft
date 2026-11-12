@@ -1096,15 +1096,15 @@ version; compare two versions of a project.
   another open document or a path; `crates/pbi-core/tests/diff.rs` finds exactly the six scripted
   changes in an Acme copy and ignores a reformatted visual; `crates/pbi-ops/tests/save.rs`).
   Changes carry property values and origins (file, line), and each side's text (`snippet`: TMDL
-  for model objects as DashCraft writes it, so only content differs; JSON for report objects).
+  for model objects as DashCraft writes it, so only content differs; for report objects of a PBIR
+  report the `report.json`, `page.json` or `visual.json` a save writes, unsaved edits included,
+  through `pbi_core::diff_projects`; the JSON of the properties for legacy layouts).
   The app's Compare (from the external changes bar) shows the diff against disk: per object, the
   change, its text with the differing lines marked, each property's value on disk and here, and
   the file and line of each; File → Compare shows the same view against the disk, another
   Power BI file or a PBIP / TMDL folder picked in the native dialog
   (`scripts/app-checks/external-changes.mjs`: 49 checks, the IBM checker clean on all three
-  surfaces). Left: report snippets in the PBIR file's form (they are the JSON of the object's
-  properties: in-memory report objects have no PBIR text until saved), and the A6 screen-reader
-  steps for Compare.
+  surfaces). Left: the A6 screen-reader steps for Compare.
 
 **Crates and layers.** `pbi-ops` (journal, watcher, commands), `pbi-core` (diff), `dashcraft-app`.
 

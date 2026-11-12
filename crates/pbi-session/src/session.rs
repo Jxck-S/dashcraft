@@ -1104,13 +1104,24 @@ impl Session {
     /// # Errors
     /// [`SessionError::Open`] when `path` cannot be read.
     pub async fn read_path(&self, path: impl AsRef<Path>) -> Result<Document, SessionError> {
+        Ok(self.read_opened(path).await?.document)
+    }
+
+    /// [`read_path`](Self::read_path) with the report sources: e.g. to
+    /// compare report files ([`pbi_core::diff_projects`]).
+    ///
+    /// # Errors
+    /// [`SessionError::Open`] when `path` cannot be read.
+    pub async fn read_opened(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> Result<OpenedDocument, SessionError> {
         let handle = crate::refresh::runtime()?;
         let path = path.as_ref().to_path_buf();
         let options = self.inner.open_options;
-        let opened = handle
+        Ok(handle
             .spawn_blocking(move || pbi_core::open_path(&path, &options))
-            .await??;
-        Ok(opened.document)
+            .await??)
     }
 
     pub(crate) fn refresh_lock(&self) -> &tokio::sync::Mutex<()> {

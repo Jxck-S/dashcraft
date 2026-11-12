@@ -765,9 +765,11 @@ pub struct ObjectDiffOut {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub after: Option<OriginOut>,
     /// The object as text on each side: TMDL for model objects (as DashCraft
-    /// writes them, so only content differs), JSON properties for report
-    /// objects; a changed table, report or page leaves out its children
-    /// listed on their own. Each side is cut after 200 lines.
+    /// writes them, so only content differs); for report objects of a PBIR
+    /// report its file (`report.json`, `page.json`, `visual.json`) as a save
+    /// writes it, else the JSON of its properties; a changed table, report or
+    /// page leaves out its children listed on their own. Each side is cut
+    /// after 200 lines.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub snippet: Option<SnippetOut>,
 }
@@ -838,6 +840,30 @@ fn origin_out(o: pbi_model::Origin) -> OriginOut {
     }
 }
 
+/// One side of `doc.diff`: the opened document with its report files (an
+/// open document's with its edits), or only the document when its report
+/// edits cannot be written as files yet.
+enum Side {
+    Opened(Box<pbi_core::OpenedDocument>),
+    Document(Arc<pbi_model::Document>),
+}
+
+impl Side {
+    fn of(session: &Session) -> Self {
+        match session.edited_opened() {
+            Ok(opened) => Self::Opened(Box::new(opened)),
+            Err(_) => Self::Document(session.document()),
+        }
+    }
+
+    fn document(&self) -> &pbi_model::Document {
+        match self {
+            Self::Opened(opened) => &opened.document,
+            Self::Document(document) => document,
+        }
+    }
+}
+
 impl Command for DocDiff {
     type Params = DocDiffParams;
     type Output = DocDiffOut;
@@ -868,7 +894,7 @@ impl Command for DocDiff {
         let session = entry.session();
         let (revision, after) = {
             let snapshot = session.document_revision();
-            (snapshot, session.document())
+            (snapshot, Side::of(session))
         };
         let (against, against_name, before) = match (&p.against_doc_id, &p.against_path) {
             (Some(_), Some(_)) => {
@@ -881,33 +907,40 @@ impl Command for DocDiff {
                 (
                     DiffAgainst::Document,
                     other.id().to_owned(),
-                    other.session().document(),
+                    Side::of(other.session()),
                 )
             }
             (None, Some(path)) => {
                 let checked = ws.policy().check_read(path)?;
-                let document = session.read_path(&checked).await.map_err(|e| match e {
+                let opened = session.read_opened(&checked).await.map_err(|e| match e {
                     SessionError::Open(e) => open_error(path, &checked, e),
                     e => OpError::from(e),
                 })?;
                 (
                     DiffAgainst::Path,
                     path.to_string_lossy().into_owned(),
-                    Arc::new(document),
+                    Side::Opened(Box::new(opened)),
                 )
             }
             (None, None) => {
                 let path = entry.path();
-                let document = session.read_path(&path).await.map_err(|e| match e {
+                let opened = session.read_opened(&path).await.map_err(|e| match e {
                     SessionError::Open(e) => open_error(&path, &path, e)
                         .context(format!("cannot read {} from disk", entry.shown_path())),
                     e => OpError::from(e),
                 })?;
-                (DiffAgainst::Disk, entry.shown_path(), Arc::new(document))
+                (
+                    DiffAgainst::Disk,
+                    entry.shown_path(),
+                    Side::Opened(Box::new(opened)),
+                )
             }
         };
-        let diff =
-            tokio::task::spawn_blocking(move || pbi_core::diff_documents(&before, &after)).await?;
+        let diff = tokio::task::spawn_blocking(move || match (&before, &after) {
+            (Side::Opened(b), Side::Opened(a)) => pbi_core::diff_projects(b, a),
+            _ => pbi_core::diff_documents(before.document(), after.document()),
+        })
+        .await?;
         let added = diff.count(pbi_core::DiffChange::Added);
         let removed = diff.count(pbi_core::DiffChange::Removed);
         let changed = diff.count(pbi_core::DiffChange::Changed);

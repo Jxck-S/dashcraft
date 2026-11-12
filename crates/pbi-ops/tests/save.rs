@@ -531,6 +531,32 @@ async fn diff_compares_the_revision_with_disk_and_other_documents() {
         .await
         .unwrap_err();
     assert_eq!(err.code, OpErrorCode::InvalidParams, "{err:?}");
+
+    // A report object shows as its PBIR file, before and after the edit.
+    r.run(
+        "report.visual.move",
+        json!({"docId": other, "page": "Overview", "visual": "total", "x": 20}),
+    )
+    .await;
+    let out = r.run("doc.diff", json!({"docId": other})).await;
+    let visual = out["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["kind"] == "visual")
+        .unwrap_or_else(|| panic!("{out}"));
+    let snippet = &visual["snippet"];
+    let card = fs::read_to_string(other_dir.path().join(TOTAL_CARD)).unwrap();
+    assert_eq!(snippet["language"], "json", "{visual}");
+    assert_eq!(
+        snippet["before"].as_str().unwrap().trim_end(),
+        card.trim_end()
+    );
+    let after = snippet["after"].as_str().unwrap();
+    assert!(
+        after.contains("\"$schema\"") && after != snippet["before"],
+        "{visual}"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]
