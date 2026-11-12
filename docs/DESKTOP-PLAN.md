@@ -1169,7 +1169,7 @@ in focus mode or as a table and export its data; see images and report-level mea
   source page's filters, slicer selections and cross-filter as conditions (Top N listed as not
   kept). `canvas.drillthroughTargets` and `canvas.drillthrough` (from a hit or the page's
   selection) and drillthrough buttons use it; the Filters pane shows a Drillthrough card; the
-  app follows drillthrough buttons and Back returns. Next: the right-click Drill through menu,
+  app follows drillthrough buttons and right-click Drill through, and Back returns. Next:
   a drillthrough page in the Acme example, the source visual's own filters, cross-report
   drillthrough.
 - [ ] **M9.5 Bookmarks.** Read `bookmarks/*.bookmark.json` and groups; apply data, display and

@@ -310,7 +310,7 @@ Every visual region and the whole page must reach the default threshold, SSIM â‰
 ## Known gaps
 
 - Pies, donuts, treemaps, funnels and combo charts are filtered instead of highlighted; data labels and tooltips of highlighted bars show the full values.
-- A bookmark's changed Top N filters, its spotlight and focus modes, cross-report drillthrough and the app's right-click Drill through menu, Q&A, report-page tooltips, visual header menus (focus mode, show as table, sort, export), drill-down/up and right-click menus are not available.
+- A bookmark's changed Top N filters, its spotlight and focus modes, cross-report drillthrough, Q&A, report-page tooltips, visual header menus (focus mode, show as table, sort, export), drill-down/up and the right-click menu's other items are not available.
 - Range-slider dragging, relative-date pickers, the newer slicers' `selfFilter`.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.
 - Scatter play axes are not animated (the first frame is drawn); `ribbonChart` and maps are placeholders.

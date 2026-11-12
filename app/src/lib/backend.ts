@@ -49,6 +49,7 @@ import {
   type DocumentHistoryOut,
   type DocumentSaveAsOut,
   type DocumentSaveOut,
+  type DrillthroughTargetOut,
   type EditOperation,
   type FileChangeOut,
   type FilterSpecOut,
@@ -765,7 +766,7 @@ export const daxService: DaxService = {
 // ---------------------------------------------------------------------------
 
 export type RenderedPage = CanvasPageOut
-export type { BookmarkOut, CanvasAction, CanvasBookmarkOut }
+export type { BookmarkOut, CanvasAction, CanvasBookmarkOut, DrillthroughTargetOut }
 export type TooltipLine = TooltipLineOut
 
 export interface ClickResult {
@@ -824,6 +825,18 @@ export function resetPage(reportId: number, pageId: number): Promise<Outcome<Ren
 
 export function visualTooltip(reportId: number, pageId: number, hitId: string): Promise<Outcome<{ lines: TooltipLine[] }>> {
   return onPage(reportId, pageId, (t) => ops.canvasTooltip({ ...t, hitId }))
+}
+
+/** The drillthrough pages a data point can drill through to. */
+export function drillthroughTargets(reportId: number, pageId: number, hitId: string): Promise<Outcome<DrillthroughTargetOut[]>> {
+  return onPage(reportId, pageId, async (t) => map(await ops.canvasDrillthroughTargets({ ...t, hitId }), (r) => r.targets))
+}
+
+/** Drills through from a data point to `target`; returns the `drillthrough` action (the target page is filtered). */
+export function drillthrough(reportId: number, pageId: number, hitId: string, target: string): Promise<Outcome<CanvasAction>> {
+  return onPage(reportId, pageId, async (t) =>
+    map(await ops.canvasDrillthrough({ ...t, hitId, target }), (r): CanvasAction => ({ kind: 'drillthrough', page: r.page, displayName: r.displayName, notApplied: r.notApplied })),
+  )
 }
 
 /** The bookmarks of a report in the Bookmarks pane's order (`report.bookmarks`). */
