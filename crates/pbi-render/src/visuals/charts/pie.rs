@@ -27,7 +27,7 @@ use crate::scene::{
 use crate::text::{FontBook, TextStyle};
 
 use super::colors::{category_colors, series_colors};
-use super::format::{NumberStyle, data_label, percent};
+use super::format::{NumberStyle, data_label, percent, shown_value};
 use super::labels::{
     DataLabels, baseline_centered, prefers_white_text, tailor, tailor_parenthesized, width,
 };
@@ -58,6 +58,8 @@ pub struct Slice {
     pub opacity: f64,
     /// The highlighted value when another visual highlights this one.
     pub highlight: Option<f64>,
+    /// Its formatted text (`None` when nothing highlights the chart).
+    pub highlight_formatted: Option<String>,
 }
 
 /// Start and end angles (degrees clockwise from 12 o'clock) of slices with
@@ -114,6 +116,9 @@ fn slices(cc: &ChartCtx<'_>) -> Vec<Slice> {
                 index: s,
                 opacity: 1.0,
                 highlight: series.highlight(0),
+                highlight_formatted: series
+                    .is_highlighted()
+                    .then(|| series.highlight_text(0).to_owned()),
             });
         }
         return out;
@@ -141,6 +146,9 @@ fn slices(cc: &ChartCtx<'_>) -> Vec<Slice> {
                 index: i,
                 opacity: op(i),
                 highlight: series.highlight(i),
+                highlight_formatted: series
+                    .is_highlighted()
+                    .then(|| series.highlight_text(i).to_owned()),
             });
         }
         return out;
@@ -170,6 +178,9 @@ fn slices(cc: &ChartCtx<'_>) -> Vec<Slice> {
                 index: i,
                 opacity: op(i),
                 highlight: series.highlight(i),
+                highlight_formatted: series
+                    .is_highlighted()
+                    .then(|| series.highlight_text(i).to_owned()),
             });
         }
     }
@@ -291,10 +302,17 @@ fn label_parts(s: &Slice, labels: &DataLabels, total: f64, max_abs: f64) -> Vec<
         parts.push(s.label.clone());
     }
     let style = NumberStyle::from_format(s.format_string.as_deref());
-    if labels.parts.value {
-        parts.push(data_label(
+    if labels.parts.value
+        && let Some((value, text)) = shown_value(
             s.value,
             &s.formatted,
+            s.highlight,
+            s.highlight_formatted.as_deref(),
+        )
+    {
+        parts.push(data_label(
+            value,
+            text,
             max_abs,
             &style,
             labels.unit,

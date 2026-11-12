@@ -751,9 +751,9 @@ on Windows 10 and 11.
 - The DAX query view has no IntelliSense, formatter, find / replace or command palette; results
   are capped at 1000 rows per `EVALUATE` and use the model's format strings for model columns.
 - Report canvas: highlights are drawn on bar, column, combo, pie, donut, treemap and funnel
-  charts; other visuals (tables, matrices, lines, …) are filtered instead; Q&A and Web URL
+  charts, whose data labels show the highlighted values and tooltips a "Highlighted" line; other visuals (tables, matrices, lines, …) are filtered instead; Q&A and Web URL
   buttons are not executed; bookmarks cannot be added or updated, and their drill, spotlight and
-  cross-highlight parts are not applied; the newer slicers' `selfFilter` is not read; range and
+  cross-highlight parts are not applied; range and
   relative-date slicers draw but their sliders / date pickers are not interactive (tiles select
   like list items); no visual header menus (focus mode, show as table, sort, export) or filter
   card editing (the header shows drill buttons only); the right-click menu offers drill and

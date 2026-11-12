@@ -185,6 +185,9 @@ pub struct SeriesData {
     /// Highlighted value per category when another visual's selection
     /// highlights this one (empty otherwise; `None`: nothing highlighted).
     pub highlights: Vec<Option<f64>>,
+    /// The DataView's formatted text of the highlighted values (empty
+    /// without highlights).
+    pub highlight_formatted: Vec<String>,
 }
 
 impl SeriesData {
@@ -199,6 +202,27 @@ impl SeriesData {
 
     pub fn formatted(&self, i: usize) -> &str {
         self.formatted.get(i).map_or("", String::as_str)
+    }
+
+    /// Whether another visual's selection highlights this series.
+    pub fn is_highlighted(&self) -> bool {
+        !self.highlights.is_empty()
+    }
+
+    /// The formatted highlighted value of category `i`.
+    pub fn highlight_text(&self, i: usize) -> &str {
+        self.highlight_formatted.get(i).map_or("", String::as_str)
+    }
+
+    /// The value and text a data label of category `i` shows: the
+    /// highlighted value while the series is highlighted (none when that
+    /// is blank), as in Power BI, else the value.
+    pub fn label_value(&self, i: usize) -> Option<(f64, &str)> {
+        if self.is_highlighted() {
+            self.highlight(i).map(|h| (h, self.highlight_text(i)))
+        } else {
+            self.value(i).map(|v| (v, self.formatted(i)))
+        }
     }
 
     /// The effective format string of category `i`'s value: the cell's
@@ -376,6 +400,15 @@ impl ChartData {
             };
             let values = number(&vc.values);
             let highlights = vc.highlights.as_deref().map(number).unwrap_or_default();
+            let highlight_formatted = vc
+                .highlights
+                .as_deref()
+                .map(|h| {
+                    (0..n)
+                        .map(|i| h.get(i).map(|c| c.formatted.clone()).unwrap_or_default())
+                        .collect()
+                })
+                .unwrap_or_default();
             let formatted = (0..n)
                 .map(|i| {
                     vc.values
@@ -405,6 +438,7 @@ impl ChartData {
                 formats,
                 fills: Vec::new(),
                 highlights,
+                highlight_formatted,
             });
         }
         Self {

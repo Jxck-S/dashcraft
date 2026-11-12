@@ -950,6 +950,41 @@ fn pies_funnels_treemaps_and_combos_draw_highlights() {
 }
 
 #[test]
+fn data_labels_of_highlighted_charts_show_the_highlighted_values() {
+    let labels = |visual_type: &str, highlights: bool| {
+        let mut dv = dataview(&["A", "B"], &[("M", vec![Some(4.0), Some(2.0)])]);
+        if highlights {
+            dv.categorical.as_mut().unwrap().values[0].highlights =
+                Some(vec![num(Some(1.0)), num(None)]);
+        }
+        let objs = objects(&[
+            ("labels", "show", "true"),
+            ("labels", "labelStyle", "'Data value'"),
+            ("legend", "show", "false"),
+        ]);
+        let g = render_with(visual_type, &dv, objs, 400.0, 300.0);
+        // Treemap labels also name the category.
+        let all = class_group(&g, "pbi-data-labels")
+            .map(texts)
+            .unwrap_or_default();
+        all.into_iter()
+            .filter(|t| t != "A" && t != "B")
+            .collect::<Vec<_>>()
+    };
+    for t in [
+        "clusteredColumnChart",
+        "clusteredBarChart",
+        "funnel",
+        "treemap",
+        "pieChart",
+    ] {
+        assert_eq!(labels(t, false), ["4", "2"], "{t}");
+        // A blank highlighted value has no label.
+        assert_eq!(labels(t, true), ["1"], "{t}");
+    }
+}
+
+#[test]
 fn svg_output_is_deterministic() {
     let dv = series_dataview(
         &["A", "B", "C"],

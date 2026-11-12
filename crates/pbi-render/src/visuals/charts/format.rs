@@ -201,6 +201,21 @@ fn with_prefix(prefix: &str, body: &str, suffix: &str) -> String {
     }
 }
 
+/// The value and text a data label shows: the highlighted ones while
+/// another visual highlights the chart (`highlight_formatted` is `Some`;
+/// nothing when the highlighted value is blank), else the value's.
+pub fn shown_value<'a>(
+    value: f64,
+    formatted: &'a str,
+    highlight: Option<f64>,
+    highlight_formatted: Option<&'a str>,
+) -> Option<(f64, &'a str)> {
+    match highlight_formatted {
+        Some(text) => highlight.map(|h| (h, text)),
+        None => Some((value, formatted)),
+    }
+}
+
 /// A data label: the DataView's formatted text unless a display unit
 /// applies (`unit`, or `Auto` from `max_abs` ≥ 1000), then the scaled value
 /// with `precision` decimals (default: 3 significant digits, trailing

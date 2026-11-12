@@ -35,7 +35,7 @@ use crate::scene::{
 use crate::text::TextStyle;
 
 use super::axis::{AxisSettings, SCROLLBAR_SIZE, scrollbar};
-use super::format::{NumberStyle, data_label};
+use super::format::{NumberStyle, data_label, shown_value};
 use super::labels::{DataLabels, baseline_centered, prefers_white_text, tailor, width};
 use super::{ChartCtx, DIMMED_OPACITY};
 
@@ -62,6 +62,8 @@ pub struct Stage {
     pub opacity: f64,
     /// The highlighted value when another visual highlights this one.
     pub highlight: Option<f64>,
+    /// Its formatted text (`None` when nothing highlights the chart).
+    pub highlight_formatted: Option<String>,
 }
 
 /// What a data label shows (`funnelLabelStyle`).
@@ -135,6 +137,9 @@ pub fn stages(cc: &ChartCtx<'_>) -> Vec<Stage> {
                 index: 0,
                 opacity: 1.0,
                 highlight: series.highlight(0),
+                highlight_formatted: series
+                    .is_highlighted()
+                    .then(|| series.highlight_text(0).to_owned()),
             })
             .collect();
     }
@@ -165,6 +170,9 @@ pub fn stages(cc: &ChartCtx<'_>) -> Vec<Stage> {
                 .copied()
                 .unwrap_or(1.0),
             highlight: series.highlight(i),
+            highlight_formatted: series
+                .is_highlighted()
+                .then(|| series.highlight_text(i).to_owned()),
         })
         .collect()
 }
@@ -408,10 +416,17 @@ fn label_text(
     previous: Option<f64>,
 ) -> String {
     let mut parts = Vec::new();
-    if contents.value {
-        parts.push(data_label(
+    if contents.value
+        && let Some((v, text)) = shown_value(
             v,
             &s.formatted,
+            s.highlight,
+            s.highlight_formatted.as_deref(),
+        )
+    {
+        parts.push(data_label(
+            v,
+            text,
             max_abs,
             &NumberStyle::from_format(s.format_string.as_deref()),
             labels.unit,
