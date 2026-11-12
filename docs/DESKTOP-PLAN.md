@@ -1144,7 +1144,7 @@ in focus mode or as a table and export its data; see images and report-level mea
 
 **Scope**
 
-- [ ] **M9.1 Highlight interactions.** `HighlightFilter` produces highlight values in categorical
+- [x] **M9.1 Highlight interactions.** `HighlightFilter` produces highlight values in categorical
   DataViews (like the visuals API), charts draw the highlighted part over the dimmed total, tables
   and matrices filter as Desktop does; selecting inside the source visual highlights it.
   *Progress:* points selected in another visual highlight bar and column charts (clustered,
@@ -1152,7 +1152,8 @@ in focus mode or as a table and export its data; see images and report-level mea
   `HighlightFilter`, unless the report sets `defaultFilterActionIsDataFilter`: categorical
   DataViews carry `ValueColumn::highlights` and the shapes are drawn dimmed with the highlighted
   part solid; line charts, tables, matrices and cards filter; the source visual dims its other
-  points. Next: highlighted values in labels and tooltips.
+  points. *Done:* data labels of highlighted charts show the highlighted value (none for a blank
+  one) and their tooltips add a "Highlighted" line. Combo chart lines are not highlighted.
 - [x] **M9.2 Drill down and up.** Hierarchies and several fields on an axis or in rows: drill mode,
   drill down on a point, drill up, go to the next level, expand all one level, for charts and
   matrices; drill state is view state (ADR-0006). *Done:* `pbi_render::query::drill` finds the

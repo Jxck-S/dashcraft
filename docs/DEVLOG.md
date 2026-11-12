@@ -7,6 +7,12 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.1: highlighted values in labels and tooltips
+
+- **What:** `pbi-render` charts (bar, column, pie, donut, funnel, treemap) label the highlighted value while another visual highlights them (`SeriesData::label_value`, `format::shown_value`; a blank highlight gets no label); `pbi-ops` `canvas.tooltip` adds a "Highlighted" line. Closes M9.1.
+- **Why:** M9.1 in `docs/DESKTOP-PLAN.md`; GAPS Interactions row.
+- **Numbers:** 2 new tests (`visuals_charts`, `pbi-ops` `canvas`); render snapshots unchanged.
+
 ### M9.6: slicer `selfFilter`
 
 - **What:** `pbi-render` `query::context` applies a visual's `general.selfFilter` filter

@@ -90,7 +90,7 @@ Measured with `cargo run --release -p pbi-render --example bench_scroll` on a 25
 A measure's format string can depend on the cell: a calculation item's `formatStringDefinition` (a `YOY %` item formats as a percent whatever the measure's own format), or the measure's own `formatStringDefinition` (for example by magnitude). As Power BI's visual queries carry a format-string column next to such a measure, the semantic query evaluates the **effective format string** of every cell of a measure that may have one (a measure with a `formatStringDefinition`, or any measure while a calculation group with format strings is filtered or grouped by the visual, or has a formatted `noSelectionExpression`) in one batch per measure and result set (`pbi_dax::EvalContext::evaluate_measure_format_strings`), formats the cell with it and keeps it in the cell (`CellValue::format`) when it differs from the column's format string. Measures without dynamic format strings cost nothing extra.
 
 - **Cards, tables, matrices**: the cell text uses the effective format string (`82.4%` under `YOY %`, `$960` without it; totals and subtotals without the item use the measure's own).
-- **Chart data labels and tooltips**: each value is formatted with its own format string (percent values stay percents when display units apply to currency values). Value axes keep the field's format string.
+- **Chart data labels and tooltips**: each value is formatted with its own format string (percent values stay percents when display units apply to currency values). Value axes keep the field's format string. While another visual highlights the chart, labels show the highlighted value (none when it is blank) and tooltips add a "Highlighted" line.
 - Implicit measures (aggregations) never have dynamic format strings (calculation items do not apply to them).
 
 ## Conditional formatting
@@ -310,7 +310,7 @@ Every visual region and the whole page must reach the default threshold, SSIM â‰
 
 ## Known gaps
 
-- Data labels and tooltips of highlighted charts show the full values; the lines of combo charts are not highlighted. How Desktop sizes a highlighted pie slice and treemap tile (radius or area, which edge) is not documented: DashCraft scales the radius and fills the tile from the bottom.
+- The lines of combo charts are not highlighted (their data labels and tooltips show the full values). How Desktop sizes a highlighted pie slice and treemap tile (radius or area, which edge) is not documented: DashCraft scales the radius and fills the tile from the bottom.
 - A bookmark's changed Top N filters, its spotlight and focus modes, cross-report drillthrough, Q&A, visual header menus (focus mode, show as table, sort, export) and the right-click menu's other items are not available; drill works on chart axes and matrix rows, not on matrix columns, and bookmarks do not apply drill state.
 - Range-slider dragging, relative-date pickers.
 - Conditional formatting: web URLs and image icons, conditional colors of charts with a legend field and of line, area, combo, waterfall and gauge charts, conditional formats of headers, titles and cards ([details](#conditional-formatting)); Analytics pane lines, small multiples.

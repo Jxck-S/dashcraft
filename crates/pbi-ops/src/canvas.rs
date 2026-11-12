@@ -2433,6 +2433,14 @@ fn tooltip_lines(
                     &s.measure_name,
                     truncate(s.formatted(index), MAX_VALUE_CHARS),
                 ));
+                // Highlighted by another visual's selection: the
+                // highlighted part, as Power BI's "Highlighted" line.
+                if s.is_highlighted() {
+                    lines.push(line(
+                        "Highlighted",
+                        truncate(s.highlight_text(index), MAX_VALUE_CHARS),
+                    ));
+                }
             }
             lines.extend(scatter_field("Size").map(value_line));
             for vc in &cat.values {

@@ -467,9 +467,12 @@ pub fn render_bar(cc: &ChartCtx<'_>, stacking: Stacking) -> Group {
             let Some(s) = data.series.get(seg.series) else {
                 continue;
             };
+            let Some((value, formatted)) = s.label_value(seg.category) else {
+                continue;
+            };
             let text = data_label(
-                seg.value,
-                s.formatted(seg.category),
+                value,
+                formatted,
                 max_abs,
                 &NumberStyle::from_format(s.format_at(seg.category)),
                 labels.unit,
@@ -645,9 +648,12 @@ pub fn render_column(cc: &ChartCtx<'_>, stacking: Stacking, combo: bool) -> Grou
             };
             let thick = w / seg.slot.1.max(1) as f64;
             let cx = x + thick * (seg.slot.0 as f64 + 0.5);
+            let Some((value, formatted)) = s.label_value(seg.category) else {
+                continue;
+            };
             let text = data_label(
-                seg.value,
-                s.formatted(seg.category),
+                value,
+                formatted,
                 max_abs,
                 &NumberStyle::from_format(s.format_at(seg.category)),
                 labels.unit,

@@ -22,6 +22,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - Opening and saving a PBIP project fingerprints its files faster: the size and file-count caps are checked before any file is read, and the files are read on up to 8 threads (Acme Outfitters: 8.8 → 5.8 ms per scan).
 
 ### Added
+- Data labels of highlighted charts show the highlighted value and their tooltips add a "Highlighted" line (M9.1).
 - Slicers honour their `general.selfFilter` (M9.6): the filter the newer slicers keep on their own item list narrows that slicer only, not the visuals it filters.
 - Drill down and up on report visuals (M9.2): charts with several axis fields and matrices with several row fields drill up, down on a data point, to the next level or expand one level, from the visual's header buttons or right-click menu, and through the new `canvas.drill` command.
 - Report-page tooltips (M9.3): `canvas.tooltipPage` renders the tooltip page of a hovered data point (the visual's `visualTooltip` page, or the first tooltip page whose fields the point has) at the page's size, filtered by the point, the source page's filters, slicers and cross-filter and the source visual's own filters; the app shows it in the hover card. Acme's Store Performance stacked chart uses the Store Tooltip page (`expected.json` `tooltipPages`); perf scenario P13 `tooltip-page-render`.
@@ -194,7 +195,6 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 Renders report pages offline, headlessly (`pbiview render`) and interactively in a Power BI Desktop-style app, from the data and engines of Phase 1. Also adds the remaining formats of [FORMATS.md](FORMATS.md) §5, PBIP local-cache data, a larger DAX library and session-derived columns.
 
 ### Added
-- Report-page tooltips (M9.3): `canvas.tooltipPage` renders the tooltip page of a hovered data point (the visual's `visualTooltip` page, or the first tooltip page whose fields the point has) at the page's size, filtered by the point, the source page's filters, slicers and cross-filter and the source visual's own filters; the app shows it in the hover card. Acme's Store Performance stacked chart uses the Store Tooltip page (`expected.json` `tooltipPages`); perf scenario P13 `tooltip-page-render`.
 
 #### Report renderer (`pbi-render`)
 - **Theme resolution**: built-in fallback, base and custom themes deep-merged; `ThemeDataColor{ColorId, Percent}`; `visualStyles` precedence (visual `objects` → theme per type and preset → `"*"` → built-in defaults); primary and derived text classes.

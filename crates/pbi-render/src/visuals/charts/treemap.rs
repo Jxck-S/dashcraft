@@ -37,7 +37,7 @@ use crate::scene::{Color, Group, Paint, Rect, RectNode, TextAnchor};
 use crate::text::TextStyle;
 
 use super::colors::series_colors;
-use super::format::{NumberStyle, data_label};
+use super::format::{NumberStyle, data_label, shown_value};
 use super::labels::{DataLabels, baseline_centered, tailor};
 use super::legend::{Legend, LegendItem};
 use super::{ChartCtx, DIMMED_OPACITY};
@@ -61,6 +61,8 @@ pub struct Leaf {
     pub color: Color,
     /// The highlighted value when another visual highlights this one.
     pub highlight: Option<f64>,
+    /// Its formatted text (`None` when nothing highlights the chart).
+    pub highlight_formatted: Option<String>,
 }
 
 /// A top-level rectangle (one group value).
@@ -246,6 +248,7 @@ pub fn branches(cc: &ChartCtx<'_>) -> Vec<Branch> {
                         .unwrap_or_else(|| resolver.data_color(s))
                 }),
                 highlight: sd.highlight(i),
+                highlight_formatted: sd.is_highlighted().then(|| sd.highlight_text(i).to_owned()),
             });
         }
         if leaves.is_empty() {
@@ -466,7 +469,7 @@ pub fn render(cc: &ChartCtx<'_>) -> Group {
         {
             let text = value_text(l, &labels, max_abs);
             let y = header_bottom + vlh / 2.0;
-            if y + vlh / 2.0 <= outer.bottom() && room > 4.0 {
+            if y + vlh / 2.0 <= outer.bottom() && room > 4.0 && !text.is_empty() {
                 let text = tailor(fonts, &text, &value_style, room);
                 labels_left = labels_left.saturating_sub(1);
                 texts.text(
@@ -512,8 +515,9 @@ pub fn render(cc: &ChartCtx<'_>) -> Group {
                     bottom -= lh;
                 }
             }
-            if labels.show && labels_left > 0 && bottom - vlh >= top_limit {
-                let text = tailor(fonts, &value_text(l, &labels, max_abs), &value_style, room);
+            let value = value_text(l, &labels, max_abs);
+            if labels.show && labels_left > 0 && bottom - vlh >= top_limit && !value.is_empty() {
+                let text = tailor(fonts, &value, &value_style, room);
                 labels_left -= 1;
                 texts.text(
                     r.x + TEXT_INSET,
@@ -531,9 +535,17 @@ pub fn render(cc: &ChartCtx<'_>) -> Group {
 }
 
 fn value_text(l: &Leaf, labels: &DataLabels, max_abs: f64) -> String {
-    data_label(
+    let Some((value, text)) = shown_value(
         l.value,
         &l.formatted,
+        l.highlight,
+        l.highlight_formatted.as_deref(),
+    ) else {
+        return String::new();
+    };
+    data_label(
+        value,
+        text,
         max_abs,
         &NumberStyle::from_format(l.format_string.as_deref()),
         labels.unit,

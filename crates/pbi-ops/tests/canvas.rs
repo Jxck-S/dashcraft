@@ -1018,3 +1018,55 @@ async fn drillthrough_filters_the_target_page() {
         "{state}"
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn tooltips_of_highlighted_charts_add_the_highlighted_value() {
+    let dir = tmp_dir("pbi-ops-highlight-");
+    let pbip = mini_pbip(dir.path());
+    let field = |property: &str| json!({"Column": {"Expression": {"SourceRef": {"Entity": "Sales"}}, "Property": property}});
+    write_visual(
+        dir.path(),
+        "overview",
+        "items",
+        false,
+        json!({"visualType": "clusteredColumnChart", "query": {"queryState": {
+            "Category": {"projections": [{"field": field("Item"), "queryRef": "Sales.Item", "nativeQueryRef": "Item"}]},
+            "Y": {"projections": [{
+                "field": {"Aggregation": {"Expression": field("Amount"), "Function": 0}},
+                "queryRef": "Sum(Sales.Amount)", "nativeQueryRef": "Sum of Amount"
+            }]}
+        }}}),
+    );
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let labels = |tip: &Value| -> Vec<String> {
+        tip["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|l| l["label"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    let column = hit(&page, "items|dataPoint|").to_owned();
+    let tip = r
+        .run("canvas.tooltip", json!({"docId": doc, "hitId": column}))
+        .await;
+    assert!(!labels(&tip).contains(&"Highlighted".to_owned()), "{tip}");
+
+    // A bar selected in the other chart highlights the columns (the default
+    // interaction): their tooltips add the highlighted value.
+    let bar = hit(&page, "bars|dataPoint|").to_owned();
+    let crossed = r
+        .run("canvas.click", json!({"docId": doc, "hitId": bar}))
+        .await;
+    let column = hit(&crossed["page"], "items|dataPoint|").to_owned();
+    let tip = r
+        .run("canvas.tooltip", json!({"docId": doc, "hitId": column}))
+        .await;
+    assert_eq!(
+        labels(&tip),
+        ["Item", "Sum of Amount", "Highlighted"],
+        "{tip}"
+    );
+}
