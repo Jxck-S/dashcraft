@@ -56,7 +56,7 @@ try {
   const role = await evaluate(`${bar}?.getAttribute('role')`)
   check('the bar is a status region (announced politely)', role === 'status', role ?? 'none')
   // A status region inserted with its text is not announced: the status bar's live region says it.
-  const said = await evaluate(`document.querySelector('.status-bar .message')?.textContent ?? ''`)
+  const said = (await waitFor(`(() => { const m = document.querySelector('.status-bar .message')?.textContent ?? ''; return m.includes('Files changed on disk') ? m : '' })()`, 3000)) || 
   check('the status bar announces the change and the bar', said.includes('Files changed on disk') && said.includes('Orders.tmdl'), said || 'no message')
 
   // Accessibility (ADR-0015, A1 to A5) of the bar and Compare, with the IBM checker when installed.

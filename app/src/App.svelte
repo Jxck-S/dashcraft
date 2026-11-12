@@ -1526,9 +1526,14 @@
       if (external?.key !== key) {
         external = { docId, changes, key }
         // The bar's own status role is not announced when it appears with its text: the status
-        // bar's live region says it.
+        // bar's live region says it, once the bar is in place (NVDA may drop a live-region change
+        // made in the same frame as the bar's insertion).
         const what = changes.length === 1 ? `${changes[0].path} was` : `${changes.length} project files were`
-        status = { message: `Files changed on disk: ${what} changed by another program. Reload, Keep mine or Compare in the bar below the ribbon.`, isError: false }
+        const message = `Files changed on disk: ${what} changed by another program. Reload, Keep mine or Compare in the bar below the ribbon.`
+        void (async () => {
+          await new Promise((resolve) => setTimeout(resolve, ANNOUNCE_DELAY_MS))
+          if (external?.key === key) status = { message, isError: false }
+        })()
       }
     } finally {
       externalChecking = false

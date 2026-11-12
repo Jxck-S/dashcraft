@@ -7,6 +7,17 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### Reliable external-change announcement (screen-reader CI)
+
+- **What**: the app sets the "Files changed on disk" status message `ANNOUNCE_DELAY_MS` after the
+  notification bar appears (and only while that change is still shown);
+  `scripts/app-checks/external-changes.mjs` waits for the message.
+- **Why**: the gating NVDA job failed S33 ("a change on disk is announced", heard nothing) on 5
+  of the last 10 completed runs, though the bar was shown each time: the live-region change made
+  in the same frame as the bar's insertion was dropped. VoiceOver and Orca stay informational.
+- **Numbers**: local app checks all pass on Windows (external-changes 51, editing-smoke 23,
+  editing-a11y 21, formula-intellisense 22, formula-keys 44, recovery 31, bookmarks 28).
+
 ### M9.11 save the reading state into the report
 
 - **What**: `pbi-render` `query::persist` (`filter_definition`, `slicer_objects`, `filter_with`:

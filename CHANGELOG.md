@@ -157,6 +157,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - `.gitignore` refuses `*.pbix`, `*.pbit` and `*.abf` files except the committed Microsoft samples and fuzz seeds.
 
 ### Fixed
+- Desktop app: screen readers announce "Files changed on disk" reliably; the status bar now says it just after the notification bar appears instead of in the same frame, where NVDA sometimes dropped it.
 - M evaluator: a value that contains its own lazy slot (`let r = [a = @r] in r`, `let r = {@r} in r`, a shared query that refers to itself inside a record or list, or one that returns `#shared`) is now freed when the evaluation ends; such values leaked memory. Found by the nightly `m_eval` fuzz target.
 - Desktop app, found by the screen-reader runs: pressing Esc in the formula bar after an edit now clears the cancelled formula's problems, which were still underlined and announced; Tab and Shift+Tab stay inside the File backstage, and Esc closes it and returns focus to File; Option+Q (Desktop's Alt+Q) moves to the formula bar on macOS, where Option types a character; and Ctrl+K Ctrl+I works when Ctrl is released between the keys, and announces the description it shows.
 - TMDL writer: a table with a second `calculationGroup` spelled in another case (`calculationgroup`), which is kept as an untyped property, is written after the calculation group again; it was written first, so reading the saved file back took it as the calculation group. Found by the `tmdl` fuzz target.
