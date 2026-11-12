@@ -1749,3 +1749,180 @@ async fn visual_header_focus_sort_spotlight_copy_and_export() {
         .unwrap_err();
     assert_eq!(err.code, OpErrorCode::Io, "{err:?}");
 }
+
+/// An "Apply all slicers" button keeps slicer selections pending until it
+/// is clicked (or `canvas.applySlicers`); hidden, selections apply at once.
+#[tokio::test(flavor = "multi_thread")]
+async fn apply_all_slicers_button_defers_selections() {
+    let dir = tmp_dir("pbi-ops-apply-");
+    let pbip = mini_pbip(dir.path());
+    write_visual(
+        dir.path(),
+        "overview",
+        "apply",
+        false,
+        json!({"visualType": "actionButton", "visualContainerObjects": {"visualLink": [{"properties": {
+            "show": {"expr": {"Literal": {"Value": "true"}}},
+            "type": {"expr": {"Literal": {"Value": "'ApplyAllSlicers'"}}}
+        }}]}}),
+    );
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+    let has = |page: &Value, text: &str| page["svg"].as_str().unwrap().contains(text);
+    let region = |page: &Value| {
+        page["interactions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["visual"] == "region")
+            .unwrap()
+            .clone()
+    };
+
+    let page = r
+        .run(
+            "canvas.setSlicer",
+            json!({"docId": doc, "visual": "region", "values": ["North"]}),
+        )
+        .await;
+    assert!(has(&page, &format!(">{MINI_TOTAL}<")), "still unfiltered");
+    let slicer = region(&page);
+    assert_eq!(slicer["pending"], true, "{slicer}");
+    assert_eq!(slicer["hasSelection"], true);
+    assert_eq!(slicer["applyButton"], false);
+    let state = r.run("canvas.state", json!({"docId": doc})).await;
+    assert_eq!(
+        state["interaction"]["pendingSlicers"]["region"]["values"],
+        json!([["North"]]),
+        "{state}"
+    );
+    assert!(
+        state["interaction"]["slicerSelections"]
+            .get("region")
+            .is_none()
+    );
+
+    // The button applies it.
+    let button = hit(&page, "apply|button").to_owned();
+    let clicked = r
+        .run("canvas.click", json!({"docId": doc, "hitId": button}))
+        .await;
+    assert!(has(&clicked["page"], ">610<"), "North only");
+    assert_eq!(region(&clicked["page"])["pending"], false);
+
+    // Clearing is pending too, until canvas.applySlicers.
+    let page = r
+        .run(
+            "canvas.clearSelections",
+            json!({"docId": doc, "visual": "region"}),
+        )
+        .await;
+    assert!(has(&page, ">610<"));
+    assert_eq!(region(&page)["hasSelection"], false);
+    let page = r.run("canvas.applySlicers", json!({"docId": doc})).await;
+    assert!(has(&page, &format!(">{MINI_TOTAL}<")));
+    assert_eq!(region(&page)["pending"], false);
+
+    // Hidden, the button no longer defers selections.
+    write_visual(
+        dir.path(),
+        "overview",
+        "apply",
+        true,
+        json!({"visualType": "actionButton", "visualContainerObjects": {"visualLink": [{"properties": {
+            "show": {"expr": {"Literal": {"Value": "true"}}},
+            "type": {"expr": {"Literal": {"Value": "'ApplyAllSlicers'"}}}
+        }}]}}),
+    );
+    let doc = r.open(json!({"path": pbip})).await;
+    let page = r
+        .run(
+            "canvas.setSlicer",
+            json!({"docId": doc, "visual": "region", "values": ["North"]}),
+        )
+        .await;
+    assert!(has(&page, ">610<"));
+}
+
+/// Query-reduction options: per-slicer Apply buttons and no default
+/// cross-filtering; page-level measure filters apply to each visual's rows.
+#[tokio::test(flavor = "multi_thread")]
+async fn query_reduction_and_page_measure_filters() {
+    let dir = tmp_dir("pbi-ops-reduce-");
+    let pbip = mini_pbip(dir.path());
+    let report = json!({
+        "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.0.0/schema.json",
+        "slowDataSourceSettings": {"isCrossHighlightingDisabled": true, "isSlicerSelectionsButtonEnabled": true}
+    });
+    std::fs::write(
+        dir.path().join("Mini.Report/definition/report.json"),
+        serde_json::to_string_pretty(&report).unwrap(),
+    )
+    .unwrap();
+    // Total > 600: East (630) and North (610), not West (590).
+    let total = |source: Value| json!({"Measure": {"Expression": {"SourceRef": source}, "Property": "Total"}});
+    let page = json!({
+        "name": "overview", "displayName": "Overview", "displayOption": "FitToPage",
+        "width": 640, "height": 360,
+        "filterConfig": {"filters": [{
+            "name": "big", "field": total(json!({"Entity": "Sales"})), "type": "Advanced",
+            "filter": {"Version": 2, "From": [{"Name": "s", "Entity": "Sales", "Type": 0}],
+                "Where": [{"Condition": {"Comparison": {"ComparisonKind": 1,
+                    "Left": total(json!({"Source": "s"})),
+                    "Right": {"Literal": {"Value": "600L"}}
+                }}}]}
+        }]}
+    });
+    std::fs::write(
+        dir.path()
+            .join("Mini.Report/definition/pages/overview/page.json"),
+        serde_json::to_string_pretty(&page).unwrap(),
+    )
+    .unwrap();
+    let r = Runner::new();
+    let doc = r.open(json!({"path": pbip})).await;
+
+    let page = r.run("canvas.render", json!({"docId": doc})).await;
+    let bars = page["hitRegions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|h| h["id"].as_str().unwrap().starts_with("bars|dataPoint|"))
+        .count();
+    assert_eq!(bars, 2, "{}", page["visuals"]);
+    let warnings = page["visuals"].to_string();
+    assert!(!warnings.contains("not applied"), "{warnings}");
+    let card = format!(">{MINI_TOTAL}<");
+    assert!(page["svg"].as_str().unwrap().contains(&card));
+
+    // A selected bar filters nothing by default.
+    let bar = hit(&page, "bars|dataPoint|").to_owned();
+    let clicked = r
+        .run("canvas.click", json!({"docId": doc, "hitId": bar}))
+        .await;
+    assert!(clicked["page"]["svg"].as_str().unwrap().contains(&card));
+
+    // Each slicer has an Apply button.
+    let page = r
+        .run(
+            "canvas.setSlicer",
+            json!({"docId": doc, "visual": "region", "values": ["North"]}),
+        )
+        .await;
+    let slicer = page["interactions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["visual"] == "region")
+        .unwrap();
+    assert_eq!(slicer["applyButton"], true, "{slicer}");
+    assert_eq!(slicer["pending"], true);
+    assert!(page["svg"].as_str().unwrap().contains(&card));
+    let page = r
+        .run(
+            "canvas.applySlicers",
+            json!({"docId": doc, "visual": "region"}),
+        )
+        .await;
+    assert!(page["svg"].as_str().unwrap().contains(">610<"));
+}

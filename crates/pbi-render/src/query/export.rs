@@ -12,8 +12,8 @@
 //! DAX refers to, else the table of its first column. The columns are the
 //! visual's columns (those of other tables through `RELATED`, dropped with
 //! a warning when no relationship leads there) followed by the base
-//! table's other visible columns. Visual-level measure filters do not apply
-//! to underlying rows (a warning says so).
+//! table's other visible columns. Measure filters do not apply to
+//! underlying rows (a warning says so).
 //!
 //! The data table of focus mode's "Show as a table" is named
 //! [`data_table_name`] (`<visual>~table`); filters, interactions and drill

@@ -700,6 +700,23 @@
     return it?.header ? { visual: it.visual, x: it.header.x + it.header.width - 22, y: it.header.y + 1 } : null
   })
 
+  /** "Apply" buttons of slicers with a pending selection (query reduction: one per slicer). */
+  const applyButtons = $derived(
+    (rendered?.interactions ?? [])
+      .filter((i) => i.kind === 'slicer' && i.applyButton && i.pending)
+      .flatMap((i) => {
+        const r = visualInfo.get(i.visual)?.rect
+        return r ? [{ visual: i.visual, x: r.x + r.width - 52, y: r.y + r.height - 26 }] : []
+      }),
+  )
+
+  async function applySlicer(visual: string) {
+    if (!rendered) return
+    const { id: reportId } = report
+    const { id: pageId } = page
+    accept(await run(() => backend.applySlicers(reportId, pageId, visual)))
+  }
+
   async function clearSlicer(visual: string) {
     if (!rendered) return
     const { id: reportId } = report
@@ -922,6 +939,20 @@
           <Icon name="close" size={12} />
         </button>
       {/if}
+      {#each applyButtons as b (b.visual)}
+        <button
+          class="chrome-control apply-slicer"
+          style:left={px(b.x)}
+          style:top={px(b.y)}
+          title="Apply the pending selection"
+          onclick={(e) => {
+            e.stopPropagation()
+            void applySlicer(b.visual)
+          }}
+        >
+          Apply
+        </button>
+      {/each}
       {#if header}
         {@const h = header}
         {@const focused = rendered?.focus?.visual === h.visual}
@@ -1251,6 +1282,23 @@
     background: rgb(255 255 255 / 0.85);
     color: #605e5c;
     cursor: pointer;
+  }
+
+  .apply-slicer {
+    width: 48px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 2px;
+    background: #117865;
+    color: #fff;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .apply-slicer:hover {
+    background: #0e6253;
   }
 
   .eraser:hover {

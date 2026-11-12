@@ -35,8 +35,11 @@
 //!    filtered; `HighlightFilter` and the default → selected points
 //!    highlight the charts that draw highlights and filter the rest, see
 //!    below;
-//!    slicers always filter). Top N filters are evaluated last, in the
-//!    context built so far.
+//!    slicers always filter; a slicer's pending selection, see
+//!    [`InteractionState::pending_slicers`], filters only once applied).
+//!    Top N filters are evaluated last, in the context built so far.
+//!    The report's query-reduction options ([`QueryReduction`]) can turn
+//!    off the default cross-filtering.
 //!    `isHiddenInViewMode` / `isLockedInViewMode` do not change evaluation.
 //!    Filters on tables without a relationship path to a measure's tables
 //!    have no effect on it (engine propagation), so a measure over a table
@@ -46,7 +49,8 @@
 //!    outer filter. Values are measures (`'Orders'[Total Sales]`) or
 //!    aggregations (`SUM(Orders[Quantity])`). Rows whose values
 //!    are all BLANK are dropped (SUMMARIZECOLUMNS semantics).
-//! 3. **Post-processing**: visual-level measure filters (rows), sort, row /
+//! 3. **Post-processing**: measure filters of the report, page and visual
+//!    (rows), sort, row /
 //!    category / series limits (`truncated`), totals by re-evaluating the
 //!    values with fewer group columns, formatting with the measure / column
 //!    format string in the model culture.
@@ -113,7 +117,7 @@
 //! | Advanced `=` `<>` `<` `>` `<=` `>=`, `Between`, `And` / `Or` / `Not` | ✅ | ✅ | ✅ (persisted range) |
 //! | Contains / StartsWith (and negations), is (not) blank / empty | ✅ | ✅ | — |
 //! | Top N (by measure or aggregation) | ✅ (evaluated in the visual's context) | ✅ | — |
-//! | Measure / aggregation conditions (`[Total Sales] > 5`) | ⚠ not applied | ✅ on the visual's rows (not matrices) | — |
+//! | Measure / aggregation conditions (`[Total Sales] > 5`) | ✅ on each visual's rows (not matrices) | ✅ on the visual's rows (not matrices) | — |
 //! | Relative date / relative time | ⚠ not applied | ⚠ not applied | ⚠ not applied |
 //! | Auto date/time hierarchy levels, `Exists`, `In` over tables, comparisons between fields | ⚠ not applied | ⚠ not applied | ⚠ not applied |
 //!
@@ -156,6 +160,7 @@ pub mod export;
 pub mod filter;
 pub mod interaction;
 mod plan;
+pub mod reduction;
 pub mod relative;
 mod semantic;
 pub mod tooltip;
@@ -187,6 +192,7 @@ pub use interaction::{
     PointSelection, SlicerSelection, is_slicer_type, persisted_selection, slicer_fields,
     sync_group, synced_slicers,
 };
+pub use reduction::QueryReduction;
 pub use semantic::TopNSpec;
 pub use tooltip::{TooltipPage, tooltip_page, tooltip_state, visual_tooltip_page};
 
@@ -575,8 +581,8 @@ pub fn query_page(
 /// The filter context `visual` is evaluated in: report + page + visual
 /// filters, other slicers' selections and the cross-filter, per
 /// `visualInteractions`, with Top N filters resolved. Warnings list what
-/// was not applied (visual-level measure filters apply to rows and are not
-/// part of the context).
+/// was not applied (measure filters apply to rows and are not part of the
+/// context).
 pub fn page_filter_context(
     report: &Report,
     page: &Page,

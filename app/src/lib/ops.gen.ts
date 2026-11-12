@@ -255,6 +255,20 @@ export type CanvasAction = {
   message: string
 }
 
+export interface CanvasApplySlicersParams {
+  /** The document id from `doc.open` (`d1`, …). */
+  docId: string
+  /** Report: name (exact, case-insensitive, or a unique part) or 1-based index. Default: the first report. */
+  report?: string | null
+  /** Page: internal name, display name, 1-based index or a unique part of the display name. Default: the active page. */
+  page?: string | null
+  /**
+   * The slicer whose pending selection to apply (its Apply button);
+   * absent: every slicer of the page ("Apply all slicers").
+   */
+  visual?: string | null
+}
+
 /** Result of `canvas.applyBookmark`. */
 export interface CanvasBookmarkOut {
   /** Internal name of the bookmark. */
@@ -445,8 +459,18 @@ export interface CanvasInteractionOut {
   search: RectOut | null
   dropdownOpen: boolean
   searchText: string
-  /** The slicer filters something (not "All"). */
+  /** The slicer shows a selection (not "All"; pending or applied). */
   hasSelection: boolean
+  /**
+   * The slicer has a selection that is not applied yet
+   * (`canvas.applySlicers` applies it).
+   */
+  pending: boolean
+  /**
+   * The report adds an Apply button to each slicer (query reduction):
+   * selections stay pending until applied.
+   */
+  applyButton: boolean
   /** Range slicers: value boxes, slider and bounds. */
   range?: RangeOut | null
   /** Relative date / time slicers: controls and setting. */
@@ -5553,6 +5577,8 @@ export interface OpsCommands {
   'canvas.sortVisual': { params: CanvasSortVisualParams; output: CanvasPageOut }
   /** Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page. */
   'canvas.clearSelections': { params: CanvasClearParams; output: CanvasPageOut }
+  /** Applies pending slicer selections (made while the page has an "Apply all slicers" button or the report adds an Apply button to slicers), and returns the re-rendered page. */
+  'canvas.applySlicers': { params: CanvasApplySlicersParams; output: CanvasPageOut }
   /** Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page. */
   'canvas.setSlicerSearch': { params: CanvasSearchParams; output: CanvasPageOut }
   /** Expands or collapses the matrix row of a cell hit and returns the re-rendered page. */
@@ -5708,6 +5734,7 @@ export const OPS_META = {
   'canvas.setSpotlight': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.sortVisual': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.clearSelections': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
+  'canvas.applySlicers': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.setSlicerSearch': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.toggleMatrixRow': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.closePopups': { category: 'canvas', mutatesDocument: true, longRunning: false, agentSafe: true, writesFiles: false },
@@ -5929,6 +5956,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasSortVisual: (params: CanvasSortVisualParams, options?: O) => run('canvas.sortVisual', params, options),
     /** Clears a slicer's selection ("Clear selections") or the page's cross-filter, and returns the re-rendered page. */
     canvasClearSelections: (params: CanvasClearParams, options?: O) => run('canvas.clearSelections', params, options),
+    /** Applies pending slicer selections (made while the page has an "Apply all slicers" button or the report adds an Apply button to slicers), and returns the re-rendered page. */
+    canvasApplySlicers: (params: CanvasApplySlicersParams, options?: O) => run('canvas.applySlicers', params, options),
     /** Filters a slicer's list (or open dropdown) by a search text and returns the re-rendered page. */
     canvasSetSlicerSearch: (params: CanvasSearchParams, options?: O) => run('canvas.setSlicerSearch', params, options),
     /** Expands or collapses the matrix row of a cell hit and returns the re-rendered page. */

@@ -161,6 +161,14 @@ pub struct InteractionState {
     /// Slicer visual name → its selection. Slicers not listed do not
     /// filter.
     pub slicer_selections: IndexMap<String, SlicerSelection>,
+    /// Slicer visual name → a selection made but not applied yet (the
+    /// page has an "Apply all slicers" button or the report adds an Apply
+    /// button to slicers; see [`InteractionState::stage`]). The slicer
+    /// shows it; other visuals are still filtered by
+    /// [`Self::slicer_selections`]. A selection of everything clears the
+    /// slicer when applied.
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub pending_slicers: IndexMap<String, SlicerSelection>,
     /// Selected data points (cross-filter source).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub selected_points: Option<PointSelection>,
@@ -298,16 +306,65 @@ impl InteractionState {
         (state, problems)
     }
 
-    /// Sets (or replaces) a slicer's selection.
+    /// Sets (or replaces) a slicer's selection, dropping a pending one.
     pub fn select(&mut self, slicer: impl Into<String>, selection: SlicerSelection) -> &mut Self {
-        self.slicer_selections.insert(slicer.into(), selection);
+        let slicer = slicer.into();
+        self.pending_slicers.shift_remove(&slicer);
+        self.slicer_selections.insert(slicer, selection);
         self
     }
 
-    /// Clears a slicer's selection.
+    /// Clears a slicer's selection, dropping a pending one.
     pub fn clear_slicer(&mut self, slicer: &str) -> &mut Self {
+        self.pending_slicers.shift_remove(slicer);
         self.slicer_selections.shift_remove(slicer);
         self
+    }
+
+    /// The selection a slicer shows: the pending one, else the applied one.
+    pub fn shown_selection(&self, slicer: &str) -> Option<&SlicerSelection> {
+        self.pending_slicers
+            .get(slicer)
+            .or_else(|| self.slicer_selections.get(slicer))
+    }
+
+    /// Makes `selection` (`None`: clear) the slicer's pending selection, to
+    /// apply with [`Self::apply_pending`]; a selection equal to the applied
+    /// one is not pending.
+    pub fn stage(&mut self, slicer: &str, selection: Option<SlicerSelection>) -> &mut Self {
+        let selection = selection.unwrap_or_default();
+        let applied = self.slicer_selections.get(slicer);
+        let same = match applied {
+            Some(a) => *a == selection,
+            None => selection.is_all(),
+        };
+        if same {
+            self.pending_slicers.shift_remove(slicer);
+        } else {
+            self.pending_slicers.insert(slicer.to_owned(), selection);
+        }
+        self
+    }
+
+    /// Applies the pending selection of `slicer` (`None`: of every slicer)
+    /// and returns the names of the slicers whose selection changed.
+    pub fn apply_pending(&mut self, slicer: Option<&str>) -> Vec<String> {
+        let names: Vec<String> = self
+            .pending_slicers
+            .keys()
+            .filter(|n| slicer.is_none_or(|s| s == n.as_str()))
+            .cloned()
+            .collect();
+        for name in &names {
+            if let Some(selection) = self.pending_slicers.shift_remove(name) {
+                if selection.is_all() {
+                    self.slicer_selections.shift_remove(name);
+                } else {
+                    self.slicer_selections.insert(name.clone(), selection);
+                }
+            }
+        }
+        names
     }
 
     /// Shows or hides visual (or group) `name` of `page`; only a change

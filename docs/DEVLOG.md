@@ -7,6 +7,20 @@ the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by 
 
 ## 2026-11-12
 
+### M9.10 measure filters at every level, query reduction and Apply slicers
+
+- **What**: `pbi-render` `query::reduction::QueryReduction` (report `slowDataSourceSettings`,
+  PBIR and legacy), `InteractionState::pending_slicers` with `stage`, `apply_pending` and
+  `shown_selection` (slicers draw what they show); report and page measure conditions filter each
+  visual's rows; cross-highlighting disabled ignores default interactions. `pbi-ops`
+  `canvas.applySlicers`, pending slicer selections when the report or a visible "Apply all
+  slicers" button asks for them, `pending` and `applyButton` on slicer interactions. App: an Apply
+  button on slicers with a pending selection.
+- **Why**: DESKTOP-PLAN M9.10; GAPS relative-date and measure filters row 3 → 4.
+- **Numbers**: 2 new `pbi-ops` canvas tests; no render snapshot changes. Not checked against
+  Desktop: report/page measure filters (Desktop adds them on visuals only), pending selections
+  not syncing across pages until applied.
+
 ### M9.9 report-level measures, images and legacy themes
 
 - **What**: `pbi-render` `QueryEnv::for_report` and `ReportModels` (report measures in the query
