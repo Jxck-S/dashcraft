@@ -206,3 +206,20 @@ max_ms = 50
 warmup = 6
 iterations = 60
 quick_iterations = 24
+
+[[scenario]]
+id = "P13"
+name = "tooltip-page-render"
+description = """
+Report-page tooltip through Registry::execute: canvas.tooltipPage on the segments of the \
+Store Performance stacked column chart of the Acme Outfitters example (refreshed offline \
+from its CSVs) in turn; each call filters the Store Tooltip page (320 × 240, one card) by the \
+point and the page's slicers, queries and renders it."""
+package = "pbi-ops"
+example = "perf_ops"
+data = "committed"
+metric = "p95"
+target_ms = 16
+max_ms = 33
+iterations = 40
+quick_iterations = 15

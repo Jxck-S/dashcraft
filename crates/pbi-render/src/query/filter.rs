@@ -355,6 +355,14 @@ impl<'a> FilterBuilder<'a> {
         cols: Vec<ColumnRef>,
         pred: Pred,
     ) -> Result<(Vec<EngineFilter>, Vec<String>), String> {
+        // One tuple is the AND of its column values: filter the columns
+        // (like TREATAS), not the rows of a common table, whose expanded
+        // table would also filter its other dimensions (dates).
+        if let Pred::In { keys, .. } = &pred
+            && keys.len() == 1
+        {
+            return Ok((per_column_in(&cols, keys), Vec::new()));
+        }
         let graph = self.snapshot.graph();
         let covers = |base: &str| {
             cols.iter()
@@ -376,15 +384,7 @@ impl<'a> FilterBuilder<'a> {
         let Pred::In { keys, .. } = &pred else {
             return Err("the condition spans tables without a relationship path".into());
         };
-        let mut filters = Vec::with_capacity(cols.len());
-        for (i, col) in cols.iter().enumerate() {
-            let values: HashSet<ValueKey> = keys.iter().filter_map(|t| t.get(i).cloned()).collect();
-            filters.push(EngineFilter::Column(ColumnFilter::in_keys(
-                col.table.as_str(),
-                col.column.as_str(),
-                values,
-            )));
-        }
+        let filters = per_column_in(&cols, keys);
         let approx = if keys.len() > 1 {
             vec![
                 "the multi-column selection spans unrelated tables; applied column by column"
@@ -440,6 +440,21 @@ impl<'a> FilterBuilder<'a> {
         }
         Ok(RowSet::from_rows(n, keep))
     }
+}
+
+/// An `IN` over the values of each column of the tuples `keys`.
+fn per_column_in(cols: &[ColumnRef], keys: &HashSet<Vec<ValueKey>>) -> Vec<EngineFilter> {
+    cols.iter()
+        .enumerate()
+        .map(|(i, col)| {
+            let values: HashSet<ValueKey> = keys.iter().filter_map(|t| t.get(i).cloned()).collect();
+            EngineFilter::Column(ColumnFilter::in_keys(
+                col.table.as_str(),
+                col.column.as_str(),
+                values,
+            ))
+        })
+        .collect()
 }
 
 fn single_column_filter(col: &ColumnRef, pred: Pred) -> EngineFilter {

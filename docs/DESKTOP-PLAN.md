@@ -1156,9 +1156,15 @@ in focus mode or as a table and export its data; see images and report-level mea
 - [ ] **M9.2 Drill down and up.** Hierarchies and several fields on an axis or in rows: drill mode,
   drill down on a point, drill up, go to the next level, expand all one level, for charts and
   matrices; drill state is view state (ADR-0006).
-- [ ] **M9.3 Report-page tooltips.** Tooltip pages (page type and binding) render inside the hover
+- [x] **M9.3 Report-page tooltips.** Tooltip pages (page type and binding) render inside the hover
   tooltip with the hovered point's filters, at the tooltip page's size; automatic tooltip pages
-  bound by fields.
+  bound by fields. *Done:* `pbi_render::query::tooltip` finds tooltip pages, the page of a
+  hovered point (`visualTooltip` `section`, else the first tooltip page whose fields the point
+  has; `show: false` or the default type gives none) and its state (the point as an exact
+  filter, the source page's filters, slicers, cross-filter and the source visual's filters as
+  conditions); `canvas.tooltipPage` renders it statelessly and the app shows it in the hover
+  card. Acme's Store Performance chart uses the Store Tooltip page (`expected.json`
+  `tooltipPages`); P13 measures it (p95 1.6 ms on the Windows desktop).
 - [ ] **M9.4 Drillthrough.** Drillthrough pages and their fields, Drill through on the context
   menu and from buttons, "keep all filters", the back button, and cross-report drillthrough between
   reports open in the same workspace. *Progress:* `pbi_render::query::drillthrough` finds

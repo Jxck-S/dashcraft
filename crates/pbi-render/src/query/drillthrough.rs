@@ -71,7 +71,7 @@ pub struct DrillthroughContext {
     pub carried: Vec<Condition>,
 }
 
-fn is_kind(value: Option<&serde_json::Value>, kind: &str) -> bool {
+pub(super) fn is_kind(value: Option<&serde_json::Value>, kind: &str) -> bool {
     value
         .and_then(serde_json::Value::as_str)
         .is_some_and(|t| t.eq_ignore_ascii_case(kind))
@@ -229,7 +229,7 @@ pub fn drill_through(
 /// filters" carries: page filters, slicer selections and the cross-filter
 /// from another visual, except those on a drillthrough field (the drilled
 /// value replaces them).
-fn carried_filters(
+pub(super) fn carried_filters(
     report: &Report,
     page: usize,
     state: &InteractionState,
@@ -313,7 +313,7 @@ fn carried_filters(
     out
 }
 
-fn filter_label(f: &Filter) -> String {
+pub(super) fn filter_label(f: &Filter) -> String {
     f.display_name
         .clone()
         .or_else(|| f.field.as_ref().and_then(FieldExpr::query_ref))

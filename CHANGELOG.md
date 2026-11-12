@@ -8,6 +8,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - M6.1 decisions: revisioned document state and transactions (ADR-0012), save conflicts and recovery (ADR-0013), serialization and generated identifiers (ADR-0014), and accessibility verification (ADR-0015). Corrected the Desktop plan's provisional ADR numbering to preserve the accepted naming and ground-truth records.
 
 ### Changed
+- A selection of one data point over columns of different tables (Store × Category) now filters each column by its value instead of the rows of a common fact table, which also narrowed every other dimension of that table (such as Date) and so changed measures over other facts.
 - `pbi-model::History` stages edits before publishing them, advances a monotonic revision only when document content changes, and reports the changed flag, revision and events. Undoing back to the saved content clears the dirty state.
 - `dax.query`, `dax.evaluateMeasure` and `measures.values` report `documentRevision` captured with the matching model and engine snapshot; DAX result formatting uses that captured model.
 - Renaming a column now also renames the default label of aggregated report fields (`Sum of Amount` → `Sum of Revenue`), so LINT003 no longer reports it after a rename.
@@ -21,6 +22,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - Opening and saving a PBIP project fingerprints its files faster: the size and file-count caps are checked before any file is read, and the files are read on up to 8 threads (Acme Outfitters: 8.8 → 5.8 ms per scan).
 
 ### Added
+- Report-page tooltips (M9.3): `canvas.tooltipPage` renders the tooltip page of a hovered data point (the visual's `visualTooltip` page, or the first tooltip page whose fields the point has) at the page's size, filtered by the point, the source page's filters, slicers and cross-filter and the source visual's own filters; the app shows it in the hover card. Acme's Store Performance stacked chart uses the Store Tooltip page (`expected.json` `tooltipPages`); perf scenario P13 `tooltip-page-render`.
 - Drillthrough (M9.4): `canvas.drillthroughTargets` lists the drillthrough pages of a data point and `canvas.drillthrough` filters one on the point's (or the selection's) values, keeping the source's filters when "Keep all filters" is on; drillthrough buttons and right-click **Drill through** on a data point work in the app. The Acme Outfitters Store Detail page is a drillthrough page on Region (Store Performance's table gains a Region column and Store Detail a Back button), with expected values for drilling from a West store.
 - Synced slicers (M9.6): selecting or clearing in a slicer, or Clear all slicers, copies its selection to every slicer of its sync group (`syncGroup`) over the same fields on any page, hidden ones included, so they filter their pages as in Power BI.
 - Bar and column charts highlight instead of filtering (M9.1): a point selected in another visual dims their bars and draws the selected part solid, as Power BI does by default and for "Highlight" interactions, unless the report's "selections filter other visuals" setting is on; the DataView's `highlights` carry the values. Combo charts highlight their columns, pies and donuts draw the highlighted share as a shorter slice, funnels as a narrower bar and treemaps as the bottom part of the tile.
@@ -127,6 +129,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 - Installers for **Windows arm64** (NSIS) and **Linux arm64** (AppImage, deb, rpm), **rpm** packages for Linux x64, and `dashcraft` CLI archives for both arm64 targets. The Release workflow can be started by hand: it releases the version in `Cargo.toml` or an override such as `0.3.0-rc.1` (a pre-release), creates the tag and the draft release, or does a dry run; `scripts/set-version.sh` sets the version in every manifest ([docs/packaging.md](docs/packaging.md#release-workflow)).
 
 ### Changed
+- A selection of one data point over columns of different tables (Store × Category) now filters each column by its value instead of the rows of a common fact table, which also narrowed every other dimension of that table (such as Date) and so changed measures over other facts.
 - CI: content-addressed Rust compiler caching, faster Windows test linking, concurrent test-binary execution with doctests retained, and conservative frontend-only job selection; all three-platform Rust/app checks remain for relevant changes.
 - **DashCraft everywhere** ([ADR-0010](docs/adr/0010-dashcraft-everywhere.md)): the `pbiview` alias binary and the `PBIVIEW_*` environment variables are removed (use `dashcraft` and `DASHCRAFT_*`); the CLI and app crates are `dashcraft-cli` and `dashcraft-app`; developer and test variables are `DASHCRAFT_REFERENCE`, `DASHCRAFT_BLESS` and `DASHCRAFT_TEST_RECORD`; exported Parquet metadata keys and model annotations are `dashcraft.*`.
 - Report rendering caches each visual by a content hash (theme, frame, definition, data, selections, view state); scroll, selection and search re-render only the affected visuals. 50k-row table scroll step p95 25.6 ms → 0.75 ms; small-table scroll steps 86 ms → under 1 ms.
@@ -189,6 +192,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 Renders report pages offline, headlessly (`pbiview render`) and interactively in a Power BI Desktop-style app, from the data and engines of Phase 1. Also adds the remaining formats of [FORMATS.md](FORMATS.md) §5, PBIP local-cache data, a larger DAX library and session-derived columns.
 
 ### Added
+- Report-page tooltips (M9.3): `canvas.tooltipPage` renders the tooltip page of a hovered data point (the visual's `visualTooltip` page, or the first tooltip page whose fields the point has) at the page's size, filtered by the point, the source page's filters, slicers and cross-filter and the source visual's own filters; the app shows it in the hover card. Acme's Store Performance stacked chart uses the Store Tooltip page (`expected.json` `tooltipPages`); perf scenario P13 `tooltip-page-render`.
 
 #### Report renderer (`pbi-render`)
 - **Theme resolution**: built-in fallback, base and custom themes deep-merged; `ThemeDataColor{ColorId, Percent}`; `visualStyles` precedence (visual `objects` → theme per type and preset → `"*"` → built-in defaults); primary and derived text classes.
@@ -238,6 +242,7 @@ Renders report pages offline, headlessly (`pbiview render`) and interactively in
 - Docs: rewritten README with format and visual matrices, [docs/CLI.md](docs/CLI.md), [docs/USER-GUIDE.md](docs/USER-GUIDE.md), [docs/VISUALS.md](docs/VISUALS.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), final [FORMATS.md](FORMATS.md), [ADR-0006](docs/adr/0006-interaction-state.md).
 
 ### Changed
+- A selection of one data point over columns of different tables (Store × Category) now filters each column by its value instead of the rows of a common fact table, which also narrowed every other dimension of that table (such as Date) and so changed measures over other facts.
 - The app's "Parse people field" uses the `pbi-session` derived-column API: the column is now visible to measures, DAX queries, SQL filters and exports, not only the grid.
 - The app's former KPI strip is the **Measures** panel under the canvas, and the former Queries tab is Home → Transform data.
 - ADR-0005's interaction design is superseded by [ADR-0006](docs/adr/0006-interaction-state.md): selections are view state kept per page, not document commands.

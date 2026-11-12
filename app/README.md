@@ -757,8 +757,8 @@ on Windows 10 and 11.
   relative-date slicers draw but their sliders / date pickers are not interactive (tiles select
   like list items); no visual header menus (focus mode, show as table, sort, export), drill-down
   / drill-up or filter card editing; the right-click menu offers Drill through only; cross-filters
-  from matrices use the row path only; tooltips are the default ones (report-page tooltips are
-  not rendered); interaction state lasts until the document closes. Performance analyzer, Sync
+  from matrices use the row path only; report-page tooltips show for chart data points only;
+  interaction state lasts until the document closes. Performance analyzer, Sync
   slicers, Mobile layout and the Analytics pane are shown disabled.
 - The native window keeps the OS title bar; the in-app title bar row sits under it.
 - Single-instance forwarding is not wired: opening a file from Windows Explorer or a Linux file

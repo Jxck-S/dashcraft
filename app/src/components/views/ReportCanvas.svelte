@@ -3,7 +3,7 @@
   import Icon from '../Icon.svelte'
   import Menu from '../shell/Menu.svelte'
   import * as backend from '../../lib/backend'
-  import type { CanvasAction, FilterSpec, PageDto, RenderedPage, ReportDto, TooltipLine, VisualDto } from '../../lib/backend'
+  import type { CanvasAction, FilterSpec, PageDto, RenderedPage, ReportDto, TooltipLine, TooltipPage, VisualDto } from '../../lib/backend'
   import type { CanvasInteractionOut } from '../../lib/ops'
   import { contains, parseHit, sanitizeSvg, scrollableAt, wheelPixels, type Hit } from '../../lib/canvas'
   import { drillthroughMenu } from '../../lib/drillthrough'
@@ -365,13 +365,19 @@
     text: string | null
     code: string | null
     warn: boolean
+    /** A report-page tooltip shown instead of the lines. */
+    page?: TooltipPage | null
   }
 
   let tip = $state<Tip | null>(null)
+  let tipPageHost = $state<HTMLDivElement | null>(null)
   let hoverId: string | null = null
   let hoverVisual = $state<string | null>(null)
   let tipTimer: ReturnType<typeof setTimeout> | undefined
   const tipCache = new Map<string, TooltipLine[]>()
+  /** Report-page tooltips by hit (`null`: the visual has none), for the current render. */
+  const tipPageCache = new Map<string, TooltipPage | null>()
+  let tipCacheGeneration = -1
 
   /** Visual-level tooltip text: the query error with its DAX, or a button's tooltip. */
   function visualTip(hit: Hit): Omit<Tip, 'x' | 'y'> | null {
@@ -397,6 +403,21 @@
     const { generation } = rendered
     const { id: reportId } = report
     const { id: pageId } = page
+    if (tipCacheGeneration !== generation) {
+      tipCacheGeneration = generation
+      tipPageCache.clear()
+    }
+    let tipPage = tipPageCache.get(hit.id)
+    if (tipPage === undefined) {
+      const result = await backend.tooltipPage(reportId, pageId, hit.id)
+      if (hoverId !== hit.id || rendered?.generation !== generation) return
+      tipPage = result.ok ? result.value : null
+      tipPageCache.set(hit.id, tipPage)
+    }
+    if (tipPage) {
+      tip = { lines: [], text: null, code: null, warn: false, page: tipPage, x, y }
+      return
+    }
     let lines = tipCache.get(hit.id)
     if (!lines) {
       const result = await backend.visualTooltip(reportId, pageId, hit.id)
@@ -432,8 +453,23 @@
     tip = null
   }
 
-  const tipLeft = $derived(tip ? (tip.x + 300 > window.innerWidth ? Math.max(4, tip.x - 300) : tip.x + 14) : 0)
-  const tipTop = $derived(tip ? (tip.y + 160 > window.innerHeight ? Math.max(4, tip.y - 140) : tip.y + 16) : 0)
+  const tipWidth = $derived(tip?.page ? tip.page.width + 2 : 300)
+  const tipHeight = $derived(tip?.page ? tip.page.height + 2 : 160)
+  const tipLeft = $derived(tip ? (tip.x + tipWidth > window.innerWidth ? Math.max(4, tip.x - tipWidth) : tip.x + 14) : 0)
+  const tipTop = $derived(tip ? (tip.y + tipHeight > window.innerHeight ? Math.max(4, tip.y - tipHeight) : tip.y + 16) : 0)
+
+  $effect(() => {
+    const p = tip?.page
+    if (!tipPageHost || !p) return
+    const el = sanitizeSvg(p.svg, `pbi${++svgSeq}-`)
+    if (el) {
+      el.setAttribute('width', '100%')
+      el.setAttribute('height', '100%')
+      el.setAttribute('aria-label', `Tooltip: ${p.displayName}`)
+      el.setAttribute('role', 'img')
+    }
+    tipPageHost.replaceChildren(...(el ? [el] : []))
+  })
 
   // ---------------------------------------------------------------------------------------------
   // Slicer search box and "Clear selections"
@@ -653,7 +689,10 @@
 </div>
 
 {#if tip}
-  <div class="tooltip" class:warn={tip.warn} role="tooltip" style:left={`${tipLeft}px`} style:top={`${tipTop}px`}>
+  <div class="tooltip" class:warn={tip.warn} class:page-tip={!!tip.page} role="tooltip" style:left={`${tipLeft}px`} style:top={`${tipTop}px`}>
+    {#if tip.page}
+      <div class="tip-page" bind:this={tipPageHost} style:width={`${tip.page.width}px`} style:height={`${tip.page.height}px`}></div>
+    {/if}
     {#if tip.text}
       <p class="tip-text">{#if tip.warn}<Icon name="warning" size={14} />{/if}{tip.text}</p>
     {/if}
@@ -883,6 +922,16 @@
 
   .tooltip.warn {
     max-width: 420px;
+  }
+
+  /* A report-page tooltip: the page at its own size. */
+  .tooltip.page-tip {
+    max-width: none;
+    padding: 0;
+  }
+
+  .tip-page :global(svg) {
+    display: block;
   }
 
   .tip-line {

@@ -539,6 +539,15 @@ export interface CanvasStateOut {
   isDefault: boolean
 }
 
+/** Result of `canvas.tooltipPage`. */
+export interface CanvasTooltipPageOut {
+  /**
+   * The rendered report-page tooltip; absent when the visual shows none
+   * for this hit.
+   */
+  tooltip?: TooltipPageOut | null
+}
+
 /** One visual of a rendered page. */
 export interface CanvasVisualOut {
   /** Internal name, the `visual` part of hit ids. */
@@ -4761,6 +4770,23 @@ export interface TooltipOut {
   lines: TooltipLineOut[]
 }
 
+/** A report-page tooltip rendered for a hovered data point. */
+export interface TooltipPageOut {
+  /** Internal name of the tooltip page. */
+  page: string
+  displayName: string
+  /** Page size (page units). */
+  width: number
+  height: number
+  /** The rendered page. */
+  svg: string
+  /** Parts of the hovered point's filter context not applied. */
+  notApplied?: string[]
+  /** Visuals of the tooltip page that failed, as `visual: message`. */
+  errors?: string[]
+  durationMs: number
+}
+
 /** A filter that could not be applied. */
 export interface UnsupportedFilterOut {
   name: string
@@ -5208,6 +5234,8 @@ export interface OpsCommands {
   'canvas.applyBookmark': { params: CanvasBookmarkParams; output: CanvasBookmarkOut }
   /** The hover tooltip (category, series, values) of a data point hit, from the last render. */
   'canvas.tooltip': { params: CanvasHitParams; output: TooltipOut }
+  /** Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. */
+  'canvas.tooltipPage': { params: CanvasHitParams; output: CanvasTooltipPageOut }
   /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
   'canvas.drillthroughTargets': { params: CanvasHitParams; output: DrillthroughTargetsOut }
   /** Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. */
@@ -5343,6 +5371,7 @@ export const OPS_META = {
   'canvas.reset': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.applyBookmark': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.tooltip': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
+  'canvas.tooltipPage': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.drillthroughTargets': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
   'canvas.drillthrough': { category: 'canvas', mutatesDocument: true, longRunning: true, agentSafe: true, writesFiles: false },
   'canvas.state': { category: 'canvas', mutatesDocument: false, longRunning: false, agentSafe: true, writesFiles: false },
@@ -5554,6 +5583,8 @@ export function makeOps<O = undefined>(run: OpsRunner<O>) {
     canvasApplyBookmark: (params: CanvasBookmarkParams, options?: O) => run('canvas.applyBookmark', params, options),
     /** The hover tooltip (category, series, values) of a data point hit, from the last render. */
     canvasTooltip: (params: CanvasHitParams, options?: O) => run('canvas.tooltip', params, options),
+    /** Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers. */
+    canvasTooltipPage: (params: CanvasHitParams, options?: O) => run('canvas.tooltipPage', params, options),
     /** The drillthrough pages a data point hit can drill through to (the "Drill through" menu). */
     canvasDrillthroughTargets: (params: CanvasHitParams, options?: O) => run('canvas.drillthroughTargets', params, options),
     /** Drills through from a data point (or the page's selection) to a drillthrough page: filters it on the point's values, keeps the source's filters when "Keep all filters" is on, and renders it. */

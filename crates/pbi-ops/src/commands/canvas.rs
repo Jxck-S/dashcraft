@@ -10,7 +10,7 @@ use serde_json::Value;
 use super::{BASE, loaded_doc};
 use crate::canvas::{
     self, CanvasAction, CanvasPageOut, Changed, DrillthroughTargetOut, MAX_SEARCH_CHARS, Modifiers,
-    Target, TooltipLineOut,
+    Target, TooltipLineOut, TooltipPageOut,
 };
 use crate::command::{Category, Command, CommandMeta};
 use crate::ctx::Ctx;
@@ -674,6 +674,48 @@ impl Command for CanvasTooltip {
         let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
         Ok(TooltipOut {
             lines: canvas::tooltip(&t, &p.hit_id)?,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+/// `canvas.tooltipPage`.
+#[derive(Debug)]
+pub struct CanvasTooltipPage;
+
+/// Result of `canvas.tooltipPage`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CanvasTooltipPageOut {
+    /// The rendered report-page tooltip; absent when the visual shows none
+    /// for this hit.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tooltip: Option<TooltipPageOut>,
+}
+
+impl Command for CanvasTooltipPage {
+    type Params = CanvasHitParams;
+    type Output = CanvasTooltipPageOut;
+
+    fn meta() -> CommandMeta {
+        CommandMeta {
+            id: "canvas.tooltipPage",
+            title: "Report-page tooltip",
+            summary: "Renders the report-page tooltip of a data point hit, filtered by the point and the page's filters and slicers.",
+            mutates_document: false,
+            examples: &[(
+                "Hover a column",
+                r#"{"docId": "d1", "report": "Stores", "page": "Store Performance", "hitId": "1f2e3d|dataPoint|0|2"}"#,
+            )],
+            ..CANVAS
+        }
+    }
+
+    async fn run(ws: &Workspace, p: Self::Params, ctx: &Ctx) -> Result<Self::Output, OpError> {
+        let t = target(ws, &p.doc_id, p.report.as_deref(), p.page.as_deref(), ctx).await?;
+        Ok(CanvasTooltipPageOut {
+            tooltip: canvas::tooltip_page(&t, &p.hit_id).await?,
         })
     }
 }
