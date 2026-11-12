@@ -286,7 +286,9 @@ results and DTOs. Locations below refer to the Desktop shell above.
     notification bar offers *Reload* (`doc.reload`; asks first when unsaved edits would be
     discarded), *Keep mine* (hides the bar until other files change; Save still asks before
     overwriting) and *Compare*: the objects that differ between the document and the files on
-    disk (`doc.diff`), each property's value on both sides and the file and line of each.
+    disk (`doc.diff`), each property's value on both sides, the file and line of each, and the
+    object's text (TMDL for model objects, JSON for report objects) with the lines that differ
+    marked - for lines on disk only, + for lines here only.
   - Checks: `cargo test -p dashcraft-app` (`edits_save_and_close_through_the_registry`),
     `npm run check` (`tests/editing.test.ts`, `tests/daxEditor.test.ts`), and on Windows the UI
     smoke, IntelliSense (`formula-intellisense.mjs`), editor keys (`formula-keys.mjs`), Auto

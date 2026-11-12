@@ -463,6 +463,21 @@ async fn diff_compares_the_revision_with_disk_and_other_documents() {
         json!([{"name": "description", "after": "Unsaved"}])
     );
     assert_eq!(object["after"]["path"], SALES_TMDL, "{object}");
+    let snippet = &object["snippet"];
+    assert_eq!(snippet["language"], "tmdl", "{object}");
+    assert!(
+        snippet["before"]
+            .as_str()
+            .unwrap()
+            .starts_with("measure Total = SUM(Sales[Amount])")
+    );
+    assert!(
+        snippet["after"]
+            .as_str()
+            .unwrap()
+            .starts_with("/// Unsaved\nmeasure Total = SUM(Sales[Amount])"),
+        "{object}"
+    );
 
     // An external change shows up too, as the other side of the property.
     let sales = dir.path().join(SALES_TMDL);

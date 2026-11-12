@@ -2,6 +2,7 @@
   import Modal from './Modal.svelte'
   import type { DocumentDiff, FileChange, ObjectDiff } from '../lib/backend'
   import { plural } from '../lib/format'
+  import { diffLines } from '../lib/lineDiff'
 
   // Compare (M8.2, M8.3): the project files another program changed on disk and the document
   // compared object by object with them (`doc.diff`: "before" is the disk, "after" this window,
@@ -107,6 +108,14 @@
                     {#if o.before && o.after}; {/if}
                     {#if o.after}Here: <code>{origin(o.after)}</code>{/if}
                   </p>
+                {/if}
+                {#if o.snippet}
+                  {@const lines = diffLines(o.snippet.before ?? '', o.snippet.after ?? '')}
+                  <div class="snippet" role="textbox" aria-readonly="true" aria-multiline="true" aria-label={`${o.snippet.language === 'tmdl' ? 'TMDL' : 'JSON'} of ${o.path}: lines with a minus are on disk only, with a plus here only`} tabindex="0">
+                    {#each lines as l, k (k)}
+                      <div class="line {l.kind}"><span class="mark">{l.kind === 'removed' ? '-' : l.kind === 'added' ? '+' : ' '}</span>{l.text}</div>
+                    {/each}
+                  </div>
                 {/if}
                 {#if o.properties.length > 0}
                   <table>
@@ -237,5 +246,36 @@
 
   .error {
     color: var(--color-danger);
+  }
+
+  .snippet {
+    max-height: 240px;
+    margin-top: 6px;
+    padding: 4px 0;
+    overflow: auto;
+    border: 1px solid var(--color-border);
+    background: var(--color-code-bg);
+    font-family: var(--font-mono, Consolas, 'Courier New', monospace);
+    font-size: 12px;
+    tab-size: 4;
+  }
+
+  .line {
+    padding: 0 6px;
+    white-space: pre;
+  }
+
+  .mark {
+    display: inline-block;
+    width: 1.5ch;
+    color: var(--color-text-muted);
+  }
+
+  .line.removed {
+    background: var(--color-danger-bg);
+  }
+
+  .line.added {
+    background: var(--color-brand-soft);
   }
 </style>

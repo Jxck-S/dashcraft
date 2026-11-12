@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use pbi_core::{DiffChange, DiffKind, OpenOptions, diff_documents, open_path};
+use pbi_core::{DiffChange, DiffKind, OpenOptions, SnippetLanguage, diff_documents, open_path};
 use pbi_model::Document;
 use pretty_assertions::assert_eq;
 
@@ -187,4 +187,62 @@ fn diff_of_acme_variants_lists_exactly_the_scripted_changes() {
     let names: Vec<_> = page.properties.iter().map(|p| p.name.as_str()).collect();
     assert_eq!(names, ["displayName"]);
     assert_eq!(diff.count(DiffChange::Changed), 4);
+
+    // Snippets: TMDL for model objects, written the same way on both sides
+    // so only the edit differs; JSON for report objects.
+    let snippet = |path: &str| {
+        diff.objects
+            .iter()
+            .find(|o| o.path == path)
+            .and_then(|o| o.snippet.clone())
+            .unwrap_or_else(|| panic!("no snippet for {path}"))
+    };
+    let count = snippet("Orders[Order Count]");
+    assert_eq!(count.language, SnippetLanguage::Tmdl);
+    let (b, a) = (count.before.unwrap(), count.after.unwrap());
+    assert!(
+        b.starts_with("measure 'Order Count' = COUNTROWS(Orders)\n"),
+        "{b}"
+    );
+    assert!(
+        a.starts_with("measure 'Order Count' = COUNTROWS(Orders) + 0\n"),
+        "{a}"
+    );
+    assert_eq!(
+        b.lines().skip(1).collect::<Vec<_>>(),
+        a.lines().skip(1).collect::<Vec<_>>()
+    );
+    assert!(b.lines().skip(1).all(|l| l.starts_with('\t')), "{b}");
+    let probe = snippet("Orders[Diff Probe]");
+    assert_eq!(probe.before, None);
+    assert!(probe.after.unwrap().starts_with("measure 'Diff Probe' = 1"));
+    let table = snippet("Time Calc");
+    let (b, a) = (table.before.unwrap(), table.after.unwrap());
+    assert!(
+        b.contains("\ntable 'Time Calc'\n") && b.contains("precedence: 10"),
+        "{b}"
+    );
+    assert!(a.contains("precedence: 20"), "{a}");
+    for text in [&b, &a] {
+        assert!(
+            !text.contains("calculationItem") && !text.contains("column "),
+            "{text}"
+        );
+    }
+    let item = snippet("Time Calc[Current]").after.unwrap();
+    assert_eq!(
+        item,
+        "/// The measure as is.\ncalculationItem Current = SELECTEDMEASURE() + 0\n\tordinal: 0"
+    );
+    let page = snippet(&format!("{}/Renamed Page", report.name));
+    assert_eq!(page.language, SnippetLanguage::Json);
+    let a = page.after.unwrap();
+    assert!(a.contains("\"displayName\": \"Renamed Page\""), "{a}");
+    assert!(!a.contains("\"visuals\""), "{a}");
+    let visual = snippet(&format!(
+        "{}/{}/{REMOVED_VISUAL}",
+        report.name, edited_page.display_name
+    ));
+    assert_eq!(visual.after, None);
+    assert!(visual.before.unwrap().contains(REMOVED_VISUAL));
 }

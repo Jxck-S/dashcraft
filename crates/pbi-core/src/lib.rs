@@ -66,7 +66,10 @@ pub mod redact;
 pub mod save;
 pub mod save_in_place;
 
-pub use diff::{DiffChange, DiffKind, DocumentDiff, ObjectDiff, PropertyDiff, diff_documents};
+pub use diff::{
+    DiffChange, DiffKind, DocumentDiff, MAX_SNIPPET_LINES, ObjectDiff, PropertyDiff, Snippet,
+    SnippetLanguage, diff_documents,
+};
 pub use error::CoreError;
 pub use lint::{Finding, LintOptions, LintReport, LintSummary, lint, lint_document};
 /// The TMDL language service (keyword catalog, diagnostics).

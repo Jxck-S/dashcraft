@@ -764,6 +764,34 @@ pub struct ObjectDiffOut {
     /// Where the object is in the document's source files.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub after: Option<OriginOut>,
+    /// The object as text on each side: TMDL for model objects (as DashCraft
+    /// writes them, so only content differs), JSON properties for report
+    /// objects; a changed table, report or page leaves out its children
+    /// listed on their own. Each side is cut after 200 lines.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub snippet: Option<SnippetOut>,
+}
+
+/// The language of a snippet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum SnippetLanguageOut {
+    Tmdl,
+    Json,
+}
+
+/// An object's text on each side of a diff; a side is absent where the
+/// object is.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SnippetOut {
+    pub language: SnippetLanguageOut,
+    /// The text in what the document is compared with.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before: Option<String>,
+    /// The text in the document.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<String>,
 }
 
 /// What a document was compared with.
@@ -910,6 +938,14 @@ impl Command for DocDiff {
                         .collect(),
                     before: o.before.map(origin_out),
                     after: o.after.map(origin_out),
+                    snippet: o.snippet.map(|s| SnippetOut {
+                        language: match s.language {
+                            pbi_core::SnippetLanguage::Tmdl => SnippetLanguageOut::Tmdl,
+                            pbi_core::SnippetLanguage::Json => SnippetLanguageOut::Json,
+                        },
+                        before: s.before,
+                        after: s.after,
+                    }),
                 })
                 .collect(),
         })
