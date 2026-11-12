@@ -33,15 +33,19 @@
 //!   showing "All"), so the persisted selection is empty.
 //! - Slicer *visual-level* filters (`filterConfig`) only restrict the
 //!   slicer's own value list; they are not its selection.
-//! - Not read yet: `syncGroup` (selections synced across pages; pass the
-//!   same selection under each page's slicer name instead) and the
-//!   `selfFilter` of the newer slicer visuals.
+//! - `syncGroup` (`{groupName, fieldChanges, filterChanges}`; in a PBIX
+//!   layout under `singleVisual`) links slicers across pages: a selection
+//!   made in one is copied to the others ([`synced_slicers`]). Saved files
+//!   already carry the same filter on every synced slicer.
+//! - Not read yet: the `selfFilter` of the newer slicer visuals.
 
 use std::borrow::Cow;
 
 use indexmap::IndexMap;
 use pbi_engine::Value;
-use pbi_model::{Condition, FieldExpr, Filter, LiteralValue, Page, SortItem, Visual};
+use pbi_model::{
+    Condition, FieldExpr, Filter, LiteralValue, Page, PropValue, Report, SortItem, Visual,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::dataview::value_serde;
@@ -407,6 +411,59 @@ pub fn slicer_fields(visual: &Visual) -> Vec<FieldExpr> {
         .collect()
 }
 
+/// The sync group whose selection the slicer shares: `syncGroup.groupName`
+/// unless `filterChanges` is `false`.
+pub fn sync_group(visual: &Visual) -> Option<&str> {
+    if !is_slicer_type(&visual.visual_type) {
+        return None;
+    }
+    let group = ["syncGroup", "singleVisual.syncGroup"]
+        .iter()
+        .find_map(|k| match visual.extra.get(*k) {
+            Some(PropValue::Json(v)) => Some(v),
+            _ => None,
+        })?;
+    if group
+        .get("filterChanges")
+        .and_then(serde_json::Value::as_bool)
+        == Some(false)
+    {
+        return None;
+    }
+    group
+        .get("groupName")
+        .and_then(serde_json::Value::as_str)
+        .filter(|n| !n.is_empty())
+}
+
+/// The slicers whose selection follows slicer `visual` of page `page` (by
+/// index): `(page index, visual name)` of every other slicer of the report
+/// in the same [`sync_group`] over the same fields, on any page.
+pub fn synced_slicers(report: &Report, page: usize, visual: &str) -> Vec<(usize, String)> {
+    let Some(source) = report.pages.get(page).and_then(|p| p.visual(visual)) else {
+        return Vec::new();
+    };
+    let Some(group) = sync_group(source) else {
+        return Vec::new();
+    };
+    let fields = slicer_fields(source);
+    let mut out = Vec::new();
+    for (i, p) in report.pages.iter().enumerate() {
+        for v in &p.visuals {
+            if (i == page && v.name == visual) || sync_group(v) != Some(group) {
+                continue;
+            }
+            let other = slicer_fields(v);
+            if other.len() == fields.len()
+                && other.iter().zip(&fields).all(|(a, b)| same_field(a, b))
+            {
+                out.push((i, v.name.clone()));
+            }
+        }
+    }
+    out
+}
+
 fn same_field(a: &FieldExpr, b: &FieldExpr) -> bool {
     match (a.entity(), a.property(), b.entity(), b.property()) {
         (Some(t1), Some(c1), Some(t2), Some(c2)) => {
@@ -453,6 +510,46 @@ mod tests {
             "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "p"}}, "Property": "Category"}}],
             "Values": values.iter().map(|v| json!([{"Literal": {"Value": format!("'{v}'")}}])).collect::<Vec<_>>()
         }})
+    }
+
+    #[test]
+    fn synced_slicers_share_a_group_and_fields() {
+        let synced = |name: &str, key: &str, group: serde_json::Value| {
+            let mut v = slicer(serde_json::Value::Null);
+            v.name = name.into();
+            v.extra.insert(key.into(), PropValue::Json(group));
+            v
+        };
+        let group = json!({"groupName": "G", "fieldChanges": true, "filterChanges": true});
+        let mut other_field = synced("other", "syncGroup", group.clone());
+        other_field.projections[0].field = FieldExpr::column("Products", "Name");
+        let page = |name: &str, visuals: Vec<Visual>| Page {
+            name: name.into(),
+            visuals,
+            ..Page::default()
+        };
+        let report = Report {
+            pages: vec![
+                page("p1", vec![synced("a", "syncGroup", group.clone())]),
+                page(
+                    "p2",
+                    vec![
+                        synced("b", "singleVisual.syncGroup", group.clone()),
+                        synced(
+                            "off",
+                            "syncGroup",
+                            json!({"groupName": "G", "filterChanges": false}),
+                        ),
+                        synced("elsewhere", "syncGroup", json!({"groupName": "H"})),
+                        other_field,
+                    ],
+                ),
+            ],
+            ..Report::default()
+        };
+        assert_eq!(synced_slicers(&report, 0, "a"), vec![(1, "b".to_owned())]);
+        assert_eq!(synced_slicers(&report, 1, "b"), vec![(0, "a".to_owned())]);
+        assert!(synced_slicers(&report, 1, "off").is_empty());
     }
 
     #[test]

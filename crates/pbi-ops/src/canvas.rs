@@ -46,7 +46,7 @@ use pbi_render::dataview::{
 use pbi_render::layout::{FrameOptions, auto_title};
 use pbi_render::query::{
     InteractionState, PointField, PointSelection, QueryEnv, QueryLimits, SlicerSelection,
-    is_slicer_type, slicer_fields,
+    is_slicer_type, slicer_fields, synced_slicers,
 };
 use pbi_render::scene::{HitId, HitKind, HitRegion, Rect};
 use pbi_render::svg::{SvgOptions, to_svg};
@@ -746,6 +746,39 @@ impl Target {
             .canvas
             .update(self.key(), &page, &revision.model, |e| f(e, &report, &page)))
     }
+
+    /// Copies the selection of slicer `visual` of this page to the slicers
+    /// synced with it, on any page ([`synced_slicers`]); `true` if this
+    /// page's state changed.
+    fn sync_slicer(&self, visual: &str) -> Result<bool, OpError> {
+        let revision = self.entry.session().revision_snapshot();
+        let report = resolve::report_in(&revision.document, self.report)?;
+        let targets = synced_slicers(&report, self.page, visual);
+        let Some(page) = report.pages.get(self.page).filter(|_| !targets.is_empty()) else {
+            return Ok(false);
+        };
+        let store = &self.entry.canvas;
+        let model = &revision.model;
+        let selection = store.update(self.key(), page, model, |e| {
+            e.state.slicer_selections.get(visual).cloned()
+        });
+        let mut changed = false;
+        for (i, name) in targets {
+            let Some(p) = report.pages.get(i) else {
+                continue;
+            };
+            let c = store.update((self.report, i), p, model, |e| {
+                let mut state = e.state.clone();
+                match &selection {
+                    Some(s) => state.select(name, s.clone()),
+                    None => state.clear_slicer(&name),
+                };
+                e.set_state(state)
+            });
+            changed |= c && i == self.page;
+        }
+        Ok(changed)
+    }
 }
 
 fn locate(document: &Document, report: usize, page: usize) -> Result<(Report, Page), OpError> {
@@ -1036,10 +1069,26 @@ pub async fn click(
     ensure_rendered(target).await?;
     let theme = target.theme();
     let active = target.entry.canvas.active_bookmark(target.report);
-    let (mut changed, mut action) = target.update(|entry, report, page| {
+    let (mut changed, mut action, cleared) = target.update(|entry, report, page| {
         let nav = Navigation::new(report, page, active.as_deref());
-        apply_click(entry, report, page, &theme, &nav, hit.as_ref(), mods)
+        let before: Vec<String> = entry.state.slicer_selections.keys().cloned().collect();
+        let (changed, action) = apply_click(entry, report, page, &theme, &nav, hit.as_ref(), mods)?;
+        let cleared: Vec<String> = before
+            .into_iter()
+            .filter(|s| !entry.state.slicer_selections.contains_key(s))
+            .collect();
+        Ok::<_, OpError>((changed, action, cleared))
     })??;
+    let clicked = match &hit {
+        Some(HitId {
+            visual,
+            kind: HitKind::SlicerItem { .. },
+        }) => Some(visual),
+        _ => None,
+    };
+    for slicer in clicked.into_iter().chain(cleared.iter()) {
+        changed |= target.sync_slicer(slicer)?;
+    }
     if let Some(CanvasAction::Bookmark { name, .. }) = &action {
         action = Some(match apply_bookmark(&target.entry, target.report, name) {
             Ok(applied) => {
@@ -1211,6 +1260,9 @@ pub async fn clear_selections(
         entry.set_state(state);
         Ok::<(), OpError>(())
     })??;
+    if let Some(v) = visual {
+        target.sync_slicer(v)?;
+    }
     render(target).await
 }
 
@@ -1226,7 +1278,7 @@ pub async fn set_slicer(
     values: Vec<serde_json::Value>,
     invert: bool,
 ) -> Result<CanvasPageOut, OpError> {
-    target.update(|entry, _, page| {
+    let name = target.update(|entry, _, page| {
         let slicer = resolve::slicer(page, visual, field)?;
         let mut state = entry.state.clone();
         if values.is_empty() && !invert {
@@ -1235,8 +1287,9 @@ pub async fn set_slicer(
             state.select(slicer.name.clone(), selection_of(values, invert)?);
         }
         entry.set_state(state);
-        Ok::<(), OpError>(())
+        Ok::<String, OpError>(slicer.name.clone())
     })??;
+    target.sync_slicer(&name)?;
     render(target).await
 }
 
