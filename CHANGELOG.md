@@ -4,6 +4,9 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 
 ## [Unreleased]
 
+### Added
+- Linter rule `LINT019` (`CIRCULAR_SORT_BY`): flags self-referencing (`col.sortByColumn == col.name`) and circular `sortByColumn` chains (`A → B → A`) on model columns with Power BI Desktop-aligned error diagnostics (M10.11).
+
 ## [0.3.0] — 2026-11-12 — Editing, language services and reading-view parity
 
 Turns the viewer into the first editable, automatable DashCraft: a typed command registry behind the CLI, a JSON-RPC server, an MCP server for AI agents and the app; revisioned, undoable editing with Power BI Desktop-compatible PBIP saves (M6); DAX, M and TMDL language services, a formula bar with IntelliSense and `dashcraft lsp` (M7); crash recovery, external-change detection and a semantic diff (M8); and reading-view parity: highlighting, drill, drillthrough, report-page tooltips, bookmarks, synced and range slicers, visual menus and query reduction (M9). Also: the opt-in AI layer, more visuals, calculation groups, row-level security "View as", 299 DAX functions, Power BI Desktop ground-truth testing, arm64 installers, the DashCraft name and the MIT OR Apache-2.0 licence.
