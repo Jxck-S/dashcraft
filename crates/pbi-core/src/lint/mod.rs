@@ -82,6 +82,8 @@ pub mod rules {
     /// A measure has both a static `formatString` and a dynamic
     /// `formatStringDefinition` (Power BI Desktop refuses to load it).
     pub const MEASURE_FORMAT: &str = "LINT018";
+    /// A column has a circular or self-referencing `sortByColumn` dependency.
+    pub const CIRCULAR_SORT_BY: &str = "LINT019";
 }
 
 /// A lint rule: stable id, default severity and a one-line title.
@@ -185,6 +187,11 @@ pub const RULES: &[Rule] = &[
         id: rules::MEASURE_FORMAT,
         severity: Severity::Error,
         title: "measure has both formatString and formatStringDefinition",
+    },
+    Rule {
+        id: rules::CIRCULAR_SORT_BY,
+        severity: Severity::Error,
+        title: "circular or self-referencing sortByColumn dependency",
     },
 ];
 
@@ -784,6 +791,6 @@ mod tests {
             None
         );
         assert!(rule("lint001").is_some());
-        assert_eq!(RULES.len(), 18);
+        assert_eq!(RULES.len(), 19);
     }
 }
