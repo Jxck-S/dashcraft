@@ -5,6 +5,20 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-13
+
+### M10.11 linter rule LINT019: circular and self-referencing sortByColumn dependencies
+
+- **What**: `pbi-core` linter rule `LINT019` (`CIRCULAR_SORT_BY`) flags columns where `sortByColumn`
+  references the column itself or forms a multi-hop circular dependency chain (`A → B → A`),
+  reporting origin, cycle path, and actionable suggestion.
+- **Why**: DESKTOP-PLAN M10.11 sort-by violations. Power BI Desktop rejects models with circular
+  sort-by dependencies during processing; DashCraft previously only verified target existence
+  (`LINT017`), allowing circular chains to pass unflagged and requiring ad-hoc guards in
+  downstream query execution.
+- **Numbers**: 1 new lint rule (18 → 19); 3 new unit tests covering self-sort, 2-hop cycles, and
+  acyclic sort chains; 0 new dependencies.
+
 ## 2026-11-12
 
 ### Release v0.3.0

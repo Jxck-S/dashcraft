@@ -67,7 +67,7 @@ intended, change `xtask/src/layers.rs` and the graph in `docs/ARCHITECTURE.md` t
 
 | Path | What |
 |---|---|
-| `crates/<crate>/` | Library crates above; `crates/pbi-dax/FUNCTIONS.md` (DAX coverage, checked by tests), `crates/pbi-core/src/lint/RULES.md` (18 lint rules), `crates/pbi-vertipaq/FORMAT-NOTES.md` and `REFERENCES.md` |
+| `crates/<crate>/` | Library crates above; `crates/pbi-dax/FUNCTIONS.md` (DAX coverage, checked by tests), `crates/pbi-core/src/lint/RULES.md` (19 lint rules), `crates/pbi-vertipaq/FORMAT-NOTES.md` and `REFERENCES.md` |
 | `app/` | Tauri 2 + Svelte 5 + TypeScript front end; [app/README.md](app/README.md), [app/docs/desktop-ui-reference.md](app/docs/desktop-ui-reference.md) (every Desktop element and what we do with it) |
 | `xtask/`, `perf/` | Repo automation; perf scenarios (`budgets.toml`), per-machine `baseline.json`, shared `harness.rs` |
 | `fuzz/` | Own Cargo workspace, 17 `cargo-fuzz` targets, seeds, dictionaries, `run.sh` |

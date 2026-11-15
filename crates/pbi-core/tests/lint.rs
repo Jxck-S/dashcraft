@@ -1053,6 +1053,57 @@ fn measure_with_static_and_dynamic_format_string_is_an_error() {
 }
 
 #[test]
+fn column_sorting_by_itself_is_a_circular_dependency_error() {
+    let mut doc = tiny_document();
+    let model = doc.model.as_mut().unwrap();
+    model.tables[0].columns[0].sort_by_column = Some("StoreKey".into());
+    doc.assign_ids();
+
+    let report = lint_document(&doc, &LintOptions::default());
+    let found = of(&report, rules::CIRCULAR_SORT_BY);
+    assert_eq!(found.len(), 1, "{}", show(&report));
+    assert_eq!(found[0].severity, Severity::Error);
+    assert_eq!(
+        found[0].message,
+        "column `Stores[StoreKey]` sorts by itself"
+    );
+    assert_eq!(
+        found[0].suggestion.as_deref(),
+        Some("remove `sortByColumn` on `Stores[StoreKey]`")
+    );
+}
+
+#[test]
+fn circular_sort_by_chain_is_an_error() {
+    let mut doc = tiny_document();
+    let model = doc.model.as_mut().unwrap();
+    model.tables[0].columns[0].sort_by_column = Some("Region".into());
+    model.tables[0].columns[1].sort_by_column = Some("StoreKey".into());
+    doc.assign_ids();
+
+    let report = lint_document(&doc, &LintOptions::default());
+    let found = of(&report, rules::CIRCULAR_SORT_BY);
+    assert_eq!(found.len(), 2, "{}", show(&report));
+    for f in &found {
+        assert_eq!(f.severity, Severity::Error);
+        assert!(f.message.contains("circular sortByColumn dependency:"));
+        assert!(f.suggestion.as_deref().unwrap().contains("break the cycle"));
+    }
+}
+
+#[test]
+fn acyclic_sort_by_chain_passes_clean() {
+    let mut doc = tiny_document();
+    let model = doc.model.as_mut().unwrap();
+    model.tables[0].columns[1].sort_by_column = Some("StoreKey".into());
+    doc.assign_ids();
+
+    let report = lint_document(&doc, &LintOptions::default());
+    let found = of(&report, rules::CIRCULAR_SORT_BY);
+    assert_eq!(found.len(), 0, "{}", show(&report));
+}
+
+#[test]
 fn lint_document_checks_in_memory_documents() {
     let doc = tiny_document();
     let report = lint_document(&doc, &LintOptions::default());

@@ -1,7 +1,7 @@
 //! Semantic-model checks: DAX (LINT007/LINT008), relationships
 //! (LINT009/LINT010), query groups (LINT011), M references (LINT013) and
-//! column references inside the model (LINT017) and measure format strings
-//! (LINT018).
+//! column references inside the model (LINT017), measure format strings
+//! (LINT018) and circular sortByColumn dependencies (LINT019).
 
 use pbi_model::{
     ColumnRef, DataType, ExpressionKind, Model, ObjectId, Origin, PartitionSource, Relationship,
@@ -112,23 +112,59 @@ fn check_table(sink: &mut Sink<'_>, model: &Model, globals: &Globals<'_>, t: &Ta
             };
             dax::check(sink, model, &site);
         }
-        if let Some(sort_by) = c.sort_by_column.as_deref()
-            && t.column(sort_by).is_none()
-        {
-            sink.push(
-                Finding::new(
-                    rules::MODEL_COLUMN_REF,
-                    Severity::Error,
-                    format!(
-                        "column `{}` sorts by `{}`, which does not exist",
-                        dax_column_ref(&t.name, &c.name),
-                        dax_column_ref(&t.name, sort_by)
-                    ),
-                )
-                .at(c.origin.clone())
-                .on(c.id)
-                .suggest(column_suggestion(t, sort_by)),
-            );
+        if let Some(sort_by) = c.sort_by_column.as_deref() {
+            if t.column(sort_by).is_none() {
+                sink.push(
+                    Finding::new(
+                        rules::MODEL_COLUMN_REF,
+                        Severity::Error,
+                        format!(
+                            "column `{}` sorts by `{}`, which does not exist",
+                            dax_column_ref(&t.name, &c.name),
+                            dax_column_ref(&t.name, sort_by)
+                        ),
+                    )
+                    .at(c.origin.clone())
+                    .on(c.id)
+                    .suggest(column_suggestion(t, sort_by)),
+                );
+            } else if pbi_model::names_eq(sort_by, &c.name) {
+                sink.push(
+                    Finding::new(
+                        rules::CIRCULAR_SORT_BY,
+                        Severity::Error,
+                        format!(
+                            "column `{}` sorts by itself",
+                            dax_column_ref(&t.name, &c.name)
+                        ),
+                    )
+                    .at(c.origin.clone())
+                    .on(c.id)
+                    .suggest(Some(format!(
+                        "remove `sortByColumn` on `{}`",
+                        dax_column_ref(&t.name, &c.name)
+                    ))),
+                );
+            } else if let Some(cycle) = detect_sort_cycle(t, &c.name, sort_by) {
+                let cycle_str = cycle
+                    .iter()
+                    .map(|name| dax_column_ref(&t.name, name))
+                    .collect::<Vec<_>>()
+                    .join(" → ");
+                sink.push(
+                    Finding::new(
+                        rules::CIRCULAR_SORT_BY,
+                        Severity::Error,
+                        format!("circular sortByColumn dependency: {cycle_str}"),
+                    )
+                    .at(c.origin.clone())
+                    .on(c.id)
+                    .suggest(Some(format!(
+                        "remove `sortByColumn` on `{}` or break the cycle",
+                        dax_column_ref(&t.name, &c.name)
+                    ))),
+                );
+            }
         }
     }
     for h in &t.hierarchies {
@@ -187,6 +223,32 @@ fn check_table(sink: &mut Sink<'_>, model: &Model, globals: &Globals<'_>, t: &Ta
 fn column_suggestion(t: &Table, name: &str) -> Option<String> {
     suggest::closest(name, t.columns.iter().map(|c| c.name.as_str()))
         .map(|c| format!("did you mean `{}`?", dax_column_ref(&t.name, c)))
+}
+
+fn detect_sort_cycle<'a>(
+    t: &'a Table,
+    start: &'a str,
+    first_target: &'a str,
+) -> Option<Vec<&'a str>> {
+    let mut path = vec![start, first_target];
+    let mut curr_name = first_target;
+
+    while let Some(curr_col) = t.column(curr_name) {
+        let next_name = curr_col.sort_by_column.as_deref()?;
+        if pbi_model::names_eq(next_name, start) {
+            path.push(start);
+            return Some(path);
+        }
+        if path.iter().any(|&p| pbi_model::names_eq(p, next_name)) {
+            return None;
+        }
+        if path.len() > t.columns.len() {
+            return None;
+        }
+        path.push(next_name);
+        curr_name = next_name;
+    }
+    None
 }
 
 fn query_group(
