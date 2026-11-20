@@ -397,10 +397,12 @@ brings the window to the front and walks the M6 editing journey (search, measure
 undo and redo) and the M7 formula-bar journey (suggestions, insert, problems, Ctrl+K Ctrl+I, Tab
 mode, the Properties description, the File menu and its "Unsaved changes" question, save), then
 the M8 journeys: another program changes the saved project (the announcement, the bar's Compare,
-the changed measure's TMDL, Esc, Reload), and an unsaved edit outlives a killed app (Document
+the comparison result, the changed measure's TMDL, Esc, Reload), and an unsaved edit outlives a killed app (Document
 recovery on the next start, Restore). It uses the platform's keys (⌘ and ⌥ on macOS). Each step clears the reader's log, acts, and checks
 what the reader said against a pattern; steps that depend on a reader's verbosity are marked
-informational in the report. The job fails when a required step fails.
+informational in the report. The comparison result check retains speech from the step that opens
+the dialog, since the result can arrive during that step. The job fails when a required step fails.
+The Windows job also asserts the M8 dialog and button roles in Narrator's UI Automation tree.
 
 `report.md` goes to the job summary; `report.json`, `report.md`, the app log and, on macOS, a
 screenshot of each failed required step are uploaded as `screen-reader-<reader>` (default
@@ -409,8 +411,9 @@ still leaves the steps so far. The script drives the real keyboard and screen re
 machine it runs on: don't run it on a workstation.
 
 How each reader is driven, and what it does not say in CI (the results per milestone are in
-[accessibility/m6-editing.md](accessibility/m6-editing.md#a6-screen-reader-runs) and
-[accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md#a6-screen-reader-runs);
+[accessibility/m6-editing.md](accessibility/m6-editing.md#a6-screen-reader-runs),
+[accessibility/m7-formula-bar.md](accessibility/m7-formula-bar.md#a6-screen-reader-runs) and
+[accessibility/m8-recovery-and-compare.md](accessibility/m8-recovery-and-compare.md#a6-screen-reader-runs);
 the decision is [ADR-0030](adr/0030-screen-readers-in-ci.md)):
 
 - **NVDA**: keys through Guidepup, text through WScript `SendKeys` (escaped, as Guidepup's own

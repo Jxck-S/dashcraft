@@ -5,6 +5,19 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-20
+
+### M8 Compare announcements and accessibility checks
+
+- **What**: Compare shows the meaning of the line markers and announces the result through a
+  persistent live region. The screen-reader journey keeps speech from the step that opens the
+  dialog. Windows also checks the UI Automation tree for the bar, Compare and Document recovery.
+- **Why**: M8's A6 comparison result went unrecorded in the latest scheduled run. The old step
+  cleared the speech log after Compare had opened.
+- **Numbers**: One announcement promoted to a required check and three Windows UI Automation
+  checks added. The 59 frontend tests and 32 Rust app tests pass. The updated hosted A6 evidence
+  remains open.
+
 ## 2026-11-13
 
 ### M10.11 linter rule LINT019: circular and self-referencing sortByColumn dependencies
