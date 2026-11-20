@@ -103,11 +103,11 @@ async function tabUntil(re, max, shift = false) {
 }
 
 /**
- * One step: runs `run`, then checks what was said since the step began against `expect` (a
- * RegExp, or a function of the text). Failures are recorded and the run goes on.
+ * Runs `run`, then checks the speech log against `expect` (a RegExp or a function of the text).
+ * Usually clears the log first. Failures are recorded and the run goes on.
  */
-async function step(id, name, keys, run, expect, { required = true } = {}) {
-  await sr.clearSpokenPhraseLog()
+async function step(id, name, keys, run, expect, { required = true, clearLog = true } = {}) {
+  if (clearLog) await sr.clearSpokenPhraseLog()
   let error = ''
   let detail = ''
   try {
@@ -176,6 +176,16 @@ function writeReport(startedAt, final = true) {
 
 const title = () => sr.perform(reader.title(sr))
 const focus = () => sr.perform(reader.focus(sr))
+
+/** Checks the UI Automation tree that Narrator reads. */
+function uia(controls) {
+  const script = join(root, 'scripts', 'app-checks', 'uia.ps1')
+  const output = execFileSync('pwsh', ['-NoProfile', '-File', script, String(app.pid), ...Object.keys(controls)], { encoding: 'utf8', timeout: 20000 })
+  for (const [name, role] of Object.entries(controls)) {
+    if (!output.includes(`FOUND\t${name}\tControlType.${role}\t`)) throw new Error(output.trim())
+  }
+  return output.trim()
+}
 
 function startApp() {
   const log = openSync(join(out, 'app.log'), 'a')
@@ -345,12 +355,18 @@ async function journey() {
     await press(SEARCH)
     return `${await tabUntil(/Compare(?! in the bar)/, 80)} Tab presses`
   }, /Compare(?! in the bar)/)
+  if (win) await step('S34a', 'A3 the external-change buttons are exposed to Narrator', 'UI Automation', () => uia({ Reload: 'Button', 'Keep mine': 'Button', Compare: 'Button' }), null)
   await step('S35', 'A1 Enter opens Compare and says its name', 'Enter', async () => {
     await press('Enter')
     await settle(3000)
   }, /Compare .*files on disk/i)
-  await step('S36', 'A1 the comparison result is announced', 'wait', () => settle(2000), /different/i, { required: false })
+  // The result can arrive during the Enter step, so retain that speech while waiting for it.
+  await step('S36', 'A1 the comparison result is announced', 'wait', () => settle(2000), /\b(?:1|one) different\b/i, { clearLog: false })
   await step('S37', 'A2 Tab reaches the changed measure as TMDL', 'Tab ×n', async () => `${await tabUntil(/TMDL of Customers/, 15)} Tab presses`, /TMDL of Customers/)
+  if (win) await step('S37a', 'A3 the Compare dialog is exposed to Narrator', 'UI Automation', () => uia({
+    'Compare AcmeOutfitters.pbip with the files on disk': 'Window',
+    'Reload from disk': 'Button',
+  }), null)
   // NVDA may switch to browse mode with a sound instead of words, so the focus report shows
   // whether the first Escape closed the dialog.
   await step('S38', 'A2 Esc closes Compare and focus goes back to Compare', 'Escape, focus report', async () => {
@@ -394,6 +410,10 @@ async function journey() {
     await focus()
   }, /Document recovery|Restore Acme ?Outfitters/i)
   await step('S42', 'A2 Tab reaches Restore, named with the file', 'Tab ×n', async () => `${await tabUntil(/Restore Acme ?Outfitters/i, 8)} Tab presses`, /Restore Acme ?Outfitters/i)
+  if (win) await step('S42a', 'A3 Document recovery is exposed to Narrator', 'UI Automation', () => uia({
+    'Document recovery': 'Window',
+    'Restore AcmeOutfitters.pbip': 'Button',
+  }), null)
   await step('S43', 'A1 Restore announces the restored edit', 'Enter', async () => {
     await press('Enter')
     await settle(6000)

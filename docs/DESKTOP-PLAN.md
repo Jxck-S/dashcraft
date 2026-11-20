@@ -1074,6 +1074,8 @@ version; compare two versions of a project.
   Document recovery (Restore, Open saved, Discard, Decide later; the file opened from the command line is the
   saved one) (`auto_recovery_journals_unsaved_edits_and_remembers_the_choice` in
   `app/src-tauri/src/lib.rs`, `scripts/app-checks/recovery.mjs`: 29 checks on Windows, A1 to A5 and the IBM checker clean for Document recovery; Open saved opens the file as saved and keeps the edits for the next start).
+  The A6 journey covers crash, restart and Restore
+  ([M8 accessibility notes](accessibility/m8-recovery-and-compare.md)).
 - [ ] **M8.2 External changes.** Watch the open project's files; a notification bar offers Reload,
   Keep mine or Compare; `doc.status` reports changes for headless callers; Save refuses to
   overwrite newer external changes unless forced.
@@ -1088,7 +1090,8 @@ version; compare two versions of a project.
   notification (MCP: a `notice` log message) when a document's set of changed files changes,
   empty again after a save or reload; the scan takes its turn among the document's mutating
   requests, so the server's own saves are never reported (`crates/pbi-ops/tests/rpc.rs`,
-  `mcp.rs`). Next: the A6 screen-reader steps for the bar.
+  `mcp.rs`). The A6 journey covers the bar announcement, Compare and Reload
+  ([M8 accessibility notes](accessibility/m8-recovery-and-compare.md)).
 - [ ] **M8.3 Semantic diff.** `doc.diff` between the in-memory revision and the files on disk, or
   between two documents or folders: objects added, removed and changed, with TMDL and PBIR
   snippets; the Compare view in the app.
@@ -1104,7 +1107,9 @@ version; compare two versions of a project.
   the file and line of each; File → Compare shows the same view against the disk, another
   Power BI file or a PBIP / TMDL folder picked in the native dialog
   (`scripts/app-checks/external-changes.mjs`: 50 checks, the IBM checker clean on all three
-  surfaces). Left: the A6 screen-reader steps for Compare.
+  surfaces). Compare shows a legend for the line markers and announces the result in a live
+  region. The A6 journey requires NVDA to read the result
+  ([M8 accessibility notes](accessibility/m8-recovery-and-compare.md)).
 
 **Crates and layers.** `pbi-ops` (journal, watcher, commands), `pbi-core` (diff), `dashcraft-app`.
 

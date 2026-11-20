@@ -68,11 +68,34 @@ try {
     order.push(await evaluate(focusedName))
   }
   check('A1 Tab goes Reload, Keep mine, Compare', order.join(', ') === 'Reload, Keep mine, Compare', order.join(', '))
+  await evaluate(`(() => {
+    window.compareStatus = null
+    const observer = new MutationObserver(() => {
+      const status = ${compare}?.querySelector('[role="status"]')
+      if (!status) return
+      window.compareStatus = { node: status, initialText: status.textContent }
+      observer.disconnect()
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    return true
+  })()`)
   await evaluate(`document.activeElement.click(), true`)
   await waitFor(`!!${compare}`, 5000)
   await sleep(300)
   check('A2 focus moves into Compare', await evaluate(`${compare}.contains(document.activeElement)`))
   await waitFor(`${compare}?.querySelector('.objects')`, 15000)
+  const announcement = await waitFor(`${compare}?.querySelector('[role="status"]')?.textContent`, 5000)
+  check('A1 Compare announces the result in a mounted live region', announcement === '1 different' && await evaluate(`
+    window.compareStatus?.initialText === '' &&
+    window.compareStatus.node === ${compare}.querySelector('[role="status"]') &&
+    !window.compareStatus.node.closest('[aria-busy="true"]')
+  `), announcement ?? 'no announcement')
+  const legend = await evaluate(`(() => {
+    const snippet = ${compare}.querySelector('.snippet')
+    const legend = document.getElementById(snippet.getAttribute('aria-describedby'))
+    return legend?.getBoundingClientRect().height > 0 ? legend.textContent : ''
+  })()`)
+  check('A3 the visible markers also describe the snippet', /Minus\. Only on disk/.test(legend) && /Plus\. Only here/.test(legend), legend)
   if (existsSync(aceJs)) {
     await installChecker(session)
     for (const [surface, scope] of [
@@ -171,6 +194,8 @@ try {
   check('the dialog names the other folder', versus === 'Compare AcmeOutfitters.pbip with acme-outfitters-other', versus ?? 'no dialog')
   const text = await evaluate(`${compare}.textContent`)
   check('the changed measure is different, labelled with the folder', text.includes('Orders[Total Sales]') && text.includes('1 different') && text.includes('In acme-outfitters-other'), text.slice(0, 300))
+  const otherLegend = await evaluate(`${compare}.querySelector('.legend')?.textContent`)
+  check('the legend names the other folder', otherLegend?.includes('Only in acme-outfitters-other'), otherLegend ?? 'no legend')
   const otherLines = await evaluate(`[...${compare}.querySelectorAll('.snippet .line')].map((l) => l.textContent)`)
   check("its TMDL: the other folder's line minus, this line plus", otherLines.includes("-measure 'Total Sales' = SUM(Orders[Line Amount]) * 2") && otherLines.includes("+measure 'Total Sales' = SUM(Orders[Line Amount]) * 1"), JSON.stringify(otherLines.slice(0, 4)))
   const otherButtons = await evaluate(`[...${compare}.querySelectorAll('button')].map((b) => b.textContent.trim()).filter((t) => t)`)

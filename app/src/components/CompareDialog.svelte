@@ -39,6 +39,8 @@
   const OTHER = $derived(against === null ? 'On disk' : `In ${against}`)
   const OBJECT_CHANGE = $derived({ added: 'Only here', removed: `Only ${other}`, changed: 'Different' } as const)
   const MAX_VALUE = 4000
+  const legendId = $props.id()
+  let announcement = $state('')
 
   const KIND_LABEL: Record<ObjectDiff['kind'], string> = {
     model: 'Model',
@@ -81,6 +83,14 @@
             .join(', ')
       : '',
   )
+
+  $effect(() => {
+    const message = summary
+    if (!message) return
+    // Let the dialog take focus and the live region mount before announcing the result.
+    const timer = setTimeout(() => (announcement = message), 500)
+    return () => clearTimeout(timer)
+  })
 </script>
 
 <Modal title={against === null ? `Compare ${fileName} with the files on disk` : `Compare ${fileName} with ${against}`} width={820} {onclose}>
@@ -94,15 +104,22 @@
       </ul>
     </section>
   {/if}
-  <section aria-labelledby="compare-objects" aria-busy={diff === null && error === null}>
+  <section aria-labelledby="compare-objects">
     <h3 id="compare-objects">Objects</h3>
+    <span class="visually-hidden" role="status">{announcement}</span>
     {#if error}
       <p class="error" role="alert">The comparison failed: {error}</p>
     {:else if !diff}
-      <p role="status">Comparing…</p>
+      <p>Comparing…</p>
     {:else}
-      <p role="status">{summary}</p>
+      <p>{summary}</p>
       {#if diff.objects.length > 0}
+        {#if diff.objects.some((o) => o.snippet)}
+          <p class="legend" id={legendId}>
+            <span><code aria-hidden="true">-</code><span class="visually-hidden">Minus.</span> Only {other}</span>
+            <span><code aria-hidden="true">+</code><span class="visually-hidden">Plus.</span> Only here</span>
+          </p>
+        {/if}
         <ul class="objects" aria-label="Objects that differ">
           {#each diff.objects as o, i (`${o.kind}:${o.path}:${i}`)}
             <li>
@@ -121,7 +138,7 @@
                 {/if}
                 {#if o.snippet}
                   {@const lines = diffLines(o.snippet.before ?? '', o.snippet.after ?? '')}
-                  <div class="snippet" role="textbox" aria-readonly="true" aria-multiline="true" aria-label={`${o.snippet.language === 'tmdl' ? 'TMDL' : 'JSON'} of ${o.path}: lines with a minus are ${other} only, with a plus here only`} tabindex="0">
+                  <div class="snippet" role="textbox" aria-readonly="true" aria-multiline="true" aria-label={`${o.snippet.language === 'tmdl' ? 'TMDL' : 'JSON'} of ${o.path}`} aria-describedby={legendId} tabindex="0">
                     {#each lines as l, k (k)}
                       <div class="line {l.kind}"><span class="mark">{l.kind === 'removed' ? '-' : l.kind === 'added' ? '+' : ' '}</span>{l.text}</div>
                     {/each}
@@ -170,6 +187,25 @@
     margin: 0 0 6px;
     font-size: 13px;
     font-weight: 600;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .legend {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    column-gap: 12px;
+    margin: 0 0 8px;
+    color: var(--color-text-muted);
+    font-size: 12px;
   }
 
   ul {

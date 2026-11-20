@@ -12,7 +12,7 @@ Legend: `[x]` done, `[ ]` not done. Item IDs match the work-tracking IDs used in
 |---|---|---|
 | v0.1.0 (2026-10-21) | Phase 1, Data Explorer: readers, model tree, M and DAX engines, data grid, exports, linter, CLI | Released |
 | v0.2.0 (2026-10-22) | Phase 2, Report Renderer: visual queries, built-in visuals, SVG/PNG output, `render`, golden-image tooling, interactive canvas in a Power BI Desktop-style app. M5: the remaining [FORMATS.md](../FORMATS.md) formats, docs, installers and the release workflow ([docs/packaging.md](packaging.md)) | Released; installers are unsigned until signing certificates exist |
-| v0.3.0 (2026-11-12) | The work below: command registry, automation and MCP, opt-in AI, the app on the registry, more visuals and engine features; [DESKTOP-PLAN](DESKTOP-PLAN.md) M6 (editable document state and save), M7 (language services, formula bar, `dashcraft lsp`), M8 (recovery, external changes, semantic diff) and M9 (reading-view parity) | Released; installers unsigned; M8's A6 screen-reader steps for the notification bar and Compare are still open |
+| v0.3.0 (2026-11-12) | The work below: command registry, automation and MCP, opt-in AI, the app on the registry, more visuals and engine features; [DESKTOP-PLAN](DESKTOP-PLAN.md) M6 (editable document state and save), M7 (language services, formula bar, `dashcraft lsp`), M8 (recovery, external changes, semantic diff) and M9 (reading-view parity) | Released; installers unsigned; M8's [A6 evidence](accessibility/m8-recovery-and-compare.md) is tracked separately |
 | Unreleased | Work in `main` after v0.3.0 ([CHANGELOG.md](../CHANGELOG.md) `[Unreleased]`) | Not tagged yet |
 
 ### In v0.3.0
