@@ -84,6 +84,8 @@ pub mod rules {
     pub const MEASURE_FORMAT: &str = "LINT018";
     /// A column has a circular or self-referencing `sortByColumn` dependency.
     pub const CIRCULAR_SORT_BY: &str = "LINT019";
+    /// Multiple active relationships exist between the same pair of tables.
+    pub const MULTIPLE_ACTIVE_RELATIONSHIPS: &str = "LINT020";
 }
 
 /// A lint rule: stable id, default severity and a one-line title.
@@ -192,6 +194,11 @@ pub const RULES: &[Rule] = &[
         id: rules::CIRCULAR_SORT_BY,
         severity: Severity::Error,
         title: "circular or self-referencing sortByColumn dependency",
+    },
+    Rule {
+        id: rules::MULTIPLE_ACTIVE_RELATIONSHIPS,
+        severity: Severity::Error,
+        title: "multiple active relationships between the same pair of tables",
     },
 ];
 
@@ -791,6 +798,6 @@ mod tests {
             None
         );
         assert!(rule("lint001").is_some());
-        assert_eq!(RULES.len(), 19);
+        assert_eq!(RULES.len(), 20);
     }
 }

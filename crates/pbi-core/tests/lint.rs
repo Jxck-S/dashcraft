@@ -1104,6 +1104,96 @@ fn acyclic_sort_by_chain_passes_clean() {
 }
 
 #[test]
+fn multiple_active_relationships_between_same_tables_is_an_error() {
+    let mut doc = tiny_document();
+    let model = doc.model.as_mut().unwrap();
+    let r2 = Relationship::new(
+        "r2",
+        ColumnRef::new("Web Sessions", "Device"),
+        ColumnRef::new("Stores", "Region"),
+    );
+    model.relationships.push(r2);
+    doc.assign_ids();
+
+    let report = lint_document(&doc, &LintOptions::default());
+    let found = of(&report, rules::MULTIPLE_ACTIVE_RELATIONSHIPS);
+    assert_eq!(found.len(), 1, "{}", show(&report));
+    assert_eq!(found[0].severity, Severity::Error);
+    assert!(
+        found[0].message.contains("Web Sessions") && found[0].message.contains("Stores"),
+        "{}",
+        found[0].message
+    );
+    assert!(
+        found[0].message.contains("r2") && found[0].message.contains("r1"),
+        "{}",
+        found[0].message
+    );
+    assert_eq!(
+        found[0].suggestion.as_deref(),
+        Some("deactivate `r2` or `r1`")
+    );
+}
+
+#[test]
+fn multiple_active_relationships_reversed_endpoints_is_an_error() {
+    let mut doc = tiny_document();
+    let model = doc.model.as_mut().unwrap();
+    let r2 = Relationship::new(
+        "r2",
+        ColumnRef::new("Stores", "Region"),
+        ColumnRef::new("Web Sessions", "Device"),
+    );
+    model.relationships.push(r2);
+    doc.assign_ids();
+
+    let report = lint_document(&doc, &LintOptions::default());
+    let found = of(&report, rules::MULTIPLE_ACTIVE_RELATIONSHIPS);
+    assert_eq!(found.len(), 1, "{}", show(&report));
+    assert_eq!(found[0].severity, Severity::Error);
+}
+
+#[test]
+fn inactive_relationships_between_same_tables_passes_clean() {
+    let mut doc = tiny_document();
+    let model = doc.model.as_mut().unwrap();
+    let mut r2 = Relationship::new(
+        "r2",
+        ColumnRef::new("Web Sessions", "Device"),
+        ColumnRef::new("Stores", "Region"),
+    );
+    r2.is_active = false;
+    model.relationships.push(r2);
+    doc.assign_ids();
+
+    let report = lint_document(&doc, &LintOptions::default());
+    let found = of(&report, rules::MULTIPLE_ACTIVE_RELATIONSHIPS);
+    assert_eq!(found.len(), 0, "{}", show(&report));
+}
+
+#[test]
+fn active_relationships_between_different_table_pairs_passes_clean() {
+    let mut doc = tiny_document();
+    let model = doc.model.as_mut().unwrap();
+    let mut customers = Table::new("Customers");
+    customers
+        .columns
+        .push(Column::data("CustomerKey", DataType::String));
+    model.tables.push(customers);
+    let r2 = Relationship::new(
+        "r2",
+        ColumnRef::new("Stores", "StoreKey"),
+        ColumnRef::new("Customers", "CustomerKey"),
+    );
+    model.relationships.push(r2);
+    doc.assign_ids();
+
+    let report = lint_document(&doc, &LintOptions::default());
+    let found = of(&report, rules::MULTIPLE_ACTIVE_RELATIONSHIPS);
+    assert_eq!(found.len(), 0, "{}", show(&report));
+}
+
+#[test]
 fn lint_document_checks_in_memory_documents() {
     let doc = tiny_document();
     let report = lint_document(&doc, &LintOptions::default());
