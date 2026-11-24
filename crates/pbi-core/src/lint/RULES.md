@@ -33,6 +33,7 @@
 | LINT017 | Error | `sortByColumn` or a hierarchy level references a missing column |
 | LINT018 | Error | A measure has both `formatString` and `formatStringDefinition` |
 | LINT019 | Error | Circular or self-referencing `sortByColumn` dependency |
+| LINT020 | Error | Multiple active relationships between the same pair of tables |
 
 ## LINT001 / LINT002: visual field missing from the model
 
@@ -170,3 +171,9 @@ A measure may have a static `formatString` or a dynamic `formatStringDefinition`
 A column cannot sort by itself (`c.sortByColumn == c.name`), nor can a chain of `sortByColumn` references form a cycle (`A → B → A` or `A → B → C → A`). Power BI Desktop refuses to evaluate models with circular sort-by dependencies with a circular dependency error.
 
 Origin: `c.origin` (the column declaration). Suggestion: remove `sortByColumn` on the flagged column or break the cycle.
+
+## LINT020: multiple active relationships between the same pair of tables
+
+At most one active relationship (`is_active = true`) may exist between any two tables in the model, regardless of direction. Power BI Desktop refuses to evaluate models with multiple active direct relationships between the same pair of tables because the filter propagation path is ambiguous. Any additional relationships between those tables must be inactive (`is_active = false`), activated only explicitly in DAX via `USERELATIONSHIP()`.
+
+Origin: `r.origin` (the relationship declaration). Suggestion: deactivate the flagged relationship or the conflicting active relationship.

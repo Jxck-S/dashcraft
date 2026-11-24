@@ -66,6 +66,7 @@ pub(crate) fn check_model(sink: &mut Sink<'_>, model: &Model) {
     for r in &model.relationships {
         check_relationship(sink, model, r);
     }
+    check_active_relationships(sink, &model.relationships);
 }
 
 fn check_table(sink: &mut Sink<'_>, model: &Model, globals: &Globals<'_>, t: &Table) {
@@ -281,15 +282,7 @@ fn query_group(
 }
 
 fn check_relationship(sink: &mut Sink<'_>, model: &Model, r: &Relationship) {
-    let name = if r.name.is_empty() {
-        format!(
-            "{} → {}",
-            dax_column_ref(&r.from.table, &r.from.column),
-            dax_column_ref(&r.to.table, &r.to.column)
-        )
-    } else {
-        r.name.clone()
-    };
+    let name = relationship_label(r);
     let mut resolved = Vec::new();
     for (end, side) in [(&r.from, "from"), (&r.to, "to")] {
         match resolve_end(model, end) {
@@ -355,5 +348,53 @@ fn resolve_end(model: &Model, end: &ColumnRef) -> Result<DataType, EndError> {
             ),
             column_suggestion(t, &end.column),
         )),
+    }
+}
+
+fn check_active_relationships(sink: &mut Sink<'_>, relationships: &[Relationship]) {
+    let mut seen_active: Vec<&Relationship> = Vec::new();
+    for r in relationships {
+        if !r.is_active || r.from.table.is_empty() || r.to.table.is_empty() {
+            continue;
+        }
+        let same_tables = |o: &Relationship| {
+            (pbi_model::names_eq(&r.from.table, &o.from.table)
+                && pbi_model::names_eq(&r.to.table, &o.to.table))
+                || (pbi_model::names_eq(&r.from.table, &o.to.table)
+                    && pbi_model::names_eq(&r.to.table, &o.from.table))
+        };
+        if let Some(other) = seen_active.iter().find(|o| same_tables(o)) {
+            let r_name = relationship_label(r);
+            let other_name = relationship_label(other);
+            sink.push(
+                Finding::new(
+                    rules::MULTIPLE_ACTIVE_RELATIONSHIPS,
+                    Severity::Error,
+                    format!(
+                        "multiple active relationships between `{}` and `{}`: `{r_name}` and `{other_name}` are both active",
+                        r.from.table, r.to.table
+                    ),
+                )
+                .at(r.origin.clone())
+                .on(r.id)
+                .suggest(Some(format!(
+                    "deactivate `{r_name}` or `{other_name}`"
+                ))),
+            );
+        } else {
+            seen_active.push(r);
+        }
+    }
+}
+
+fn relationship_label(r: &Relationship) -> String {
+    if r.name.is_empty() {
+        format!(
+            "{} → {}",
+            dax_column_ref(&r.from.table, &r.from.column),
+            dax_column_ref(&r.to.table, &r.to.column)
+        )
+    } else {
+        r.name.clone()
     }
 }

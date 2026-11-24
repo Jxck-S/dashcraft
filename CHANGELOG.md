@@ -6,6 +6,7 @@ All notable changes to DashCraft (named pbiview before [ADR-0009](docs/adr/0009-
 
 ### Added
 - Linter rule `LINT019` (`CIRCULAR_SORT_BY`): flags self-referencing (`col.sortByColumn == col.name`) and circular `sortByColumn` chains (`A → B → A`) on model columns with Power BI Desktop-aligned error diagnostics (M10.11).
+- Linter rule `LINT020` (`MULTIPLE_ACTIVE_RELATIONSHIPS`): flags multiple active relationships between the same pair of tables with Power BI Desktop-aligned error diagnostics (M10.11).
 
 ## [0.3.0] — 2026-11-12 — Editing, language services and reading-view parity
 

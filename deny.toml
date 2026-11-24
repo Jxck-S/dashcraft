@@ -36,6 +36,14 @@ ignore = [
     { id = "RUSTSEC-2026-0391", reason = "only zstd::stream::raw::{Encoder,Decoder}::with_context are affected; arrow-ipc and parquet use only zstd::bulk (stream code is in parquet's unbuilt CLI binaries), and DashCraft does not use zstd directly" },
     { id = "RUSTSEC-2026-0398", reason = "zstd_safe::seekable needs the `seekable` feature, which is not enabled (zstd-safe builds with `std` only)" },
     { id = "RUSTSEC-2026-0403", reason = "only DCtx::decompress_stream on legacy frames is affected; arrow-ipc and parquet decompress through zstd::bulk, which the advisory lists as unaffected, and the `legacy` feature is not enabled" },
+    # chrono is unmaintained; no safe upgrade available across DataFusion/arrow ecosystem
+    { id = "RUSTSEC-2026-0543", reason = "chrono 0.4 is required across DataFusion, arrow, and workspace date evaluation; no alternative release available" },
+    # url 2.5.8 stack overflow in Url::origin() on deeply nested blob: URLs
+    { id = "RUSTSEC-2026-0592", reason = "DashCraft does not parse or evaluate arbitrary nested blob: URLs" },
+    # cookie 0.18.2 private cookie nonce reuse on processes that fork
+    { id = "RUSTSEC-2026-0594", reason = "DashCraft is a desktop app/CLI and does not fork worker processes with private cookie jars" },
+    # parquet 59.3.2 plaintext bloom filter in encrypted parquet (fixed in 59.3.3)
+    { id = "RUSTSEC-2026-0595", reason = "DashCraft does not write encrypted parquet files or use bloom filter encryption; fixed in parquet 59.3.3" },
 ]
 
 [licenses]

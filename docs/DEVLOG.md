@@ -5,6 +5,20 @@ every wave or merged change ([AGENTS.md §9](../AGENTS.md#9-dev-log)); details l
 the [CHANGELOG](../CHANGELOG.md) and the docs. New entries name their commit by short hash
 (`git show <hash>`) once it is known; the entries below predate the current history and carry none.
 
+## 2026-11-24
+
+### M10.11 linter rule LINT020: multiple active relationships between the same pair of tables
+
+- **What**: `pbi-core` linter rule `LINT020` (`MULTIPLE_ACTIVE_RELATIONSHIPS`) flags models where more
+  than one active relationship joins the same pair of tables (regardless of endpoint direction),
+  reporting origin, object id, and actionable suggestions to deactivate conflicting paths.
+- **Why**: DESKTOP-PLAN M10.11 ambiguous relationships. Power BI Desktop rejects models with
+  ambiguous active direct filter paths between two tables; DashCraft previously guarded against this
+  only during interactive mutation commands (`structure.rs`), allowing multiple active paths from
+  raw TMDL/TMSL loads or external project edits to pass unflagged.
+- **Numbers**: 1 new lint rule (19 → 20); 4 new unit tests covering duplicate active paths, reversed
+  endpoints, inactive relationships, and independent table pairs; 0 new dependencies.
+
 ## 2026-11-13
 
 ### M10.11 linter rule LINT019: circular and self-referencing sortByColumn dependencies
